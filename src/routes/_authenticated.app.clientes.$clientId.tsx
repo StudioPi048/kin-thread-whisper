@@ -210,6 +210,7 @@ function ClientDossierPage() {
             </section>
 
             <aside className="space-y-6">
+              <CaseDashboard clientId={client.id} />
               <Panel title="Identificação">
                 <InfoRow label="Nome completo" value={client.full_name} />
                 <InfoRow label="Gênero" value={genderLabel} />
