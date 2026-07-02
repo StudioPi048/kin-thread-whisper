@@ -33,6 +33,7 @@ import { ClientFormDialog } from "@/components/clients/client-form-dialog";
 import { ClientTimeline } from "@/components/clients/client-timeline";
 import { PatternsPanel } from "@/components/clients/patterns-panel";
 import { GenogramCanvas } from "@/components/genogram/genogram-canvas";
+import { ClanSpreadsheet } from "@/components/genogram/clan-spreadsheet";
 import { IntakeForm } from "@/components/intake/intake-form";
 import { calcAge, formatBirthDate, genderOptions, initialsFrom } from "@/lib/clients";
 
@@ -164,6 +165,7 @@ function ClientDossierPage() {
         <TabsList>
           <TabsTrigger value="overview">Visão geral</TabsTrigger>
           <TabsTrigger value="intake">Anamnese</TabsTrigger>
+          <TabsTrigger value="clan">Planilha do clã</TabsTrigger>
           <TabsTrigger value="genogram">Genossociograma</TabsTrigger>
           <TabsTrigger value="timeline">Linha do tempo</TabsTrigger>
           <TabsTrigger value="patterns">Padrões</TabsTrigger>
@@ -258,6 +260,10 @@ function ClientDossierPage() {
 
         <TabsContent value="intake" className="mt-8">
           <IntakeForm clientId={client.id} professionalId={user.id} />
+        </TabsContent>
+
+        <TabsContent value="clan" className="mt-8">
+          <ClanSpreadsheet clientId={client.id} />
         </TabsContent>
 
         <TabsContent value="genogram" className="mt-8">
