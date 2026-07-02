@@ -108,7 +108,7 @@ export const processSessionAudio = createServerFn({ method: "POST" })
 
       await supabase
         .from("clinical_sessions")
-        .update({ structured_note: structured, status: "ready" })
+        .update({ structured_note: structured as never, status: "ready" })
         .eq("id", session.id);
 
       return { ok: true as const };
