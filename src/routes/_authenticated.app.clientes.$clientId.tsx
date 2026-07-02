@@ -9,7 +9,6 @@ import {
   Library,
   Mic,
   Pencil,
-  ScrollText,
   ShieldCheck,
   ShieldAlert,
   Trash2,
