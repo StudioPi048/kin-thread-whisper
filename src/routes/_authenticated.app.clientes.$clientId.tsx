@@ -5,13 +5,14 @@ import {
   ArrowLeft,
   Archive,
   ArchiveRestore,
+  CalendarClock,
   ChevronRight,
-  GitBranch,
   Library,
   Mic,
   Pencil,
   ShieldCheck,
   ShieldAlert,
+  Sparkles,
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -31,6 +32,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { ClientFormDialog } from "@/components/clients/client-form-dialog";
+import { ClientTimeline } from "@/components/clients/client-timeline";
+import { PatternsPanel } from "@/components/clients/patterns-panel";
 import { GenogramCanvas } from "@/components/genogram/genogram-canvas";
 import { calcAge, formatBirthDate, genderOptions, initialsFrom } from "@/lib/clients";
 
