@@ -99,9 +99,9 @@ export const processSessionAudio = createServerFn({ method: "POST" })
         choices?: Array<{ message?: { content?: string } }>;
       };
       const raw = chatJson.choices?.[0]?.message?.content ?? "{}";
-      let structured: unknown;
+      let structured: Record<string, unknown>;
       try {
-        structured = JSON.parse(raw);
+        structured = JSON.parse(raw) as Record<string, unknown>;
       } catch {
         structured = { resumo: raw };
       }
