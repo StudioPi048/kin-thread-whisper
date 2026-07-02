@@ -14,6 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      clients: {
+        Row: {
+          birth_date: string | null
+          birthplace: string | null
+          clinical_notes: string | null
+          consent_given_at: string | null
+          consent_notes: string | null
+          created_at: string
+          email: string | null
+          full_name: string
+          gender: string | null
+          id: string
+          phone: string | null
+          preferred_name: string | null
+          presenting_complaint: string | null
+          professional_id: string
+          status: string
+          tags: string[]
+          updated_at: string
+        }
+        Insert: {
+          birth_date?: string | null
+          birthplace?: string | null
+          clinical_notes?: string | null
+          consent_given_at?: string | null
+          consent_notes?: string | null
+          created_at?: string
+          email?: string | null
+          full_name: string
+          gender?: string | null
+          id?: string
+          phone?: string | null
+          preferred_name?: string | null
+          presenting_complaint?: string | null
+          professional_id: string
+          status?: string
+          tags?: string[]
+          updated_at?: string
+        }
+        Update: {
+          birth_date?: string | null
+          birthplace?: string | null
+          clinical_notes?: string | null
+          consent_given_at?: string | null
+          consent_notes?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string
+          gender?: string | null
+          id?: string
+          phone?: string | null
+          preferred_name?: string | null
+          presenting_complaint?: string | null
+          professional_id?: string
+          status?: string
+          tags?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -83,6 +143,8 @@ export type Database = {
         }
         Returns: boolean
       }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
     }
     Enums: {
       app_role: "admin" | "professional"
