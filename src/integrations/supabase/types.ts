@@ -74,6 +74,135 @@ export type Database = {
         }
         Relationships: []
       }
+      genogram_persons: {
+        Row: {
+          birth_date: string | null
+          client_id: string
+          created_at: string
+          death_date: string | null
+          full_name: string
+          gender: string | null
+          id: string
+          is_deceased: boolean
+          is_proband: boolean
+          notes: string | null
+          occupation: string | null
+          position_x: number
+          position_y: number
+          preferred_name: string | null
+          tags: string[]
+          updated_at: string
+        }
+        Insert: {
+          birth_date?: string | null
+          client_id: string
+          created_at?: string
+          death_date?: string | null
+          full_name: string
+          gender?: string | null
+          id?: string
+          is_deceased?: boolean
+          is_proband?: boolean
+          notes?: string | null
+          occupation?: string | null
+          position_x?: number
+          position_y?: number
+          preferred_name?: string | null
+          tags?: string[]
+          updated_at?: string
+        }
+        Update: {
+          birth_date?: string | null
+          client_id?: string
+          created_at?: string
+          death_date?: string | null
+          full_name?: string
+          gender?: string | null
+          id?: string
+          is_deceased?: boolean
+          is_proband?: boolean
+          notes?: string | null
+          occupation?: string | null
+          position_x?: number
+          position_y?: number
+          preferred_name?: string | null
+          tags?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "genogram_persons_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      genogram_relationships: {
+        Row: {
+          client_id: string
+          created_at: string
+          end_date: string | null
+          from_person_id: string
+          id: string
+          notes: string | null
+          qualifier: string | null
+          relationship_type: string
+          start_date: string | null
+          to_person_id: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          end_date?: string | null
+          from_person_id: string
+          id?: string
+          notes?: string | null
+          qualifier?: string | null
+          relationship_type: string
+          start_date?: string | null
+          to_person_id: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          end_date?: string | null
+          from_person_id?: string
+          id?: string
+          notes?: string | null
+          qualifier?: string | null
+          relationship_type?: string
+          start_date?: string | null
+          to_person_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "genogram_relationships_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "genogram_relationships_from_person_id_fkey"
+            columns: ["from_person_id"]
+            isOneToOne: false
+            referencedRelation: "genogram_persons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "genogram_relationships_to_person_id_fkey"
+            columns: ["to_person_id"]
+            isOneToOne: false
+            referencedRelation: "genogram_persons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
