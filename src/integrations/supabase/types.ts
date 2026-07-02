@@ -382,6 +382,62 @@ export type Database = {
         }
         Relationships: []
       }
+      clinical_sessions: {
+        Row: {
+          audio_path: string | null
+          client_id: string
+          created_at: string
+          duration_seconds: number | null
+          error_message: string | null
+          id: string
+          session_date: string
+          status: string
+          structured_note: Json | null
+          title: string | null
+          transcript: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          audio_path?: string | null
+          client_id: string
+          created_at?: string
+          duration_seconds?: number | null
+          error_message?: string | null
+          id?: string
+          session_date?: string
+          status?: string
+          structured_note?: Json | null
+          title?: string | null
+          transcript?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          audio_path?: string | null
+          client_id?: string
+          created_at?: string
+          duration_seconds?: number | null
+          error_message?: string | null
+          id?: string
+          session_date?: string
+          status?: string
+          structured_note?: Json | null
+          title?: string | null
+          transcript?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinical_sessions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       genogram_persons: {
         Row: {
           birth_date: string | null
