@@ -124,7 +124,7 @@ export function PersonFormDialog({
         occupation: form.occupation.trim() || null,
         cause_of_death: form.cause_of_death.trim() || null,
         health_conditions: form.health_conditions,
-        life_events: form.life_events,
+        life_events: form.life_events as unknown as Database["public"]["Tables"]["genogram_persons"]["Insert"]["life_events"],
         notes: form.notes.trim() || null,
       };
       if (editing) {
