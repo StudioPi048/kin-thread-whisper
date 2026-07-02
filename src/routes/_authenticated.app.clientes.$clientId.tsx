@@ -35,6 +35,7 @@ import { PatternsPanel } from "@/components/clients/patterns-panel";
 import { GenogramCanvas } from "@/components/genogram/genogram-canvas";
 import { ClanSpreadsheet } from "@/components/genogram/clan-spreadsheet";
 import { IntakeForm } from "@/components/intake/intake-form";
+import { SessionsPanel } from "@/components/sessions/sessions-panel";
 import { calcAge, formatBirthDate, genderOptions, initialsFrom } from "@/lib/clients";
 
 export const Route = createFileRoute("/_authenticated/app/clientes/$clientId")({
