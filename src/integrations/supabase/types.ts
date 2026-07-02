@@ -385,12 +385,14 @@ export type Database = {
       genogram_persons: {
         Row: {
           birth_date: string | null
+          birth_order: number | null
           cause_of_death: string | null
           client_id: string
           created_at: string
           death_date: string | null
           full_name: string
           gender: string | null
+          gestational_weeks: string | null
           health_conditions: string[]
           id: string
           is_deceased: boolean
@@ -401,17 +403,22 @@ export type Database = {
           position_x: number
           position_y: number
           preferred_name: string | null
+          relationship_to_proband: string | null
           tags: string[]
+          temperament: string | null
           updated_at: string
+          vices: string | null
         }
         Insert: {
           birth_date?: string | null
+          birth_order?: number | null
           cause_of_death?: string | null
           client_id: string
           created_at?: string
           death_date?: string | null
           full_name: string
           gender?: string | null
+          gestational_weeks?: string | null
           health_conditions?: string[]
           id?: string
           is_deceased?: boolean
@@ -422,17 +429,22 @@ export type Database = {
           position_x?: number
           position_y?: number
           preferred_name?: string | null
+          relationship_to_proband?: string | null
           tags?: string[]
+          temperament?: string | null
           updated_at?: string
+          vices?: string | null
         }
         Update: {
           birth_date?: string | null
+          birth_order?: number | null
           cause_of_death?: string | null
           client_id?: string
           created_at?: string
           death_date?: string | null
           full_name?: string
           gender?: string | null
+          gestational_weeks?: string | null
           health_conditions?: string[]
           id?: string
           is_deceased?: boolean
@@ -443,8 +455,11 @@ export type Database = {
           position_x?: number
           position_y?: number
           preferred_name?: string | null
+          relationship_to_proband?: string | null
           tags?: string[]
+          temperament?: string | null
           updated_at?: string
+          vices?: string | null
         }
         Relationships: [
           {
