@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Panel } from "./panel";
 
 interface Props {
   clientId: string;
@@ -8,9 +7,8 @@ interface Props {
 
 type Person = {
   gender: string | null;
-  generation: number | null;
-  deceased: boolean | null;
-  diseases: string | null;
+  is_deceased: boolean;
+  health_conditions: string[];
   cause_of_death: string | null;
 };
 
@@ -21,7 +19,7 @@ export function CaseDashboard({ clientId }: Props) {
       const [persons, rels, patterns, sessions] = await Promise.all([
         supabase
           .from("genogram_persons")
-          .select("gender, generation, deceased, diseases, cause_of_death")
+          .select("gender, is_deceased, health_conditions, cause_of_death")
           .eq("client_id", clientId),
         supabase.from("genogram_relationships").select("id", { count: "exact", head: true }).eq("client_id", clientId),
         supabase.from("patterns_detected").select("id", { count: "exact", head: true }).eq("client_id", clientId),
@@ -41,31 +39,34 @@ export function CaseDashboard({ clientId }: Props) {
   const { persons, relationships, patterns, sessions } = data;
   const female = persons.filter((p) => p.gender === "female").length;
   const male = persons.filter((p) => p.gender === "male").length;
-  const deceased = persons.filter((p) => p.deceased).length;
-  const withDisease = persons.filter((p) => p.diseases && p.diseases.trim()).length;
-  const generations = new Set(persons.map((p) => p.generation).filter((g) => g !== null)).size;
+  const deceased = persons.filter((p) => p.is_deceased).length;
+  const withDisease = persons.filter((p) => (p.health_conditions ?? []).length > 0).length;
+  const withCause = persons.filter((p) => p.cause_of_death && p.cause_of_death.trim()).length;
 
   return (
-    <Panel title="Dashboard sistêmico">
-      <div className="grid grid-cols-2 gap-3">
+    <div className="rounded-lg border border-border bg-card">
+      <div className="border-b border-border px-4 py-3">
+        <h3 className="font-serif text-sm text-primary">Dashboard sistêmico</h3>
+      </div>
+      <div className="grid grid-cols-2 gap-2 p-4">
         <Stat label="Pessoas no clã" value={persons.length} />
-        <Stat label="Gerações" value={generations} />
         <Stat label="Vínculos" value={relationships} />
         <Stat label="Padrões detectados" value={patterns} />
         <Stat label="Sessões gravadas" value={sessions} />
         <Stat label="Falecidos" value={deceased} />
+        <Stat label="Causa de morte" value={withCause} />
         <Stat label="Femininos" value={female} />
         <Stat label="Masculinos" value={male} />
         <Stat label="Com doença registrada" value={withDisease} full />
       </div>
-    </Panel>
+    </div>
   );
 }
 
 function Stat({ label, value, full }: { label: string; value: number; full?: boolean }) {
   return (
     <div
-      className={`rounded-md border border-border bg-background/50 p-3 ${full ? "col-span-2" : ""}`}
+      className={`rounded-md border border-border bg-background/60 p-3 ${full ? "col-span-2" : ""}`}
     >
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="mt-1 font-serif text-2xl text-primary">{value}</p>
