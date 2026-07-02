@@ -1,9 +1,10 @@
 import { createFileRoute, Link, Outlet, redirect, useLocation, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Home, LogOut, Users, Library, Settings, Sparkles } from "lucide-react";
+import { Home, LogOut, Users, Library, Settings } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { LizLogoLockup, LizLogo } from "@/components/liz-logo";
 
 // Integration-managed auth gate. ssr:false because Supabase session lives in localStorage.
 export const Route = createFileRoute("/_authenticated")({
@@ -63,15 +64,7 @@ function AuthenticatedLayout() {
     <div className="flex min-h-screen bg-background">
       <aside className="hidden w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
         <Link to="/app" className="flex items-center gap-3 border-b border-sidebar-border px-6 py-5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gold text-primary font-serif text-lg">
-            L
-          </div>
-          <div className="leading-tight">
-            <p className="font-serif text-lg">Instituto Liz</p>
-            <p className="text-[10px] uppercase tracking-[0.25em] text-sidebar-foreground/60">
-              Psicogenealogia
-            </p>
-          </div>
+          <LizLogoLockup variant="light" />
         </Link>
         <nav className="flex-1 space-y-1 px-3 py-6">
           {nav.map((item) => {
@@ -119,8 +112,9 @@ function AuthenticatedLayout() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 items-center justify-between border-b border-border bg-parchment/60 px-6 backdrop-blur md:hidden">
-          <Link to="/app" className="font-serif text-lg text-primary">
-            Instituto Liz
+          <Link to="/app" className="flex items-center gap-2">
+            <LizLogo size={28} />
+            <span className="font-serif text-lg text-primary">Instituto Liz</span>
           </Link>
           <Button onClick={handleSignOut} variant="ghost" size="sm">
             <LogOut className="size-4" />
@@ -133,6 +127,3 @@ function AuthenticatedLayout() {
     </div>
   );
 }
-
-// Small icon export re-use to silence unused-import warnings if any
-export const _ = Sparkles;

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
+import { LizLogo, LizLogoLockup } from "@/components/liz-logo";
 
 const searchSchema = z.object({
   mode: z.enum(["signin", "signup"]).optional(),
@@ -107,15 +108,7 @@ function AuthPage() {
       {/* Left: manifesto */}
       <aside className="hidden bg-sidebar text-sidebar-foreground md:flex md:flex-col md:justify-between md:p-12">
         <Link to="/" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gold text-primary font-serif text-lg">
-            L
-          </div>
-          <div className="leading-tight">
-            <p className="font-serif text-xl">Instituto Liz</p>
-            <p className="text-[10px] uppercase tracking-[0.3em] text-sidebar-foreground/60">
-              Psicogenealogia
-            </p>
-          </div>
+          <LizLogoLockup variant="light" />
         </Link>
         <div className="max-w-md">
           <p className="text-xs uppercase tracking-[0.3em] text-gold">Beta fechado</p>
@@ -134,9 +127,10 @@ function AuthPage() {
       {/* Right: form */}
       <main className="flex items-center justify-center p-6 md:p-12">
         <div className="w-full max-w-sm">
-          <div className="md:hidden mb-8">
-            <Link to="/" className="text-sm text-muted-foreground">
-              ← Voltar
+          <div className="md:hidden mb-8 flex items-center justify-between">
+            <Link to="/" className="flex items-center gap-2">
+              <LizLogo size={32} />
+              <span className="font-serif text-lg text-primary">Instituto Liz</span>
             </Link>
           </div>
           <h2 className="font-serif text-3xl text-primary">

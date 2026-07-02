@@ -14,8 +14,9 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated.app.index'
 import { Route as AuthenticatedAppConfiguracoesRouteImport } from './routes/_authenticated.app.configuracoes'
-import { Route as AuthenticatedAppClientesRouteImport } from './routes/_authenticated.app.clientes'
 import { Route as AuthenticatedAppBibliotecaRouteImport } from './routes/_authenticated.app.biblioteca'
+import { Route as AuthenticatedAppClientesIndexRouteImport } from './routes/_authenticated.app.clientes.index'
+import { Route as AuthenticatedAppClientesClientIdRouteImport } from './routes/_authenticated.app.clientes.$clientId'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -42,16 +43,22 @@ const AuthenticatedAppConfiguracoesRoute =
     path: '/app/configuracoes',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedAppClientesRoute =
-  AuthenticatedAppClientesRouteImport.update({
-    id: '/app/clientes',
-    path: '/app/clientes',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
 const AuthenticatedAppBibliotecaRoute =
   AuthenticatedAppBibliotecaRouteImport.update({
     id: '/app/biblioteca',
     path: '/app/biblioteca',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAppClientesIndexRoute =
+  AuthenticatedAppClientesIndexRouteImport.update({
+    id: '/app/clientes/',
+    path: '/app/clientes/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAppClientesClientIdRoute =
+  AuthenticatedAppClientesClientIdRouteImport.update({
+    id: '/app/clientes/$clientId',
+    path: '/app/clientes/$clientId',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 
@@ -59,17 +66,19 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/app/biblioteca': typeof AuthenticatedAppBibliotecaRoute
-  '/app/clientes': typeof AuthenticatedAppClientesRoute
   '/app/configuracoes': typeof AuthenticatedAppConfiguracoesRoute
   '/app/': typeof AuthenticatedAppIndexRoute
+  '/app/clientes/$clientId': typeof AuthenticatedAppClientesClientIdRoute
+  '/app/clientes/': typeof AuthenticatedAppClientesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/app/biblioteca': typeof AuthenticatedAppBibliotecaRoute
-  '/app/clientes': typeof AuthenticatedAppClientesRoute
   '/app/configuracoes': typeof AuthenticatedAppConfiguracoesRoute
   '/app': typeof AuthenticatedAppIndexRoute
+  '/app/clientes/$clientId': typeof AuthenticatedAppClientesClientIdRoute
+  '/app/clientes': typeof AuthenticatedAppClientesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -77,9 +86,10 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/app/biblioteca': typeof AuthenticatedAppBibliotecaRoute
-  '/_authenticated/app/clientes': typeof AuthenticatedAppClientesRoute
   '/_authenticated/app/configuracoes': typeof AuthenticatedAppConfiguracoesRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
+  '/_authenticated/app/clientes/$clientId': typeof AuthenticatedAppClientesClientIdRoute
+  '/_authenticated/app/clientes/': typeof AuthenticatedAppClientesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -87,26 +97,29 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/app/biblioteca'
-    | '/app/clientes'
     | '/app/configuracoes'
     | '/app/'
+    | '/app/clientes/$clientId'
+    | '/app/clientes/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
     | '/app/biblioteca'
-    | '/app/clientes'
     | '/app/configuracoes'
     | '/app'
+    | '/app/clientes/$clientId'
+    | '/app/clientes'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
     | '/_authenticated/app/biblioteca'
-    | '/_authenticated/app/clientes'
     | '/_authenticated/app/configuracoes'
     | '/_authenticated/app/'
+    | '/_authenticated/app/clientes/$clientId'
+    | '/_authenticated/app/clientes/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -152,13 +165,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppConfiguracoesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/app/clientes': {
-      id: '/_authenticated/app/clientes'
-      path: '/app/clientes'
-      fullPath: '/app/clientes'
-      preLoaderRoute: typeof AuthenticatedAppClientesRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/app/biblioteca': {
       id: '/_authenticated/app/biblioteca'
       path: '/app/biblioteca'
@@ -166,21 +172,37 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppBibliotecaRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/app/clientes/': {
+      id: '/_authenticated/app/clientes/'
+      path: '/app/clientes'
+      fullPath: '/app/clientes/'
+      preLoaderRoute: typeof AuthenticatedAppClientesIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/app/clientes/$clientId': {
+      id: '/_authenticated/app/clientes/$clientId'
+      path: '/app/clientes/$clientId'
+      fullPath: '/app/clientes/$clientId'
+      preLoaderRoute: typeof AuthenticatedAppClientesClientIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
 interface AuthenticatedRouteChildren {
   AuthenticatedAppBibliotecaRoute: typeof AuthenticatedAppBibliotecaRoute
-  AuthenticatedAppClientesRoute: typeof AuthenticatedAppClientesRoute
   AuthenticatedAppConfiguracoesRoute: typeof AuthenticatedAppConfiguracoesRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
+  AuthenticatedAppClientesClientIdRoute: typeof AuthenticatedAppClientesClientIdRoute
+  AuthenticatedAppClientesIndexRoute: typeof AuthenticatedAppClientesIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAppBibliotecaRoute: AuthenticatedAppBibliotecaRoute,
-  AuthenticatedAppClientesRoute: AuthenticatedAppClientesRoute,
   AuthenticatedAppConfiguracoesRoute: AuthenticatedAppConfiguracoesRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
+  AuthenticatedAppClientesClientIdRoute: AuthenticatedAppClientesClientIdRoute,
+  AuthenticatedAppClientesIndexRoute: AuthenticatedAppClientesIndexRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
@@ -195,13 +217,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
