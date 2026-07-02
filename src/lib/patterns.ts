@@ -11,11 +11,12 @@ export type PersonRow = Database["public"]["Tables"]["genogram_persons"]["Row"];
 export type RelationshipRow =
   Database["public"]["Tables"]["genogram_relationships"]["Row"];
 
-export interface LifeEvent {
+export type LifeEvent = {
   date: string; // YYYY-MM-DD
-  type?: string;
   description: string;
-}
+  type?: string;
+  [key: string]: string | undefined;
+};
 
 export type PatternSeverity = "info" | "attention" | "critical";
 
@@ -76,15 +77,20 @@ function personLabel(p: PersonRow): string {
 }
 
 export function personLifeEvents(p: PersonRow): LifeEvent[] {
-  const raw = p.life_events;
+  const raw = p.life_events as unknown;
   if (!Array.isArray(raw)) return [];
-  return raw.filter(
-    (e): e is LifeEvent =>
-      !!e &&
+  const out: LifeEvent[] = [];
+  for (const e of raw) {
+    if (
+      e &&
       typeof e === "object" &&
-      typeof (e as LifeEvent).date === "string" &&
-      typeof (e as LifeEvent).description === "string",
-  );
+      typeof (e as { date?: unknown }).date === "string" &&
+      typeof (e as { description?: unknown }).description === "string"
+    ) {
+      out.push(e as LifeEvent);
+    }
+  }
+  return out;
 }
 
 /* ---------- Timeline ---------- */
