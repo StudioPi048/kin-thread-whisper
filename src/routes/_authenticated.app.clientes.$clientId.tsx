@@ -283,12 +283,9 @@ function ClientDossierPage() {
 
 
         <TabsContent value="sessions" className="mt-8">
-          <ComingSoon
-            icon={Mic}
-            title="Sessões & prontuário por voz"
-            body="Etapa 5: grave o áudio ao final da sessão. A plataforma transcreve, estrutura em SOAP e associa ao cliente."
-          />
+          <SessionsPanel clientId={client.id} />
         </TabsContent>
+
 
         <TabsContent value="library" className="mt-8">
           <ComingSoon
