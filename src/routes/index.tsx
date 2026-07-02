@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { ArrowRight, Brain, GitBranch, Library, Mic, ScanSearch, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { LizLogo, LizLogoLockup } from "@/components/liz-logo";
 
 export const Route = createFileRoute("/")({
   component: LandingPage,
@@ -48,15 +49,7 @@ function LandingPage() {
       <header className="border-b border-border/50 bg-parchment/60 backdrop-blur">
         <div className="container-liz flex h-16 items-center justify-between">
           <Link to="/" className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground font-serif text-lg">
-              L
-            </div>
-            <div className="flex flex-col leading-tight">
-              <span className="font-serif text-lg text-primary">Instituto Liz</span>
-              <span className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
-                Psicogenealogia
-              </span>
-            </div>
+            <LizLogoLockup />
           </Link>
           <div className="flex items-center gap-2">
             <Button asChild variant="ghost" size="sm">

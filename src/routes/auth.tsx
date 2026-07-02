@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
+import { LizLogo, LizLogoLockup } from "@/components/liz-logo";
 
 const searchSchema = z.object({
   mode: z.enum(["signin", "signup"]).optional(),
@@ -107,15 +108,7 @@ function AuthPage() {
       {/* Left: manifesto */}
       <aside className="hidden bg-sidebar text-sidebar-foreground md:flex md:flex-col md:justify-between md:p-12">
         <Link to="/" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gold text-primary font-serif text-lg">
-            L
-          </div>
-          <div className="leading-tight">
-            <p className="font-serif text-xl">Instituto Liz</p>
-            <p className="text-[10px] uppercase tracking-[0.3em] text-sidebar-foreground/60">
-              Psicogenealogia
-            </p>
-          </div>
+          <LizLogoLockup variant="light" />
         </Link>
         <div className="max-w-md">
           <p className="text-xs uppercase tracking-[0.3em] text-gold">Beta fechado</p>
