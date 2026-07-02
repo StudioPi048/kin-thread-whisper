@@ -77,14 +77,17 @@ export type Database = {
       genogram_persons: {
         Row: {
           birth_date: string | null
+          cause_of_death: string | null
           client_id: string
           created_at: string
           death_date: string | null
           full_name: string
           gender: string | null
+          health_conditions: string[]
           id: string
           is_deceased: boolean
           is_proband: boolean
+          life_events: Json
           notes: string | null
           occupation: string | null
           position_x: number
@@ -95,14 +98,17 @@ export type Database = {
         }
         Insert: {
           birth_date?: string | null
+          cause_of_death?: string | null
           client_id: string
           created_at?: string
           death_date?: string | null
           full_name: string
           gender?: string | null
+          health_conditions?: string[]
           id?: string
           is_deceased?: boolean
           is_proband?: boolean
+          life_events?: Json
           notes?: string | null
           occupation?: string | null
           position_x?: number
@@ -113,14 +119,17 @@ export type Database = {
         }
         Update: {
           birth_date?: string | null
+          cause_of_death?: string | null
           client_id?: string
           created_at?: string
           death_date?: string | null
           full_name?: string
           gender?: string | null
+          health_conditions?: string[]
           id?: string
           is_deceased?: boolean
           is_proband?: boolean
+          life_events?: Json
           notes?: string | null
           occupation?: string | null
           position_x?: number
@@ -199,6 +208,56 @@ export type Database = {
             columns: ["to_person_id"]
             isOneToOne: false
             referencedRelation: "genogram_persons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patterns_detected: {
+        Row: {
+          acknowledged_at: string | null
+          client_id: string
+          created_at: string
+          description: string | null
+          details: Json
+          id: string
+          pattern_type: string
+          person_ids: string[]
+          severity: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          client_id: string
+          created_at?: string
+          description?: string | null
+          details?: Json
+          id?: string
+          pattern_type: string
+          person_ids?: string[]
+          severity?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          client_id?: string
+          created_at?: string
+          description?: string | null
+          details?: Json
+          id?: string
+          pattern_type?: string
+          person_ids?: string[]
+          severity?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patterns_detected_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
         ]
