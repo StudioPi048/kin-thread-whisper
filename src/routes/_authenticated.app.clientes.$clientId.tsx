@@ -262,6 +262,10 @@ function ClientDossierPage() {
           <IntakeForm clientId={client.id} professionalId={user.id} />
         </TabsContent>
 
+        <TabsContent value="clan" className="mt-8">
+          <ClanSpreadsheet clientId={client.id} />
+        </TabsContent>
+
         <TabsContent value="genogram" className="mt-8">
           <GenogramCanvas clientId={client.id} />
         </TabsContent>
