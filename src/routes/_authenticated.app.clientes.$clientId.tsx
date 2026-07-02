@@ -165,6 +165,8 @@ function ClientDossierPage() {
         <TabsList>
           <TabsTrigger value="overview">Visão geral</TabsTrigger>
           <TabsTrigger value="genogram">Genossociograma</TabsTrigger>
+          <TabsTrigger value="timeline">Linha do tempo</TabsTrigger>
+          <TabsTrigger value="patterns">Padrões</TabsTrigger>
           <TabsTrigger value="sessions">Sessões</TabsTrigger>
           <TabsTrigger value="library">Referências</TabsTrigger>
         </TabsList>
@@ -257,6 +259,16 @@ function ClientDossierPage() {
         <TabsContent value="genogram" className="mt-8">
           <GenogramCanvas clientId={client.id} />
         </TabsContent>
+
+        <TabsContent value="timeline" className="mt-8">
+          <ClientTimeline clientId={client.id} />
+        </TabsContent>
+
+        <TabsContent value="patterns" className="mt-8">
+          <PatternsPanel clientId={client.id} />
+        </TabsContent>
+
+
 
 
         <TabsContent value="sessions" className="mt-8">
