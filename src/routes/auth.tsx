@@ -127,9 +127,10 @@ function AuthPage() {
       {/* Right: form */}
       <main className="flex items-center justify-center p-6 md:p-12">
         <div className="w-full max-w-sm">
-          <div className="md:hidden mb-8">
-            <Link to="/" className="text-sm text-muted-foreground">
-              ← Voltar
+          <div className="md:hidden mb-8 flex items-center justify-between">
+            <Link to="/" className="flex items-center gap-2">
+              <LizLogo size={32} />
+              <span className="font-serif text-lg text-primary">Instituto Liz</span>
             </Link>
           </div>
           <h2 className="font-serif text-3xl text-primary">
