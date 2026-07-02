@@ -6,7 +6,6 @@ import {
   Archive,
   ArchiveRestore,
   ChevronRight,
-  GitBranch,
   Library,
   Mic,
   Pencil,
@@ -31,6 +30,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { ClientFormDialog } from "@/components/clients/client-form-dialog";
+import { ClientTimeline } from "@/components/clients/client-timeline";
+import { PatternsPanel } from "@/components/clients/patterns-panel";
 import { GenogramCanvas } from "@/components/genogram/genogram-canvas";
 import { calcAge, formatBirthDate, genderOptions, initialsFrom } from "@/lib/clients";
 
@@ -162,6 +163,8 @@ function ClientDossierPage() {
         <TabsList>
           <TabsTrigger value="overview">Visão geral</TabsTrigger>
           <TabsTrigger value="genogram">Genossociograma</TabsTrigger>
+          <TabsTrigger value="timeline">Linha do tempo</TabsTrigger>
+          <TabsTrigger value="patterns">Padrões</TabsTrigger>
           <TabsTrigger value="sessions">Sessões</TabsTrigger>
           <TabsTrigger value="library">Referências</TabsTrigger>
         </TabsList>
@@ -254,6 +257,16 @@ function ClientDossierPage() {
         <TabsContent value="genogram" className="mt-8">
           <GenogramCanvas clientId={client.id} />
         </TabsContent>
+
+        <TabsContent value="timeline" className="mt-8">
+          <ClientTimeline clientId={client.id} />
+        </TabsContent>
+
+        <TabsContent value="patterns" className="mt-8">
+          <PatternsPanel clientId={client.id} />
+        </TabsContent>
+
+
 
 
         <TabsContent value="sessions" className="mt-8">
