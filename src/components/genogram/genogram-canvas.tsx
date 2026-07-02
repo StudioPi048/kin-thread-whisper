@@ -14,6 +14,7 @@ import {
   type EdgeMouseHandler,
   type Node,
   type NodeMouseHandler,
+  type OnNodeDrag,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -113,7 +114,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
     [],
   );
 
-  const onNodeDragStop = useCallback<NodeMouseHandler>(
+  const onNodeDragStop = useCallback<OnNodeDrag>(
     (_, node) => savePosition(node.id, node.position.x, node.position.y),
     [savePosition],
   );
