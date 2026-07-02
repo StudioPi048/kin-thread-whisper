@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { ClientFormDialog } from "@/components/clients/client-form-dialog";
+import { GenogramCanvas } from "@/components/genogram/genogram-canvas";
 import { calcAge, formatBirthDate, genderOptions, initialsFrom } from "@/lib/clients";
 
 export const Route = createFileRoute("/_authenticated/app/clientes/$clientId")({
@@ -251,12 +252,9 @@ function ClientDossierPage() {
         </TabsContent>
 
         <TabsContent value="genogram" className="mt-8">
-          <ComingSoon
-            icon={GitBranch}
-            title="Genossociograma vivo"
-            body="Etapa 3 do roadmap: canvas interativo com React Flow para construir a árvore e detectar padrões transgeracionais automaticamente."
-          />
+          <GenogramCanvas clientId={client.id} />
         </TabsContent>
+
 
         <TabsContent value="sessions" className="mt-8">
           <ComingSoon
