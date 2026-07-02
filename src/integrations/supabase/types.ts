@@ -591,6 +591,45 @@ export type Database = {
           },
         ]
       }
+      library_entries: {
+        Row: {
+          author: string
+          content: string | null
+          created_at: string
+          id: string
+          school: string | null
+          summary: string | null
+          tags: string[]
+          title: string
+          topic: string | null
+          updated_at: string
+        }
+        Insert: {
+          author: string
+          content?: string | null
+          created_at?: string
+          id?: string
+          school?: string | null
+          summary?: string | null
+          tags?: string[]
+          title: string
+          topic?: string | null
+          updated_at?: string
+        }
+        Update: {
+          author?: string
+          content?: string | null
+          created_at?: string
+          id?: string
+          school?: string | null
+          summary?: string | null
+          tags?: string[]
+          title?: string
+          topic?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       patterns_detected: {
         Row: {
           acknowledged_at: string | null

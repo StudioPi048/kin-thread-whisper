@@ -31,6 +31,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { ClientFormDialog } from "@/components/clients/client-form-dialog";
 import { ClientTimeline } from "@/components/clients/client-timeline";
+import { CaseDashboard } from "@/components/clients/case-dashboard";
 import { PatternsPanel } from "@/components/clients/patterns-panel";
 import { GenogramCanvas } from "@/components/genogram/genogram-canvas";
 import { ClanSpreadsheet } from "@/components/genogram/clan-spreadsheet";
@@ -209,6 +210,7 @@ function ClientDossierPage() {
             </section>
 
             <aside className="space-y-6">
+              <CaseDashboard clientId={client.id} />
               <Panel title="Identificação">
                 <InfoRow label="Nome completo" value={client.full_name} />
                 <InfoRow label="Gênero" value={genderLabel} />
