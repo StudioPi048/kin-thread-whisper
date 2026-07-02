@@ -5,14 +5,12 @@ import {
   ArrowLeft,
   Archive,
   ArchiveRestore,
-  CalendarClock,
   ChevronRight,
   Library,
   Mic,
   Pencil,
   ShieldCheck,
   ShieldAlert,
-  Sparkles,
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
