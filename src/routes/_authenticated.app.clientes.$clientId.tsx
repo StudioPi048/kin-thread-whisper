@@ -34,6 +34,7 @@ import { ClientFormDialog } from "@/components/clients/client-form-dialog";
 import { ClientTimeline } from "@/components/clients/client-timeline";
 import { PatternsPanel } from "@/components/clients/patterns-panel";
 import { GenogramCanvas } from "@/components/genogram/genogram-canvas";
+import { IntakeForm } from "@/components/intake/intake-form";
 import { calcAge, formatBirthDate, genderOptions, initialsFrom } from "@/lib/clients";
 
 export const Route = createFileRoute("/_authenticated/app/clientes/$clientId")({
