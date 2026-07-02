@@ -18,12 +18,12 @@ export const Route = createFileRoute("/_authenticated")({
   component: AuthenticatedLayout,
 });
 
-const nav = [
+const nav: Array<{ to: string; label: string; icon: typeof Home; exact?: boolean }> = [
   { to: "/app", label: "Início", icon: Home, exact: true },
   { to: "/app/clientes", label: "Clientes", icon: Users },
   { to: "/app/biblioteca", label: "Biblioteca", icon: Library },
   { to: "/app/configuracoes", label: "Configurações", icon: Settings },
-] as const;
+];
 
 function AuthenticatedLayout() {
   const { user } = Route.useRouteContext();
@@ -56,7 +56,7 @@ function AuthenticatedLayout() {
     .split(" ")
     .filter(Boolean)
     .slice(0, 2)
-    .map((s) => s[0]?.toUpperCase())
+    .map((s: string) => s[0]?.toUpperCase() ?? "")
     .join("");
 
   return (
