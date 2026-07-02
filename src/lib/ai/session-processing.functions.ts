@@ -41,7 +41,7 @@ async function callGateway(path: string, init: RequestInit): Promise<Response> {
 
 export const processSessionAudio = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) => z.object({ sessionId: z.string().uuid() }).parse(data))
+  .validator((data) => z.object({ sessionId: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
