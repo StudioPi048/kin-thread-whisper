@@ -14,6 +14,314 @@ export type Database = {
   }
   public: {
     Tables: {
+      client_intakes: {
+        Row: {
+          birth_datetime: string | null
+          birth_notes: string | null
+          birth_place: string | null
+          childhood_dream_profession: string | null
+          childhood_fears: string | null
+          childhood_traumas: string | null
+          children: Json | null
+          civil_status: string | null
+          clan_alcoholism: string | null
+          clan_autism: string | null
+          clan_bonds_ruptures: string | null
+          clan_cancer: string | null
+          clan_car_accidents: string | null
+          clan_cardiovascular: string | null
+          clan_chemical_dependency: string | null
+          clan_epilepsy: string | null
+          clan_homicides: string | null
+          clan_homosexuality: string | null
+          clan_important_events: string | null
+          clan_incest: string | null
+          clan_mental_illness: string | null
+          clan_migrants: string | null
+          clan_other_observations: string | null
+          clan_physical_disability: string | null
+          clan_repeated_stories: string | null
+          clan_respiratory: string | null
+          clan_secrets: string | null
+          clan_stroke: string | null
+          clan_suicides: string | null
+          clan_surgeries: string | null
+          client_id: string
+          completion_percentage: number | null
+          conception_notes: string | null
+          created_at: string
+          cultural_heritage_maternal: string | null
+          cultural_heritage_paternal: string | null
+          dental_agenesis: string | null
+          dental_root_canal: string | null
+          disliked_patterns: string | null
+          ear_stretcher: string | null
+          education: string | null
+          education_chosen_by_self: boolean | null
+          ethnicity_maternal: string | null
+          ethnicity_paternal: string | null
+          extra_or_inverted_limbs: string | null
+          favorite_childhood_games: string | null
+          formal_education: string | null
+          full_name: string | null
+          future_perspective: string | null
+          gender: string | null
+          historical_context_at_birth: string | null
+          id: string
+          last_section_edited: string | null
+          life_mission: string | null
+          marking_fairy_tales: string | null
+          missing_limbs: string | null
+          moles_notes: string | null
+          name_chooser: string | null
+          name_intention: string | null
+          name_repetition_in_family: string | null
+          own_abortions: string | null
+          own_illnesses: string | null
+          parents_emotional_father: string | null
+          parents_emotional_mother: string | null
+          parents_financial_father: string | null
+          parents_financial_mother: string | null
+          parents_professional_father: string | null
+          parents_professional_mother: string | null
+          parents_relationship: string | null
+          parents_siblings_deaths: string | null
+          partners: Json | null
+          piercings: string | null
+          pregnancy_notes: string | null
+          presenting_intention: string | null
+          profession: string | null
+          professional_id: string
+          recurring_dreams: string | null
+          relationships_count: number | null
+          religion: string | null
+          scars_notes: string | null
+          school_events: string | null
+          siblings: Json | null
+          siblings_deaths_notes: string | null
+          siblings_relationship: string | null
+          signature_notes: string | null
+          social_atom_book: string | null
+          social_atom_close_people: string | null
+          social_atom_historic_moment: string | null
+          social_atom_music: string | null
+          social_atom_object: string | null
+          social_atom_other: string | null
+          social_atom_pet: string | null
+          social_atom_symbols: string | null
+          tattoos: Json | null
+          union_date: string | null
+          updated_at: string
+          work_history: Json | null
+        }
+        Insert: {
+          birth_datetime?: string | null
+          birth_notes?: string | null
+          birth_place?: string | null
+          childhood_dream_profession?: string | null
+          childhood_fears?: string | null
+          childhood_traumas?: string | null
+          children?: Json | null
+          civil_status?: string | null
+          clan_alcoholism?: string | null
+          clan_autism?: string | null
+          clan_bonds_ruptures?: string | null
+          clan_cancer?: string | null
+          clan_car_accidents?: string | null
+          clan_cardiovascular?: string | null
+          clan_chemical_dependency?: string | null
+          clan_epilepsy?: string | null
+          clan_homicides?: string | null
+          clan_homosexuality?: string | null
+          clan_important_events?: string | null
+          clan_incest?: string | null
+          clan_mental_illness?: string | null
+          clan_migrants?: string | null
+          clan_other_observations?: string | null
+          clan_physical_disability?: string | null
+          clan_repeated_stories?: string | null
+          clan_respiratory?: string | null
+          clan_secrets?: string | null
+          clan_stroke?: string | null
+          clan_suicides?: string | null
+          clan_surgeries?: string | null
+          client_id: string
+          completion_percentage?: number | null
+          conception_notes?: string | null
+          created_at?: string
+          cultural_heritage_maternal?: string | null
+          cultural_heritage_paternal?: string | null
+          dental_agenesis?: string | null
+          dental_root_canal?: string | null
+          disliked_patterns?: string | null
+          ear_stretcher?: string | null
+          education?: string | null
+          education_chosen_by_self?: boolean | null
+          ethnicity_maternal?: string | null
+          ethnicity_paternal?: string | null
+          extra_or_inverted_limbs?: string | null
+          favorite_childhood_games?: string | null
+          formal_education?: string | null
+          full_name?: string | null
+          future_perspective?: string | null
+          gender?: string | null
+          historical_context_at_birth?: string | null
+          id?: string
+          last_section_edited?: string | null
+          life_mission?: string | null
+          marking_fairy_tales?: string | null
+          missing_limbs?: string | null
+          moles_notes?: string | null
+          name_chooser?: string | null
+          name_intention?: string | null
+          name_repetition_in_family?: string | null
+          own_abortions?: string | null
+          own_illnesses?: string | null
+          parents_emotional_father?: string | null
+          parents_emotional_mother?: string | null
+          parents_financial_father?: string | null
+          parents_financial_mother?: string | null
+          parents_professional_father?: string | null
+          parents_professional_mother?: string | null
+          parents_relationship?: string | null
+          parents_siblings_deaths?: string | null
+          partners?: Json | null
+          piercings?: string | null
+          pregnancy_notes?: string | null
+          presenting_intention?: string | null
+          profession?: string | null
+          professional_id: string
+          recurring_dreams?: string | null
+          relationships_count?: number | null
+          religion?: string | null
+          scars_notes?: string | null
+          school_events?: string | null
+          siblings?: Json | null
+          siblings_deaths_notes?: string | null
+          siblings_relationship?: string | null
+          signature_notes?: string | null
+          social_atom_book?: string | null
+          social_atom_close_people?: string | null
+          social_atom_historic_moment?: string | null
+          social_atom_music?: string | null
+          social_atom_object?: string | null
+          social_atom_other?: string | null
+          social_atom_pet?: string | null
+          social_atom_symbols?: string | null
+          tattoos?: Json | null
+          union_date?: string | null
+          updated_at?: string
+          work_history?: Json | null
+        }
+        Update: {
+          birth_datetime?: string | null
+          birth_notes?: string | null
+          birth_place?: string | null
+          childhood_dream_profession?: string | null
+          childhood_fears?: string | null
+          childhood_traumas?: string | null
+          children?: Json | null
+          civil_status?: string | null
+          clan_alcoholism?: string | null
+          clan_autism?: string | null
+          clan_bonds_ruptures?: string | null
+          clan_cancer?: string | null
+          clan_car_accidents?: string | null
+          clan_cardiovascular?: string | null
+          clan_chemical_dependency?: string | null
+          clan_epilepsy?: string | null
+          clan_homicides?: string | null
+          clan_homosexuality?: string | null
+          clan_important_events?: string | null
+          clan_incest?: string | null
+          clan_mental_illness?: string | null
+          clan_migrants?: string | null
+          clan_other_observations?: string | null
+          clan_physical_disability?: string | null
+          clan_repeated_stories?: string | null
+          clan_respiratory?: string | null
+          clan_secrets?: string | null
+          clan_stroke?: string | null
+          clan_suicides?: string | null
+          clan_surgeries?: string | null
+          client_id?: string
+          completion_percentage?: number | null
+          conception_notes?: string | null
+          created_at?: string
+          cultural_heritage_maternal?: string | null
+          cultural_heritage_paternal?: string | null
+          dental_agenesis?: string | null
+          dental_root_canal?: string | null
+          disliked_patterns?: string | null
+          ear_stretcher?: string | null
+          education?: string | null
+          education_chosen_by_self?: boolean | null
+          ethnicity_maternal?: string | null
+          ethnicity_paternal?: string | null
+          extra_or_inverted_limbs?: string | null
+          favorite_childhood_games?: string | null
+          formal_education?: string | null
+          full_name?: string | null
+          future_perspective?: string | null
+          gender?: string | null
+          historical_context_at_birth?: string | null
+          id?: string
+          last_section_edited?: string | null
+          life_mission?: string | null
+          marking_fairy_tales?: string | null
+          missing_limbs?: string | null
+          moles_notes?: string | null
+          name_chooser?: string | null
+          name_intention?: string | null
+          name_repetition_in_family?: string | null
+          own_abortions?: string | null
+          own_illnesses?: string | null
+          parents_emotional_father?: string | null
+          parents_emotional_mother?: string | null
+          parents_financial_father?: string | null
+          parents_financial_mother?: string | null
+          parents_professional_father?: string | null
+          parents_professional_mother?: string | null
+          parents_relationship?: string | null
+          parents_siblings_deaths?: string | null
+          partners?: Json | null
+          piercings?: string | null
+          pregnancy_notes?: string | null
+          presenting_intention?: string | null
+          profession?: string | null
+          professional_id?: string
+          recurring_dreams?: string | null
+          relationships_count?: number | null
+          religion?: string | null
+          scars_notes?: string | null
+          school_events?: string | null
+          siblings?: Json | null
+          siblings_deaths_notes?: string | null
+          siblings_relationship?: string | null
+          signature_notes?: string | null
+          social_atom_book?: string | null
+          social_atom_close_people?: string | null
+          social_atom_historic_moment?: string | null
+          social_atom_music?: string | null
+          social_atom_object?: string | null
+          social_atom_other?: string | null
+          social_atom_pet?: string | null
+          social_atom_symbols?: string | null
+          tattoos?: Json | null
+          union_date?: string | null
+          updated_at?: string
+          work_history?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_intakes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           birth_date: string | null
