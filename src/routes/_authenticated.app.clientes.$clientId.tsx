@@ -35,6 +35,7 @@ import { PatternsPanel } from "@/components/clients/patterns-panel";
 import { GenogramCanvas } from "@/components/genogram/genogram-canvas";
 import { ClanSpreadsheet } from "@/components/genogram/clan-spreadsheet";
 import { IntakeForm } from "@/components/intake/intake-form";
+import { SessionsPanel } from "@/components/sessions/sessions-panel";
 import { calcAge, formatBirthDate, genderOptions, initialsFrom } from "@/lib/clients";
 
 export const Route = createFileRoute("/_authenticated/app/clientes/$clientId")({
@@ -282,12 +283,9 @@ function ClientDossierPage() {
 
 
         <TabsContent value="sessions" className="mt-8">
-          <ComingSoon
-            icon={Mic}
-            title="Sessões & prontuário por voz"
-            body="Etapa 5: grave o áudio ao final da sessão. A plataforma transcreve, estrutura em SOAP e associa ao cliente."
-          />
+          <SessionsPanel clientId={client.id} />
         </TabsContent>
+
 
         <TabsContent value="library" className="mt-8">
           <ComingSoon
