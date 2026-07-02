@@ -164,6 +164,7 @@ function ClientDossierPage() {
       <Tabs defaultValue="overview" className="mt-10">
         <TabsList>
           <TabsTrigger value="overview">Visão geral</TabsTrigger>
+          <TabsTrigger value="intake">Anamnese</TabsTrigger>
           <TabsTrigger value="genogram">Genossociograma</TabsTrigger>
           <TabsTrigger value="timeline">Linha do tempo</TabsTrigger>
           <TabsTrigger value="patterns">Padrões</TabsTrigger>
