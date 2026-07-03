@@ -94,6 +94,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Instituto Liz — Plataforma de Psicogenealogia" },
+      { name: "description", content: "O segundo cérebro do psicogenealogista. Dossiê clínico, genossociograma vivo, detecção de padrões transgeracionais e copiloto de IA para profissionais." },
+      { property: "og:description", content: "O segundo cérebro do psicogenealogista. Dossiê clínico, genossociograma vivo, detecção de padrões transgeracionais e copiloto de IA para profissionais." },
+      { name: "twitter:description", content: "O segundo cérebro do psicogenealogista. Dossiê clínico, genossociograma vivo, detecção de padrões transgeracionais e copiloto de IA para profissionais." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/5748bc5e-8a61-4e67-9e19-f17bac3a0120/id-preview-14615d19--0bbf5716-9319-44ef-94e7-0852e32026e1.lovable.app-1782999354814.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/5748bc5e-8a61-4e67-9e19-f17bac3a0120/id-preview-14615d19--0bbf5716-9319-44ef-94e7-0852e32026e1.lovable.app-1782999354814.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
