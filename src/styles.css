@@ -6,206 +6,203 @@
 @import "@fontsource/cormorant-garamond/600.css";
 @import "@fontsource/cormorant-garamond/700.css";
 @import "@fontsource/cormorant-garamond/400-italic.css";
+@import "@fontsource/cormorant-garamond/700-italic.css";
 @import "@fontsource/inter/400.css";
 @import "@fontsource/inter/500.css";
 @import "@fontsource/inter/600.css";
+@import "@fontsource/inter/700.css";
 
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Instituto Liz — Plataforma Psicogenealogia
- * Design system: Azul Noturno (confiança clínica) + Dourado (linhagem) + Verde Floresta (saúde/crescimento)
- * Otimizado para profissionais 40+: texto grande, contraste máximo, elementos espaçados.
- * Todos os tokens em oklch. Nunca escrever cores ad-hoc em componentes.
+ * Instituto Liz — Design System Gráfico Editorial
+ * Paleta: Ameixa profunda (#1E0A3C) + Lavanda vibrante + Dourado
+ * Estética: Monocle Magazine meets clinical platform
+ * Acessibilidade: 40+ — texto ≥16px, alvos ≥52px, foco visível sempre
  */
 
 @theme inline {
   --font-serif: "Cormorant Garamond", ui-serif, Georgia, serif;
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans:  "Inter", ui-sans-serif, system-ui, sans-serif;
 
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
+  --radius-sm:  calc(var(--radius) - 4px);
+  --radius-md:  calc(var(--radius) - 2px);
+  --radius-lg:  var(--radius);
+  --radius-xl:  calc(var(--radius) + 4px);
 
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
+  --color-background:    var(--background);
+  --color-foreground:    var(--foreground);
+  --color-card:          var(--card);
   --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
+  --color-popover:       var(--popover);
   --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
+  --color-primary:       var(--primary);
   --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
+  --color-secondary:     var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
+  --color-muted:         var(--muted);
   --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
+  --color-accent:        var(--accent);
   --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
+  --color-destructive:   var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-ring-offset-background: var(--background);
-  --color-gold: var(--gold);
-  --color-forest: var(--forest);
-  --color-navy: var(--navy);
-  --color-cream: var(--cream);
-  --color-ink: var(--ink);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
+  --color-border:        var(--border);
+  --color-input:         var(--input);
+  --color-ring:          var(--ring);
+
+  /* Tokens de marca */
+  --color-plum:          var(--plum);
+  --color-plum-mid:      var(--plum-mid);
+  --color-plum-soft:     var(--plum-soft);
+  --color-lavender:      var(--lavender);
+  --color-lavender-mid:  var(--lavender-mid);
+  --color-lavender-soft: var(--lavender-soft);
+  --color-gold:          var(--gold);
+  --color-gold-soft:     var(--gold-soft);
+  --color-cream:         var(--cream);
+  --color-ink:           var(--ink);
+
+  /* Sidebar */
+  --color-sidebar:                    var(--sidebar);
+  --color-sidebar-foreground:         var(--sidebar-foreground);
+  --color-sidebar-primary:            var(--sidebar-primary);
   --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-accent:             var(--sidebar-accent);
+  --color-sidebar-accent-foreground:  var(--sidebar-accent-foreground);
+  --color-sidebar-border:             var(--sidebar-border);
+  --color-sidebar-ring:               var(--sidebar-ring);
 }
 
 :root {
-  --radius: 0.75rem;
+  --radius: 0.375rem; /* Menos redondo = mais gráfico */
 
-  /* Azul Noturno — confiança e profundidade clínica */
-  --navy:      oklch(0.20 0.045 245);
-  --navy-mid:  oklch(0.26 0.05 245);
-  --navy-soft: oklch(0.32 0.04 245);
+  /* ─── AMEIXA PROFUNDA ─────────────────────────── */
+  --plum:        oklch(0.18 0.12 295);
+  --plum-mid:    oklch(0.25 0.10 295);
+  --plum-soft:   oklch(0.35 0.09 295);
 
-  /* Fundo: creme quente, nunca branco frio */
-  --background: oklch(0.97 0.008 75);
-  --cream:      oklch(0.95 0.014 75);
-  --foreground: oklch(0.18 0.03 240);
-  --ink:        oklch(0.15 0.02 240);
+  /* ─── LAVANDA VIBRANTE ───────────────────────── */
+  --lavender:      oklch(0.65 0.20 295);
+  --lavender-mid:  oklch(0.78 0.14 295);
+  --lavender-soft: oklch(0.94 0.05 295);
 
-  --card:            oklch(1.0 0.0 0);
-  --card-foreground: oklch(0.18 0.03 240);
-  --popover:         oklch(1.0 0.0 0);
-  --popover-foreground: oklch(0.18 0.03 240);
+  /* ─── DOURADO ────────────────────────────────── */
+  --gold:      oklch(0.73 0.14 78);
+  --gold-soft: oklch(0.95 0.04 78);
 
-  /* Primária = Azul Noturno */
-  --primary:            var(--navy);
-  --primary-foreground: oklch(0.97 0.008 75);
+  /* ─── FUNDO — creme quente ───────────────────── */
+  --background: oklch(0.985 0.005 80);
+  --cream:      oklch(0.965 0.010 80);
+  --foreground: oklch(0.14 0.06 295);
+  --ink:        oklch(0.10 0.04 295);
 
-  /* Verde Floresta — saúde, crescimento */
-  --forest:      oklch(0.42 0.10 155);
-  --forest-soft: oklch(0.88 0.04 155);
+  --card:               oklch(1.00 0.0 0);
+  --card-foreground:    oklch(0.14 0.06 295);
+  --popover:            oklch(1.00 0.0 0);
+  --popover-foreground: oklch(0.14 0.06 295);
 
-  /* Dourado — linhagem, destaque, logo */
-  --gold:      oklch(0.72 0.13 78);
-  --gold-soft: oklch(0.93 0.05 78);
+  --primary:            oklch(0.18 0.12 295);
+  --primary-foreground: oklch(0.985 0.005 80);
 
-  --secondary:            oklch(0.93 0.015 245);
-  --secondary-foreground: oklch(0.22 0.04 245);
+  --secondary:            oklch(0.94 0.05 295);
+  --secondary-foreground: oklch(0.25 0.10 295);
 
-  --muted:            oklch(0.94 0.008 245);
-  --muted-foreground: oklch(0.50 0.03 240);
+  --muted:            oklch(0.95 0.03 295);
+  --muted-foreground: oklch(0.50 0.07 295);
 
-  --accent:            oklch(0.91 0.02 245);
-  --accent-foreground: oklch(0.22 0.04 245);
+  --accent:            oklch(0.91 0.05 295);
+  --accent-foreground: oklch(0.22 0.10 295);
 
   --destructive:            oklch(0.55 0.19 25);
   --destructive-foreground: oklch(0.98 0.01 25);
 
-  --border: oklch(0.88 0.015 245);
-  --input:  oklch(0.92 0.01 245);
-  --ring:   oklch(0.72 0.13 78);
+  --border: oklch(0.90 0.04 295);
+  --input:  oklch(0.93 0.03 295);
+  --ring:   oklch(0.65 0.20 295);
 
-  /* Sidebar: Azul Noturno profundo */
-  --sidebar:                    var(--navy);
-  --sidebar-foreground:         oklch(0.94 0.012 75);
-  --sidebar-primary:            oklch(0.72 0.13 78);
-  --sidebar-primary-foreground: oklch(0.18 0.03 240);
-  --sidebar-accent:             var(--navy-soft);
-  --sidebar-accent-foreground:  oklch(0.97 0.008 75);
-  --sidebar-border:             oklch(0.28 0.04 245);
-  --sidebar-ring:               oklch(0.72 0.13 78);
+  /* Sidebar: ameixa profunda */
+  --sidebar:                    oklch(0.18 0.12 295);
+  --sidebar-foreground:         oklch(0.93 0.04 295);
+  --sidebar-primary:            oklch(0.65 0.20 295);
+  --sidebar-primary-foreground: oklch(0.14 0.06 295);
+  --sidebar-accent:             oklch(0.25 0.10 295);
+  --sidebar-accent-foreground:  oklch(0.93 0.04 295);
+  --sidebar-border:             oklch(0.29 0.09 295);
+  --sidebar-ring:               oklch(0.65 0.20 295);
 }
 
 .dark {
-  --background: oklch(0.14 0.025 240);
-  --cream:      oklch(0.18 0.03 240);
-  --foreground: oklch(0.94 0.012 75);
-  --ink:        oklch(0.96 0.008 75);
+  --background: oklch(0.11 0.05 295);
+  --cream:      oklch(0.15 0.06 295);
+  --foreground: oklch(0.94 0.03 295);
+  --ink:        oklch(0.97 0.02 295);
 
-  --card:            oklch(0.19 0.03 240);
-  --card-foreground: oklch(0.94 0.012 75);
-  --popover:         oklch(0.19 0.03 240);
-  --popover-foreground: oklch(0.94 0.012 75);
+  --card:               oklch(0.16 0.06 295);
+  --card-foreground:    oklch(0.94 0.03 295);
+  --popover:            oklch(0.16 0.06 295);
+  --popover-foreground: oklch(0.94 0.03 295);
 
-  --primary:            oklch(0.72 0.13 78);
-  --primary-foreground: oklch(0.14 0.025 240);
+  --primary:            oklch(0.65 0.20 295);
+  --primary-foreground: oklch(0.11 0.05 295);
 
-  --secondary:            oklch(0.24 0.04 240);
-  --secondary-foreground: oklch(0.94 0.012 75);
+  --secondary:            oklch(0.22 0.08 295);
+  --secondary-foreground: oklch(0.94 0.03 295);
 
-  --muted:            oklch(0.22 0.035 240);
-  --muted-foreground: oklch(0.68 0.025 240);
+  --muted:            oklch(0.20 0.06 295);
+  --muted-foreground: oklch(0.64 0.08 295);
 
-  --accent:            oklch(0.26 0.04 240);
-  --accent-foreground: oklch(0.94 0.012 75);
+  --accent:            oklch(0.24 0.08 295);
+  --accent-foreground: oklch(0.94 0.03 295);
 
-  --gold:      oklch(0.76 0.13 78);
-  --gold-soft: oklch(0.32 0.06 78);
+  --gold:      oklch(0.76 0.14 78);
+  --gold-soft: oklch(0.28 0.06 78);
 
-  --forest:      oklch(0.50 0.10 155);
-  --forest-soft: oklch(0.24 0.05 155);
+  --lavender:      oklch(0.70 0.18 295);
+  --lavender-mid:  oklch(0.82 0.12 295);
+  --lavender-soft: oklch(0.22 0.07 295);
 
   --destructive:            oklch(0.58 0.18 22);
   --destructive-foreground: oklch(0.97 0.01 22);
 
-  --border: oklch(0.28 0.03 240);
-  --input:  oklch(0.26 0.03 240);
-  --ring:   oklch(0.72 0.13 78);
+  --border: oklch(0.26 0.07 295);
+  --input:  oklch(0.24 0.07 295);
+  --ring:   oklch(0.65 0.20 295);
 
-  --sidebar:                    oklch(0.12 0.025 240);
-  --sidebar-foreground:         oklch(0.92 0.012 75);
-  --sidebar-primary:            oklch(0.76 0.13 78);
-  --sidebar-primary-foreground: oklch(0.12 0.025 240);
-  --sidebar-accent:             oklch(0.20 0.04 240);
-  --sidebar-accent-foreground:  oklch(0.94 0.012 75);
-  --sidebar-border:             oklch(0.22 0.03 240);
-  --sidebar-ring:               oklch(0.72 0.13 78);
+  --sidebar:                    oklch(0.11 0.05 295);
+  --sidebar-foreground:         oklch(0.92 0.04 295);
+  --sidebar-primary:            oklch(0.70 0.18 295);
+  --sidebar-primary-foreground: oklch(0.11 0.05 295);
+  --sidebar-accent:             oklch(0.20 0.07 295);
+  --sidebar-accent-foreground:  oklch(0.94 0.03 295);
+  --sidebar-border:             oklch(0.22 0.07 295);
+  --sidebar-ring:               oklch(0.65 0.20 295);
 }
 
 @layer base {
-  * {
-    border-color: var(--color-border);
-  }
+  * { border-color: var(--color-border); }
   html {
     font-family: var(--font-sans);
-    /* Fonte base maior — leitura facilitada para profissionais 40+ */
     font-size: 16px;
+    scroll-behavior: smooth;
   }
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
-    font-feature-settings: "ss01", "cv11";
     -webkit-font-smoothing: antialiased;
-    /* Gradiente sutil de profundidade — sem o blob roxo do Lovable */
+    /* Gradiente sutil — o impacto vem dos blocos de cor, não do fundo */
     background-image:
-      radial-gradient(900px 500px at 80% -5%, color-mix(in oklab, var(--gold) 5%, transparent), transparent 55%),
-      radial-gradient(800px 400px at -5% 90%, color-mix(in oklab, var(--forest) 4%, transparent), transparent 50%);
+      radial-gradient(900px 600px at 100% 0%, color-mix(in oklab, var(--lavender) 5%, transparent), transparent 60%);
     background-attachment: fixed;
   }
   h1, h2, h3, h4 {
     font-family: var(--font-serif);
-    letter-spacing: -0.01em;
-    font-weight: 500;
+    font-weight: 700;
+    letter-spacing: -0.02em;
   }
-
-  /* Acessibilidade: foco visível para todos os elementos interativos */
   :focus-visible {
-    outline: 3px solid var(--color-gold);
+    outline: 3px solid var(--color-lavender);
     outline-offset: 3px;
-    border-radius: 4px;
-  }
-
-  /* Scroll suave */
-  html {
-    scroll-behavior: smooth;
+    border-radius: 3px;
   }
 }
 
@@ -220,59 +217,50 @@
   max-width: 72rem;
 }
 
-@utility text-display {
+/* Números decorativos gigantes — elemento gráfico editorial */
+@utility section-number {
   font-family: var(--font-serif);
-  font-weight: 500;
-  letter-spacing: -0.02em;
-  line-height: 1.05;
+  font-size: clamp(72px, 11vw, 130px);
+  font-weight: 700;
+  line-height: 1;
+  color: color-mix(in oklab, var(--lavender) 14%, transparent);
+  user-select: none;
+  pointer-events: none;
+  letter-spacing: -0.04em;
 }
 
-/* Sublinhado dourado animado */
-@utility gold-underline {
-  background-image: linear-gradient(to right, var(--gold), var(--gold));
-  background-repeat: no-repeat;
-  background-size: 0% 2px;
-  background-position: 0 100%;
-  transition: background-size 0.3s ease;
+/* Accent bars — borda esquerda espessa, elemento gráfico principal */
+@utility accent-bar-lavender {
+  border-left: 5px solid var(--color-lavender);
 }
-@utility gold-underline-full {
-  background-image: linear-gradient(to right, var(--gold), var(--gold));
-  background-repeat: no-repeat;
-  background-size: 100% 2px;
-  background-position: 0 100%;
+@utility accent-bar-gold {
+  border-left: 5px solid var(--color-gold);
+}
+@utility accent-bar-plum {
+  border-left: 5px solid var(--color-plum);
 }
 
-/* Badge de geração para o genograma */
-@utility generation-badge {
-  display: inline-flex;
-  align-items: center;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 2px 10px;
-  border-radius: 999px;
+/* Blocos de cor full-section */
+@utility block-plum {
+  background-color: oklch(0.18 0.12 295);
+  color: oklch(0.93 0.04 295);
 }
-
-/* Painel de vidro premium */
-@utility glass-panel {
-  background: color-mix(in oklab, var(--color-card) 85%, transparent);
-  backdrop-filter: blur(12px);
-  border: 1px solid color-mix(in oklab, var(--color-border) 70%, transparent);
+@utility block-lavender {
+  background-color: oklch(0.94 0.05 295);
+  color: oklch(0.18 0.12 295);
 }
 
 /* ────────────────────────────────────────────────────────────
-   GENOSSOCIOGRAMA — GRADE GUIADA
+   REACT FLOW — GENOSSOCIOGRAMA
    ──────────────────────────────────────────────────────────── */
 
-/* Remove o estilo padrão do ReactFlow e impõe o nosso */
 .react-flow__background {
-  background-color: oklch(0.96 0.008 245) !important;
+  background-color: oklch(0.965 0.010 80) !important;
 }
 
 .react-flow__controls {
   border: 1px solid var(--color-border) !important;
-  border-radius: var(--radius-lg) !important;
+  border-radius: 0.375rem !important;
   overflow: hidden;
   box-shadow: 0 2px 8px oklch(0 0 0 / 0.08) !important;
 }
@@ -284,27 +272,21 @@
   width: 36px !important;
   height: 36px !important;
 }
-
 .react-flow__controls-button:hover {
-  background: var(--color-accent) !important;
+  background: var(--color-secondary) !important;
 }
 
 .react-flow__minimap {
-  border-radius: var(--radius-lg) !important;
+  border-radius: 0.375rem !important;
   border: 1px solid var(--color-border) !important;
 }
 
-/* Linhas do genossociograma: sem curvas, estilo clínico */
-.react-flow__edge-path {
-  stroke-linecap: square !important;
-}
-
-/* Handles: pontos de conexão dourados */
+/* Handles: pontos de conexão lavanda */
 .react-flow__handle {
   width: 10px !important;
   height: 10px !important;
   border-radius: 2px !important;
-  background: var(--color-gold) !important;
+  background: var(--color-lavender) !important;
   border: 2px solid var(--color-card) !important;
   opacity: 0;
   transition: opacity 0.2s;
@@ -314,32 +296,9 @@
   opacity: 1;
 }
 
-/* ────────────────────────────────────────────────────────────
-   CORES POR GERAÇÃO (classes utilitárias)
-   ──────────────────────────────────────────────────────────── */
-
-.gen-1 { --gen-color: oklch(0.42 0.10 155); }   /* Verde Floresta */
-.gen-2 { --gen-color: oklch(0.72 0.13 78); }    /* Dourado */
-.gen-3 { --gen-color: oklch(0.20 0.045 245); }  /* Azul Noturno */
-.gen-4 { --gen-color: oklch(0.55 0.08 200); }   /* Azul-esverdeado */
-.gen-5 { --gen-color: oklch(0.50 0.09 30); }    /* Terracota */
-
-/* ────────────────────────────────────────────────────────────
-   TIPOGRAFIA — ACESSÍVEL PARA 40+
-   ──────────────────────────────────────────────────────────── */
-
-/* Labels e microcopy: nunca abaixo de 13px */
-.label-micro {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-/* Texto de corpo mínimo para formulários */
-.body-readable {
-  font-size: 1rem;
-  line-height: 1.6;
+/* Linhas clínicas — sem curvas */
+.react-flow__edge-path {
+  stroke-linecap: square !important;
 }
 
 /* ────────────────────────────────────────────────────────────
@@ -347,10 +306,9 @@
    ──────────────────────────────────────────────────────────── */
 
 @keyframes fadeSlideUp {
-  from { opacity: 0; transform: translateY(12px); }
+  from { opacity: 0; transform: translateY(14px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-
 @keyframes shimmer {
   0%   { background-position: -200% 0; }
   100% { background-position: 200% 0; }
@@ -360,7 +318,6 @@
   animation: fadeSlideUp 0.45s ease both;
 }
 
-/* Skeleton loader */
 .skeleton {
   background: linear-gradient(
     90deg,

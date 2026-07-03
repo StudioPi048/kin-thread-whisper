@@ -1,6 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { ArrowRight, Brain, GitBranch, Library, Mic, ScanSearch, Sparkles, ShieldCheck, ChevronDown } from "lucide-react";
+import {
+  ArrowRight, Brain, GitBranch, Library,
+  Mic, ScanSearch, Sparkles, ShieldCheck,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { LizLogo, LizLogoLockup } from "@/components/liz-logo";
@@ -14,280 +17,345 @@ const modules = [
     icon: GitBranch,
     title: "Genossociograma vivo",
     body: "Árvore interativa onde cada nó é um banco de dados: datas, doenças, profissões, traumas, segredos, mandatos.",
-    color: "var(--color-gold)",
+    color: "lavender",
   },
   {
     icon: ScanSearch,
     title: "Motor de padrões",
     body: "Detecção automática de repetições transgeracionais: síndrome de aniversário, doenças em linha, rupturas afetivas.",
-    color: "var(--color-forest)",
+    color: "gold",
   },
   {
     icon: Mic,
     title: "Prontuário por voz",
     body: "Fale ao final da sessão. A plataforma transcreve, estrutura e gera o registro clínico automaticamente.",
-    color: "var(--color-gold)",
+    color: "lavender",
   },
   {
     icon: Library,
     title: "Biblioteca sistêmica",
     body: "Schützenberger, Jodorowsky, Hellinger, Dolto — organizados por tema e ligados ao caso em questão.",
-    color: "var(--color-forest)",
+    color: "gold",
   },
   {
     icon: Brain,
     title: "Copiloto clínico",
     body: "IA treinada em psicogenealogia. Sugere hipóteses, nunca diagnostica. Postura de supervisor, não de terapeuta.",
-    color: "var(--color-gold)",
+    color: "lavender",
   },
   {
     icon: Sparkles,
     title: "Memória entre casos",
     body: "\"Já atendi alguém parecido?\". Busca semântica em toda a sua base clínica, em linguagem natural.",
-    color: "var(--color-forest)",
+    color: "gold",
   },
 ];
 
 const comparisons = [
-  { before: "Papel e caneta", after: "Memória estruturada e pesquisável" },
-  { before: "Árvore desenhada à mão", after: "Banco de dados vivo e interativo" },
-  { before: "Memória do terapeuta", after: "IA que lembra, compara e sugere" },
+  { before: "Papel e caneta",            after: "Memória estruturada e pesquisável",  color: "lavender" },
+  { before: "Árvore desenhada à mão",    after: "Banco de dados vivo e interativo",    color: "gold"     },
+  { before: "Memória do terapeuta",      after: "IA que lembra, compara e sugere",     color: "lavender" },
+  { before: "WhatsApp disperso",         after: "Formulário adaptativo pré-sessão",    color: "gold"     },
+  { before: "Word e prontuário manual",  after: "Registro por voz, gerado pela IA",   color: "lavender" },
+  { before: "Livros espalhados na mesa", after: "Biblioteca sistêmica contextual",     color: "gold"     },
 ];
 
-function LandingPage() {
+const ethics = [
+  { n: "01", text: "Criptografia em repouso e em trânsito. Isolamento total entre profissionais." },
+  { n: "02", text: "Consentimento explícito. Direito ao esquecimento e portabilidade de dados." },
+  { n: "03", text: "Nenhum dado é usado para treinar IA sem consentimento granular." },
+  { n: "04", text: "A IA sempre hipotetiza. Nunca diagnostica. Postura de supervisor clínico." },
+];
+
+export default function LandingPage() {
   return (
     <div className="min-h-screen">
-      {/* ── TOPBAR ──────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 border-b border-border/40 bg-background/90 backdrop-blur-md">
+      {/* ── HEADER ──────────────────────────────────────── */}
+      <header className="sticky top-0 z-50 border-b-2 border-primary/10 bg-background/95 backdrop-blur-md">
         <div className="container-liz flex h-20 items-center justify-between">
-          <Link to="/" className="flex items-center gap-3 group">
+          <Link to="/" className="flex items-center gap-3">
             <LizLogoLockup />
           </Link>
           <div className="flex items-center gap-3">
             <Button asChild variant="ghost" size="sm">
               <Link to="/auth">Entrar</Link>
             </Button>
-            <Button asChild variant="gold" size="sm">
+            <Button asChild variant="hero" size="sm">
               <Link to="/auth" search={{ mode: "signup" }}>
-                Solicitar acesso beta
+                Acesso beta →
               </Link>
             </Button>
           </div>
         </div>
       </header>
 
-      {/* ── HERO ────────────────────────────────────────── */}
-      <section className="container-liz pt-24 pb-20 md:pt-32 md:pb-28">
-        <div className="mx-auto max-w-3xl text-center">
+      {/* ── HERO — full-plum ────────────────────────────── */}
+      <section className="block-plum relative overflow-hidden">
+        <div className="container-liz relative py-28 md:py-44">
+
+          {/* Elemento decorativo — número de fundo */}
+          <span
+            aria-hidden
+            className="section-number pointer-events-none absolute right-0 bottom-0 select-none translate-x-8 translate-y-4 opacity-[0.07]"
+          >
+            01
+          </span>
+
+          {/* Badge */}
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2 rounded-full border border-gold/30 bg-gold/10 px-5 py-2 text-[13px] font-semibold uppercase tracking-[0.25em] text-gold"
+            className="inline-flex items-center gap-2 rounded border border-lavender/30 bg-lavender/10 px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.3em] text-lavender-mid"
           >
-            <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-gold" />
-            Acesso beta · Psicogenealogistas
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-lavender" />
+            Beta fechado · Psicogenealogistas
           </motion.div>
 
+          {/* Título editorial — quebra intencional de linhas */}
           <motion.h1
-            initial={{ opacity: 0, y: 14 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.07 }}
-            className="text-display mt-7 text-5xl text-primary md:text-7xl"
+            transition={{ duration: 0.7, delay: 0.08 }}
+            className="mt-8 font-serif text-6xl font-bold leading-[0.95] tracking-tight text-white md:text-8xl lg:text-[100px]"
           >
-            O segundo cérebro
+            O segundo
             <br />
-            do <em className="italic text-gold">psicogenealogista</em>.
+            <em className="italic text-gold">cérebro</em>
+            <br />
+            do psicogene-
+            <br />
+            alogista.
           </motion.h1>
+
+          {/* Linha dourada decorativa */}
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: 96 }}
+            transition={{ duration: 0.8, delay: 0.3 }}
+            className="my-8 h-px bg-gold"
+          />
 
           <motion.p
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.14 }}
-            className="mt-8 text-xl leading-relaxed text-muted-foreground md:text-2xl"
+            transition={{ duration: 0.7, delay: 0.18 }}
+            className="max-w-lg text-xl leading-relaxed text-white/65 md:text-2xl"
           >
-            Não é um CRM. Não é um prontuário eletrônico.
-            <br className="hidden md:block" />
-            É o sistema operacional onde toda a inteligência clínica{" "}
-            <span className="font-semibold text-foreground">vive, cresce e se retroalimenta</span>.
+            Não é um CRM. É o sistema operacional onde toda a inteligência clínica{" "}
+            <strong className="text-white">vive, cresce e se retroalimenta.</strong>
           </motion.p>
 
           <motion.div
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.22 }}
-            className="mt-12 flex flex-wrap justify-center gap-4"
+            transition={{ duration: 0.6, delay: 0.26 }}
+            className="mt-12 flex flex-wrap gap-4"
           >
-            <Button asChild size="lg" variant="hero">
+            <Button asChild size="xl" variant="hero">
               <Link to="/auth" search={{ mode: "signup" }}>
-                Solicitar acesso beta
-                <ArrowRight className="ml-1" />
+                Solicitar acesso beta →
               </Link>
             </Button>
-            <Button asChild size="lg" variant="outline">
+            <Button
+              asChild
+              size="xl"
+              variant="outline"
+              className="border-white/25 text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold"
+            >
               <Link to="/auth">Já tenho conta</Link>
             </Button>
           </motion.div>
-
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.5 }}
-            className="mt-6 text-sm text-muted-foreground"
-          >
-            Acesso restrito a psicogenealogistas formados ou em formação.
-          </motion.p>
         </div>
-
-        {/* Scroll hint */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1, duration: 0.6 }}
-          className="mt-16 flex justify-center"
-        >
-          <ChevronDown className="size-6 animate-bounce text-muted-foreground/50" />
-        </motion.div>
       </section>
 
-      {/* ── COMPARATIVO ─────────────────────────────────── */}
-      <section className="border-y border-border/50 bg-primary/[0.025]">
-        <div className="container-liz py-16">
-          <p className="mb-10 text-center text-[12px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
-            O que a plataforma substitui
-          </p>
-          <div className="grid gap-6 md:grid-cols-3">
+      {/* ── COMPARATIVOS — fundo branco ─────────────────── */}
+      <section className="bg-white py-24 md:py-32">
+        <div className="container-liz">
+          {/* Header com número decorativo */}
+          <div className="relative mb-16 flex items-end gap-6">
+            <span aria-hidden className="section-number leading-none select-none">01</span>
+            <div className="pb-2">
+              <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-lavender">
+                O que substitui
+              </p>
+              <h2 className="font-serif text-4xl font-bold text-primary md:text-5xl">
+                Seu consultório,<br />reimaginado.
+              </h2>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {comparisons.map((item, i) => (
               <motion.div
                 key={item.before}
                 initial={{ opacity: 0, y: 12 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: i * 0.08 }}
-                className="rounded-2xl border border-border bg-card p-6 shadow-sm"
+                transition={{ duration: 0.4, delay: i * 0.06 }}
+                className={
+                  "bg-card p-6 shadow-sm transition-shadow hover:shadow-md " +
+                  (item.color === "lavender" ? "accent-bar-lavender" : "accent-bar-gold")
+                }
               >
-                <p className="text-[12px] font-semibold uppercase tracking-[0.2em] text-muted-foreground line-through">
+                <p className="text-[12px] font-bold uppercase tracking-[0.15em] text-muted-foreground/60 line-through">
                   {item.before}
                 </p>
-                <div className="my-3 h-px w-8 bg-gold" />
-                <p className="font-serif text-xl text-primary">{item.after}</p>
+                <div className="my-3 h-px w-6 bg-muted" />
+                <p className="font-serif text-xl font-semibold text-primary">{item.after}</p>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── MÓDULOS ─────────────────────────────────────── */}
-      <section className="container-liz py-24 md:py-32">
-        <div className="mx-auto max-w-2xl text-center">
-          <p className="text-[12px] font-semibold uppercase tracking-[0.3em] text-gold">
-            Arquitetura
-          </p>
-          <h2 className="mt-5 font-serif text-4xl text-primary md:text-5xl">
-            Cinco camadas,<br />um só fluxo clínico
-          </h2>
-          <p className="mt-5 text-lg text-muted-foreground">
-            Cada camada resolve uma dor real do atendimento. Juntas, formam
-            uma extensão cognitiva do profissional.
-          </p>
-        </div>
-
-        <div className="mt-16 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-          {modules.map((m, i) => (
-            <motion.article
-              key={m.title}
-              initial={{ opacity: 0, y: 18 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-40px" }}
-              transition={{ duration: 0.45, delay: i * 0.06 }}
-              className="group relative overflow-hidden rounded-2xl border border-border bg-card p-8 shadow-sm transition-all duration-200 hover:border-gold hover:shadow-md hover:-translate-y-0.5"
-            >
-              {/* Linha colorida no topo */}
-              <div
-                className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl opacity-0 transition-opacity duration-200 group-hover:opacity-100"
-                style={{ background: m.color }}
-              />
-              <div
-                className="flex h-12 w-12 items-center justify-center rounded-xl"
-                style={{ background: `color-mix(in oklab, ${m.color} 12%, transparent)` }}
-              >
-                <m.icon className="size-6" style={{ color: m.color }} />
-              </div>
-              <h3 className="mt-5 font-serif text-2xl text-primary">{m.title}</h3>
-              <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">{m.body}</p>
-            </motion.article>
-          ))}
-        </div>
-      </section>
-
-      {/* ── ÉTICA & LGPD ────────────────────────────────── */}
-      <section className="bg-primary text-primary-foreground">
-        <div className="container-liz py-20 md:py-28">
-          <div className="grid gap-12 md:grid-cols-2 md:items-center">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-gold/30 bg-gold/10 px-4 py-1.5 text-[12px] font-semibold uppercase tracking-[0.2em] text-gold">
-                <ShieldCheck className="size-4" />
-                Ética & LGPD
-              </div>
-              <h2 className="mt-6 font-serif text-4xl leading-tight md:text-5xl">
-                Dados clínicos são{" "}
-                <em className="italic text-gold">fundação</em>,
-                <br />não feature.
+      {/* ── MÓDULOS — lavanda soft ───────────────────────── */}
+      <section className="block-lavender py-24 md:py-32">
+        <div className="container-liz">
+          <div className="relative mb-16 flex items-end gap-6">
+            <span aria-hidden className="section-number leading-none select-none">02</span>
+            <div className="pb-2">
+              <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-lavender">
+                Arquitetura
+              </p>
+              <h2 className="font-serif text-4xl font-bold text-primary md:text-5xl">
+                Cinco camadas.<br />Um fluxo clínico.
               </h2>
             </div>
-            <ul className="space-y-5">
-              {[
-                "Criptografia em repouso e em trânsito. Isolamento total entre profissionais.",
-                "Consentimento explícito. Direito ao esquecimento e portabilidade de dados.",
-                "Nenhum dado é usado para treinar IA sem consentimento granular do profissional.",
-                "A IA sempre hipotetiza. Nunca diagnostica. Postura de supervisor clínico.",
-              ].map((item) => (
-                <li key={item} className="flex items-start gap-3 text-[15px] leading-relaxed text-primary-foreground/80">
-                  <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-gold" />
-                  {item}
-                </li>
-              ))}
-            </ul>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {modules.map((m, i) => (
+              <motion.article
+                key={m.title}
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-40px" }}
+                transition={{ duration: 0.4, delay: i * 0.06 }}
+                className={
+                  "group bg-white p-8 shadow-sm transition-all duration-200 hover:shadow-lg hover:-translate-y-1 border-l-[5px] border-l-transparent " +
+                  (m.color === "lavender"
+                    ? "hover:border-l-lavender"
+                    : "hover:border-l-gold")
+                }
+              >
+                <div
+                  className={
+                    "mb-5 flex h-11 w-11 items-center justify-center rounded-md " +
+                    (m.color === "lavender" ? "bg-lavender-soft" : "bg-gold-soft")
+                  }
+                >
+                  <m.icon
+                    className={
+                      "size-5 " + (m.color === "lavender" ? "text-lavender" : "text-gold")
+                    }
+                  />
+                </div>
+                <h3 className="font-serif text-2xl font-bold text-primary">{m.title}</h3>
+                <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">{m.body}</p>
+              </motion.article>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* ── CTA FINAL ───────────────────────────────────── */}
-      <section className="container-liz py-24 text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-        >
-          <p className="text-[12px] font-semibold uppercase tracking-[0.3em] text-gold">
-            Beta fechado · 2026
+      {/* ── CITAÇÃO — full-plum ──────────────────────────── */}
+      <section className="block-plum py-24 md:py-36">
+        <div className="container-liz max-w-4xl text-center">
+          <p className="text-[11px] font-bold uppercase tracking-[0.4em] text-lavender-mid">
+            Fundamento clínico
           </p>
-          <h2 className="mt-5 font-serif text-4xl text-primary md:text-5xl">
-            Pronta para começar?
-          </h2>
-          <p className="mt-5 text-lg text-muted-foreground">
-            Acesso restrito a psicogenealogistas. Vagas limitadas.
-          </p>
-          <div className="mt-10 flex flex-wrap justify-center gap-4">
-            <Button asChild size="xl" variant="gold">
-              <Link to="/auth" search={{ mode: "signup" }}>
-                Solicitar acesso beta
-                <ArrowRight className="ml-1" />
-              </Link>
-            </Button>
+          <motion.blockquote
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="mt-8 font-serif text-4xl font-bold italic leading-tight text-white md:text-6xl"
+          >
+            "O que não pode ser dito,
+            <br />
+            não pode ser esquecido —
+            <br />
+            <span className="text-gold">apenas repetido."</span>
+          </motion.blockquote>
+          <p className="mt-8 text-[15px] text-white/45">— inspirado em Françoise Dolto</p>
+        </div>
+      </section>
+
+      {/* ── ÉTICA & LGPD — branco ───────────────────────── */}
+      <section className="bg-white py-24 md:py-32">
+        <div className="container-liz">
+          <div className="relative mb-16 flex items-end gap-6">
+            <span aria-hidden className="section-number leading-none select-none">03</span>
+            <div className="pb-2">
+              <div className="inline-flex items-center gap-2 rounded border border-lavender/30 bg-lavender/8 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-lavender mb-3">
+                <ShieldCheck className="size-3.5" />
+                Ética & LGPD
+              </div>
+              <h2 className="font-serif text-4xl font-bold text-primary md:text-5xl">
+                Dados clínicos são
+                <br />
+                <em className="italic text-lavender">fundação</em>,
+                <br />
+                não feature.
+              </h2>
+            </div>
           </div>
-        </motion.div>
+
+          <div className="grid gap-5 md:grid-cols-2">
+            {ethics.map((item) => (
+              <div key={item.n} className="flex gap-5 border-l-[5px] border-l-lavender pl-5 py-2">
+                <span className="font-serif text-4xl font-bold text-lavender/20 leading-none shrink-0">
+                  {item.n}
+                </span>
+                <p className="text-[16px] leading-relaxed text-foreground/80 pt-1">{item.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── CTA FINAL — full-plum ───────────────────────── */}
+      <section className="block-plum py-28 text-center md:py-40">
+        <div className="container-liz">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+          >
+            <p className="text-[11px] font-bold uppercase tracking-[0.4em] text-lavender-mid">
+              Beta fechado · 2026
+            </p>
+            <h2 className="mt-6 font-serif text-5xl font-bold text-white md:text-7xl">
+              Pronta para
+              <br />
+              <span className="text-gold">começar?</span>
+            </h2>
+            <p className="mt-6 text-xl text-white/55">
+              Acesso restrito a psicogenealogistas. Vagas limitadas.
+            </p>
+            <div className="mt-12">
+              <Button asChild size="xl" variant="hero">
+                <Link to="/auth" search={{ mode: "signup" }}>
+                  Solicitar acesso beta →
+                </Link>
+              </Button>
+            </div>
+          </motion.div>
+        </div>
       </section>
 
       {/* ── FOOTER ──────────────────────────────────────── */}
-      <footer className="border-t border-border/60 bg-cream">
-        <div className="container-liz flex flex-wrap items-center justify-between gap-4 py-10">
-          <Link to="/" className="flex items-center gap-2">
-            <LizLogo size={24} />
-            <p className="font-serif text-[15px] text-primary">Instituto Liz — Plataforma de Psicogenealogia</p>
-          </Link>
-          <p className="text-[13px] text-muted-foreground">Beta fechado · 2026</p>
+      <footer className="block-plum border-t border-sidebar-border">
+        <div className="container-liz flex flex-wrap items-center justify-between gap-4 py-8">
+          <div className="flex items-center gap-3">
+            <LizLogo size={20} />
+            <p className="font-serif text-[14px] text-white/55">
+              Instituto Liz — Plataforma de Psicogenealogia
+            </p>
+          </div>
+          <p className="text-[12px] text-white/25">Beta fechado · 2026</p>
         </div>
       </footer>
     </div>

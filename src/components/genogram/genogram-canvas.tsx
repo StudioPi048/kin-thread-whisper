@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Background,
   BackgroundVariant,
@@ -18,15 +18,8 @@ import {
 import "@xyflow/react/dist/style.css";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  UserPlus,
-  Link2,
-  Trash2,
-  Printer,
-  ZoomIn,
-  ZoomOut,
-  HelpCircle,
-  Users,
-  TreePine,
+  UserPlus, Link2, Trash2, Printer,
+  HelpCircle, Users, TreePine,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -43,9 +36,7 @@ type RelRow = Database["public"]["Tables"]["genogram_relationships"]["Row"];
 
 const nodeTypes = { person: PersonNode };
 
-interface CanvasProps {
-  clientId: string;
-}
+interface CanvasProps { clientId: string; }
 
 export function GenogramCanvas(props: CanvasProps) {
   return (
@@ -85,7 +76,6 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
   }>({ open: false });
   const [showGuide, setShowGuide] = useState(false);
 
-  // Hydrate React Flow state from server data.
   useEffect(() => {
     if (!query.data) return;
     setNodes(
@@ -108,21 +98,17 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
     setEdges(query.data.rels.map(relToEdge));
   }, [query.data, setNodes, setEdges]);
 
-  // Persist node positions (debounced).
   const positionTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
-  const savePosition = useCallback(
-    (id: string, x: number, y: number) => {
-      clearTimeout(positionTimers.current[id]);
-      positionTimers.current[id] = setTimeout(async () => {
-        const { error } = await supabase
-          .from("genogram_persons")
-          .update({ position_x: x, position_y: y })
-          .eq("id", id);
-        if (error) toast.error("Não consegui salvar a posição");
-      }, 400);
-    },
-    [],
-  );
+  const savePosition = useCallback((id: string, x: number, y: number) => {
+    clearTimeout(positionTimers.current[id]);
+    positionTimers.current[id] = setTimeout(async () => {
+      const { error } = await supabase
+        .from("genogram_persons")
+        .update({ position_x: x, position_y: y })
+        .eq("id", id);
+      if (error) toast.error("Não consegui salvar a posição");
+    }, 400);
+  }, []);
 
   const onNodeDragStop = useCallback<OnNodeDrag>(
     (_, node) => savePosition(node.id, node.position.x, node.position.y),
@@ -131,12 +117,8 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
 
   const onConnect = useCallback(
     (conn: Connection) => {
-      // Optimistic edge until user confirms details in the dialog.
-      setEdges((eds) => addEdge({ ...conn, style: { stroke: "var(--color-gold)" } }, eds));
-      setRelDialog({
-        open: true,
-        seed: { from: conn.source ?? undefined, to: conn.target ?? undefined },
-      });
+      setEdges((eds) => addEdge({ ...conn, style: { stroke: "var(--color-lavender)" } }, eds));
+      setRelDialog({ open: true, seed: { from: conn.source ?? undefined, to: conn.target ?? undefined } });
     },
     [setEdges],
   );
@@ -157,31 +139,21 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
     [query.data],
   );
 
-  // Delete keyboard shortcut acts on selected nodes/edges.
   const deleteSelected = useMutation({
     mutationFn: async () => {
       const nodeIds = nodes.filter((n) => n.selected).map((n) => n.id);
       const edgeIds = edges.filter((e) => e.selected).map((e) => e.id);
       if (nodeIds.length === 0 && edgeIds.length === 0) return;
       if (edgeIds.length > 0) {
-        const { error } = await supabase
-          .from("genogram_relationships")
-          .delete()
-          .in("id", edgeIds);
+        const { error } = await supabase.from("genogram_relationships").delete().in("id", edgeIds);
         if (error) throw error;
       }
       if (nodeIds.length > 0) {
-        const { error } = await supabase
-          .from("genogram_persons")
-          .delete()
-          .in("id", nodeIds);
+        const { error } = await supabase.from("genogram_persons").delete().in("id", nodeIds);
         if (error) throw error;
       }
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["genogram", clientId] });
-      toast.success("Removido.");
-    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["genogram", clientId] }); toast.success("Removido."); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
 
@@ -189,28 +161,24 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
   const personCount = persons.length;
   const relCount = query.data?.rels.length ?? 0;
 
-  function handlePrint() {
-    window.print();
-  }
-
   return (
-    <div className="relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-      {/* ── BARRA DE AÇÕES ────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-border bg-cream px-4 py-3">
+    <div className="relative flex flex-col overflow-hidden rounded-sm border border-border bg-card shadow-sm">
+
+      {/* ── BARRA DE AÇÕES — fundo ameixa ─────────────────── */}
+      <div className="block-plum flex flex-wrap items-center gap-2 px-4 py-3">
         {/* Label */}
         <div className="flex items-center gap-2 mr-3">
           <TreePine className="size-4 text-gold" />
-          <span className="text-[12px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+          <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/60">
             Genossociograma
           </span>
         </div>
 
-        {/* Botões principais */}
         <Button
           size="sm"
-          variant="default"
+          variant="lavender"
           onClick={() => setCreatingPerson(true)}
-          className="h-10 gap-2"
+          className="h-9 gap-2"
         >
           <UserPlus className="size-4" />
           Adicionar pessoa
@@ -221,7 +189,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
           variant="outline"
           onClick={() => setRelDialog({ open: true })}
           disabled={persons.length < 2}
-          className="h-10 gap-2"
+          className="h-9 gap-2 border-white/25 text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[13px]"
         >
           <Link2 className="size-4" />
           Criar vínculo
@@ -229,100 +197,79 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
 
         {/* Stats */}
         <div className="hidden items-center gap-4 md:flex ml-3">
-          <span className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
-            <Users className="size-3.5 text-gold" />
-            <strong className="text-foreground">{personCount}</strong> pessoas
+          <span className="flex items-center gap-1.5 text-[13px] text-white/55">
+            <Users className="size-3.5 text-lavender" />
+            <strong className="text-white">{personCount}</strong> pessoas
           </span>
-          <span className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
-            <Link2 className="size-3.5 text-forest" />
-            <strong className="text-foreground">{relCount}</strong> vínculos
+          <span className="flex items-center gap-1.5 text-[13px] text-white/55">
+            <Link2 className="size-3.5 text-gold" />
+            <strong className="text-white">{relCount}</strong> vínculos
           </span>
         </div>
 
         {/* Ações secundárias */}
-        <div className="ml-auto flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-10 gap-2 text-muted-foreground"
+        <div className="ml-auto flex items-center gap-1">
+          <button
             onClick={() => setShowGuide(!showGuide)}
+            className="flex items-center gap-1.5 rounded px-3 py-2 text-[12px] font-bold uppercase tracking-[0.1em] text-white/55 transition-colors hover:bg-white/10 hover:text-white"
           >
             <HelpCircle className="size-4" />
             <span className="hidden sm:inline">Guia</span>
-          </Button>
-
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-10 gap-2 text-muted-foreground"
-            onClick={handlePrint}
+          </button>
+          <button
+            onClick={() => window.print()}
+            className="flex items-center gap-1.5 rounded px-3 py-2 text-[12px] font-bold uppercase tracking-[0.1em] text-white/55 transition-colors hover:bg-white/10 hover:text-white"
           >
             <Printer className="size-4" />
-            <span className="hidden sm:inline">Imprimir A3</span>
-          </Button>
-
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-10 gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            <span className="hidden sm:inline">A3</span>
+          </button>
+          <button
             onClick={() => deleteSelected.mutate()}
             disabled={deleteSelected.isPending}
+            className="flex items-center gap-1.5 rounded px-3 py-2 text-[12px] font-bold uppercase tracking-[0.1em] text-destructive/70 transition-colors hover:bg-destructive/20 hover:text-destructive"
           >
             <Trash2 className="size-4" />
             <span className="hidden sm:inline">Remover</span>
-          </Button>
+          </button>
         </div>
       </div>
 
-      {/* ── GUIA RÁPIDO ───────────────────────────────────── */}
+      {/* ── GUIA RÁPIDO ─────────────────────────────────────── */}
       {showGuide && (
-        <div className="border-b border-border bg-gold/5 px-4 py-3">
-          <div className="flex flex-wrap gap-6 text-[13px] text-muted-foreground">
-            <span className="flex items-center gap-2">
-              <kbd className="rounded border border-border bg-card px-1.5 py-0.5 text-[11px] font-mono">Clique duplo</kbd>
-              Editar pessoa ou vínculo
-            </span>
-            <span className="flex items-center gap-2">
-              <kbd className="rounded border border-border bg-card px-1.5 py-0.5 text-[11px] font-mono">Arrastar ponto dourado</kbd>
-              Criar vínculo entre pessoas
-            </span>
-            <span className="flex items-center gap-2">
-              <kbd className="rounded border border-border bg-card px-1.5 py-0.5 text-[11px] font-mono">Selecionar + Remover</kbd>
-              Excluir selecionado
-            </span>
-            <span className="flex items-center gap-2">
-              <kbd className="rounded border border-border bg-card px-1.5 py-0.5 text-[11px] font-mono">Scroll</kbd>
-              Zoom in/out
-            </span>
+        <div className="border-b border-border bg-lavender-soft px-4 py-3">
+          <div className="flex flex-wrap gap-6 text-[13px] text-foreground/70">
+            {[
+              ["Clique duplo", "Editar pessoa ou vínculo"],
+              ["Arrastar ponto lavanda", "Criar vínculo entre pessoas"],
+              ["Selecionar + Remover", "Excluir o selecionado"],
+              ["Scroll", "Zoom in/out"],
+            ].map(([key, desc]) => (
+              <span key={key} className="flex items-center gap-2">
+                <kbd className="rounded border border-border bg-white px-1.5 py-0.5 text-[11px] font-mono font-semibold">
+                  {key}
+                </kbd>
+                {desc}
+              </span>
+            ))}
           </div>
         </div>
       )}
 
-      {/* ── LEGENDAS DE GERAÇÃO ────────────────────────────── */}
-      <div className="flex items-center gap-2 border-b border-border/50 bg-background/40 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.15em]">
-        <span className="text-muted-foreground/60">Convenção:</span>
-        {[
-          { label: "□ Masculino", color: "var(--color-primary)" },
-          { label: "○ Feminino", color: "var(--color-forest)" },
-          { label: "⬡ Não-binário", color: "var(--color-gold)" },
-          { label: "✕ Falecido", color: "var(--color-destructive)" },
-          { label: "Borda dupla = Paciente-índice", color: "var(--color-gold)" },
-        ].map((item) => (
-          <span
-            key={item.label}
-            className="flex items-center gap-1.5"
-            style={{ color: item.color }}
-          >
-            {item.label}
-          </span>
-        ))}
+      {/* ── LEGENDA ─────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-center gap-4 border-b border-border/50 bg-background/60 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.15em]">
+        <span className="text-muted-foreground/50 mr-1">Legenda:</span>
+        <span style={{ color: "var(--color-plum)" }}>□ Masculino</span>
+        <span style={{ color: "var(--color-lavender)" }}>○ Feminino</span>
+        <span style={{ color: "var(--color-gold)" }}>⬡ Não-binário</span>
+        <span className="text-destructive">✕ Falecido</span>
+        <span className="ml-auto text-lavender">Borda dupla = Paciente-índice</span>
       </div>
 
-      {/* ── CANVAS ────────────────────────────────────────── */}
+      {/* ── CANVAS ──────────────────────────────────────────── */}
       <div className="relative" style={{ height: "65vh" }}>
         {query.isLoading ? (
           <div className="flex h-full flex-col items-center justify-center gap-3">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-gold border-t-transparent" />
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-lavender border-t-transparent" />
             <p className="text-[14px] text-muted-foreground">Carregando a árvore...</p>
           </div>
         ) : persons.length === 0 ? (
@@ -341,9 +288,8 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
             fitView
             fitViewOptions={{ padding: 0.3 }}
             proOptions={{ hideAttribution: true }}
-            // Linhas retas (orthogonal) — conforme solicitado
             defaultEdgeOptions={{
-              type: "smoothstep",
+              type: "smoothstep", // Linhas retas em 90°
               style: { strokeWidth: 2 },
             }}
             snapToGrid
@@ -353,7 +299,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
               variant={BackgroundVariant.Dots}
               gap={24}
               size={1.2}
-              color="oklch(0.80 0.015 245)"
+              color="oklch(0.85 0.05 295)"
             />
             <Controls
               showInteractive={false}
@@ -391,22 +337,18 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
 }
 
 function relToEdge(r: RelRow): Edge {
-  const base: Edge = {
+  const stroke = colorFor(r);
+  const dashed = r.qualifier === "divorce" || r.qualifier === "separation" || r.qualifier === "rupture";
+  const thick   = r.qualifier === "fusion";
+  return {
     id: r.id,
     source: r.from_person_id,
     target: r.to_person_id,
-    // Forçar linhas retas com tipo smoothstep (ângulos de 90°)
     type: "smoothstep",
     label: relationshipLabel(r.relationship_type, r.qualifier),
     labelStyle: { fontSize: 11, fill: "var(--color-muted-foreground)", fontFamily: "var(--font-sans)" },
-    labelBgStyle: { fill: "var(--color-card)", fillOpacity: 0.95, rx: 4, ry: 4 },
+    labelBgStyle: { fill: "var(--color-card)", fillOpacity: 0.95, rx: 3, ry: 3 },
     labelBgPadding: [4, 6] as [number, number],
-  };
-  const stroke = colorFor(r);
-  const dashed = r.qualifier === "divorce" || r.qualifier === "separation" || r.qualifier === "rupture";
-  const thick = r.qualifier === "fusion";
-  return {
-    ...base,
     animated: r.qualifier === "conflict",
     style: {
       stroke,
@@ -417,19 +359,16 @@ function relToEdge(r: RelRow): Edge {
 }
 
 function colorFor(r: RelRow): string {
-  if (r.relationship_type === "parent")  return "var(--color-primary)";
-  if (r.relationship_type === "sibling") return "var(--color-forest)";
+  if (r.relationship_type === "parent")  return "var(--color-plum)";
+  if (r.relationship_type === "sibling") return "var(--color-lavender)";
   if (r.relationship_type === "union")   return "var(--color-gold)";
-  // emotional
   switch (r.qualifier) {
     case "conflict":
     case "rupture":
       return "var(--color-destructive)";
     case "fusion":
     case "close":
-      return "var(--color-forest)";
-    case "grief":
-      return "var(--color-primary)";
+      return "var(--color-lavender)";
     default:
       return "var(--color-muted-foreground)";
   }
@@ -438,36 +377,36 @@ function colorFor(r: RelRow): string {
 function EmptyCanvas({ onCreate }: { onCreate: () => void }) {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-6 p-10 text-center">
-      {/* Ícone decorativo */}
-      <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-dashed border-gold/40 bg-gold/5">
-        <TreePine className="size-9 text-gold/60" />
+      <div className="flex h-20 w-20 items-center justify-center border-2 border-dashed border-lavender/40 bg-lavender-soft">
+        <TreePine className="size-9 text-lavender/60" />
       </div>
 
       <div>
-        <p className="font-serif text-2xl text-primary">A árvore começa por uma pessoa</p>
+        <p className="font-serif text-2xl font-bold text-primary">
+          A árvore começa por uma pessoa
+        </p>
         <p className="mt-3 max-w-md text-[15px] leading-relaxed text-muted-foreground">
           Adicione o <strong>paciente-índice</strong> primeiro. Depois construa em torno dele:
-          pais, avós, irmãos, uniões, filhos. As relações contam a história.
+          pais, avós, irmãos, uniões, filhos.
         </p>
       </div>
 
-      {/* Passos guiados */}
-      <div className="mt-2 flex flex-col items-start gap-3 rounded-xl border border-border bg-cream p-5 text-left">
-        <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+      <div className="w-full max-w-md border-l-[5px] border-l-lavender bg-cream p-5 text-left">
+        <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
           Como construir a árvore
         </p>
         {[
-          "1. Adicione o paciente-índice (borda dupla dourada)",
+          "1. Adicione o paciente-índice (borda dupla lavanda)",
           "2. Clique em \"Adicionar pessoa\" para cada familiar",
-          "3. Arraste o ponto dourado de uma pessoa para outra para criar vínculos",
+          "3. Arraste o ponto lavanda de uma pessoa para outra para criar vínculos",
           "4. Clique duplo em qualquer elemento para editar",
-          "5. Use \"Imprimir A3\" para exportar a árvore completa",
+          "5. Use \"A3\" para exportar a árvore para impressão",
         ].map((step) => (
-          <p key={step} className="text-[14px] text-foreground/80">{step}</p>
+          <p key={step} className="py-1 text-[14px] text-foreground/75">{step}</p>
         ))}
       </div>
 
-      <Button onClick={onCreate} size="lg" variant="gold">
+      <Button onClick={onCreate} size="lg" variant="lavender">
         <UserPlus className="size-5" />
         Adicionar primeira pessoa
       </Button>

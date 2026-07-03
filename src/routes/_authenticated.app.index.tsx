@@ -1,7 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, GitBranch, Library, Users } from "lucide-react";
+import { ArrowRight, GitBranch, Library, Users, Calendar, TreePine, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/_authenticated/app/")({
   component: AppHome,
@@ -9,73 +11,184 @@ export const Route = createFileRoute("/_authenticated/app/")({
 
 function AppHome() {
   const { user } = Route.useRouteContext();
-  const firstName = (user.email ?? "").split("@")[0];
+
+  const { data: profile } = useQuery({
+    queryKey: ["profile", user.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .maybeSingle();
+      return data;
+    },
+  });
+
+  const { data: clients = [] } = useQuery({
+    queryKey: ["clients", "active"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("clients")
+        .select("id")
+        .eq("status", "active");
+      return data ?? [];
+    },
+  });
+
+  const firstName =
+    profile?.full_name?.split(" ")[0] ??
+    user.email?.split("@")[0] ??
+    "terapeuta";
+
+  const stats = [
+    { label: "Clientes ativos",      value: clients.length, icon: Users,     color: "lavender" },
+    { label: "Sessões este mês",     value: "—",            icon: Calendar,  color: "gold"     },
+    { label: "Árvores construídas",  value: "—",            icon: TreePine,  color: "lavender" },
+    { label: "Padrões detectados",   value: "—",            icon: Sparkles,  color: "gold"     },
+  ];
 
   return (
-    <div className="container-liz py-12">
-      <p className="text-xs uppercase tracking-[0.3em] text-gold">Bem-vinda</p>
-      <h1 className="mt-3 font-serif text-4xl text-primary md:text-5xl">
-        Olá, <em className="italic">{firstName}</em>.
-      </h1>
-      <p className="mt-3 max-w-xl text-muted-foreground">
-        Seu consultório digital. Comece cadastrando um cliente ou explore a biblioteca sistêmica.
-      </p>
-
-      <div className="mt-12 grid gap-6 md:grid-cols-3">
-        <Card
-          to="/app/clientes"
-          icon={Users}
-          title="Clientes"
-          body="Dossiê completo, mídia e histórico clínico por cliente."
-        />
-        <Card
-          to="/app/clientes"
-          icon={GitBranch}
-          title="Genossociograma"
-          body="Construa a árvore viva do seu caso. Detecção automática de padrões."
-        />
-        <Card
-          to="/app/biblioteca"
-          icon={Library}
-          title="Biblioteca"
-          body="Schützenberger, Jodorowsky, Hellinger — organizados por tema."
-        />
+    <div>
+      {/* Breadcrumb */}
+      <div className="border-b-2 border-border bg-cream px-6 py-3">
+        <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-muted-foreground">
+          Instituto Liz / Início
+        </p>
       </div>
 
-      <div className="mt-16 rounded-lg border border-border bg-card p-8">
-        <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Roadmap beta</p>
-        <h2 className="mt-2 font-serif text-2xl text-primary">Próximas entregas</h2>
-        <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-          <li>· Dossiê multi-dimensional do cliente (nesta semana)</li>
-          <li>· Genossociograma interativo com React Flow</li>
-          <li>· Prontuário por voz com transcrição automática</li>
-          <li>· Motor de padrões transgeracionais v1</li>
-        </ul>
+      <div className="container-liz py-12">
+        {/* Saudação editorial */}
+        <div className="mb-10">
+          <p className="text-[11px] font-bold uppercase tracking-[0.35em] text-lavender">
+            Bem-vinda de volta
+          </p>
+          <h1 className="mt-2 font-serif text-5xl font-bold text-primary">
+            Bom dia, <em className="italic text-lavender">{firstName}</em>.
+          </h1>
+          <div className="my-5 h-[3px] w-14 bg-gold" />
+          <p className="max-w-xl text-[15px] leading-relaxed text-muted-foreground">
+            Seu consultório digital. Comece cadastrando um cliente ou acesse a árvore de um caso ativo.
+          </p>
+        </div>
+
+        {/* Stats em grid */}
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4 mb-14">
+          {stats.map((s) => (
+            <div
+              key={s.label}
+              className={
+                "bg-white p-6 shadow-sm flex flex-col gap-3 " +
+                (s.color === "lavender" ? "accent-bar-lavender" : "accent-bar-gold")
+              }
+            >
+              <div
+                className={
+                  "flex h-10 w-10 items-center justify-center rounded-md " +
+                  (s.color === "lavender" ? "bg-lavender-soft" : "bg-gold-soft")
+                }
+              >
+                <s.icon
+                  className={
+                    "size-5 " + (s.color === "lavender" ? "text-lavender" : "text-gold")
+                  }
+                />
+              </div>
+              <div>
+                <p className="font-serif text-5xl font-bold text-primary leading-none">
+                  {s.value}
+                </p>
+                <p className="mt-1.5 text-[13px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+                  {s.label}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Atalhos de módulos */}
+        <div className="mb-4 flex items-center justify-between">
+          <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-muted-foreground">
+            Acesso rápido
+          </p>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-3">
+          <ModuleCard
+            to="/app/clientes"
+            icon={Users}
+            title="Clientes"
+            body="Dossiê completo, mídia e histórico clínico por cliente."
+            color="lavender"
+          />
+          <ModuleCard
+            to="/app/clientes"
+            icon={GitBranch}
+            title="Genossociograma"
+            body="Construa a árvore viva do seu caso. Detecção automática de padrões."
+            color="gold"
+          />
+          <ModuleCard
+            to="/app/biblioteca"
+            icon={Library}
+            title="Biblioteca"
+            body="Schützenberger, Jodorowsky, Hellinger — organizados por tema."
+            color="lavender"
+          />
+        </div>
+
+        {/* Roadmap */}
+        <div className="mt-12 border-l-[5px] border-l-lavender bg-white p-8 shadow-sm">
+          <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-muted-foreground">
+            Roadmap beta
+          </p>
+          <h2 className="mt-2 font-serif text-2xl font-bold text-primary">Próximas entregas</h2>
+          <ul className="mt-4 space-y-2">
+            {[
+              "Dossiê multi-dimensional do cliente",
+              "Genossociograma interativo com React Flow",
+              "Prontuário por voz com transcrição automática",
+              "Motor de padrões transgeracionais v1",
+            ].map((item) => (
+              <li key={item} className="flex items-start gap-2 text-[15px] text-muted-foreground">
+                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-lavender" />
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </div>
   );
 }
 
-function Card({
-  to,
-  icon: Icon,
-  title,
-  body,
+function ModuleCard({
+  to, icon: Icon, title, body, color,
 }: {
   to: string;
   icon: React.ComponentType<{ className?: string }>;
   title: string;
   body: string;
+  color: "lavender" | "gold";
 }) {
   return (
     <Link
       to={to}
-      className="group flex flex-col rounded-lg border border-border bg-card p-6 transition-colors hover:border-gold"
+      className={
+        "group flex flex-col bg-white p-6 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 " +
+        (color === "lavender" ? "border-l-[5px] border-l-transparent hover:border-l-lavender" : "border-l-[5px] border-l-transparent hover:border-l-gold")
+      }
     >
-      <Icon className="size-6 text-primary" />
-      <h3 className="mt-6 font-serif text-2xl text-primary">{title}</h3>
-      <p className="mt-2 flex-1 text-sm text-muted-foreground">{body}</p>
-      <div className="mt-6 inline-flex items-center gap-1.5 text-sm text-primary transition-transform group-hover:translate-x-0.5">
+      <div
+        className={
+          "flex h-10 w-10 items-center justify-center rounded-md mb-5 " +
+          (color === "lavender" ? "bg-lavender-soft" : "bg-gold-soft")
+        }
+      >
+        <Icon className={"size-5 " + (color === "lavender" ? "text-lavender" : "text-gold")} />
+      </div>
+      <h3 className="font-serif text-2xl font-bold text-primary">{title}</h3>
+      <p className="mt-2 flex-1 text-[14px] leading-relaxed text-muted-foreground">{body}</p>
+      <div className="mt-5 inline-flex items-center gap-1.5 text-[13px] font-bold uppercase tracking-[0.08em] text-primary/60 transition-colors group-hover:text-lavender">
         Abrir <ArrowRight className="size-4" />
       </div>
     </Link>

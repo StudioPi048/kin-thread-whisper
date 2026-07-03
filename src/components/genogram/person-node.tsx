@@ -17,56 +17,67 @@ export interface PersonNodeData {
 
 /**
  * Nó do genossociograma — convenção internacional:
- *  □ quadrado = masculino
- *  ○ círculo  = feminino
- *  ⬡ losango  = não-binário / outro
+ *  □ quadrado  = masculino (borda ameixa)
+ *  ○ círculo   = feminino  (borda lavanda)
+ *  ⬡ losango   = não-binário / outro (borda dourada)
  *  ✕ atravessando = falecido
- *  Borda dupla dourada = paciente-índice (proband)
+ *  Borda dupla lavanda = paciente-índice (proband)
  */
 function PersonNodeComponent({ data, selected }: NodeProps) {
   const d = data as unknown as PersonNodeData;
   const gender = d.gender ?? "desconhecido";
 
-  // Formas geométricas por gênero — convenção PSIGENEALOgica
   const shapeClass =
     gender === "masculino"
-      ? "rounded-none"          // □ quadrado
+      ? "rounded-none"
       : gender === "feminino"
-        ? "rounded-full"        // ○ círculo
-        : "rotate-45 rounded-sm"; // ⬡ losango
+        ? "rounded-full"
+        : "rotate-45 rounded-sm";
+
+  const borderColor =
+    gender === "masculino"
+      ? "border-plum"
+      : gender === "feminino"
+        ? "border-lavender"
+        : "border-gold";
+
+  const symbolColor =
+    gender === "masculino"
+      ? "text-plum"
+      : gender === "feminino"
+        ? "text-lavender"
+        : "text-gold";
 
   const displayName = d.preferred_name || d.full_name;
   const years = personYears(d.birth_date, d.death_date);
 
   return (
     <div className="relative flex flex-col items-center" style={{ userSelect: "none" }}>
-      {/* Handle topo (entrada de pais) */}
+      {/* Handle topo */}
       <Handle
         type="target"
         position={Position.Top}
-        className="!size-3 !rounded-sm !border-2 !border-card !bg-gold opacity-0 transition-opacity hover:opacity-100"
+        className="!size-3 !rounded-sm !border-2 !border-card !bg-lavender opacity-0 transition-opacity hover:opacity-100"
       />
 
-      {/* Nó principal */}
+      {/* Nó */}
       <div
         className={cn(
-          // Base: tamanho aumentado para 40+, borda grossa e clara
-          "relative flex size-24 items-center justify-center border-[3px] bg-card font-serif text-3xl text-primary transition-all duration-150",
+          "relative flex size-24 items-center justify-center border-[3px] bg-card font-serif text-3xl transition-all duration-150",
           shapeClass,
-          // Paciente-índice: borda dupla dourada
+          borderColor,
           d.is_proband
-            ? "border-gold shadow-[0_0_0_4px_white,0_0_0_7px_var(--color-gold)] shadow-gold/30"
-            : "border-primary/80 shadow-sm",
-          // Estado selecionado
-          selected && "ring-3 ring-gold ring-offset-3 ring-offset-background scale-105",
+            ? "shadow-[0_0_0_4px_white,0_0_0_7px_var(--color-lavender)]"
+            : "shadow-sm",
+          selected && "scale-105 ring-3 ring-lavender ring-offset-3 ring-offset-background",
         )}
       >
         {/* Símbolo de gênero */}
         <span
           className={cn(
             "text-[26px] font-light leading-none",
+            symbolColor,
             (gender === "nao_binario" || gender === "outro") ? "-rotate-45" : "",
-            gender === "masculino" ? "text-primary" : gender === "feminino" ? "text-forest" : "text-gold",
           )}
         >
           {genderSymbol(gender)}
@@ -77,7 +88,7 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
           <span
             aria-hidden
             className={cn(
-              "pointer-events-none absolute inset-0 flex items-center justify-center text-5xl leading-none text-destructive/75",
+              "pointer-events-none absolute inset-0 flex items-center justify-center text-5xl leading-none text-destructive/70",
               (gender === "nao_binario" || gender === "outro") ? "-rotate-45" : "",
             )}
           >
@@ -88,40 +99,38 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
 
       {/* Nome e anos */}
       <div className="mt-2.5 max-w-[160px] text-center">
-        <p className="truncate font-sans text-[13px] font-semibold text-foreground leading-tight">
+        <p className="truncate font-sans text-[13px] font-bold text-foreground leading-tight">
           {displayName}
         </p>
         {years && (
-          <p className="mt-0.5 text-[11px] font-medium text-muted-foreground">
-            {years}
-          </p>
+          <p className="mt-0.5 text-[11px] font-medium text-muted-foreground">{years}</p>
         )}
         {d.is_proband && (
-          <span className="mt-1 inline-block rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-gold">
+          <span className="mt-1 inline-block rounded bg-lavender/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-lavender">
             Paciente
           </span>
         )}
       </div>
 
-      {/* Handle base (saída de filhos) */}
+      {/* Handle base */}
       <Handle
         type="source"
         position={Position.Bottom}
-        className="!size-3 !rounded-sm !border-2 !border-card !bg-gold opacity-0 transition-opacity hover:opacity-100"
+        className="!size-3 !rounded-sm !border-2 !border-card !bg-lavender opacity-0 transition-opacity hover:opacity-100"
       />
-      {/* Handle esquerdo (cônjuge esquerdo) */}
+      {/* Handle esquerdo */}
       <Handle
         type="source"
         position={Position.Left}
         id="left"
-        className="!size-3 !rounded-sm !border-2 !border-card !bg-gold opacity-0 transition-opacity hover:opacity-100"
+        className="!size-3 !rounded-sm !border-2 !border-card !bg-lavender opacity-0 transition-opacity hover:opacity-100"
       />
-      {/* Handle direito (cônjuge direito) */}
+      {/* Handle direito */}
       <Handle
         type="target"
         position={Position.Right}
         id="right"
-        className="!size-3 !rounded-sm !border-2 !border-card !bg-gold opacity-0 transition-opacity hover:opacity-100"
+        className="!size-3 !rounded-sm !border-2 !border-card !bg-lavender opacity-0 transition-opacity hover:opacity-100"
       />
     </div>
   );

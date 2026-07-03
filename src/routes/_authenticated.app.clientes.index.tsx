@@ -72,7 +72,10 @@ function ClientesIndex() {
 
   const setStatus = useMutation({
     mutationFn: async (input: { id: string; status: "active" | "archived" }) => {
-      const { error } = await supabase.from("clients").update({ status: input.status }).eq("id", input.id);
+      const { error } = await supabase
+        .from("clients")
+        .update({ status: input.status })
+        .eq("id", input.id);
       if (error) throw error;
     },
     onSuccess: (_d, v) => {
@@ -96,67 +99,79 @@ function ClientesIndex() {
   });
 
   return (
-    <div className="container-liz py-12">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      {/* Breadcrumb */}
+      <div className="border-b-2 border-border bg-cream px-6 py-3">
+        <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-muted-foreground">
+          Instituto Liz / Clientes
+        </p>
+      </div>
+
+      {/* Header — bloco plum */}
+      <div className="block-plum px-6 py-10">
+        <div className="container-liz flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.35em] text-lavender-mid">
+              Consultório
+            </p>
+            <h1 className="mt-2 font-serif text-5xl font-bold text-white">Clientes</h1>
+            <p className="mt-2 text-[14px] text-white/55">
+              Cada cliente tem um dossiê vivo. Você é a única pessoa com acesso.
+            </p>
+          </div>
+          <Button size="lg" variant="hero" onClick={() => setCreating(true)}>
+            <Plus className="size-4" />
+            Novo cliente
+          </Button>
+        </div>
+      </div>
+
+      <div className="container-liz py-8">
+        {/* Filtros */}
+        <div className="mb-6 flex flex-wrap items-center gap-3">
+          <Tabs value={tab} onValueChange={(v) => setTab(v as "active" | "archived")}>
+            <TabsList>
+              <TabsTrigger value="active">Ativos</TabsTrigger>
+              <TabsTrigger value="archived">Arquivados</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <div className="relative ml-auto w-full max-w-sm">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Buscar por nome, e-mail ou tag..."
+              className="pl-9 h-10 text-[14px]"
+            />
+          </div>
+        </div>
+
+        {/* Cards */}
         <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-gold">Consultório</p>
-          <h1 className="mt-3 font-serif text-4xl text-primary md:text-5xl">Clientes</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Cada cliente tem um dossiê vivo. Você é a única pessoa com acesso.
-          </p>
-        </div>
-        <Button size="lg" onClick={() => setCreating(true)}>
-          <Plus className="size-4" />
-          Novo cliente
-        </Button>
-      </div>
-
-      <div className="mt-8 flex flex-wrap items-center gap-3">
-        <Tabs value={tab} onValueChange={(v) => setTab(v as "active" | "archived")}>
-          <TabsList>
-            <TabsTrigger value="active">Ativos</TabsTrigger>
-            <TabsTrigger value="archived">Arquivados</TabsTrigger>
-          </TabsList>
-        </Tabs>
-        <div className="relative ml-auto w-full max-w-sm">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar por nome, e-mail ou tag..."
-            className="pl-9"
-          />
+          {isLoading ? (
+            <SkeletonGrid />
+          ) : filtered.length === 0 ? (
+            <EmptyState hasQuery={query.length > 0} onCreate={() => setCreating(true)} tab={tab} />
+          ) : (
+            <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {filtered.map((c) => (
+                <li key={c.id}>
+                  <ClientCard
+                    client={c}
+                    onEdit={() => setEditing(c)}
+                    onArchive={() =>
+                      setStatus.mutate({ id: c.id, status: c.status === "active" ? "archived" : "active" })
+                    }
+                    onDelete={() => setDeleting(c)}
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
 
-      <div className="mt-6">
-        {isLoading ? (
-          <SkeletonGrid />
-        ) : filtered.length === 0 ? (
-          <EmptyState hasQuery={query.length > 0} onCreate={() => setCreating(true)} tab={tab} />
-        ) : (
-          <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {filtered.map((c) => (
-              <li key={c.id}>
-                <ClientCard
-                  client={c}
-                  onEdit={() => setEditing(c)}
-                  onArchive={() =>
-                    setStatus.mutate({ id: c.id, status: c.status === "active" ? "archived" : "active" })
-                  }
-                  onDelete={() => setDeleting(c)}
-                />
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      <ClientFormDialog
-        open={creating}
-        onOpenChange={setCreating}
-        professionalId={user.id}
-      />
+      <ClientFormDialog open={creating} onOpenChange={setCreating} professionalId={user.id} />
       <ClientFormDialog
         open={Boolean(editing)}
         onOpenChange={(o) => !o && setEditing(null)}
@@ -191,10 +206,7 @@ function ClientesIndex() {
 }
 
 function ClientCard({
-  client,
-  onEdit,
-  onArchive,
-  onDelete,
+  client, onEdit, onArchive, onDelete,
 }: {
   client: ClientRow;
   onEdit: () => void;
@@ -203,28 +215,30 @@ function ClientCard({
 }) {
   const age = calcAge(client.birth_date);
   const display = client.preferred_name || client.full_name;
+
   return (
-    <article className="group relative flex h-full flex-col rounded-lg border border-border bg-card p-5 transition-colors hover:border-lilac">
-      <div className="flex items-start gap-3">
-        <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-lilac-soft font-serif text-lg text-primary">
+    <article className="group relative flex h-full flex-col bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 accent-bar-lavender">
+      <div className="flex items-start gap-3 p-5">
+        {/* Avatar lavanda */}
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-md bg-lavender font-serif text-base font-bold text-white">
           {initialsFrom(client.full_name)}
         </div>
         <div className="min-w-0 flex-1">
           <Link
             to="/app/clientes/$clientId"
             params={{ clientId: client.id }}
-            className="block truncate font-serif text-xl text-primary hover:underline"
+            className="block truncate font-serif text-xl font-bold text-primary hover:text-lavender transition-colors"
           >
             {display}
           </Link>
-          <p className="mt-0.5 truncate text-xs text-muted-foreground">
+          <p className="mt-0.5 truncate text-[13px] text-muted-foreground">
             {age !== null ? `${age} anos · ` : ""}
             {formatBirthDate(client.birth_date)}
           </p>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="size-8 opacity-70 hover:opacity-100">
+            <Button variant="ghost" size="icon-sm" className="size-8 opacity-60 hover:opacity-100">
               <MoreHorizontal className="size-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -234,20 +248,13 @@ function ClientCard({
             </DropdownMenuItem>
             <DropdownMenuItem onClick={onArchive}>
               {client.status === "active" ? (
-                <>
-                  <Archive className="size-4" /> Arquivar
-                </>
+                <><Archive className="size-4" /> Arquivar</>
               ) : (
-                <>
-                  <ArchiveRestore className="size-4" /> Reativar
-                </>
+                <><ArchiveRestore className="size-4" /> Reativar</>
               )}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-destructive focus:text-destructive"
-              onClick={onDelete}
-            >
+            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={onDelete}>
               <Trash2 className="size-4" /> Excluir
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -255,33 +262,33 @@ function ClientCard({
       </div>
 
       {client.presenting_complaint && (
-        <p className="mt-4 line-clamp-3 text-sm leading-relaxed text-muted-foreground">
+        <p className="px-5 line-clamp-2 text-[14px] leading-relaxed text-muted-foreground">
           {client.presenting_complaint}
         </p>
       )}
 
       {client.tags && client.tags.length > 0 && (
-        <div className="mt-4 flex flex-wrap gap-1.5">
-          {client.tags.slice(0, 5).map((t) => (
-            <Badge key={t} variant="secondary" className="font-normal">
+        <div className="px-5 pt-3 flex flex-wrap gap-1.5">
+          {client.tags.slice(0, 4).map((t) => (
+            <Badge key={t} variant="secondary" className="rounded text-[11px] font-semibold">
               {t}
             </Badge>
           ))}
         </div>
       )}
 
-      <div className="mt-5 flex items-center justify-between border-t border-border/70 pt-3 text-xs text-muted-foreground">
+      <div className="mt-auto flex items-center justify-between border-t border-border/60 px-5 py-3 text-[12px] text-muted-foreground">
         <span>
           {client.consent_given_at ? (
-            <span className="text-emerald-700">● Consentimento registrado</span>
+            <span className="font-semibold text-emerald-700">● Consentimento</span>
           ) : (
-            <span className="text-amber-700">● Sem consentimento</span>
+            <span className="text-amber-600">● Sem consentimento</span>
           )}
         </span>
         <Link
           to="/app/clientes/$clientId"
           params={{ clientId: client.id }}
-          className="text-primary underline-offset-4 hover:underline"
+          className="font-bold uppercase tracking-[0.08em] text-lavender hover:text-plum transition-colors"
         >
           Abrir dossiê →
         </Link>
@@ -291,9 +298,7 @@ function ClientCard({
 }
 
 function EmptyState({
-  hasQuery,
-  onCreate,
-  tab,
+  hasQuery, onCreate, tab,
 }: {
   hasQuery: boolean;
   onCreate: () => void;
@@ -301,27 +306,26 @@ function EmptyState({
 }) {
   if (hasQuery) {
     return (
-      <div className="rounded-lg border border-dashed border-border bg-card/50 p-16 text-center">
-        <p className="font-serif text-2xl text-primary">Nada encontrado</p>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Tente outro termo ou remova o filtro.
-        </p>
+      <div className="border-l-[5px] border-l-muted bg-white p-16 text-center shadow-sm">
+        <p className="font-serif text-2xl font-bold text-primary">Nada encontrado</p>
+        <p className="mt-2 text-[15px] text-muted-foreground">Tente outro termo ou remova o filtro.</p>
       </div>
     );
   }
   return (
-    <div className="rounded-lg border border-dashed border-border bg-card/50 p-16 text-center">
-      <p className="font-serif text-2xl text-primary">
+    <div className="border-l-[5px] border-l-lavender bg-white p-16 text-center shadow-sm">
+      <p className="font-serif text-2xl font-bold text-primary">
         {tab === "active" ? "Comece pelo primeiro cliente" : "Nenhum dossiê arquivado"}
       </p>
-      <p className="mt-2 text-sm text-muted-foreground">
+      <p className="mt-2 text-[15px] text-muted-foreground">
         {tab === "active"
           ? "Todo caso começa por um nome. O resto — árvore, sessões, padrões — se constrói a partir daqui."
           : "Quando arquivar um dossiê, ele aparece aqui."}
       </p>
       {tab === "active" && (
-        <Button onClick={onCreate} className="mt-6" size="lg">
-          <Plus className="size-4" /> Cadastrar cliente
+        <Button onClick={onCreate} className="mt-6" size="lg" variant="lavender">
+          <Plus className="size-4" />
+          Cadastrar cliente
         </Button>
       )}
     </div>
@@ -332,10 +336,7 @@ function SkeletonGrid() {
   return (
     <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {Array.from({ length: 6 }).map((_, i) => (
-        <li
-          key={i}
-          className="h-44 animate-pulse rounded-lg border border-border bg-card/60"
-        />
+        <li key={i} className="skeleton h-44" />
       ))}
     </ul>
   );
