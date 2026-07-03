@@ -14,8 +14,8 @@
 
 /*
  * Instituto Liz — Plataforma Psicogenealogia
- * Design system: lilás profundo (raiz sistêmica), creme rosado (memória),
- * tinta arquivada (registro clínico), dourado (linhagem — cor da logo).
+ * Design system: Azul Noturno (confiança clínica) + Dourado (linhagem) + Verde Floresta (saúde/crescimento)
+ * Otimizado para profissionais 40+: texto grande, contraste máximo, elementos espaçados.
  * Todos os tokens em oklch. Nunca escrever cores ad-hoc em componentes.
  */
 
@@ -52,9 +52,9 @@
   --color-ring: var(--ring);
   --color-ring-offset-background: var(--background);
   --color-gold: var(--gold);
-  --color-lilac: var(--lilac);
-  --color-lilac-soft: var(--lilac-soft);
-  --color-parchment: var(--parchment);
+  --color-forest: var(--forest);
+  --color-navy: var(--navy);
+  --color-cream: var(--cream);
   --color-ink: var(--ink);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
@@ -67,89 +67,107 @@
 }
 
 :root {
-  --radius: 0.625rem;
+  --radius: 0.75rem;
 
-  /* Creme rosado — pergaminho vivo */
-  --background: oklch(0.98 0.008 320);
-  --parchment: oklch(0.965 0.014 320);
-  --foreground: oklch(0.22 0.04 300);
-  --ink: oklch(0.18 0.03 300);
+  /* Azul Noturno — confiança e profundidade clínica */
+  --navy:      oklch(0.20 0.045 245);
+  --navy-mid:  oklch(0.26 0.05 245);
+  --navy-soft: oklch(0.32 0.04 245);
 
-  --card: oklch(0.99 0.005 320);
-  --card-foreground: oklch(0.22 0.04 300);
-  --popover: oklch(0.99 0.005 320);
-  --popover-foreground: oklch(0.22 0.04 300);
+  /* Fundo: creme quente, nunca branco frio */
+  --background: oklch(0.97 0.008 75);
+  --cream:      oklch(0.95 0.014 75);
+  --foreground: oklch(0.18 0.03 240);
+  --ink:        oklch(0.15 0.02 240);
 
-  /* Lilás profundo — a raiz sistêmica */
-  --primary: oklch(0.42 0.14 300);
-  --primary-foreground: oklch(0.985 0.008 320);
+  --card:            oklch(1.0 0.0 0);
+  --card-foreground: oklch(0.18 0.03 240);
+  --popover:         oklch(1.0 0.0 0);
+  --popover-foreground: oklch(0.18 0.03 240);
 
-  --lilac: oklch(0.58 0.15 305);
-  --lilac-soft: oklch(0.88 0.05 310);
+  /* Primária = Azul Noturno */
+  --primary:            var(--navy);
+  --primary-foreground: oklch(0.97 0.008 75);
 
-  --secondary: oklch(0.93 0.025 310);
-  --secondary-foreground: oklch(0.32 0.09 300);
+  /* Verde Floresta — saúde, crescimento */
+  --forest:      oklch(0.42 0.10 155);
+  --forest-soft: oklch(0.88 0.04 155);
 
-  --muted: oklch(0.94 0.02 315);
-  --muted-foreground: oklch(0.48 0.05 300);
+  /* Dourado — linhagem, destaque, logo */
+  --gold:      oklch(0.72 0.13 78);
+  --gold-soft: oklch(0.93 0.05 78);
 
-  --accent: oklch(0.9 0.05 310);
-  --accent-foreground: oklch(0.32 0.09 300);
+  --secondary:            oklch(0.93 0.015 245);
+  --secondary-foreground: oklch(0.22 0.04 245);
 
-  /* Dourado da logo — linhagem */
-  --gold: oklch(0.76 0.13 82);
+  --muted:            oklch(0.94 0.008 245);
+  --muted-foreground: oklch(0.50 0.03 240);
 
-  --destructive: oklch(0.55 0.19 25);
-  --destructive-foreground: oklch(0.98 0.01 320);
+  --accent:            oklch(0.91 0.02 245);
+  --accent-foreground: oklch(0.22 0.04 245);
 
-  --border: oklch(0.88 0.025 310);
-  --input: oklch(0.92 0.02 315);
-  --ring: oklch(0.58 0.15 305);
+  --destructive:            oklch(0.55 0.19 25);
+  --destructive-foreground: oklch(0.98 0.01 25);
 
-  --sidebar: oklch(0.24 0.07 300);
-  --sidebar-foreground: oklch(0.94 0.025 320);
-  --sidebar-primary: oklch(0.76 0.13 82);
-  --sidebar-primary-foreground: oklch(0.22 0.04 300);
-  --sidebar-accent: oklch(0.32 0.09 300);
-  --sidebar-accent-foreground: oklch(0.96 0.02 320);
-  --sidebar-border: oklch(0.3 0.06 300);
-  --sidebar-ring: oklch(0.76 0.13 82);
+  --border: oklch(0.88 0.015 245);
+  --input:  oklch(0.92 0.01 245);
+  --ring:   oklch(0.72 0.13 78);
+
+  /* Sidebar: Azul Noturno profundo */
+  --sidebar:                    var(--navy);
+  --sidebar-foreground:         oklch(0.94 0.012 75);
+  --sidebar-primary:            oklch(0.72 0.13 78);
+  --sidebar-primary-foreground: oklch(0.18 0.03 240);
+  --sidebar-accent:             var(--navy-soft);
+  --sidebar-accent-foreground:  oklch(0.97 0.008 75);
+  --sidebar-border:             oklch(0.28 0.04 245);
+  --sidebar-ring:               oklch(0.72 0.13 78);
 }
 
 .dark {
-  --background: oklch(0.16 0.03 300);
-  --parchment: oklch(0.2 0.04 300);
-  --foreground: oklch(0.94 0.02 320);
-  --ink: oklch(0.96 0.015 320);
+  --background: oklch(0.14 0.025 240);
+  --cream:      oklch(0.18 0.03 240);
+  --foreground: oklch(0.94 0.012 75);
+  --ink:        oklch(0.96 0.008 75);
 
-  --card: oklch(0.2 0.04 300);
-  --card-foreground: oklch(0.94 0.02 320);
-  --popover: oklch(0.2 0.04 300);
-  --popover-foreground: oklch(0.94 0.02 320);
+  --card:            oklch(0.19 0.03 240);
+  --card-foreground: oklch(0.94 0.012 75);
+  --popover:         oklch(0.19 0.03 240);
+  --popover-foreground: oklch(0.94 0.012 75);
 
-  --primary: oklch(0.6 0.16 305);
-  --primary-foreground: oklch(0.16 0.03 300);
+  --primary:            oklch(0.72 0.13 78);
+  --primary-foreground: oklch(0.14 0.025 240);
 
-  --lilac: oklch(0.65 0.15 305);
-  --lilac-soft: oklch(0.4 0.1 305);
+  --secondary:            oklch(0.24 0.04 240);
+  --secondary-foreground: oklch(0.94 0.012 75);
 
-  --secondary: oklch(0.26 0.05 300);
-  --secondary-foreground: oklch(0.94 0.02 320);
+  --muted:            oklch(0.22 0.035 240);
+  --muted-foreground: oklch(0.68 0.025 240);
 
-  --muted: oklch(0.24 0.04 300);
-  --muted-foreground: oklch(0.7 0.03 315);
+  --accent:            oklch(0.26 0.04 240);
+  --accent-foreground: oklch(0.94 0.012 75);
 
-  --accent: oklch(0.3 0.06 305);
-  --accent-foreground: oklch(0.94 0.02 320);
+  --gold:      oklch(0.76 0.13 78);
+  --gold-soft: oklch(0.32 0.06 78);
 
-  --gold: oklch(0.78 0.13 82);
+  --forest:      oklch(0.50 0.10 155);
+  --forest-soft: oklch(0.24 0.05 155);
 
-  --destructive: oklch(0.58 0.18 22);
-  --destructive-foreground: oklch(0.96 0.01 320);
+  --destructive:            oklch(0.58 0.18 22);
+  --destructive-foreground: oklch(0.97 0.01 22);
 
-  --border: oklch(0.3 0.05 300);
-  --input: oklch(0.28 0.05 300);
-  --ring: oklch(0.62 0.14 305);
+  --border: oklch(0.28 0.03 240);
+  --input:  oklch(0.26 0.03 240);
+  --ring:   oklch(0.72 0.13 78);
+
+  --sidebar:                    oklch(0.12 0.025 240);
+  --sidebar-foreground:         oklch(0.92 0.012 75);
+  --sidebar-primary:            oklch(0.76 0.13 78);
+  --sidebar-primary-foreground: oklch(0.12 0.025 240);
+  --sidebar-accent:             oklch(0.20 0.04 240);
+  --sidebar-accent-foreground:  oklch(0.94 0.012 75);
+  --sidebar-border:             oklch(0.22 0.03 240);
+  --sidebar-ring:               oklch(0.72 0.13 78);
 }
 
 @layer base {
@@ -158,15 +176,18 @@
   }
   html {
     font-family: var(--font-sans);
+    /* Fonte base maior — leitura facilitada para profissionais 40+ */
+    font-size: 16px;
   }
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-feature-settings: "ss01", "cv11";
     -webkit-font-smoothing: antialiased;
+    /* Gradiente sutil de profundidade — sem o blob roxo do Lovable */
     background-image:
-      radial-gradient(1200px 800px at 100% -10%, color-mix(in oklab, var(--gold) 8%, transparent), transparent 60%),
-      radial-gradient(1000px 600px at -10% 100%, color-mix(in oklab, var(--primary) 6%, transparent), transparent 55%);
+      radial-gradient(900px 500px at 80% -5%, color-mix(in oklab, var(--gold) 5%, transparent), transparent 55%),
+      radial-gradient(800px 400px at -5% 90%, color-mix(in oklab, var(--forest) 4%, transparent), transparent 50%);
     background-attachment: fixed;
   }
   h1, h2, h3, h4 {
@@ -174,7 +195,23 @@
     letter-spacing: -0.01em;
     font-weight: 500;
   }
+
+  /* Acessibilidade: foco visível para todos os elementos interativos */
+  :focus-visible {
+    outline: 3px solid var(--color-gold);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  /* Scroll suave */
+  html {
+    scroll-behavior: smooth;
+  }
 }
+
+/* ────────────────────────────────────────────────────────────
+   UTILITÁRIOS GLOBAIS
+   ──────────────────────────────────────────────────────────── */
 
 @utility container-liz {
   width: 100%;
@@ -190,9 +227,148 @@
   line-height: 1.05;
 }
 
+/* Sublinhado dourado animado */
 @utility gold-underline {
+  background-image: linear-gradient(to right, var(--gold), var(--gold));
+  background-repeat: no-repeat;
+  background-size: 0% 2px;
+  background-position: 0 100%;
+  transition: background-size 0.3s ease;
+}
+@utility gold-underline-full {
   background-image: linear-gradient(to right, var(--gold), var(--gold));
   background-repeat: no-repeat;
   background-size: 100% 2px;
   background-position: 0 100%;
+}
+
+/* Badge de geração para o genograma */
+@utility generation-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 10px;
+  border-radius: 999px;
+}
+
+/* Painel de vidro premium */
+@utility glass-panel {
+  background: color-mix(in oklab, var(--color-card) 85%, transparent);
+  backdrop-filter: blur(12px);
+  border: 1px solid color-mix(in oklab, var(--color-border) 70%, transparent);
+}
+
+/* ────────────────────────────────────────────────────────────
+   GENOSSOCIOGRAMA — GRADE GUIADA
+   ──────────────────────────────────────────────────────────── */
+
+/* Remove o estilo padrão do ReactFlow e impõe o nosso */
+.react-flow__background {
+  background-color: oklch(0.96 0.008 245) !important;
+}
+
+.react-flow__controls {
+  border: 1px solid var(--color-border) !important;
+  border-radius: var(--radius-lg) !important;
+  overflow: hidden;
+  box-shadow: 0 2px 8px oklch(0 0 0 / 0.08) !important;
+}
+
+.react-flow__controls-button {
+  background: var(--color-card) !important;
+  border-bottom: 1px solid var(--color-border) !important;
+  color: var(--color-foreground) !important;
+  width: 36px !important;
+  height: 36px !important;
+}
+
+.react-flow__controls-button:hover {
+  background: var(--color-accent) !important;
+}
+
+.react-flow__minimap {
+  border-radius: var(--radius-lg) !important;
+  border: 1px solid var(--color-border) !important;
+}
+
+/* Linhas do genossociograma: sem curvas, estilo clínico */
+.react-flow__edge-path {
+  stroke-linecap: square !important;
+}
+
+/* Handles: pontos de conexão dourados */
+.react-flow__handle {
+  width: 10px !important;
+  height: 10px !important;
+  border-radius: 2px !important;
+  background: var(--color-gold) !important;
+  border: 2px solid var(--color-card) !important;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.react-flow__node:hover .react-flow__handle,
+.react-flow__handle:hover {
+  opacity: 1;
+}
+
+/* ────────────────────────────────────────────────────────────
+   CORES POR GERAÇÃO (classes utilitárias)
+   ──────────────────────────────────────────────────────────── */
+
+.gen-1 { --gen-color: oklch(0.42 0.10 155); }   /* Verde Floresta */
+.gen-2 { --gen-color: oklch(0.72 0.13 78); }    /* Dourado */
+.gen-3 { --gen-color: oklch(0.20 0.045 245); }  /* Azul Noturno */
+.gen-4 { --gen-color: oklch(0.55 0.08 200); }   /* Azul-esverdeado */
+.gen-5 { --gen-color: oklch(0.50 0.09 30); }    /* Terracota */
+
+/* ────────────────────────────────────────────────────────────
+   TIPOGRAFIA — ACESSÍVEL PARA 40+
+   ──────────────────────────────────────────────────────────── */
+
+/* Labels e microcopy: nunca abaixo de 13px */
+.label-micro {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Texto de corpo mínimo para formulários */
+.body-readable {
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+/* ────────────────────────────────────────────────────────────
+   ANIMAÇÕES
+   ──────────────────────────────────────────────────────────── */
+
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-fade-slide-up {
+  animation: fadeSlideUp 0.45s ease both;
+}
+
+/* Skeleton loader */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-muted) 25%,
+    var(--color-accent) 50%,
+    var(--color-muted) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  border-radius: var(--radius-md);
 }

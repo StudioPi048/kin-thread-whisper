@@ -3,7 +3,6 @@ import {
   Background,
   BackgroundVariant,
   Controls,
-  MiniMap,
   ReactFlow,
   ReactFlowProvider,
   addEdge,
@@ -18,7 +17,17 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link2, Plus, Trash2, UserPlus } from "lucide-react";
+import {
+  UserPlus,
+  Link2,
+  Trash2,
+  Printer,
+  ZoomIn,
+  ZoomOut,
+  HelpCircle,
+  Users,
+  TreePine,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -74,6 +83,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
     seed?: { from?: string; to?: string };
     editing?: RelRow | null;
   }>({ open: false });
+  const [showGuide, setShowGuide] = useState(false);
 
   // Hydrate React Flow state from server data.
   useEffect(() => {
@@ -122,7 +132,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
   const onConnect = useCallback(
     (conn: Connection) => {
       // Optimistic edge until user confirms details in the dialog.
-      setEdges((eds) => addEdge({ ...conn, style: { stroke: "var(--color-lilac)" } }, eds));
+      setEdges((eds) => addEdge({ ...conn, style: { stroke: "var(--color-gold)" } }, eds));
       setRelDialog({
         open: true,
         seed: { from: conn.source ?? undefined, to: conn.target ?? undefined },
@@ -176,41 +186,144 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
   });
 
   const persons = query.data?.persons ?? [];
+  const personCount = persons.length;
+  const relCount = query.data?.rels.length ?? 0;
+
+  function handlePrint() {
+    window.print();
+  }
 
   return (
-    <div className="relative flex h-[70vh] flex-col overflow-hidden rounded-lg border border-border bg-card">
-      <div className="flex flex-wrap items-center gap-2 border-b border-border bg-parchment/60 px-3 py-2">
-        <p className="mr-2 text-[10px] font-medium uppercase tracking-[0.28em] text-gold">
-          Genossociograma
-        </p>
-        <Button size="sm" variant="outline" onClick={() => setCreatingPerson(true)}>
-          <UserPlus className="size-4" /> Pessoa
+    <div className="relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      {/* ── BARRA DE AÇÕES ────────────────────────────────── */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-border bg-cream px-4 py-3">
+        {/* Label */}
+        <div className="flex items-center gap-2 mr-3">
+          <TreePine className="size-4 text-gold" />
+          <span className="text-[12px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+            Genossociograma
+          </span>
+        </div>
+
+        {/* Botões principais */}
+        <Button
+          size="sm"
+          variant="default"
+          onClick={() => setCreatingPerson(true)}
+          className="h-10 gap-2"
+        >
+          <UserPlus className="size-4" />
+          Adicionar pessoa
         </Button>
+
         <Button
           size="sm"
           variant="outline"
           onClick={() => setRelDialog({ open: true })}
           disabled={persons.length < 2}
+          className="h-10 gap-2"
         >
-          <Link2 className="size-4" /> Vínculo
+          <Link2 className="size-4" />
+          Criar vínculo
         </Button>
+
+        {/* Stats */}
+        <div className="hidden items-center gap-4 md:flex ml-3">
+          <span className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
+            <Users className="size-3.5 text-gold" />
+            <strong className="text-foreground">{personCount}</strong> pessoas
+          </span>
+          <span className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
+            <Link2 className="size-3.5 text-forest" />
+            <strong className="text-foreground">{relCount}</strong> vínculos
+          </span>
+        </div>
+
+        {/* Ações secundárias */}
         <div className="ml-auto flex items-center gap-2">
           <Button
             size="sm"
             variant="ghost"
-            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+            className="h-10 gap-2 text-muted-foreground"
+            onClick={() => setShowGuide(!showGuide)}
+          >
+            <HelpCircle className="size-4" />
+            <span className="hidden sm:inline">Guia</span>
+          </Button>
+
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-10 gap-2 text-muted-foreground"
+            onClick={handlePrint}
+          >
+            <Printer className="size-4" />
+            <span className="hidden sm:inline">Imprimir A3</span>
+          </Button>
+
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-10 gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
             onClick={() => deleteSelected.mutate()}
             disabled={deleteSelected.isPending}
           >
-            <Trash2 className="size-4" /> Excluir selecionado
+            <Trash2 className="size-4" />
+            <span className="hidden sm:inline">Remover</span>
           </Button>
         </div>
       </div>
 
-      <div className="relative flex-1">
+      {/* ── GUIA RÁPIDO ───────────────────────────────────── */}
+      {showGuide && (
+        <div className="border-b border-border bg-gold/5 px-4 py-3">
+          <div className="flex flex-wrap gap-6 text-[13px] text-muted-foreground">
+            <span className="flex items-center gap-2">
+              <kbd className="rounded border border-border bg-card px-1.5 py-0.5 text-[11px] font-mono">Clique duplo</kbd>
+              Editar pessoa ou vínculo
+            </span>
+            <span className="flex items-center gap-2">
+              <kbd className="rounded border border-border bg-card px-1.5 py-0.5 text-[11px] font-mono">Arrastar ponto dourado</kbd>
+              Criar vínculo entre pessoas
+            </span>
+            <span className="flex items-center gap-2">
+              <kbd className="rounded border border-border bg-card px-1.5 py-0.5 text-[11px] font-mono">Selecionar + Remover</kbd>
+              Excluir selecionado
+            </span>
+            <span className="flex items-center gap-2">
+              <kbd className="rounded border border-border bg-card px-1.5 py-0.5 text-[11px] font-mono">Scroll</kbd>
+              Zoom in/out
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* ── LEGENDAS DE GERAÇÃO ────────────────────────────── */}
+      <div className="flex items-center gap-2 border-b border-border/50 bg-background/40 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.15em]">
+        <span className="text-muted-foreground/60">Convenção:</span>
+        {[
+          { label: "□ Masculino", color: "var(--color-primary)" },
+          { label: "○ Feminino", color: "var(--color-forest)" },
+          { label: "⬡ Não-binário", color: "var(--color-gold)" },
+          { label: "✕ Falecido", color: "var(--color-destructive)" },
+          { label: "Borda dupla = Paciente-índice", color: "var(--color-gold)" },
+        ].map((item) => (
+          <span
+            key={item.label}
+            className="flex items-center gap-1.5"
+            style={{ color: item.color }}
+          >
+            {item.label}
+          </span>
+        ))}
+      </div>
+
+      {/* ── CANVAS ────────────────────────────────────────── */}
+      <div className="relative" style={{ height: "65vh" }}>
         {query.isLoading ? (
-          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-            Carregando árvore...
+          <div className="flex h-full flex-col items-center justify-center gap-3">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-gold border-t-transparent" />
+            <p className="text-[14px] text-muted-foreground">Carregando a árvore...</p>
           </div>
         ) : persons.length === 0 ? (
           <EmptyCanvas onCreate={() => setCreatingPerson(true)} />
@@ -228,19 +341,34 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
             fitView
             fitViewOptions={{ padding: 0.3 }}
             proOptions={{ hideAttribution: true }}
+            // Linhas retas (orthogonal) — conforme solicitado
+            defaultEdgeOptions={{
+              type: "smoothstep",
+              style: { strokeWidth: 2 },
+            }}
+            snapToGrid
+            snapGrid={[20, 20]}
           >
-            <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
-            <Controls showInteractive={false} />
-            <MiniMap pannable zoomable className="!bg-parchment" />
+            <Background
+              variant={BackgroundVariant.Dots}
+              gap={24}
+              size={1.2}
+              color="oklch(0.80 0.015 245)"
+            />
+            <Controls
+              showInteractive={false}
+              style={{ bottom: 16, left: 16, top: "auto" }}
+            />
           </ReactFlow>
         )}
       </div>
 
+      {/* Dialogs */}
       <PersonFormDialog
         open={creatingPerson}
         onOpenChange={setCreatingPerson}
         clientId={clientId}
-        defaultPosition={{ x: 120 + persons.length * 40, y: 120 }}
+        defaultPosition={{ x: 120 + persons.length * 200, y: 120 }}
       />
       <PersonFormDialog
         open={Boolean(editingPerson)}
@@ -267,9 +395,12 @@ function relToEdge(r: RelRow): Edge {
     id: r.id,
     source: r.from_person_id,
     target: r.to_person_id,
+    // Forçar linhas retas com tipo smoothstep (ângulos de 90°)
+    type: "smoothstep",
     label: relationshipLabel(r.relationship_type, r.qualifier),
-    labelStyle: { fontSize: 10, fill: "var(--color-muted-foreground)" },
-    labelBgStyle: { fill: "var(--color-card)", fillOpacity: 0.9 },
+    labelStyle: { fontSize: 11, fill: "var(--color-muted-foreground)", fontFamily: "var(--font-sans)" },
+    labelBgStyle: { fill: "var(--color-card)", fillOpacity: 0.95, rx: 4, ry: 4 },
+    labelBgPadding: [4, 6] as [number, number],
   };
   const stroke = colorFor(r);
   const dashed = r.qualifier === "divorce" || r.qualifier === "separation" || r.qualifier === "rupture";
@@ -279,16 +410,16 @@ function relToEdge(r: RelRow): Edge {
     animated: r.qualifier === "conflict",
     style: {
       stroke,
-      strokeWidth: thick ? 3 : 1.5,
-      strokeDasharray: dashed ? "6 4" : undefined,
+      strokeWidth: thick ? 3 : 2,
+      strokeDasharray: dashed ? "8 5" : undefined,
     },
   };
 }
 
 function colorFor(r: RelRow): string {
-  if (r.relationship_type === "parent") return "var(--color-primary)";
-  if (r.relationship_type === "sibling") return "var(--color-muted-foreground)";
-  if (r.relationship_type === "union") return "var(--color-gold)";
+  if (r.relationship_type === "parent")  return "var(--color-primary)";
+  if (r.relationship_type === "sibling") return "var(--color-forest)";
+  if (r.relationship_type === "union")   return "var(--color-gold)";
   // emotional
   switch (r.qualifier) {
     case "conflict":
@@ -296,24 +427,49 @@ function colorFor(r: RelRow): string {
       return "var(--color-destructive)";
     case "fusion":
     case "close":
-      return "var(--color-lilac)";
+      return "var(--color-forest)";
     case "grief":
       return "var(--color-primary)";
     default:
-      return "var(--color-lilac)";
+      return "var(--color-muted-foreground)";
   }
 }
 
 function EmptyCanvas({ onCreate }: { onCreate: () => void }) {
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-4 p-10 text-center">
-      <p className="font-serif text-2xl text-primary">A árvore começa por uma pessoa</p>
-      <p className="max-w-md text-sm text-muted-foreground">
-        Adicione o paciente-índice primeiro. Depois construa em torno dele: pais,
-        avós, irmãos, uniões, filhos. As relações contam a história.
-      </p>
-      <Button onClick={onCreate}>
-        <Plus className="size-4" /> Adicionar primeira pessoa
+    <div className="flex h-full flex-col items-center justify-center gap-6 p-10 text-center">
+      {/* Ícone decorativo */}
+      <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-dashed border-gold/40 bg-gold/5">
+        <TreePine className="size-9 text-gold/60" />
+      </div>
+
+      <div>
+        <p className="font-serif text-2xl text-primary">A árvore começa por uma pessoa</p>
+        <p className="mt-3 max-w-md text-[15px] leading-relaxed text-muted-foreground">
+          Adicione o <strong>paciente-índice</strong> primeiro. Depois construa em torno dele:
+          pais, avós, irmãos, uniões, filhos. As relações contam a história.
+        </p>
+      </div>
+
+      {/* Passos guiados */}
+      <div className="mt-2 flex flex-col items-start gap-3 rounded-xl border border-border bg-cream p-5 text-left">
+        <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+          Como construir a árvore
+        </p>
+        {[
+          "1. Adicione o paciente-índice (borda dupla dourada)",
+          "2. Clique em \"Adicionar pessoa\" para cada familiar",
+          "3. Arraste o ponto dourado de uma pessoa para outra para criar vínculos",
+          "4. Clique duplo em qualquer elemento para editar",
+          "5. Use \"Imprimir A3\" para exportar a árvore completa",
+        ].map((step) => (
+          <p key={step} className="text-[14px] text-foreground/80">{step}</p>
+        ))}
+      </div>
+
+      <Button onClick={onCreate} size="lg" variant="gold">
+        <UserPlus className="size-5" />
+        Adicionar primeira pessoa
       </Button>
     </div>
   );

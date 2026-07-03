@@ -1,6 +1,14 @@
 import { createFileRoute, Link, Outlet, redirect, useLocation, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Home, LogOut, Users, Library, Settings } from "lucide-react";
+import {
+  Home,
+  LogOut,
+  Users,
+  Library,
+  Settings,
+  GitBranch,
+  Mic,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,9 +28,9 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 const nav: Array<{ to: string; label: string; icon: typeof Home; exact?: boolean }> = [
-  { to: "/app", label: "Início", icon: Home, exact: true },
-  { to: "/app/clientes", label: "Clientes", icon: Users },
-  { to: "/app/biblioteca", label: "Biblioteca", icon: Library },
+  { to: "/app",           label: "Início",         icon: Home,      exact: true },
+  { to: "/app/clientes",  label: "Clientes",        icon: Users },
+  { to: "/app/biblioteca",label: "Biblioteca",      icon: Library },
   { to: "/app/configuracoes", label: "Configurações", icon: Settings },
 ];
 
@@ -62,11 +70,19 @@ function AuthenticatedLayout() {
 
   return (
     <div className="flex min-h-screen bg-background">
-      <aside className="hidden w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
-        <Link to="/app" className="flex items-center gap-3 border-b border-sidebar-border px-6 py-5">
+      {/* ── SIDEBAR ─────────────────────────────────────── */}
+      <aside className="hidden w-72 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
+
+        {/* Logo */}
+        <Link
+          to="/app"
+          className="flex items-center gap-3 border-b border-sidebar-border px-6 py-6"
+        >
           <LizLogoLockup variant="light" />
         </Link>
-        <nav className="flex-1 space-y-1 px-3 py-6">
+
+        {/* Nav items */}
+        <nav className="flex-1 px-4 py-6 space-y-1">
           {nav.map((item) => {
             const active = item.exact
               ? location.pathname === item.to
@@ -76,50 +92,88 @@ function AuthenticatedLayout() {
                 key={item.to}
                 to={item.to as "/app"}
                 className={
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors " +
+                  "group flex items-center gap-4 rounded-xl px-4 py-3.5 text-[15px] font-medium transition-all duration-150 " +
                   (active
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground/75 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground")
+                    ? "bg-gold text-[oklch(0.15_0.02_240)] shadow-sm"
+                    : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground")
                 }
               >
-                <item.icon className="size-4" />
+                <item.icon
+                  className={
+                    "size-5 shrink-0 transition-colors " +
+                    (active ? "text-[oklch(0.15_0.02_240)]" : "text-sidebar-foreground/60 group-hover:text-sidebar-foreground")
+                  }
+                />
                 {item.label}
               </Link>
             );
           })}
         </nav>
-        <div className="border-t border-sidebar-border p-4">
-          <div className="mb-3 flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sidebar-accent text-sm font-medium">
+
+        {/* Separador com label */}
+        <div className="px-4 pb-2">
+          <p className="px-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-sidebar-foreground/40">
+            Ferramentas
+          </p>
+          <div className="mt-2 space-y-1">
+            <button
+              disabled
+              className="flex w-full items-center gap-4 rounded-xl px-4 py-3 text-[14px] text-sidebar-foreground/40 cursor-not-allowed"
+            >
+              <Mic className="size-5" />
+              Prontuário por voz
+              <span className="ml-auto rounded-full bg-gold/20 px-2 py-0.5 text-[10px] font-bold text-gold uppercase tracking-wide">Em breve</span>
+            </button>
+            <button
+              disabled
+              className="flex w-full items-center gap-4 rounded-xl px-4 py-3 text-[14px] text-sidebar-foreground/40 cursor-not-allowed"
+            >
+              <GitBranch className="size-5" />
+              Motor de padrões
+              <span className="ml-auto rounded-full bg-gold/20 px-2 py-0.5 text-[10px] font-bold text-gold uppercase tracking-wide">Em breve</span>
+            </button>
+          </div>
+        </div>
+
+        {/* User section */}
+        <div className="border-t border-sidebar-border p-4 mt-2">
+          <div className="flex items-center gap-3 rounded-xl bg-sidebar-accent p-3">
+            {/* Avatar */}
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gold text-[13px] font-bold text-[oklch(0.15_0.02_240)]">
               {initials || "?"}
             </div>
-            <div className="min-w-0 flex-1 leading-tight">
-              <p className="truncate text-sm">{displayName}</p>
-              <p className="truncate text-xs text-sidebar-foreground/60">{user.email}</p>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[14px] font-semibold text-sidebar-foreground">
+                {displayName}
+              </p>
+              <p className="truncate text-[12px] text-sidebar-foreground/55">
+                {user.email}
+              </p>
             </div>
+            <button
+              onClick={handleSignOut}
+              className="shrink-0 rounded-lg p-2 text-sidebar-foreground/60 transition-colors hover:bg-sidebar-border hover:text-sidebar-foreground"
+              title="Sair da plataforma"
+            >
+              <LogOut className="size-4" />
+            </button>
           </div>
-          <Button
-            onClick={handleSignOut}
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-          >
-            <LogOut className="size-4" />
-            Sair
-          </Button>
         </div>
       </aside>
 
+      {/* ── CONTEÚDO PRINCIPAL ──────────────────────────── */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 items-center justify-between border-b border-border bg-parchment/60 px-6 backdrop-blur md:hidden">
+        {/* Mobile header */}
+        <header className="flex h-16 items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur md:hidden">
           <Link to="/app" className="flex items-center gap-2">
             <LizLogo size={28} />
-            <span className="font-serif text-lg text-primary">Instituto Liz</span>
+            <span className="font-serif text-xl text-primary">Instituto Liz</span>
           </Link>
-          <Button onClick={handleSignOut} variant="ghost" size="sm">
-            <LogOut className="size-4" />
+          <Button onClick={handleSignOut} variant="ghost" size="icon-sm">
+            <LogOut className="size-5" />
           </Button>
         </header>
+
         <main className="flex-1 overflow-y-auto">
           <Outlet />
         </main>
