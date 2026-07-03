@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { Link2 } from "lucide-react";
 
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import {
   relationshipQualifiers,
@@ -37,7 +39,6 @@ interface Props {
   clientId: string;
   persons: PersonRow[];
   editing?: RelRow | null;
-  /** Pré-seleciona pessoas quando criado via drag & drop no canvas. */
   seed?: { from?: string; to?: string };
 }
 
@@ -114,141 +115,166 @@ export function RelationshipFormDialog({
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["genogram", clientId] });
-      toast.success(editing ? "Relação atualizada." : "Relação criada.");
+      toast.success(editing ? "Vínculo salvo." : "Vínculo criado na árvore.");
       onOpenChange(false);
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
 
-  const fromHint =
-    v.relationship_type === "parent" ? "Pai/mãe" : "Pessoa A";
+  const fromHint = v.relationship_type === "parent" ? "Pai/mãe" : "Pessoa A";
   const toHint = v.relationship_type === "parent" ? "Filho(a)" : "Pessoa B";
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="font-serif text-2xl text-primary">
-            {editing ? "Editar relação" : "Nova relação"}
-          </DialogTitle>
-          <DialogDescription>
-            Padrões vinculares: parentalidade, uniões, irmandade e vínculos emocionais.
-          </DialogDescription>
-        </DialogHeader>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="flex flex-col gap-0 p-0 sm:max-w-lg w-full border-l-[5px] border-l-gold">
+        
+        {/* Header Magazine Style */}
+        <div className="bg-plum px-8 py-10 relative overflow-hidden shrink-0">
+          <span className="section-number absolute right-4 top-4 opacity-10 text-white">
+            ∞
+          </span>
+          <SheetHeader className="relative z-10">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="flex h-16 w-16 items-center justify-center rounded-md bg-gold text-2xl font-bold text-plum shadow-md">
+                <Link2 className="size-8" />
+              </div>
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-gold">
+                  Conexão
+                </p>
+                <SheetTitle className="font-serif text-3xl font-bold text-white mt-1">
+                  {editing ? "Editar vínculo" : "Novo vínculo"}
+                </SheetTitle>
+              </div>
+            </div>
+            <SheetDescription className="text-white/60 text-[14px]">
+              Vínculos entrelaçam os dados. Registre parentalidade, uniões, rupturas ou aproximações.
+            </SheetDescription>
+          </SheetHeader>
+        </div>
 
-        <form
-          className="space-y-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            mutation.mutate(v);
-          }}
-        >
-          <div className="space-y-1.5">
-            <Label>Tipo</Label>
-            <Select
-              value={v.relationship_type}
-              onValueChange={(x) =>
-                setV((p) => ({ ...p, relationship_type: x as RelationshipType, qualifier: "" }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {relationshipTypes.map((t) => (
-                  <SelectItem key={t.value} value={t.value}>
-                    {t.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label>{fromHint}</Label>
+        <ScrollArea className="flex-1 bg-background px-8 py-6">
+          <form
+            id="rel-form"
+            className="space-y-6 pb-8"
+            onSubmit={(e) => {
+              e.preventDefault();
+              mutation.mutate(v);
+            }}
+          >
+            <div className="space-y-2">
+              <Label className="text-[13px] font-bold text-foreground">Natureza da relação</Label>
               <Select
-                value={v.from_person_id}
-                onValueChange={(x) => setV((p) => ({ ...p, from_person_id: x }))}
+                value={v.relationship_type}
+                onValueChange={(x) =>
+                  setV((p) => ({ ...p, relationship_type: x as RelationshipType, qualifier: "" }))
+                }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecionar..." />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {persons.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.preferred_name || p.full_name}
+                  {relationshipTypes.map((t) => (
+                    <SelectItem key={t.value} value={t.value} className="font-bold">
+                      {t.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5">
-              <Label>{toHint}</Label>
-              <Select
-                value={v.to_person_id}
-                onValueChange={(x) => setV((p) => ({ ...p, to_person_id: x }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecionar..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {persons.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.preferred_name || p.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+
+            <div className="grid gap-5 border-l-2 border-dashed border-border pl-4 ml-2">
+              <div className="space-y-2 relative">
+                <div className="absolute -left-[23px] top-4 size-2.5 rounded-full bg-border" />
+                <Label className="text-[13px] font-bold text-foreground">{fromHint}</Label>
+                <Select
+                  value={v.from_person_id}
+                  onValueChange={(x) => setV((p) => ({ ...p, from_person_id: x }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecionar..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {persons.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.preferred_name || p.full_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2 relative">
+                <div className="absolute -left-[23px] top-4 size-2.5 rounded-full bg-border" />
+                <Label className="text-[13px] font-bold text-foreground">{toHint}</Label>
+                <Select
+                  value={v.to_person_id}
+                  onValueChange={(x) => setV((p) => ({ ...p, to_person_id: x }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecionar..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {persons.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.preferred_name || p.full_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          </div>
 
-          {qualifierOptions.length > 0 && (
-            <div className="space-y-1.5">
-              <Label>Qualificador</Label>
-              <Select
-                value={v.qualifier || undefined}
-                onValueChange={(x) => setV((p) => ({ ...p, qualifier: x }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Opcional" />
-                </SelectTrigger>
-                <SelectContent>
-                  {qualifierOptions.map((q) => (
-                    <SelectItem key={q.value} value={q.value}>
-                      {q.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {qualifierOptions.length > 0 && (
+              <div className="space-y-2 pt-2">
+                <Label className="text-[13px] font-bold text-foreground">Intensidade / Qualificador</Label>
+                <Select
+                  value={v.qualifier || undefined}
+                  onValueChange={(x) => setV((p) => ({ ...p, qualifier: x }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Opcional" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {qualifierOptions.map((q) => (
+                      <SelectItem key={q.value} value={q.value}>
+                        {q.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="space-y-2 pt-2">
+              <Label className="text-[13px] font-bold text-foreground">Anotações sistêmicas</Label>
+              <Textarea
+                rows={4}
+                value={v.notes}
+                onChange={(e) => setV((p) => ({ ...p, notes: e.target.value }))}
+                placeholder="Contexto clínico deste vínculo, datas de início/fim, observações de tensão ou alienação..."
+                className="resize-none"
+              />
             </div>
-          )}
+          </form>
+        </ScrollArea>
 
-          <div className="space-y-1.5">
-            <Label>Notas</Label>
-            <Textarea
-              rows={2}
-              value={v.notes}
-              onChange={(e) => setV((p) => ({ ...p, notes: e.target.value }))}
-              placeholder="Contexto do vínculo, datas, observações clínicas..."
-            />
-          </div>
+        {/* Footer */}
+        <div className="border-t border-border bg-card px-8 py-5 shrink-0 flex justify-end gap-3">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+            disabled={mutation.isPending}
+          >
+            Cancelar
+          </Button>
+          <Button type="submit" form="rel-form" disabled={mutation.isPending} variant="gold">
+            {mutation.isPending ? "Salvando..." : editing ? "Salvar vínculo" : "Criar conexão"}
+          </Button>
+        </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => onOpenChange(false)}
-              disabled={mutation.isPending}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? "Salvando..." : editing ? "Salvar" : "Criar vínculo"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }

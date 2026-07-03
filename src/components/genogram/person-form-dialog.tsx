@@ -1,16 +1,16 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, X } from "lucide-react";
+import { Plus, X, User } from "lucide-react";
 
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { genogramGenderOptions } from "@/lib/genogram";
 import { personLifeEvents, type LifeEvent } from "@/lib/patterns";
@@ -144,7 +145,7 @@ export function PersonFormDialog({
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["genogram", clientId] });
-      toast.success(editing ? "Pessoa atualizada." : "Pessoa adicionada.");
+      toast.success(editing ? "Dossiê salvo." : "Pessoa adicionada.");
       onOpenChange(false);
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
@@ -166,10 +167,7 @@ export function PersonFormDialog({
   }
 
   function removeCondition(c: string) {
-    set(
-      "health_conditions",
-      v.health_conditions.filter((x) => x !== c),
-    );
+    set("health_conditions", v.health_conditions.filter((x) => x !== c));
   }
 
   function addEvent() {
@@ -184,249 +182,280 @@ export function PersonFormDialog({
   }
 
   function removeEvent(i: number) {
-    set(
-      "life_events",
-      v.life_events.filter((_, idx) => idx !== i),
-    );
+    set("life_events", v.life_events.filter((_, idx) => idx !== i));
   }
 
+  // Visual header: initials
+  const initials = v.full_name
+    ? v.full_name.split(" ").filter(Boolean).slice(0, 2).map(n => n[0]).join("").toUpperCase()
+    : "?";
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="font-serif text-2xl text-primary">
-            {editing ? "Editar pessoa" : "Nova pessoa"}
-          </DialogTitle>
-          <DialogDescription>
-            Membro do sistema familiar. Cada campo alimenta o motor de padrões
-            e a linha do tempo do caso.
-          </DialogDescription>
-        </DialogHeader>
-
-        <form
-          className="space-y-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            mutation.mutate(v);
-          }}
-        >
-          <Row>
-            <Field label="Nome completo *" id="full_name">
-              <Input
-                id="full_name"
-                required
-                autoFocus
-                value={v.full_name}
-                onChange={(e) => set("full_name", e.target.value)}
-              />
-            </Field>
-            <Field label="Apelido" id="preferred_name">
-              <Input
-                id="preferred_name"
-                value={v.preferred_name}
-                onChange={(e) => set("preferred_name", e.target.value)}
-              />
-            </Field>
-          </Row>
-
-          <Row>
-            <Field label="Gênero" id="gender">
-              <Select value={v.gender} onValueChange={(x) => set("gender", x)}>
-                <SelectTrigger id="gender">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {genogramGenderOptions.map((g) => (
-                    <SelectItem key={g.value} value={g.value}>
-                      <span className="mr-2 font-serif">{g.symbol}</span> {g.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field label="Ocupação" id="occupation">
-              <Input
-                id="occupation"
-                value={v.occupation}
-                onChange={(e) => set("occupation", e.target.value)}
-                placeholder="Ex.: professora, militar, comerciante"
-              />
-            </Field>
-          </Row>
-
-          <Row>
-            <Field label="Nascimento" id="birth_date">
-              <Input
-                id="birth_date"
-                type="date"
-                value={v.birth_date}
-                onChange={(e) => set("birth_date", e.target.value)}
-              />
-            </Field>
-            <Field label="Falecimento" id="death_date">
-              <Input
-                id="death_date"
-                type="date"
-                value={v.death_date}
-                onChange={(e) => set("death_date", e.target.value)}
-              />
-            </Field>
-          </Row>
-
-          {(v.is_deceased || v.death_date) && (
-            <Field label="Causa da morte" id="cause_of_death">
-              <Input
-                id="cause_of_death"
-                value={v.cause_of_death}
-                onChange={(e) => set("cause_of_death", e.target.value)}
-                placeholder="Ex.: câncer de mama, acidente, suicídio"
-              />
-            </Field>
-          )}
-
-          <Field label="Condições de saúde" id="health_conditions">
-            <div className="flex gap-2">
-              <Input
-                id="health_conditions"
-                value={conditionInput}
-                onChange={(e) => setConditionInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    addCondition();
-                  }
-                }}
-                placeholder="Diabetes, depressão, câncer... (Enter para adicionar)"
-              />
-              <Button type="button" variant="outline" size="icon" onClick={addCondition}>
-                <Plus className="size-4" />
-              </Button>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      {/* Editorial width: sm:max-w-2xl */}
+      <SheetContent side="right" className="flex flex-col gap-0 p-0 sm:max-w-xl w-full border-l-[5px] border-l-lavender">
+        
+        {/* Header Magazine Style */}
+        <div className="bg-plum px-8 py-10 relative overflow-hidden shrink-0">
+          <span className="section-number absolute right-4 top-4 opacity-10 text-white">
+            {initials}
+          </span>
+          <SheetHeader className="relative z-10">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="flex h-16 w-16 items-center justify-center rounded-md bg-lavender text-2xl font-serif font-bold text-white shadow-md">
+                {initials}
+              </div>
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-lavender-mid">
+                  Dossiê
+                </p>
+                <SheetTitle className="font-serif text-3xl font-bold text-white mt-1">
+                  {editing ? (v.preferred_name || v.full_name || "Membro da árvore") : "Nova pessoa"}
+                </SheetTitle>
+              </div>
             </div>
-            {v.health_conditions.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {v.health_conditions.map((c) => (
-                  <Badge key={c} variant="secondary" className="gap-1 font-normal">
-                    {c}
-                    <button
-                      type="button"
-                      onClick={() => removeCondition(c)}
-                      className="opacity-70 hover:opacity-100"
-                    >
-                      <X className="size-3" />
-                    </button>
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </Field>
+            <SheetDescription className="text-white/60 text-[14px]">
+              Cada detalhe preenchido aqui alimenta o motor de padrões e a memória do sistema.
+            </SheetDescription>
+          </SheetHeader>
+        </div>
 
-          <Field label="Eventos biográficos" id="life_events">
-            <div className="rounded-lg border border-border bg-parchment/40 p-3">
-              <div className="grid gap-2 sm:grid-cols-[130px_140px_1fr_auto]">
-                <Input
-                  type="date"
-                  value={eventDate}
-                  onChange={(e) => setEventDate(e.target.value)}
-                  aria-label="Data"
-                />
-                <Input
-                  value={eventType}
-                  onChange={(e) => setEventType(e.target.value)}
-                  placeholder="Tipo"
-                  aria-label="Tipo"
-                />
-                <Input
-                  value={eventDesc}
-                  onChange={(e) => setEventDesc(e.target.value)}
-                  placeholder="Descrição (ex.: casamento, exílio, aborto)"
-                  aria-label="Descrição"
-                />
-                <Button type="button" variant="outline" size="icon" onClick={addEvent}>
-                  <Plus className="size-4" />
-                </Button>
+        {/* Scrollable Form Body */}
+        <ScrollArea className="flex-1 bg-background px-8 py-6">
+          <form
+            id="person-form"
+            className="space-y-8 pb-8"
+            onSubmit={(e) => {
+              e.preventDefault();
+              mutation.mutate(v);
+            }}
+          >
+            {/* Identidade */}
+            <div className="space-y-4">
+              <h3 className="font-serif text-xl font-bold text-primary border-b border-border pb-2">
+                Identidade
+              </h3>
+              <Row>
+                <Field label="Nome completo *" id="full_name">
+                  <Input
+                    id="full_name"
+                    required
+                    autoFocus
+                    value={v.full_name}
+                    onChange={(e) => set("full_name", e.target.value)}
+                  />
+                </Field>
+                <Field label="Apelido" id="preferred_name">
+                  <Input
+                    id="preferred_name"
+                    value={v.preferred_name}
+                    onChange={(e) => set("preferred_name", e.target.value)}
+                  />
+                </Field>
+              </Row>
+              <Row>
+                <Field label="Gênero" id="gender">
+                  <Select value={v.gender} onValueChange={(x) => set("gender", x)}>
+                    <SelectTrigger id="gender">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {genogramGenderOptions.map((g) => (
+                        <SelectItem key={g.value} value={g.value}>
+                          <span className="mr-2 font-serif font-bold text-lavender">{g.symbol}</span> {g.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <Field label="Ocupação" id="occupation">
+                  <Input
+                    id="occupation"
+                    value={v.occupation}
+                    onChange={(e) => set("occupation", e.target.value)}
+                    placeholder="Ex.: professora, militar"
+                  />
+                </Field>
+              </Row>
+            </div>
+
+            {/* Ciclo de vida */}
+            <div className="space-y-4">
+              <h3 className="font-serif text-xl font-bold text-primary border-b border-border pb-2">
+                Ciclo de Vida
+              </h3>
+              <Row>
+                <Field label="Nascimento" id="birth_date">
+                  <Input
+                    id="birth_date"
+                    type="date"
+                    value={v.birth_date}
+                    onChange={(e) => set("birth_date", e.target.value)}
+                  />
+                </Field>
+                <Field label="Falecimento" id="death_date">
+                  <Input
+                    id="death_date"
+                    type="date"
+                    value={v.death_date}
+                    onChange={(e) => set("death_date", e.target.value)}
+                  />
+                </Field>
+              </Row>
+
+              <div className="flex items-center gap-6 mt-2 mb-4">
+                <label className="flex items-center gap-2 text-[14px] font-medium cursor-pointer">
+                  <Checkbox
+                    checked={v.is_deceased}
+                    onCheckedChange={(c) => set("is_deceased", c === true)}
+                  />
+                  Já faleceu
+                </label>
+                <label className="flex items-center gap-2 text-[14px] font-bold text-lavender cursor-pointer">
+                  <Checkbox
+                    checked={v.is_proband}
+                    onCheckedChange={(c) => set("is_proband", c === true)}
+                  />
+                  É o paciente-índice
+                </label>
               </div>
-              {v.life_events.length > 0 && (
-                <ul className="mt-3 space-y-1.5 text-sm">
-                  {v.life_events
-                    .slice()
-                    .sort((a, b) => a.date.localeCompare(b.date))
-                    .map((ev, i) => (
-                      <li
-                        key={`${ev.date}-${i}`}
-                        className="flex items-center gap-2 rounded border border-border/70 bg-card px-2 py-1"
-                      >
-                        <span className="font-mono text-xs text-muted-foreground">
-                          {ev.date}
-                        </span>
-                        {ev.type && (
-                          <span className="text-xs uppercase tracking-wide text-gold">
-                            {ev.type}
-                          </span>
-                        )}
-                        <span className="flex-1 truncate">{ev.description}</span>
-                        <button
-                          type="button"
-                          onClick={() => removeEvent(i)}
-                          className="text-muted-foreground hover:text-destructive"
-                          aria-label="Remover evento"
-                        >
-                          <X className="size-3.5" />
-                        </button>
-                      </li>
-                    ))}
-                </ul>
+
+              {(v.is_deceased || v.death_date) && (
+                <Field label="Causa da morte" id="cause_of_death">
+                  <Input
+                    id="cause_of_death"
+                    value={v.cause_of_death}
+                    onChange={(e) => set("cause_of_death", e.target.value)}
+                    placeholder="Ex.: câncer de mama, acidente, suicídio"
+                  />
+                </Field>
               )}
             </div>
-          </Field>
 
-          <Field label="Notas" id="notes">
-            <Textarea
-              id="notes"
-              rows={3}
-              value={v.notes}
-              onChange={(e) => set("notes", e.target.value)}
-              placeholder="Segredos, padrões, síndromes de aniversário, missões transgeracionais..."
-            />
-          </Field>
+            {/* Saúde e Padrões */}
+            <div className="space-y-4">
+              <h3 className="font-serif text-xl font-bold text-primary border-b border-border pb-2">
+                Padrões & Histórico
+              </h3>
+              
+              <Field label="Condições de saúde (física/mental)" id="health_conditions">
+                <div className="flex gap-2">
+                  <Input
+                    id="health_conditions"
+                    value={conditionInput}
+                    onChange={(e) => setConditionInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        addCondition();
+                      }
+                    }}
+                    placeholder="Diabetes, luto, depressão... (Enter para adicionar)"
+                  />
+                  <Button type="button" variant="lavender" size="icon" onClick={addCondition}>
+                    <Plus className="size-4" />
+                  </Button>
+                </div>
+                {v.health_conditions.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {v.health_conditions.map((c) => (
+                      <Badge key={c} variant="secondary" className="gap-1.5 font-semibold text-[13px] bg-accent/50 px-2 py-1">
+                        {c}
+                        <button
+                          type="button"
+                          onClick={() => removeCondition(c)}
+                          className="opacity-60 hover:opacity-100 transition-opacity"
+                        >
+                          <X className="size-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </Field>
 
-          <div className="space-y-2 rounded-lg border border-border bg-parchment/40 p-3">
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox
-                checked={v.is_proband}
-                onCheckedChange={(c) => set("is_proband", c === true)}
-              />
-              É o paciente-índice (proband)
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox
-                checked={v.is_deceased}
-                onCheckedChange={(c) => set("is_deceased", c === true)}
-              />
-              Já faleceu
-            </label>
-          </div>
+              <Field label="Eventos biográficos marcantes" id="life_events">
+                <div className="rounded-lg border-2 border-dashed border-border bg-card p-4">
+                  <div className="grid gap-3 sm:grid-cols-[130px_1fr_auto]">
+                    <Input
+                      type="date"
+                      value={eventDate}
+                      onChange={(e) => setEventDate(e.target.value)}
+                      aria-label="Data"
+                    />
+                    <Input
+                      value={eventDesc}
+                      onChange={(e) => setEventDesc(e.target.value)}
+                      placeholder="Descrição (ex.: exílio, casamento, aborto)"
+                      aria-label="Descrição"
+                    />
+                    <Button type="button" variant="outline" size="icon" onClick={addEvent}>
+                      <Plus className="size-4" />
+                    </Button>
+                  </div>
+                  {v.life_events.length > 0 && (
+                    <ul className="mt-4 space-y-2">
+                      {v.life_events
+                        .slice()
+                        .sort((a, b) => a.date.localeCompare(b.date))
+                        .map((ev, i) => (
+                          <li
+                            key={`${ev.date}-${i}`}
+                            className="flex items-center gap-3 rounded-md border border-border/70 bg-background px-3 py-2 shadow-sm"
+                          >
+                            <span className="font-mono text-[12px] font-bold text-muted-foreground">
+                              {ev.date}
+                            </span>
+                            <span className="flex-1 truncate text-[14px] font-medium">{ev.description}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeEvent(i)}
+                              className="text-muted-foreground hover:text-destructive"
+                            >
+                              <X className="size-4" />
+                            </button>
+                          </li>
+                        ))}
+                    </ul>
+                  )}
+                </div>
+              </Field>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => onOpenChange(false)}
-              disabled={mutation.isPending}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? "Salvando..." : editing ? "Salvar" : "Adicionar"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+              <Field label="Anotações sistêmicas (Mitos, Segredos)" id="notes">
+                <Textarea
+                  id="notes"
+                  rows={4}
+                  value={v.notes}
+                  onChange={(e) => set("notes", e.target.value)}
+                  placeholder="Segredos de família, padrões repetitivos, síndromes de aniversário, missões transgeracionais invisíveis..."
+                  className="resize-none"
+                />
+              </Field>
+            </div>
+          </form>
+        </ScrollArea>
+
+        {/* Footer */}
+        <div className="border-t border-border bg-card px-8 py-5 shrink-0 flex justify-end gap-3">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+            disabled={mutation.isPending}
+          >
+            Cancelar
+          </Button>
+          <Button type="submit" form="person-form" disabled={mutation.isPending} variant="lavender" size="lg">
+            {mutation.isPending ? "Salvando..." : editing ? "Salvar dossiê" : "Adicionar à árvore"}
+          </Button>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }
 
 function Row({ children }: { children: React.ReactNode }) {
-  return <div className="grid gap-4 sm:grid-cols-2">{children}</div>;
+  return <div className="grid gap-5 sm:grid-cols-2">{children}</div>;
 }
 
 function Field({
@@ -439,8 +468,10 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <div className="space-y-1.5">
-      <Label htmlFor={id}>{label}</Label>
+    <div className="space-y-2">
+      <Label htmlFor={id} className="text-[13px] font-bold text-foreground">
+        {label}
+      </Label>
       {children}
     </div>
   );

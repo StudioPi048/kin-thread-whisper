@@ -7,13 +7,17 @@ import {
   ArchiveRestore,
   ChevronRight,
   Library,
-  Mic,
   Pencil,
   ShieldCheck,
   ShieldAlert,
   Trash2,
+  TreePine,
+  Activity,
+  History,
+  FileText
 } from "lucide-react";
 import { toast } from "sonner";
+import { motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -109,194 +113,207 @@ function ClientDossierPage() {
   const display = client.preferred_name || client.full_name;
   const age = calcAge(client.birth_date);
   const genderLabel = genderOptions.find((g) => g.value === client.gender)?.label ?? "—";
+  const initials = initialsFrom(client.full_name);
 
   return (
-    <div className="container-liz py-8 md:py-12">
-      <nav className="flex items-center gap-1 text-sm text-muted-foreground">
-        <Link to="/app/clientes" className="inline-flex items-center gap-1 hover:text-primary">
-          <ArrowLeft className="size-3.5" /> Clientes
-        </Link>
-        <ChevronRight className="size-3.5" />
-        <span className="truncate text-foreground">{display}</span>
-      </nav>
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="pb-12"
+    >
+      {/* Editorial Plum Header */}
+      <div className="block-plum pb-10 pt-4 px-6 relative overflow-hidden">
+        {/* Giant decorative initial */}
+        <span className="section-number absolute -right-4 -bottom-10 opacity-[0.03] text-white">
+          {initials}
+        </span>
+        
+        <div className="container-liz relative z-10">
+          <nav className="flex items-center gap-1 text-[12px] uppercase tracking-[0.1em] font-bold text-white/50 mb-8">
+            <Link to="/app/clientes" className="inline-flex items-center gap-1 hover:text-white transition-colors">
+              <ArrowLeft className="size-3.5" /> Clientes
+            </Link>
+            <ChevronRight className="size-3.5" />
+            <span className="truncate text-gold">{display}</span>
+          </nav>
 
-      <header className="mt-6 flex flex-wrap items-start justify-between gap-6">
-        <div className="flex items-start gap-4">
-          <div className="flex size-16 items-center justify-center rounded-full bg-lilac-soft font-serif text-2xl text-primary">
-            {initialsFrom(client.full_name)}
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-[0.28em] text-gold">Dossiê clínico</p>
-            <h1 className="mt-2 font-serif text-4xl text-primary md:text-5xl">{display}</h1>
-            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-              {age !== null && <span>{age} anos</span>}
-              {client.birth_date && <span>· {formatBirthDate(client.birth_date)}</span>}
-              {client.birthplace && <span>· {client.birthplace}</span>}
-              {client.status === "archived" && (
-                <Badge variant="secondary" className="ml-1">Arquivado</Badge>
-              )}
-            </div>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => setEditing(true)}>
-            <Pencil className="size-4" /> Editar
-          </Button>
-          <Button variant="outline" onClick={() => toggleArchive.mutate()}>
-            {client.status === "active" ? (
-              <>
-                <Archive className="size-4" /> Arquivar
-              </>
-            ) : (
-              <>
-                <ArchiveRestore className="size-4" /> Reativar
-              </>
-            )}
-          </Button>
-          <Button
-            variant="ghost"
-            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-            onClick={() => setDeleting(true)}
-          >
-            <Trash2 className="size-4" /> Excluir
-          </Button>
-        </div>
-      </header>
-
-      <Tabs defaultValue="overview" className="mt-10">
-        <TabsList>
-          <TabsTrigger value="overview">Visão geral</TabsTrigger>
-          <TabsTrigger value="intake">Anamnese</TabsTrigger>
-          <TabsTrigger value="clan">Planilha do clã</TabsTrigger>
-          <TabsTrigger value="genogram">Genossociograma</TabsTrigger>
-          <TabsTrigger value="timeline">Linha do tempo</TabsTrigger>
-          <TabsTrigger value="patterns">Padrões</TabsTrigger>
-          <TabsTrigger value="sessions">Sessões</TabsTrigger>
-          <TabsTrigger value="library">Referências</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview" className="mt-8">
-          <div className="grid gap-6 lg:grid-cols-3">
-            <section className="lg:col-span-2 space-y-6">
-              <Panel title="Queixa apresentada">
-                {client.presenting_complaint ? (
-                  <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
-                    {client.presenting_complaint}
-                  </p>
-                ) : (
-                  <EmptyLine>Sem queixa registrada ainda.</EmptyLine>
-                )}
-              </Panel>
-              <Panel title="Notas clínicas">
-                {client.clinical_notes ? (
-                  <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
-                    {client.clinical_notes}
-                  </p>
-                ) : (
-                  <EmptyLine>Sem notas ainda. Você pode ditar por voz em breve.</EmptyLine>
-                )}
-              </Panel>
-              {client.tags && client.tags.length > 0 && (
-                <Panel title="Tags">
-                  <div className="flex flex-wrap gap-1.5">
-                    {client.tags.map((t) => (
-                      <Badge key={t} variant="secondary" className="font-normal">
-                        {t}
-                      </Badge>
-                    ))}
-                  </div>
-                </Panel>
-              )}
-            </section>
-
-            <aside className="space-y-6">
-              <CaseDashboard clientId={client.id} />
-              <Panel title="Identificação">
-                <InfoRow label="Nome completo" value={client.full_name} />
-                <InfoRow label="Gênero" value={genderLabel} />
-                <InfoRow label="Local de nascimento" value={client.birthplace ?? "—"} />
-                <InfoRow label="Telefone" value={client.phone ?? "—"} />
-                <InfoRow label="E-mail" value={client.email ?? "—"} />
-              </Panel>
-              <Panel
-                title="Consentimento LGPD"
-                icon={
-                  client.consent_given_at ? (
-                    <ShieldCheck className="size-4 text-emerald-700" />
-                  ) : (
-                    <ShieldAlert className="size-4 text-amber-700" />
-                  )
-                }
+          <header className="flex flex-wrap items-start justify-between gap-6">
+            <div className="flex items-start gap-5">
+              <motion.div 
+                layoutId={`avatar-${client.id}`}
+                className="flex size-20 shrink-0 items-center justify-center rounded-md bg-lavender font-serif text-3xl font-bold text-white shadow-lg"
               >
-                {client.consent_given_at ? (
-                  <>
-                    <p className="text-sm text-foreground">
-                      Consentimento registrado em{" "}
-                      <strong>
-                        {new Date(client.consent_given_at).toLocaleDateString("pt-BR")}
-                      </strong>
-                      .
-                    </p>
-                    {client.consent_notes && (
-                      <p className="mt-2 text-xs text-muted-foreground">{client.consent_notes}</p>
-                    )}
-                  </>
+                {initials}
+              </motion.div>
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.35em] text-lavender-mid">
+                  Dossiê Clínico
+                </p>
+                <h1 className="mt-1 font-serif text-4xl font-bold text-white md:text-5xl">{display}</h1>
+                <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-[14px] font-medium text-white/70">
+                  {age !== null && <span className="text-white">{age} anos</span>}
+                  {client.birth_date && <span>· {formatBirthDate(client.birth_date)}</span>}
+                  {client.birthplace && <span>· {client.birthplace}</span>}
+                  {client.status === "archived" && (
+                    <Badge variant="secondary" className="ml-1 bg-white/10 text-white hover:bg-white/20">Arquivado</Badge>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex flex-wrap gap-2 mt-2">
+              <Button variant="outline" onClick={() => setEditing(true)} className="border-white/20 text-white hover:bg-white/10 hover:text-white">
+                <Pencil className="size-4 mr-2" /> Editar
+              </Button>
+              <Button variant="outline" onClick={() => toggleArchive.mutate()} className="border-white/20 text-white hover:bg-white/10 hover:text-white">
+                {client.status === "active" ? (
+                  <><Archive className="size-4 mr-2" /> Arquivar</>
                 ) : (
-                  <p className="text-sm text-amber-800">
-                    Sem consentimento registrado. Registre antes de anotar dados sensíveis.
-                  </p>
+                  <><ArchiveRestore className="size-4 mr-2" /> Reativar</>
                 )}
-              </Panel>
-              <Panel title="Metadados">
-                <InfoRow
-                  label="Criado em"
-                  value={new Date(client.created_at).toLocaleString("pt-BR")}
-                />
-                <InfoRow
-                  label="Atualizado em"
-                  value={new Date(client.updated_at).toLocaleString("pt-BR")}
-                />
-              </Panel>
-            </aside>
+              </Button>
+              <Button
+                variant="ghost"
+                className="text-destructive hover:bg-destructive/20 hover:text-destructive"
+                onClick={() => setDeleting(true)}
+              >
+                <Trash2 className="size-4 mr-2" /> Excluir
+              </Button>
+            </div>
+          </header>
+        </div>
+      </div>
+
+      <div className="container-liz -mt-6 relative z-20">
+        <Tabs defaultValue="genogram" className="w-full">
+          <TabsList className="w-full justify-start h-auto p-1 bg-white border border-border rounded-md shadow-sm overflow-x-auto flex-nowrap">
+            <TabsTrigger value="overview" className="flex items-center gap-2 py-2.5 px-4 rounded-sm data-[state=active]:bg-lavender-soft data-[state=active]:text-plum">
+              <FileText className="size-4" /> Visão geral
+            </TabsTrigger>
+            <TabsTrigger value="genogram" className="flex items-center gap-2 py-2.5 px-4 rounded-sm data-[state=active]:bg-lavender-soft data-[state=active]:text-plum">
+              <TreePine className="size-4" /> Genossociograma
+            </TabsTrigger>
+            <TabsTrigger value="timeline" className="flex items-center gap-2 py-2.5 px-4 rounded-sm data-[state=active]:bg-lavender-soft data-[state=active]:text-plum">
+              <History className="size-4" /> Linha do tempo
+            </TabsTrigger>
+            <TabsTrigger value="patterns" className="flex items-center gap-2 py-2.5 px-4 rounded-sm data-[state=active]:bg-lavender-soft data-[state=active]:text-plum">
+              <Activity className="size-4" /> Padrões
+            </TabsTrigger>
+            <TabsTrigger value="intake" className="py-2.5 px-4 rounded-sm data-[state=active]:bg-lavender-soft data-[state=active]:text-plum">Anamnese</TabsTrigger>
+            <TabsTrigger value="sessions" className="py-2.5 px-4 rounded-sm data-[state=active]:bg-lavender-soft data-[state=active]:text-plum">Sessões</TabsTrigger>
+            <TabsTrigger value="clan" className="py-2.5 px-4 rounded-sm data-[state=active]:bg-lavender-soft data-[state=active]:text-plum">Planilha</TabsTrigger>
+          </TabsList>
+
+          <div className="mt-8">
+            <TabsContent value="overview">
+              <div className="grid gap-6 xl:grid-cols-3">
+                <section className="xl:col-span-2 space-y-6">
+                  <Panel title="Queixa apresentada" accent="lavender">
+                    {client.presenting_complaint ? (
+                      <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-foreground/80 font-serif">
+                        {client.presenting_complaint}
+                      </p>
+                    ) : (
+                      <EmptyLine>Sem queixa registrada ainda.</EmptyLine>
+                    )}
+                  </Panel>
+                  <Panel title="Notas clínicas" accent="gold">
+                    {client.clinical_notes ? (
+                      <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-foreground/80 font-serif">
+                        {client.clinical_notes}
+                      </p>
+                    ) : (
+                      <EmptyLine>Sem notas ainda. Você pode ditar por voz em breve.</EmptyLine>
+                    )}
+                  </Panel>
+                  {client.tags && client.tags.length > 0 && (
+                    <Panel title="Tags">
+                      <div className="flex flex-wrap gap-2">
+                        {client.tags.map((t) => (
+                          <Badge key={t} variant="secondary" className="font-semibold px-2 py-1 bg-background border border-border">
+                            {t}
+                          </Badge>
+                        ))}
+                      </div>
+                    </Panel>
+                  )}
+                </section>
+
+                <aside className="space-y-6">
+                  <CaseDashboard clientId={client.id} />
+                  <Panel title="Identificação">
+                    <InfoRow label="Nome completo" value={client.full_name} />
+                    <InfoRow label="Gênero" value={genderLabel} />
+                    <InfoRow label="Nascimento" value={client.birthplace ?? "—"} />
+                    <InfoRow label="Telefone" value={client.phone ?? "—"} />
+                    <InfoRow label="E-mail" value={client.email ?? "—"} />
+                  </Panel>
+                  <Panel
+                    title="Consentimento LGPD"
+                    icon={
+                      client.consent_given_at ? (
+                        <ShieldCheck className="size-4 text-emerald-600" />
+                      ) : (
+                        <ShieldAlert className="size-4 text-amber-600" />
+                      )
+                    }
+                  >
+                    {client.consent_given_at ? (
+                      <>
+                        <p className="text-[13px] text-foreground font-medium">
+                          Consentimento registrado em{" "}
+                          <strong className="text-emerald-700">
+                            {new Date(client.consent_given_at).toLocaleDateString("pt-BR")}
+                          </strong>
+                        </p>
+                        {client.consent_notes && (
+                          <p className="mt-2 text-[12px] text-muted-foreground">{client.consent_notes}</p>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-[13px] font-bold text-amber-700">
+                        Sem consentimento registrado. Registre antes de anotar dados sensíveis.
+                      </p>
+                    )}
+                  </Panel>
+                </aside>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="genogram">
+              <GenogramCanvas clientId={client.id} />
+            </TabsContent>
+
+            <TabsContent value="timeline">
+              <ClientTimeline clientId={client.id} />
+            </TabsContent>
+
+            <TabsContent value="patterns">
+              <PatternsPanel clientId={client.id} />
+            </TabsContent>
+
+            <TabsContent value="intake">
+              <IntakeForm clientId={client.id} professionalId={user.id} />
+            </TabsContent>
+
+            <TabsContent value="clan">
+              <ClanSpreadsheet clientId={client.id} />
+            </TabsContent>
+
+            <TabsContent value="sessions">
+              <SessionsPanel clientId={client.id} />
+            </TabsContent>
+
+            <TabsContent value="library">
+              <ComingSoon
+                icon={Library}
+                title="Referências ligadas ao caso"
+                body="Etapa 6: referências bibliográficas sugeridas automaticamente baseadas nas dinâmicas do dossiê."
+              />
+            </TabsContent>
           </div>
-        </TabsContent>
-
-        <TabsContent value="intake" className="mt-8">
-          <IntakeForm clientId={client.id} professionalId={user.id} />
-        </TabsContent>
-
-        <TabsContent value="clan" className="mt-8">
-          <ClanSpreadsheet clientId={client.id} />
-        </TabsContent>
-
-        <TabsContent value="genogram" className="mt-8">
-          <GenogramCanvas clientId={client.id} />
-        </TabsContent>
-
-        <TabsContent value="timeline" className="mt-8">
-          <ClientTimeline clientId={client.id} />
-        </TabsContent>
-
-        <TabsContent value="patterns" className="mt-8">
-          <PatternsPanel clientId={client.id} />
-        </TabsContent>
-
-
-
-
-        <TabsContent value="sessions" className="mt-8">
-          <SessionsPanel clientId={client.id} />
-        </TabsContent>
-
-
-        <TabsContent value="library" className="mt-8">
-          <ComingSoon
-            icon={Library}
-            title="Referências ligadas ao caso"
-            body="Etapa 6: capítulos de Schützenberger, Jodorowsky e Hellinger relacionados automaticamente ao dossiê."
-          />
-        </TabsContent>
-      </Tabs>
+        </Tabs>
+      </div>
 
       <ClientFormDialog
         open={editing}
@@ -327,19 +344,19 @@ function ClientDossierPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </motion.div>
   );
 }
 
 function ClientNotFound() {
   return (
     <div className="container-liz py-24 text-center">
-      <p className="text-xs uppercase tracking-[0.3em] text-gold">Instituto Liz</p>
-      <h1 className="mt-4 font-serif text-4xl text-primary">Dossiê não encontrado</h1>
-      <p className="mt-3 text-muted-foreground">
+      <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-gold">Instituto Liz</p>
+      <h1 className="mt-4 font-serif text-4xl font-bold text-primary">Dossiê não encontrado</h1>
+      <p className="mt-3 text-[15px] text-muted-foreground">
         Este cliente não existe ou foi removido.
       </p>
-      <Button asChild className="mt-8">
+      <Button asChild className="mt-8" variant="lavender">
         <Link to="/app/clientes">Voltar para clientes</Link>
       </Button>
     </div>
@@ -349,17 +366,21 @@ function ClientNotFound() {
 function Panel({
   title,
   icon,
+  accent,
   children,
 }: {
   title: string;
   icon?: React.ReactNode;
+  accent?: "lavender" | "gold" | "plum";
   children: React.ReactNode;
 }) {
+  const accentClass = accent === "lavender" ? "accent-bar-lavender" : accent === "gold" ? "accent-bar-gold" : accent === "plum" ? "accent-bar-plum" : "";
+  
   return (
-    <section className="rounded-lg border border-border bg-card p-5">
-      <div className="mb-3 flex items-center gap-2">
+    <section className={`rounded-sm border border-border bg-white p-6 shadow-sm ${accentClass}`}>
+      <div className="mb-4 flex items-center gap-2 border-b border-border/50 pb-2">
         {icon}
-        <h3 className="text-[10px] font-medium uppercase tracking-[0.28em] text-gold">{title}</h3>
+        <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">{title}</h3>
       </div>
       {children}
     </section>
@@ -368,15 +389,15 @@ function Panel({
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between gap-3 border-t border-border/70 py-2 text-sm first:border-0 first:pt-0">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="max-w-[60%] truncate text-right text-foreground">{value}</dd>
+    <div className="flex justify-between gap-3 border-t border-border/40 py-2.5 text-[13px] first:border-0 first:pt-0">
+      <dt className="font-semibold text-muted-foreground">{label}</dt>
+      <dd className="max-w-[60%] truncate text-right text-foreground font-medium">{value}</dd>
     </div>
   );
 }
 
 function EmptyLine({ children }: { children: React.ReactNode }) {
-  return <p className="text-sm italic text-muted-foreground">{children}</p>;
+  return <p className="text-[14px] italic text-muted-foreground">{children}</p>;
 }
 
 function ComingSoon({
@@ -389,10 +410,12 @@ function ComingSoon({
   body: string;
 }) {
   return (
-    <div className="rounded-lg border border-dashed border-border bg-card/50 p-16 text-center">
-      <Icon className="mx-auto size-8 text-lilac" />
-      <p className="mt-4 font-serif text-2xl text-primary">{title}</p>
-      <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">{body}</p>
+    <div className="rounded-sm border border-dashed border-border bg-white/50 p-16 text-center">
+      <div className="mx-auto flex size-12 items-center justify-center rounded-md bg-lavender-soft">
+        <Icon className="size-6 text-lavender" />
+      </div>
+      <p className="mt-4 font-serif text-2xl font-bold text-primary">{title}</p>
+      <p className="mx-auto mt-2 max-w-md text-[14px] text-muted-foreground leading-relaxed">{body}</p>
     </div>
   );
 }

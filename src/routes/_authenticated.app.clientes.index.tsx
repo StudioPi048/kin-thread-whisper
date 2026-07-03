@@ -3,6 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Archive, ArchiveRestore, MoreHorizontal, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -153,9 +154,23 @@ function ClientesIndex() {
           ) : filtered.length === 0 ? (
             <EmptyState hasQuery={query.length > 0} onCreate={() => setCreating(true)} tab={tab} />
           ) : (
-            <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <motion.ul 
+              className="grid gap-4 md:grid-cols-2 xl:grid-cols-3"
+              initial="hidden"
+              animate="visible"
+              variants={{
+                hidden: { opacity: 0 },
+                visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+              }}
+            >
               {filtered.map((c) => (
-                <li key={c.id}>
+                <motion.li 
+                  key={c.id}
+                  variants={{
+                    hidden: { opacity: 0, y: 20 },
+                    visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+                  }}
+                >
                   <ClientCard
                     client={c}
                     onEdit={() => setEditing(c)}
@@ -164,9 +179,9 @@ function ClientesIndex() {
                     }
                     onDelete={() => setDeleting(c)}
                   />
-                </li>
+                </motion.li>
               ))}
-            </ul>
+            </motion.ul>
           )}
         </div>
       </div>
