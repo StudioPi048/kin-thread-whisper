@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { CalendarClock, HeartPulse, Sparkles, Baby, Cross } from "lucide-react";
+import { motion } from "framer-motion";
 
 import { supabase } from "@/integrations/supabase/client";
 import { buildTimeline, type TimelineItem } from "@/lib/patterns";
@@ -22,26 +23,29 @@ export function ClientTimeline({ clientId }: Props) {
   });
 
   if (isLoading) {
-    return <div className="h-40 animate-pulse rounded-lg bg-muted/60" />;
+    return <div className="h-40 animate-pulse rounded-lg bg-muted/30" />;
   }
 
   const items = data ?? [];
   if (items.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-border bg-card/60 p-16 text-center">
-        <CalendarClock className="mx-auto size-8 text-lilac" />
-        <p className="mt-4 font-serif text-2xl text-primary">
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="rounded-sm border border-dashed border-border bg-lavender-soft/40 p-16 text-center"
+      >
+        <CalendarClock className="mx-auto size-10 text-lavender opacity-60" />
+        <p className="mt-4 font-serif text-2xl font-bold text-primary">
           A linha do tempo se desenha a partir do genograma
         </p>
-        <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-          Adicione nascimentos, mortes e eventos biográficos às pessoas do
-          sistema. Eles aparecerão aqui em ordem cronológica.
+        <p className="mx-auto mt-2 max-w-md text-[14px] leading-relaxed text-muted-foreground">
+          Adicione nascimentos, mortes e eventos biográficos às pessoas do sistema. Eles aparecerão aqui em ordem cronológica, revelando sincronicidades.
         </p>
-      </div>
+      </motion.div>
     );
   }
 
-  // Agrupa por ano
+  // Group by year
   const byYear = new Map<number, TimelineItem[]>();
   for (const it of items) {
     const list = byYear.get(it.year) ?? [];
@@ -51,55 +55,91 @@ export function ClientTimeline({ clientId }: Props) {
   const years = [...byYear.keys()].sort((a, b) => a - b);
 
   return (
-    <div className="relative">
-      <div className="pointer-events-none absolute inset-y-0 left-[7.5rem] w-px bg-gradient-to-b from-lilac/40 via-lilac/20 to-transparent" />
+    <div className="relative pt-6 pb-12">
+      {/* Editorial subtle timeline gradient line */}
+      <div className="pointer-events-none absolute inset-y-0 left-[8rem] w-px bg-gradient-to-b from-plum/50 via-lavender/30 to-transparent" />
 
-      <ol className="space-y-8">
+      <motion.ol 
+        className="space-y-12"
+        initial="hidden"
+        animate="visible"
+        variants={{
+          hidden: { opacity: 0 },
+          visible: { opacity: 1, transition: { staggerChildren: 0.15 } }
+        }}
+      >
         {years.map((year) => (
-          <li key={year} className="grid grid-cols-[7rem_auto_1fr] items-start gap-4">
-            <div className="pt-1 text-right">
-              <span className="font-serif text-3xl text-primary">{year || "?"}</span>
+          <motion.li 
+            key={year} 
+            className="grid grid-cols-[8rem_auto_1fr] items-start gap-6"
+            variants={{
+              hidden: { opacity: 0, x: -15 },
+              visible: { opacity: 1, x: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+            }}
+          >
+            {/* Year Column */}
+            <div className="pt-0.5 text-right relative pr-4">
+              <span className="font-serif text-4xl font-bold text-plum/90">{year || "?"}</span>
             </div>
-            <div className="mt-3 size-3 rounded-full border-2 border-lilac bg-background" />
-            <div className="space-y-3">
+            
+            {/* Timeline Dot */}
+            <div className="relative mt-3.5 z-10 flex size-3.5 items-center justify-center rounded-full bg-white border-[3px] border-plum shadow-sm" />
+            
+            {/* Cards Column */}
+            <div className="space-y-4 pt-1">
               {byYear.get(year)!.map((it, idx) => (
                 <TimelineCard key={`${it.personId}-${idx}`} item={it} />
               ))}
             </div>
-          </li>
+          </motion.li>
         ))}
-      </ol>
+      </motion.ol>
     </div>
   );
 }
 
 function TimelineCard({ item }: { item: TimelineItem }) {
-  const Icon =
-    item.kind === "birth" ? Baby : item.kind === "death" ? Cross : Sparkles;
-  const tone =
-    item.kind === "death"
-      ? "border-destructive/30 bg-destructive/5"
-      : item.kind === "birth"
-        ? "border-emerald-300/50 bg-emerald-50/50"
-        : "border-lilac/30 bg-lilac-soft/50";
+  const Icon = item.kind === "birth" ? Baby : item.kind === "death" ? Cross : Sparkles;
+  const isDeath = item.kind === "death";
+  const isBirth = item.kind === "birth";
+  
+  // Editorial tones based on event
+  const accentClass = isDeath 
+    ? "accent-bar-plum bg-white" 
+    : isBirth 
+      ? "accent-bar-gold bg-white" 
+      : "accent-bar-lavender bg-lavender-soft/20";
+      
+  const iconColor = isDeath ? "text-plum" : isBirth ? "text-gold" : "text-lavender";
 
   return (
-    <div className={`rounded-lg border ${tone} px-4 py-3`}>
-      <div className="flex items-center gap-2">
-        <Icon className="size-4 text-primary" />
-        <span className="text-xs uppercase tracking-[0.2em] text-gold">
-          {item.label}
-        </span>
-        <span className="ml-auto font-mono text-xs text-muted-foreground">
-          {item.date}
-        </span>
+    <div className={`rounded-sm border border-border shadow-sm px-5 py-4 transition-shadow hover:shadow-md ${accentClass}`}>
+      <div className="flex items-center gap-3">
+        <div className={`flex size-8 shrink-0 items-center justify-center rounded-md bg-background border border-border ${iconColor}`}>
+          <Icon className="size-4" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
+              {item.label}
+            </span>
+            <span className="font-mono text-[11px] font-bold text-muted-foreground/70 bg-background px-1.5 py-0.5 rounded border border-border">
+              {item.date}
+            </span>
+          </div>
+          <p className="mt-1 font-serif text-xl font-bold text-primary truncate leading-tight">
+            {item.personName}
+          </p>
+        </div>
       </div>
-      <p className="mt-1 font-serif text-lg text-primary">{item.personName}</p>
+      
       {item.meta && (
-        <p className="mt-0.5 flex items-center gap-1 text-sm text-muted-foreground">
-          {item.kind === "death" && <HeartPulse className="size-3.5" />}
-          {item.meta}
-        </p>
+        <div className="mt-3 pt-3 border-t border-border/50">
+          <p className="flex items-start gap-2 text-[14px] leading-relaxed text-foreground/80 font-serif">
+            {isDeath && <HeartPulse className="size-4 text-plum/60 mt-0.5 shrink-0" />}
+            {item.meta}
+          </p>
+        </div>
       )}
     </div>
   );

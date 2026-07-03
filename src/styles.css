@@ -354,3 +354,60 @@
   opacity: 0.5;
   transition: opacity 0.3s ease;
 }
+
+/* ────────────────────────────────────────────────────────────
+   EXPORTAÇÃO A3 (MODO IMPRESSÃO)
+   ──────────────────────────────────────────────────────────── */
+@media print {
+  @page {
+    size: A3 landscape;
+    margin: 0mm;
+  }
+
+  body {
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Oculta tudo na página por padrão */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Exibe apenas o Canvas e seus filhos */
+  .react-flow, .react-flow * {
+    visibility: visible;
+  }
+
+  /* Faz o canvas ocupar a folha inteira */
+  .react-flow {
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    z-index: 9999 !important;
+  }
+
+  /* Força a cor de fundo do React Flow ser branca no PDF */
+  .react-flow__background {
+    background-color: white !important;
+  }
+
+  /* Esconde os controles interativos do PDF */
+  .react-flow__controls, 
+  .react-flow__controls *,
+  .react-flow__minimap, 
+  .react-flow__minimap *,
+  .react-flow__panel, 
+  .react-flow__panel *,
+  .genogram-toolbar,
+  .genogram-toolbar * {
+    display: none !important;
+    visibility: hidden !important;
+  }
+}

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, Trash2, Download } from "lucide-react";
+import { Loader2, Plus, Trash2, Download, Table2 } from "lucide-react";
 import { toast } from "sonner";
+import { motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -192,72 +193,81 @@ export function ClanSpreadsheet({ clientId }: Props) {
   }
 
   return (
-    <div className="space-y-4">
-      <header className="flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-6 pb-12">
+      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border/60 pb-4">
         <div>
-          <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-gold">
-            Planilha do clã · 4 gerações
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gold mb-1">
+            Planilha do Clã
           </p>
-          <h2 className="mt-1 font-serif text-2xl text-primary">Atlas familiar</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Uma linha por pessoa. Cada registro alimenta o genograma e o motor de padrões.
+          <h2 className="font-serif text-3xl font-bold text-primary">Atlas Familiar</h2>
+          <p className="mt-2 text-[14px] text-muted-foreground max-w-xl leading-relaxed">
+            Mapeie o sistema familiar de forma ágil em lista. Cada linha digitada aqui atualiza o Genograma e alimenta o motor de padrões clínicos.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={exportCsv} disabled={rows.length === 0}>
-            <Download className="size-3.5" /> Exportar CSV
+        <div className="flex flex-wrap gap-3">
+          <Button variant="outline" size="sm" onClick={exportCsv} disabled={rows.length === 0} className="font-bold">
+            <Download className="size-4 mr-2" /> Exportar CSV
           </Button>
-          <Button variant="outline" size="sm" onClick={scaffoldTemplate}>
-            <Plus className="size-3.5" /> Aplicar modelo (4 gerações)
+          <Button variant="outline" size="sm" onClick={scaffoldTemplate} className="font-bold">
+            <Table2 className="size-4 mr-2" /> Aplicar modelo (4 gerações)
           </Button>
-          <Button size="sm" onClick={() => addPerson.mutate(undefined)}>
-            <Plus className="size-3.5" /> Nova pessoa
+          <Button size="sm" onClick={() => addPerson.mutate(undefined)} variant="lavender">
+            <Plus className="size-4 mr-2" /> Nova pessoa
           </Button>
         </div>
       </header>
 
       {rows.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border bg-card/40 p-12 text-center">
-          <p className="font-serif text-xl text-primary">Planilha vazia</p>
-          <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-sm border border-dashed border-border bg-lavender-soft/40 p-16 text-center"
+        >
+          <Table2 className="mx-auto size-10 text-lavender opacity-60" />
+          <p className="mt-4 font-serif text-2xl font-bold text-primary">Planilha Vazia</p>
+          <p className="mx-auto mt-2 max-w-md text-[14px] text-muted-foreground leading-relaxed">
             Aplique o modelo com as 40 linhas de parentesco padrão (consulente até bisavós dos dois lados)
-            e complete os dados de cada pessoa.
+            e digite as informações rapidamente como num Excel.
           </p>
-          <Button className="mt-6" onClick={scaffoldTemplate}>
-            <Plus className="size-3.5" /> Aplicar modelo
+          <Button className="mt-6 font-bold" variant="lavender" onClick={scaffoldTemplate}>
+            <Plus className="size-4 mr-2" /> Aplicar Modelo Próprio
           </Button>
-        </div>
+        </motion.div>
       ) : (
-        <>
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
           <datalist id="relationship-suggestions">
             {RELATIONSHIP_OPTIONS.map((r) => (
               <option key={r} value={r} />
             ))}
           </datalist>
 
-          <div className="overflow-x-auto rounded-lg border border-border bg-card">
-            <table className="w-full min-w-[1500px] border-collapse text-sm">
-              <thead className="bg-lilac-soft/60 text-[10px] uppercase tracking-[0.18em] text-primary">
+          <div className="overflow-x-auto rounded-sm border-2 border-border/80 bg-white shadow-sm">
+            <table className="w-full min-w-[1500px] border-collapse text-[13px]">
+              <thead className="bg-lavender-soft text-[10px] font-bold uppercase tracking-[0.15em] text-plum border-b-2 border-border/80">
                 <tr>
                   <Th w="w-8">#</Th>
                   <Th w="min-w-[180px]">Nome</Th>
                   <Th w="min-w-[180px]">Parentesco</Th>
-                  <Th w="w-32">Nascimento</Th>
+                  <Th w="w-36">Nascimento</Th>
                   <Th w="w-24">Gestação</Th>
-                  <Th w="w-32">Morte</Th>
+                  <Th w="w-36">Morte</Th>
                   <Th w="min-w-[160px]">Enfermidades</Th>
                   <Th w="min-w-[140px]">Profissão</Th>
                   <Th w="min-w-[120px]">Vícios</Th>
                   <Th w="min-w-[120px]">Temperamento</Th>
                   <Th w="w-16">Ordem</Th>
                   <Th w="min-w-[240px]">Observações</Th>
-                  <Th w="w-8"></Th>
+                  <Th w="w-10"></Th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((r, i) => (
-                  <tr key={r.id} className="border-t border-border/60 hover:bg-lilac-soft/20">
-                    <td className="px-2 text-center text-xs text-muted-foreground">{i + 1}</td>
+                  <tr key={r.id} className="border-b border-border/40 hover:bg-lavender-soft/20 transition-colors">
+                    <td className="px-3 text-center text-[11px] font-mono font-medium text-muted-foreground/60">{i + 1}</td>
                     <Td>
                       <CellInput
                         value={r.full_name ?? ""}
@@ -305,7 +315,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
                               .filter(Boolean),
                           })
                         }
-                        placeholder="separe por vírgula"
+                        placeholder="separar por vírgula"
                       />
                     </Td>
                     <Td>
@@ -338,16 +348,16 @@ export function ClanSpreadsheet({ clientId }: Props) {
                         onChange={(v) => scheduleSave(r.id, { notes: v })}
                       />
                     </Td>
-                    <td className="px-1">
+                    <td className="px-1 text-center">
                       <button
                         onClick={() => {
                           if (confirm(`Remover ${r.full_name || "pessoa sem nome"}?`))
                             removePerson.mutate(r.id);
                         }}
-                        className="rounded p-1 text-destructive/60 transition hover:bg-destructive/10 hover:text-destructive"
+                        className="rounded p-1.5 text-muted-foreground/50 transition-colors hover:bg-destructive/10 hover:text-destructive"
                         title="Remover"
                       >
-                        <Trash2 className="size-3.5" />
+                        <Trash2 className="size-4" />
                       </button>
                     </td>
                   </tr>
@@ -355,11 +365,12 @@ export function ClanSpreadsheet({ clientId }: Props) {
               </tbody>
             </table>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Salvamento automático após 0,9 s sem digitar. Dados aparecem no Genograma e alimentam o
-            motor de padrões.
-          </p>
-        </>
+          <div className="mt-3 flex items-center justify-between">
+            <p className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted-foreground/60">
+              Salvamento automático a cada digitação (0.9s)
+            </p>
+          </div>
+        </motion.div>
       )}
     </div>
   );
@@ -374,10 +385,10 @@ function inferGenderFromRelationship(rel?: string): "male" | "female" | undefine
 }
 
 function Th({ children, w }: { children?: React.ReactNode; w?: string }) {
-  return <th className={`px-2 py-2 text-left font-medium ${w ?? ""}`}>{children}</th>;
+  return <th className={`px-3 py-3 text-left font-bold ${w ?? ""}`}>{children}</th>;
 }
 function Td({ children }: { children: React.ReactNode }) {
-  return <td className="px-1 py-1">{children}</td>;
+  return <td className="px-1 py-1 relative group">{children}</td>;
 }
 
 function CellInput(props: {
@@ -394,7 +405,7 @@ function CellInput(props: {
       onChange={(e) => props.onChange(e.target.value)}
       placeholder={props.placeholder}
       list={props.list}
-      className="w-full rounded-sm border-0 bg-transparent px-2 py-1.5 text-sm text-foreground outline-none ring-1 ring-transparent transition focus:bg-background focus:ring-primary/40"
+      className="w-full h-8 rounded-sm border-0 bg-transparent px-2 text-[13px] font-medium text-foreground outline-none ring-1 ring-transparent transition-all focus:bg-lavender-soft/30 focus:ring-lavender placeholder:text-muted-foreground/40"
     />
   );
 }
