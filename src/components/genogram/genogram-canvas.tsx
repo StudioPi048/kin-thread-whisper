@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   Background,
   BackgroundVariant,
+  BaseEdge,
   Controls,
   ReactFlow,
   ReactFlowProvider,
@@ -11,6 +12,7 @@ import {
   useReactFlow,
   type Connection,
   type Edge,
+  type EdgeProps,
   type EdgeMouseHandler,
   type Node,
   type NodeMouseHandler,
@@ -47,18 +49,61 @@ const UnionNodeComponent = () => (
 
 const nodeTypes = { person: PersonNode, union: UnionNodeComponent };
 
+function StraightStepEdge({
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  style,
+  markerEnd,
+  markerStart,
+  label,
+  labelStyle,
+  labelShowBg,
+  labelBgStyle,
+  labelBgPadding,
+  labelBgBorderRadius,
+  interactionWidth,
+}: EdgeProps) {
+  const isStraight = Math.abs(sourceX - targetX) < 1 || Math.abs(sourceY - targetY) < 1;
+  const midY = sourceY + (targetY - sourceY) / 2;
+  const path = isStraight
+    ? `M ${sourceX} ${sourceY} L ${targetX} ${targetY}`
+    : `M ${sourceX} ${sourceY} L ${sourceX} ${midY} L ${targetX} ${midY} L ${targetX} ${targetY}`;
+
+  return (
+    <BaseEdge
+      path={path}
+      style={style}
+      markerEnd={markerEnd}
+      markerStart={markerStart}
+      label={label}
+      labelStyle={labelStyle}
+      labelShowBg={labelShowBg}
+      labelBgStyle={labelBgStyle}
+      labelBgPadding={labelBgPadding}
+      labelBgBorderRadius={labelBgBorderRadius}
+      interactionWidth={interactionWidth}
+      labelX={(sourceX + targetX) / 2}
+      labelY={Math.abs(sourceY - targetY) < 1 ? sourceY - 10 : midY - 10}
+    />
+  );
+}
+
+const edgeTypes = { straightStep: StraightStepEdge };
+
 function GenerationRuler() {
   return (
-    <div className="w-[188px] overflow-hidden rounded-md border border-plum/40 bg-plum/95 shadow-lg">
+    <div className="w-[154px] overflow-hidden rounded-md border border-plum/25 bg-card/92 shadow-sm backdrop-blur">
       {[
         ["Paciente", "ponto de partida"],
         ["Geração 1", "pais e tios"],
         ["Geração 2", "avós e tios-avós"],
         ["Geração 3", "bisavós"],
       ].map(([label, subtitle]) => (
-        <div key={label} className="border-b border-white/15 px-3 py-3 last:border-b-0">
-          <p className="font-serif text-[17px] font-bold leading-tight text-white">{label}</p>
-          <p className="mt-1 text-[10px] font-bold uppercase leading-snug tracking-[0.12em] text-white/70">
+        <div key={label} className="border-b border-border/60 px-2.5 py-2 last:border-b-0">
+          <p className="font-serif text-[14px] font-bold leading-tight text-plum">{label}</p>
+          <p className="mt-0.5 text-[9px] font-bold uppercase leading-snug tracking-[0.08em] text-muted-foreground">
             {subtitle}
           </p>
         </div>
@@ -82,8 +127,12 @@ export function GenogramCanvas(props: CanvasProps) {
 // ── Tamanhos generosos, otimizados para leitura em 4K ────────
 const NODE_W = 170;   // Largura do nó (shape + label)
 const NODE_H = 210;   // Altura total do nó
-const GENERATION_GAP = 300;   // Distância vertical entre gerações
+const GENERATION_GAP = 340;   // Distância vertical entre gerações
 const HORIZONTAL_STEP = NODE_W + 90; // Espaço horizontal entre nós de uma geração
+const DIRECT_PARENT_X = 450;
+const GRANDPARENT_PAIR_GAP = 400;
+const GREAT_GRANDPARENT_PAIR_GAP = 200;
+const COLLATERAL_GAP = 270;
 
 /**
  * Descobre a geração da pessoa (0 = cliente, 1 = pais, 2 = avós, 3 = bisavós).
@@ -104,8 +153,75 @@ function generationForData(data: unknown): number {
     canonical.includes("mae") ||
     canonical.startsWith("tio")
   ) return 1;
-  if (canonical.includes("irmã") || canonical.includes("irma")) return 1;
+  if (canonical.includes("irmã") || canonical.includes("irma")) return 0;
+  if (canonical.includes("cônjuge") || canonical.includes("conjuge") || canonical.includes("filho")) return 0;
   return 1;
+}
+
+function alternatingCenter(anchor: number, orderIndex: number, gap = COLLATERAL_GAP): number {
+  const step = Math.floor(orderIndex / 2) + 1;
+  return anchor + (orderIndex % 2 === 0 ? -step : step) * gap;
+}
+
+function duplicateOffset(base: number, orderIndex: number, side: "left" | "right", gap = COLLATERAL_GAP): number {
+  if (orderIndex === 0) return base;
+  return base + (side === "left" ? -1 : 1) * orderIndex * gap;
+}
+
+function directBloodCenter(canonical: string, orderIndex: number, isProband: boolean): number | null {
+  if (isProband) return 0;
+  const c = canonical.toLowerCase();
+
+  const fatherX = -DIRECT_PARENT_X;
+  const motherX = DIRECT_PARENT_X;
+  const paternalGrandfatherX = fatherX - GRANDPARENT_PAIR_GAP / 2;
+  const paternalGrandmotherX = fatherX + GRANDPARENT_PAIR_GAP / 2;
+  const maternalGrandfatherX = motherX - GRANDPARENT_PAIR_GAP / 2;
+  const maternalGrandmotherX = motherX + GRANDPARENT_PAIR_GAP / 2;
+
+  if (c === "pai") return duplicateOffset(fatherX, orderIndex, "left");
+  if (c === "mãe" || c === "mae") return duplicateOffset(motherX, orderIndex, "right");
+  if (c.startsWith("tio(a) paterno")) return fatherX - GRANDPARENT_PAIR_GAP / 2 - (orderIndex + 1) * COLLATERAL_GAP;
+  if (c.startsWith("tio(a) materno")) return motherX + GRANDPARENT_PAIR_GAP / 2 + (orderIndex + 1) * COLLATERAL_GAP;
+
+  if (c === "avô paterno") return duplicateOffset(paternalGrandfatherX, orderIndex, "left");
+  if (c === "avó paterna") return duplicateOffset(paternalGrandmotherX, orderIndex, "right");
+  if (c === "avô materno") return duplicateOffset(maternalGrandfatherX, orderIndex, "left");
+  if (c === "avó materna") return duplicateOffset(maternalGrandmotherX, orderIndex, "right");
+  if (c.includes("irmã(o) do avô paterno") || c.includes("irmã(o) da avó paterna")) {
+    return paternalGrandfatherX - GRANDPARENT_PAIR_GAP / 2 - (orderIndex + 1) * COLLATERAL_GAP;
+  }
+  if (c.includes("irmã(o) do avô materno") || c.includes("irmã(o) da avó materna")) {
+    return maternalGrandmotherX + GRANDPARENT_PAIR_GAP / 2 + (orderIndex + 1) * COLLATERAL_GAP;
+  }
+
+  if (c.includes("bisavô paterno (pai do avô)")) return duplicateOffset(paternalGrandfatherX - GREAT_GRANDPARENT_PAIR_GAP / 2, orderIndex, "left");
+  if (c.includes("bisavó paterna (mãe do avô)")) return duplicateOffset(paternalGrandfatherX + GREAT_GRANDPARENT_PAIR_GAP / 2, orderIndex, "right");
+  if (c.includes("bisavô paterno (pai da avó)")) return duplicateOffset(paternalGrandmotherX - GREAT_GRANDPARENT_PAIR_GAP / 2, orderIndex, "left");
+  if (c.includes("bisavó paterna (mãe da avó)")) return duplicateOffset(paternalGrandmotherX + GREAT_GRANDPARENT_PAIR_GAP / 2, orderIndex, "right");
+  if (c.includes("bisavô materno (pai do avô)")) return duplicateOffset(maternalGrandfatherX - GREAT_GRANDPARENT_PAIR_GAP / 2, orderIndex, "left");
+  if (c.includes("bisavó materna (mãe do avô)")) return duplicateOffset(maternalGrandfatherX + GREAT_GRANDPARENT_PAIR_GAP / 2, orderIndex, "right");
+  if (c.includes("bisavô materno (pai da avó)")) return duplicateOffset(maternalGrandmotherX - GREAT_GRANDPARENT_PAIR_GAP / 2, orderIndex, "left");
+  if (c.includes("bisavó materna (mãe da avó)")) return duplicateOffset(maternalGrandmotherX + GREAT_GRANDPARENT_PAIR_GAP / 2, orderIndex, "right");
+  if (c.includes("irmã(o) do bisavô paterno")) return paternalGrandfatherX - GRANDPARENT_PAIR_GAP / 2 - (orderIndex + 1) * COLLATERAL_GAP;
+  if (c.includes("irmã(o) do bisavô materno")) return maternalGrandmotherX + GRANDPARENT_PAIR_GAP / 2 + (orderIndex + 1) * COLLATERAL_GAP;
+
+  if ((c.includes("irmã(o)") || c.startsWith("irmã") || c.startsWith("irma")) && !c.includes("av")) {
+    return alternatingCenter(0, orderIndex);
+  }
+
+  return null;
+}
+
+type EdgeWithPathOptions = Edge & { pathOptions?: { borderRadius?: number } };
+
+function forceRightAngle(edge: Edge): Edge {
+  const existing = (edge as EdgeWithPathOptions).pathOptions ?? {};
+  return {
+    ...edge,
+    type: "straightStep",
+    pathOptions: { ...existing, borderRadius: 0 },
+  } as Edge;
 }
 
 /**
@@ -165,17 +281,19 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
   // Agrupar por geração — cliente forçado a 0
   const byGeneration = new Map<number, Node[]>();
   for (const n of nodes) {
-    const g = n.id === probandId ? 0 : Math.max(1, generationForData(n.data));
+    const g = n.id === probandId ? 0 : Math.max(0, generationForData(n.data));
     if (!byGeneration.has(g)) byGeneration.set(g, []);
     byGeneration.get(g)!.push(n);
   }
 
-  // Calcular rank para cada nó
-  type Placed = { node: Node; rank: number; canonical: string };
+  // Posicionamento clínico: a família de sangue direta fica centralizada.
+  // Cada pessoa deve ficar acima do ponto médio dos próprios pais.
+  type Placed = { node: Node; centerX: number; canonical: string; generation: number };
   const placedByGen = new Map<number, Placed[]>();
 
   byGeneration.forEach((generationNodes, generation) => {
     const perCategory = new Map<string, number>();
+    let fallbackIndex = 0;
     const placed: Placed[] = generationNodes.map((node) => {
       const d = node.data as PersonNodeData & { relationship_to_proband?: string | null };
       const canonical = node.id === probandId
@@ -184,8 +302,9 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
       const category = canonical.toLowerCase();
       const idx = perCategory.get(category) ?? 0;
       perCategory.set(category, idx + 1);
-      const rank = node.id === probandId ? 0 : rankFor(canonical, idx);
-      return { node, rank, canonical };
+      const directCenter = directBloodCenter(canonical, idx, node.id === probandId);
+      const centerX = directCenter ?? alternatingCenter(0, fallbackIndex++, 900);
+      return { node, centerX, canonical, generation };
     });
     placedByGen.set(generation, placed);
   });
@@ -193,56 +312,19 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
   const layoutedNodes: Node[] = [];
 
   placedByGen.forEach((placed, generation) => {
-    placed.sort((a, b) => a.rank - b.rank || a.node.id.localeCompare(b.node.id));
-
-    const xs = placed.map((_, i) => i * HORIZONTAL_STEP);
-
-    let anchorAvgX = 0;
-    const coreCanonicals: string[] = generation === 0
-      ? ["consulente"]
-      : generation === 1
-        ? ["pai", "mãe", "mae"]
-        : generation === 2
-          ? ["avô paterno", "avó paterna", "avô materno", "avó materna"]
-          : ["bisavô paterno (pai do avô)", "bisavó paterna (mãe do avô)",
-             "bisavô paterno (pai da avó)", "bisavó paterna (mãe da avó)",
-             "bisavô materno (pai do avô)", "bisavó materna (mãe do avô)",
-             "bisavô materno (pai da avó)", "bisavó materna (mãe da avó)"];
-
-    const coreIdx = placed
-      .map((p, i) => (coreCanonicals.includes(p.canonical.toLowerCase()) ? i : -1))
-      .filter((i) => i >= 0);
-
-    if (coreIdx.length > 0) {
-      anchorAvgX = coreIdx.reduce((s, i) => s + xs[i], 0) / coreIdx.length;
-    } else if (placed.length > 0) {
-      anchorAvgX = xs.reduce((s, x) => s + x, 0) / xs.length;
-    }
+    placed.sort((a, b) => a.centerX - b.centerX || a.node.id.localeCompare(b.node.id));
 
     // y = geração * gap — cliente (gen 0) no topo, ancestrais descendo
     const y = generation * GENERATION_GAP;
 
-    placed.forEach((p, i) => {
+    placed.forEach((p) => {
       layoutedNodes.push({
         ...p.node,
-        position: { x: xs[i] - anchorAvgX - NODE_W / 2, y },
+        position: { x: p.centerX - NODE_W / 2, y },
         data: { ...p.node.data, generation },
       });
     });
   });
-
-  // Cliente exatamente em x=-NODE_W/2 (centro em 0)
-  if (probandId) {
-    const proband = layoutedNodes.find((n) => n.id === probandId);
-    if (proband) {
-      const dx = -NODE_W / 2 - proband.position.x;
-      if (dx !== 0) {
-        layoutedNodes.forEach((n) => {
-          n.position = { x: n.position.x + dx, y: n.position.y };
-        });
-      }
-    }
-  }
 
   // ── Geometric Pedigree Routing (Union Nodes) ──
   //
@@ -302,7 +384,7 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     }
   });
 
-  const childrenByUnion = new Map<string, string[]>();
+  const childrenByUnion = new Map<string, Set<string>>();
   const orphanParentEdges: Edge[] = [];
   const parentToUnionMap = new Map<string, string>();
 
@@ -320,8 +402,8 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     }
 
     if (matchedUnionId) {
-      if (!childrenByUnion.has(matchedUnionId)) childrenByUnion.set(matchedUnionId, []);
-      childrenByUnion.get(matchedUnionId)!.push(childId);
+      if (!childrenByUnion.has(matchedUnionId)) childrenByUnion.set(matchedUnionId, new Set());
+      childrenByUnion.get(matchedUnionId)!.add(childId);
     } else {
       // Filho com um único progenitor conhecido — mantemos a direção
       // filho → pai para preservar o roteamento limpo (bottom→top).
@@ -336,8 +418,8 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     }
   });
 
-  childrenByUnion.forEach((childIds, unionId) => {
-    const childNodes = childIds
+  childrenByUnion.forEach((childIdsSet, unionId) => {
+    const childNodes = Array.from(childIdsSet)
       .map((id) => finalNodes.find((n) => n.id === id))
       .filter((n): n is Node => Boolean(n));
     if (childNodes.length === 0) return;
@@ -345,8 +427,9 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     const unionNode = finalNodes.find((n) => n.id === unionId);
     if (!unionNode) return;
 
-    const centersX = childNodes.map((n) => n.position.x + NODE_W / 2);
-    const busX = (Math.min(...centersX) + Math.max(...centersX)) / 2;
+    // O ponto de convergência dos filhos deve ser o centro do casal/pais,
+    // não a média dos filhos. Isso mantém o tronco vertical padronizado.
+    const busX = unionNode.position.x;
     // Bus entre gerações: logo ABAIXO da fileira dos filhos (que está por
     // cima), e ACIMA do pivô do casal (que está na fileira dos pais).
     const childBottomY = Math.max(...childNodes.map((n) => n.position.y)) + NODE_H;
@@ -368,30 +451,30 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
 
     // Tronco vertical: barra dos irmãos (source, bottom) → pivô do casal
     // (target, top). Como pivô está ABAIXO do bus, roteia reto para baixo.
-    finalEdges.push({
+      finalEdges.push(forceRightAngle({
       id: `trunk_${unionId}`,
       source: busId,
       target: unionId,
       type: "step",
       style: { stroke: "var(--color-plum)", strokeWidth: 2 },
-    });
+      } as Edge));
 
     // Cada filho conecta na MESMA barra: filho (source, bottom) → bus
     // (target, top). Todos os irmãos convergem no mesmo ponto do bus.
     childNodes.forEach((child) => {
-      finalEdges.push({
+      finalEdges.push(forceRightAngle({
         id: `sib_${busId}_${child.id}`,
         source: child.id,
         target: busId,
         type: "step",
         style: { stroke: "var(--color-plum)", strokeWidth: 2 },
-      });
+      } as Edge));
     });
   });
 
   finalEdges.push(...orphanParentEdges);
 
-  return { nodes: finalNodes, edges: [...otherEdges, ...finalEdges] };
+  return { nodes: finalNodes, edges: [...otherEdges, ...finalEdges].map(forceRightAngle) };
 }
 
 
@@ -442,6 +525,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
 
   useEffect(() => {
     if (!query.data) return;
+    let cancelled = false;
 
     const qualifiedPersons = query.data.persons.filter((p) => {
       if (p.is_proband) return true;
@@ -486,7 +570,8 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
     setNodes(layoutedNodes);
     setEdges(layoutedEdges);
 
-    setTimeout(() => {
+    const centerTimer = window.setTimeout(() => {
+      if (cancelled) return;
       // Enquadramento: cliente próximo ao topo do canvas, gerações descendo.
       // Escolhemos zoom de acordo com a largura da árvore para manter legível
       // em 1080p e 4K sem exigir zoom manual.
@@ -516,6 +601,11 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
       }
       rfInstance.fitView({ padding: 0.12, duration: 600, minZoom: 0.28, maxZoom: 1.1 });
     }, 120);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(centerTimer);
+    };
 
   }, [query.data, setNodes, setEdges, rfInstance]);
 
@@ -716,6 +806,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
             nodes={nodes}
             edges={edges}
             nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
@@ -749,7 +840,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
           </ReactFlow>
         )}
         {!query.isLoading && persons.length > 0 && (
-          <div className="pointer-events-none absolute left-4 top-4 z-50 hidden md:block">
+          <div className="pointer-events-none absolute bottom-4 right-4 z-50 hidden md:block">
             <GenerationRuler />
           </div>
         )}
