@@ -52,15 +52,15 @@ function GenerationBandNode({ data }: NodeProps) {
       className="pointer-events-none relative border-y border-border/60 bg-lavender-soft/45"
       style={{ width: d.width, height: d.height }}
     >
-      <div className="absolute inset-y-0 left-0 flex w-48 items-center border-r border-border/50 bg-background/85 px-5">
+      <div className="absolute inset-y-0 left-[560px] flex w-[330px] items-center border-x border-border/50 bg-background/90 px-7 shadow-sm">
         <div>
-          <p className="font-serif text-[20px] font-bold leading-tight text-primary">{d.label}</p>
-          <p className="mt-1 max-w-36 text-[11px] font-bold uppercase leading-snug tracking-[0.16em] text-muted-foreground">
+          <p className="font-serif text-[34px] font-bold leading-tight text-primary">{d.label}</p>
+          <p className="mt-2 max-w-[260px] text-[16px] font-bold uppercase leading-snug tracking-[0.14em] text-muted-foreground">
             {d.subtitle}
           </p>
         </div>
       </div>
-      <div className="absolute inset-x-52 top-1/2 h-px -translate-y-1/2 bg-border/70" />
+      <div className="absolute inset-x-[920px] top-1/2 h-px -translate-y-1/2 bg-border/70" />
     </div>
   );
 }
