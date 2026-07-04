@@ -302,6 +302,7 @@ type Block = {
 };
 
 function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
+  const siblingToChildTarget = new Map<string, string>();
   const byCanonical = new Map<string, Node[]>();
   nodes.forEach(n => {
     const d = n.data as any;
@@ -340,6 +341,9 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
       ? [...childSiblings, ...(child ? [child] : [])]
       : [...(child ? [child] : []), ...childSiblings];
       
+    if (child) {
+      childSiblings.forEach(s => siblingToChildTarget.set(s.id, child.id));
+    }
     const bottomWidth = bottomNodes.length * HORIZONTAL_STEP;
     
     let childLocalCenter = bottomWidth > 0 ? bottomWidth / 2 : 0;
@@ -397,6 +401,9 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
       ? [...childSiblings, ...(childTarget ? [childTarget] : [])]
       : [...(childTarget ? [childTarget] : []), ...childSiblings];
       
+    if (childTarget) {
+      childSiblings.forEach(s => siblingToChildTarget.set(s.id, childTarget.id));
+    }
     const bottomWidth = bottomNodes.length * HORIZONTAL_STEP;
     let childLocalCenter = bottomWidth > 0 ? bottomWidth / 2 : 0;
     if (childTarget) {
@@ -522,6 +529,8 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
 
   const parentEdgesByChild = new Map<string, Edge[]>();
   const otherEdges: Edge[] = [];
+  const finalEdges: Edge[] = [];
+  const childToUnion = new Map<string, string>();
 
   edges.forEach((edge) => {
     if (edge.style?.stroke === "var(--color-plum)") {
@@ -536,8 +545,6 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     }
   });
 
-  const finalEdges: Edge[] = [];
-
   parentEdgesByChild.forEach((pEdges, childId) => {
     let matchedUnionId: string | null = null;
     for (const edge of pEdges) {
@@ -549,7 +556,8 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     }
 
     if (matchedUnionId) {
-            finalEdges.push({
+      childToUnion.set(childId, matchedUnionId);
+      finalEdges.push({
         id: `descendant_${matchedUnionId}_${childId}`,
         source: matchedUnionId, 
         target: childId,
@@ -560,7 +568,7 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
       });
     } else {
       pEdges.forEach((e) => {
-                finalEdges.push({
+        finalEdges.push({
           ...e,
           id: `direct_${e.id}`,
           source: e.target, 
@@ -575,7 +583,24 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
   });
 
   
+
+  siblingToChildTarget.forEach((targetId, siblingId) => {
+    const matchedUnionId = childToUnion.get(targetId);
+    if (matchedUnionId) {
+      finalEdges.push({
+        id: `descendant_${matchedUnionId}_${siblingId}`,
+        source: matchedUnionId, 
+        target: siblingId,
+        sourceHandle: "top",
+        targetHandle: "bottom",
+        type: "straightStep",
+        style: { stroke: "var(--color-plum)", strokeWidth: 2 },
+      });
+    }
+  });
+
   // Create background bands
+
   for (let g = 0; g <= 3; g++) {
     layoutedNodes.unshift({
       id: `gen_bg_${g}`,
