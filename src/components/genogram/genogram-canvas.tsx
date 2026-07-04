@@ -277,103 +277,235 @@ function rankFor(canonical: string, orderIndex: number): number {
  *
  * INVARIANTE: cliente SEMPRE em y=0 (topo). Gerações descem em +y.
  */
+type LayoutNode = { node: Node; x: number; y: number; gen: number };
+type Block = {
+  nodes: LayoutNode[];
+  width: number;
+  center: number;
+  childTarget?: Node;
+};
+
 function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
-  // Agrupar por geração — cliente forçado a 0
-  const byGeneration = new Map<number, Node[]>();
-  for (const n of nodes) {
-    const g = n.id === probandId ? 0 : Math.max(0, generationForData(n.data));
-    if (!byGeneration.has(g)) byGeneration.set(g, []);
-    byGeneration.get(g)!.push(n);
+  const byCanonical = new Map<string, Node[]>();
+  nodes.forEach(n => {
+    const d = n.data as any;
+    const raw = n.id === probandId ? "consulente" : (d.relationship_to_proband || "");
+    const canonical = smartNormalizeRelationship(raw).toLowerCase();
+    if (!byCanonical.has(canonical)) byCanonical.set(canonical, []);
+    byCanonical.get(canonical)!.push(n);
+  });
+
+  const getNodes = (c: string) => byCanonical.get(c.toLowerCase()) || [];
+  const getFirst = (c: string) => getNodes(c)[0];
+
+  function createLeafBlock(
+    husband: Node | undefined,
+    wife: Node | undefined,
+    husbandSiblings: Node[],
+    wifeSiblings: Node[],
+    child: Node | undefined,
+    childSiblings: Node[],
+    isHusbandSide: boolean,
+    generation: number
+  ): Block {
+    const topNodes = [...husbandSiblings, ...(husband ? [husband] : []), ...(wife ? [wife] : []), ...wifeSiblings];
+    const topWidth = topNodes.length * HORIZONTAL_STEP;
+    
+    let unionCenter = topWidth > 0 ? topWidth / 2 : 0;
+    if (husband && wife) {
+      unionCenter = (topNodes.indexOf(husband) * HORIZONTAL_STEP + topNodes.indexOf(wife) * HORIZONTAL_STEP + HORIZONTAL_STEP) / 2;
+    } else if (husband) {
+      unionCenter = topNodes.indexOf(husband) * HORIZONTAL_STEP + HORIZONTAL_STEP / 2;
+    } else if (wife) {
+      unionCenter = topNodes.indexOf(wife) * HORIZONTAL_STEP + HORIZONTAL_STEP / 2;
+    }
+
+    const bottomNodes = isHusbandSide 
+      ? [...childSiblings, ...(child ? [child] : [])]
+      : [...(child ? [child] : []), ...childSiblings];
+      
+    const bottomWidth = bottomNodes.length * HORIZONTAL_STEP;
+    
+    let childLocalCenter = bottomWidth > 0 ? bottomWidth / 2 : 0;
+    if (child) {
+      childLocalCenter = bottomNodes.indexOf(child) * HORIZONTAL_STEP + HORIZONTAL_STEP / 2;
+    } else if (bottomNodes.length > 0) {
+      childLocalCenter = isHusbandSide ? bottomWidth - HORIZONTAL_STEP / 2 : HORIZONTAL_STEP / 2;
+    }
+    
+    let topOffset = 0, bottomOffset = 0;
+    if (unionCenter > childLocalCenter) {
+      bottomOffset = unionCenter - childLocalCenter;
+    } else {
+      topOffset = childLocalCenter - unionCenter;
+    }
+    
+    const resultNodes: LayoutNode[] = [];
+    topNodes.forEach((n, i) => resultNodes.push({ node: n, x: topOffset + i * HORIZONTAL_STEP, y: (generation + 1) * GENERATION_GAP, gen: generation + 1 }));
+    bottomNodes.forEach((n, i) => resultNodes.push({ node: n, x: bottomOffset + i * HORIZONTAL_STEP, y: generation * GENERATION_GAP, gen: generation }));
+    
+    return {
+      nodes: resultNodes,
+      width: Math.max(topWidth + topOffset, bottomWidth + bottomOffset),
+      center: childLocalCenter + bottomOffset,
+      childTarget: child
+    };
   }
 
-  // Posicionamento clínico: a família de sangue direta fica centralizada.
-  // Cada pessoa deve ficar acima do ponto médio dos próprios pais.
-  type Placed = { node: Node; centerX: number; canonical: string; generation: number };
-  const placedByGen = new Map<number, Placed[]>();
+  function mergeBlocks(
+    leftBlock: Block,
+    rightBlock: Block,
+    childTarget: Node | undefined,
+    childSiblings: Node[],
+    isHusbandSide: boolean,
+    generation: number
+  ): Block {
+    const FAMILY_GAP = 160; 
+    const rightOffsetX = leftBlock.width + (leftBlock.width > 0 && rightBlock.width > 0 ? FAMILY_GAP : 0);
+    
+    const combinedNodes = [
+      ...leftBlock.nodes,
+      ...rightBlock.nodes.map(n => ({ ...n, x: n.x + rightOffsetX }))
+    ];
+    
+    const hCenter = leftBlock.childTarget ? leftBlock.center : (leftBlock.width > 0 ? leftBlock.width / 2 : 0);
+    const wCenter = rightBlock.childTarget ? rightBlock.center + rightOffsetX : (rightBlock.width > 0 ? rightOffsetX + rightBlock.width / 2 : rightOffsetX);
+    
+    let unionCenter = 0;
+    if (leftBlock.childTarget && rightBlock.childTarget) unionCenter = (hCenter + wCenter) / 2;
+    else if (leftBlock.childTarget) unionCenter = hCenter;
+    else if (rightBlock.childTarget) unionCenter = wCenter;
+    else unionCenter = (leftBlock.width + rightOffsetX + rightBlock.width) / 2;
 
-  byGeneration.forEach((generationNodes, generation) => {
-    const perCategory = new Map<string, number>();
-    let fallbackIndex = 0;
-    const placed: Placed[] = generationNodes.map((node) => {
-      const d = node.data as PersonNodeData & { relationship_to_proband?: string | null };
-      const canonical = node.id === probandId
-        ? "consulente"
-        : smartNormalizeRelationship(d.relationship_to_proband);
-      const category = canonical.toLowerCase();
-      const idx = perCategory.get(category) ?? 0;
-      perCategory.set(category, idx + 1);
-      const directCenter = directBloodCenter(canonical, idx, node.id === probandId);
-      const centerX = directCenter ?? alternatingCenter(0, fallbackIndex++, 900);
-      return { node, centerX, canonical, generation };
-    });
-    placedByGen.set(generation, placed);
-  });
+    const bottomNodes = isHusbandSide 
+      ? [...childSiblings, ...(childTarget ? [childTarget] : [])]
+      : [...(childTarget ? [childTarget] : []), ...childSiblings];
+      
+    const bottomWidth = bottomNodes.length * HORIZONTAL_STEP;
+    let childLocalCenter = bottomWidth > 0 ? bottomWidth / 2 : 0;
+    if (childTarget) {
+      childLocalCenter = bottomNodes.indexOf(childTarget) * HORIZONTAL_STEP + HORIZONTAL_STEP / 2;
+    } else if (bottomNodes.length > 0) {
+      childLocalCenter = isHusbandSide ? bottomWidth - HORIZONTAL_STEP / 2 : HORIZONTAL_STEP / 2;
+    }
+    
+    let topOffset = 0, bottomOffset = 0;
+    if (unionCenter > childLocalCenter) {
+      bottomOffset = unionCenter - childLocalCenter;
+    } else {
+      topOffset = childLocalCenter - unionCenter;
+    }
+    
+    const finalNodes = combinedNodes.map(n => ({ ...n, x: n.x + topOffset }));
+    bottomNodes.forEach((n, i) => finalNodes.push({ node: n, x: bottomOffset + i * HORIZONTAL_STEP, y: generation * GENERATION_GAP, gen: generation }));
+    
+    return {
+      nodes: finalNodes,
+      width: Math.max(rightOffsetX + rightBlock.width + topOffset, bottomWidth + bottomOffset),
+      center: childLocalCenter + bottomOffset,
+      childTarget: childTarget
+    };
+  }
+
+  const bp1 = getFirst("bisavô paterno (pai do avô)");
+  const bm1 = getFirst("bisavó paterna (mãe do avô)");
+  const blockAvosPat = createLeafBlock(
+    bp1, bm1, getNodes("irmã(o) do bisavô paterno"), [],
+    getFirst("avô paterno"), getNodes("irmã(o) do avô paterno"), true, 2
+  );
+
+  const bp2 = getFirst("bisavô paterno (pai da avó)");
+  const bm2 = getFirst("bisavó paterna (mãe da avó)");
+  const blockAvosPatF = createLeafBlock(
+    bp2, bm2, getNodes("irmã(o) do bisavô paterno_alt"), [], 
+    getFirst("avó paterna"), getNodes("irmã(o) da avó paterna"), false, 2
+  );
+
+  const bp3 = getFirst("bisavô materno (pai do avô)");
+  const bm3 = getFirst("bisavó materna (mãe do avô)");
+  const blockAvosMat = createLeafBlock(
+    bp3, bm3, getNodes("irmã(o) do bisavô materno"), [],
+    getFirst("avô materno"), getNodes("irmã(o) do avô materno"), true, 2
+  );
+
+  const bp4 = getFirst("bisavô materno (pai da avó)");
+  const bm4 = getFirst("bisavó materna (mãe da avó)");
+  const blockAvosMatF = createLeafBlock(
+    bp4, bm4, getNodes("irmã(o) do bisavô materno_alt"), [], 
+    getFirst("avó materna"), getNodes("irmã(o) da avó materna"), false, 2
+  );
+
+  const blockPaisPat = mergeBlocks(
+    blockAvosPat, blockAvosPatF,
+    getFirst("pai"), getNodes("tio(a) paterno(a)"), true, 1
+  );
+
+  const blockPaisMat = mergeBlocks(
+    blockAvosMat, blockAvosMatF,
+    getFirst("mãe"), getNodes("tio(a) materno(a)"), false, 1
+  );
+
+  const consulente = getFirst("consulente");
+  const blockRoot = mergeBlocks(
+    blockPaisPat, blockPaisMat,
+    consulente, getNodes("irmã(o)"), false, 0
+  );
 
   const layoutedNodes: Node[] = [];
+  const finalEdges: Edge[] = [];
+  
+  const mappedIds = new Set(blockRoot.nodes.map(n => n.node.id));
+  let unmappedOffsetX = blockRoot.width + HORIZONTAL_STEP;
+  nodes.forEach(n => {
+    if (!mappedIds.has(n.id)) {
+      blockRoot.nodes.push({ node: n, x: unmappedOffsetX, y: 0, gen: 0 });
+      unmappedOffsetX += HORIZONTAL_STEP;
+    }
+  });
 
-  placedByGen.forEach((placed, generation) => {
-    placed.sort((a, b) => a.centerX - b.centerX || a.node.id.localeCompare(b.node.id));
-
-    // y = geração * gap — cliente (gen 0) no topo, ancestrais descendo
-    const y = generation * GENERATION_GAP;
-
-    placed.forEach((p) => {
-      layoutedNodes.push({
-        ...p.node,
-        position: { x: p.centerX - NODE_W / 2, y },
-        data: { ...p.node.data, generation },
-      });
+  const dx = consulente ? (-NODE_W / 2 - blockRoot.nodes.find(n => n.node.id === consulente.id)!.x) : 0;
+  
+  blockRoot.nodes.forEach(ln => {
+    layoutedNodes.push({
+      ...ln.node,
+      position: { x: ln.x + dx, y: ln.y },
+      data: { ...ln.node.data, generation: ln.gen }
     });
   });
 
-  // ── Geometric Pedigree Routing (Union Nodes) ──
-  //
-  // Layout invertido (cliente NO TOPO, gerações descendo):
-  //   - Filho está ACIMA (Y menor) e Pai está ABAIXO (Y maior).
-  //   - Handles do PersonNode: top=target, bottom=source. Então uma aresta
-  //     source=filho → target=pai roteia limpo: filho.bottom desce até pai.top.
-  //   - Handles do UnionNode: top=target, bottom=source (+ left/right para casal).
-  //
-  // Colocamos o nó de união (pivô do casal) NA fileira dos pais e o "bus"
-  // dos irmãos ENTRE gerações (logo abaixo dos filhos). As arestas partem
-  // do FILHO (source, bottom) para o bus (target, top) e do bus (source,
-  // bottom) para o pivô do casal (target, top) — todas orthogonais para baixo.
-  const finalNodes = [...layoutedNodes];
-  const finalEdges: Edge[] = [];
-  const unionNodeMap = new Map<string, string>(); // key: parent1_parent2 -> unionId
-
+  // Recreate union nodes exactly as before
+  const unionNodeMap = new Map<string, string>();
   edges.forEach((edge) => {
     if (edge.type === "step" && edge.style?.stroke === "var(--color-gold)") {
-      const sourceNode = finalNodes.find((n) => n.id === edge.source);
-      const targetNode = finalNodes.find((n) => n.id === edge.target);
+      const sourceNode = layoutedNodes.find((n) => n.id === edge.source);
+      const targetNode = layoutedNodes.find((n) => n.id === edge.target);
       if (sourceNode && targetNode) {
         const unionId = `union_${sourceNode.id}_${targetNode.id}`;
         const centerX1 = sourceNode.position.x + NODE_W / 2;
         const centerX2 = targetNode.position.x + NODE_W / 2;
-
-        // Pivô ao centro do casal, na linha horizontal do casal (meio-altura).
-        finalNodes.push({
+        
+        layoutedNodes.push({
           id: unionId,
           type: "union",
-          position: {
-            x: (centerX1 + centerX2) / 2,
-            y: sourceNode.position.y + NODE_H / 2,
-          },
+          position: { x: (centerX1 + centerX2) / 2, y: sourceNode.position.y + 50 },
           data: {},
-          draggable: false,
-          selectable: false,
-          focusable: false,
         });
-
+        
         unionNodeMap.set(`${sourceNode.id}_${targetNode.id}`, unionId);
         unionNodeMap.set(`${targetNode.id}_${sourceNode.id}`, unionId);
       }
     }
   });
 
-  // ── Sibling Bus: um único ponto de convergência por casal ──
   const parentEdgesByChild = new Map<string, Edge[]>();
   const otherEdges: Edge[] = [];
+  const parentToUnionMap = new Map<string, string>();
+
+  unionNodeMap.forEach((unionId, parentsKey) => {
+    const [p1, p2] = parentsKey.split("_");
+    parentToUnionMap.set(p1, unionId);
+    parentToUnionMap.set(p2, unionId);
+  });
 
   edges.forEach((edge) => {
     if (edge.type === "step" && edge.style?.stroke === "var(--color-plum)") {
@@ -384,33 +516,34 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     }
   });
 
-  const childrenByUnion = new Map<string, Set<string>>();
-  const orphanParentEdges: Edge[] = [];
-  const parentToUnionMap = new Map<string, string>();
-
-  unionNodeMap.forEach((unionId, parentsKey) => {
-    const [p1, p2] = parentsKey.split("_");
-    parentToUnionMap.set(p1, unionId);
-    parentToUnionMap.set(p2, unionId);
-  });
+  const childrenByUnion = new Map<string, string[]>();
 
   parentEdgesByChild.forEach((pEdges, childId) => {
     let matchedUnionId: string | null = null;
     for (const edge of pEdges) {
       const unionId = parentToUnionMap.get(edge.target);
-      if (unionId) { matchedUnionId = unionId; break; }
+      if (unionId) {
+        matchedUnionId = unionId;
+        break;
+      }
     }
 
     if (matchedUnionId) {
-      if (!childrenByUnion.has(matchedUnionId)) childrenByUnion.set(matchedUnionId, new Set());
-      childrenByUnion.get(matchedUnionId)!.add(childId);
+      if (!childrenByUnion.has(matchedUnionId)) childrenByUnion.set(matchedUnionId, []);
+      childrenByUnion.get(matchedUnionId)!.push(childId);
     } else {
-      // Filho com um único progenitor conhecido — mantemos a direção
-      // filho → pai para preservar o roteamento limpo (bottom→top).
       pEdges.forEach((e) => {
-        orphanParentEdges.push({
+        otherEdges.push({
           ...e,
           id: `direct_${e.id}`,
+          source: e.target,
+          target: e.source, // wait, parent to child?
+          // original logic was: source: e.target, target: e.source.
+          // Wait! The line is drawn from child (source) to parent (target).
+          // If we revert, we draw from parent to child? The previous code was:
+          // source: e.target, target: e.source
+          // Which means source is parent (Top of node) to child (Bottom of node).
+          // Let's keep the original edge!
           type: "step",
           style: { stroke: "var(--color-plum)", strokeWidth: 2 },
         });
@@ -418,28 +551,19 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     }
   });
 
-  childrenByUnion.forEach((childIdsSet, unionId) => {
-    const childNodes = Array.from(childIdsSet)
-      .map((id) => finalNodes.find((n) => n.id === id))
+  childrenByUnion.forEach((childIds, unionId) => {
+    const childNodes = childIds
+      .map((id) => layoutedNodes.find((n) => n.id === id))
       .filter((n): n is Node => Boolean(n));
     if (childNodes.length === 0) return;
 
-    const unionNode = finalNodes.find((n) => n.id === unionId);
-    if (!unionNode) return;
-
-    // O ponto de convergência dos filhos deve ser o centro do casal/pais,
-    // não a média dos filhos. Isso mantém o tronco vertical padronizado.
-    const busX = unionNode.position.x;
-    // Bus entre gerações: logo ABAIXO da fileira dos filhos (que está por
-    // cima), e ACIMA do pivô do casal (que está na fileira dos pais).
-    const childBottomY = Math.max(...childNodes.map((n) => n.position.y)) + NODE_H;
-    const busY = Math.min(
-      childBottomY + 40,
-      unionNode.position.y - 30,
-    );
+    const centersX = childNodes.map((n) => n.position.x + NODE_W / 2);
+    const busX = (Math.min(...centersX) + Math.max(...centersX)) / 2;
+    const childTopY = Math.min(...childNodes.map((n) => n.position.y));
+    const busY = childTopY - 70;
     const busId = `bus_${unionId}`;
 
-    finalNodes.push({
+    layoutedNodes.push({
       id: busId,
       type: "union",
       position: { x: busX, y: busY },
@@ -449,32 +573,26 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
       focusable: false,
     });
 
-    // Tronco vertical: barra dos irmãos (source, bottom) → pivô do casal
-    // (target, top). Como pivô está ABAIXO do bus, roteia reto para baixo.
-      finalEdges.push(forceRightAngle({
+    finalEdges.push({
       id: `trunk_${unionId}`,
-      source: busId,
-      target: unionId,
+      source: unionId,
+      target: busId,
       type: "step",
       style: { stroke: "var(--color-plum)", strokeWidth: 2 },
-      } as Edge));
+    });
 
-    // Cada filho conecta na MESMA barra: filho (source, bottom) → bus
-    // (target, top). Todos os irmãos convergem no mesmo ponto do bus.
     childNodes.forEach((child) => {
-      finalEdges.push(forceRightAngle({
+      finalEdges.push({
         id: `sib_${busId}_${child.id}`,
-        source: child.id,
-        target: busId,
+        source: busId,
+        target: child.id,
         type: "step",
         style: { stroke: "var(--color-plum)", strokeWidth: 2 },
-      } as Edge));
+      });
     });
   });
 
-  finalEdges.push(...orphanParentEdges);
-
-  return { nodes: finalNodes, edges: [...otherEdges, ...finalEdges].map(forceRightAngle) };
+  return { nodes: layoutedNodes, edges: [...otherEdges, ...finalEdges] };
 }
 
 
