@@ -140,14 +140,15 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
   useEffect(() => {
     if (!query.data) return;
     
-    // ── Filtro de qualidade: só entra no genossociograma quem tem dados suficientes ──
-    // Exceção: o próprio consulente/proband sempre entra, mesmo que incompleto.
+    // ── Filtro de qualidade: entra no mapa quem tem nome OU parentesco ──
+    // Após import da planilha muitas pessoas não têm data de nascimento ainda —
+    // ainda assim precisam aparecer para receber layout automático via dagre.
+    // Exceção: o próprio consulente/proband sempre entra.
     const qualifiedPersons = query.data.persons.filter(p => {
-      if (p.is_proband) return true; // Consulente sempre aparece
+      if (p.is_proband) return true;
       const hasName = !!(p.full_name?.trim());
-      const hasBirth = !!(p.birth_date?.trim());
       const hasRel = !!(p.relationship_to_proband?.trim());
-      return hasName && hasBirth && hasRel;
+      return hasName || hasRel;
     });
 
     const initialNodes: Node[] = qualifiedPersons.map((p) => ({
