@@ -144,6 +144,26 @@ function ClientDossierPage() {
 
   if (!client) return <ClientNotFound />;
 
+  // Resolve stored avatar path to a signed URL (bucket is private).
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    let cancelled = false;
+    const path = (client as { avatar_url?: string | null }).avatar_url;
+    if (!path) {
+      setAvatarUrl(null);
+      return;
+    }
+    supabase.storage
+      .from("client-avatars")
+      .createSignedUrl(path, 60 * 60)
+      .then(({ data }) => {
+        if (!cancelled && data?.signedUrl) setAvatarUrl(data.signedUrl);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [client]);
+
   const display = client.preferred_name || client.full_name;
   const age = calcAge(client.birth_date);
   const genderLabel = genderOptions.find((g) => g.value === client.gender)?.label ?? "—";
