@@ -43,6 +43,7 @@ interface FormState {
   to_person_id: string;
   relationship_type: RelationshipType;
   qualifier: string;
+  marriage_order: string; // "" | "1" | "2" | "3" | "4" | "5"
   notes: string;
 }
 
@@ -51,8 +52,10 @@ const empty: FormState = {
   to_person_id: "",
   relationship_type: "union",
   qualifier: "",
+  marriage_order: "",
   notes: "",
 };
+
 
 export function RelationshipFormDialog({
   open,
@@ -68,11 +71,13 @@ export function RelationshipFormDialog({
   useEffect(() => {
     if (!open) return;
     if (editing) {
+      const rec = editing as RelRow & { marriage_order?: number | null };
       setV({
         from_person_id: editing.from_person_id,
         to_person_id: editing.to_person_id,
         relationship_type: editing.relationship_type as RelationshipType,
         qualifier: editing.qualifier ?? "",
+        marriage_order: rec.marriage_order ? String(rec.marriage_order) : "",
         notes: editing.notes ?? "",
       });
     } else {
@@ -95,6 +100,10 @@ export function RelationshipFormDialog({
         to_person_id: form.to_person_id,
         relationship_type: form.relationship_type,
         qualifier: form.qualifier || null,
+        marriage_order:
+          form.relationship_type === "union" && form.marriage_order
+            ? Number(form.marriage_order)
+            : null,
         notes: form.notes.trim() || null,
       };
       if (editing) {
@@ -108,6 +117,7 @@ export function RelationshipFormDialog({
         if (error) throw error;
       }
     },
+
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["genogram", clientId] });
       toast.success(editing ? "Vínculo salvo." : "Vínculo criado na árvore.");
@@ -243,6 +253,36 @@ export function RelationshipFormDialog({
                 </Select>
               </div>
             )}
+
+            {v.relationship_type === "union" && (
+              <div className="space-y-2 pt-2">
+                <Label className="text-[13px] font-bold text-foreground">
+                  Ordem desta união
+                </Label>
+                <Select
+                  value={v.marriage_order || "none"}
+                  onValueChange={(x) =>
+                    setV((p) => ({ ...p, marriage_order: x === "none" ? "" : x }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="União única" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">União única (padrão)</SelectItem>
+                    <SelectItem value="1">① Primeira união</SelectItem>
+                    <SelectItem value="2">② Segunda união</SelectItem>
+                    <SelectItem value="3">③ Terceira união</SelectItem>
+                    <SelectItem value="4">④ Quarta união</SelectItem>
+                    <SelectItem value="5">⑤ Quinta união</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground leading-snug">
+                  Use quando a pessoa teve mais de um casamento — aparece como ①/②/③ na linha do casal para diferenciar cônjuges.
+                </p>
+              </div>
+            )}
+
 
             <div className="space-y-2 pt-2">
               <Label className="text-[13px] font-bold text-foreground">Anotações sistêmicas</Label>

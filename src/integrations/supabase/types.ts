@@ -537,6 +537,7 @@ export type Database = {
           end_date: string | null
           from_person_id: string
           id: string
+          marriage_order: number | null
           notes: string | null
           qualifier: string | null
           relationship_type: string
@@ -550,6 +551,7 @@ export type Database = {
           end_date?: string | null
           from_person_id: string
           id?: string
+          marriage_order?: number | null
           notes?: string | null
           qualifier?: string | null
           relationship_type: string
@@ -563,6 +565,7 @@ export type Database = {
           end_date?: string | null
           from_person_id?: string
           id?: string
+          marriage_order?: number | null
           notes?: string | null
           qualifier?: string | null
           relationship_type?: string
