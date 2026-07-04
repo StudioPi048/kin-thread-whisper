@@ -570,9 +570,10 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
             maxZoom={2.5}
             proOptions={{ hideAttribution: true }}
             defaultEdgeOptions={{
-              type: "smoothstep",
-              style: { strokeWidth: 2 },
+              type: "step",
+              style: { strokeWidth: 2, stroke: "var(--color-plum)" },
             }}
+
           >
             <Background
               color="#d8d0ec"
