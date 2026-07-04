@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables, TablesUpdate } from "@/integrations/supabase/types";
+import * as XLSX from "xlsx";
 
 type Person = Tables<"genogram_persons">;
 type Props = { clientId: string };
@@ -146,34 +147,51 @@ export function ClanSpreadsheet({ clientId }: Props) {
     toast.success("Modelo aplicado. Complete os nomes e datas.");
   };
 
-  const importCsv = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const importFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setIsImporting(true);
     const reader = new FileReader();
+
     reader.onload = async (event) => {
-      const text = event.target?.result as string;
-      if (!text) {
-        setIsImporting(false);
-        return;
-      }
-
       try {
-        const lines = text.split(/\r?\n/).filter(line => line.trim());
-        if (lines.length < 2) throw new Error("Arquivo vazio ou sem cabeçalho.");
+        let parsedRows: string[][] = [];
 
-        const separator = lines[0].includes(";") ? ";" : ",";
-        
-        const parsedRows = lines.slice(1).map(line => {
-          const regex = new RegExp(`(?:^|${separator})(?:"([^"]*)"|([^${separator}]*))`, 'g');
-          const row: string[] = [];
-          let match;
-          while ((match = regex.exec(line)) !== null) {
-            row.push(match[1] || match[2] || "");
-          }
-          return row;
-        });
+        if (file.name.endsWith(".xlsx")) {
+          // Process Excel
+          const data = new Uint8Array(event.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: "array" });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          // Obter formato JSON de matriz (array of arrays)
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+          
+          if (jsonData.length < 2) throw new Error("Arquivo vazio ou sem cabeçalho.");
+          
+          // Ignorar cabeçalho e converter tudo para string
+          parsedRows = jsonData.slice(1).map(row => 
+            Array.from({ length: 11 }).map((_, i) => (row[i] !== undefined && row[i] !== null ? String(row[i]) : ""))
+          );
+        } else {
+          // Process CSV
+          const text = event.target?.result as string;
+          if (!text) throw new Error("Erro ao ler o texto do arquivo.");
+          
+          const lines = text.split(/\r?\n/).filter(line => line.trim());
+          if (lines.length < 2) throw new Error("Arquivo vazio ou sem cabeçalho.");
+
+          const separator = lines[0].includes(";") ? ";" : ",";
+          parsedRows = lines.slice(1).map(line => {
+            const regex = new RegExp(`(?:^|${separator})(?:"([^"]*)"|([^${separator}]*))`, 'g');
+            const row: string[] = [];
+            let match;
+            while ((match = regex.exec(line)) !== null) {
+              row.push(match[1] || match[2] || "");
+            }
+            return row;
+          });
+        }
         
         const inserts = parsedRows.filter(r => r.length > 1).map(row => {
           const [nome, parentesco, nascimento, gestacao, morte, enfermidades, profissao, vicios, temperamento, ordem, obs] = row;
@@ -207,14 +225,18 @@ export function ClanSpreadsheet({ clientId }: Props) {
         }
       } catch (error) {
         console.error(error);
-        toast.error("Erro ao importar CSV. Verifique o formato do arquivo.");
+        toast.error("Erro ao importar arquivo. Verifique o formato.");
       } finally {
         setIsImporting(false);
         if (fileInputRef.current) fileInputRef.current.value = "";
       }
     };
     
-    reader.readAsText(file);
+    if (file.name.endsWith(".xlsx")) {
+      reader.readAsArrayBuffer(file);
+    } else {
+      reader.readAsText(file);
+    }
   };
 
   const exportCsv = () => {
@@ -284,10 +306,10 @@ export function ClanSpreadsheet({ clientId }: Props) {
         <div className="flex flex-wrap gap-3">
           <input 
             type="file" 
-            accept=".csv" 
+            accept=".csv, .xlsx" 
             className="hidden" 
             ref={fileInputRef} 
-            onChange={importCsv} 
+            onChange={importFile} 
           />
           <Button
             variant="outline"
@@ -331,7 +353,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-4">
               <Button className="font-bold" variant="lavender" onClick={() => fileInputRef.current?.click()}>
-                <Upload className="size-4 mr-2" /> Importar CSV
+                <Upload className="size-4 mr-2" /> Importar CSV/XLSX
               </Button>
               <Button className="font-bold" variant="outline" onClick={scaffoldTemplate}>
                 <Table2 className="size-4 mr-2" /> Aplicar Modelo Próprio
