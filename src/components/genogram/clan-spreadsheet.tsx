@@ -306,8 +306,8 @@ export function ClanSpreadsheet({ clientId }: Props) {
               notes: obs?.trim() || null
             };
           })
-          // Remove linhas completamente vazias (sem nome E sem nascimento)
-          .filter(r => !!(r.full_name) || !!(r.birth_date));
+          // Remove linhas vazias E a linha "Consulente" — o proband vem do cadastro do cliente
+          .filter(r => (!!(r.full_name) || !!(r.birth_date)) && r.relationship_to_proband !== "Consulente");
         
         if (inserts.length > 0) {
           if (shouldOverwrite) {
