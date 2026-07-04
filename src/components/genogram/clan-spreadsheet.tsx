@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables, TablesUpdate } from "@/integrations/supabase/types";
 import * as XLSX from "xlsx";
 import { smartNormalizeRelationship, genealogicalOrder } from "@/lib/relationship-normalizer";
+import { ensureProband } from "@/lib/ensure-proband";
 
 type Person = Tables<"genogram_persons">;
 type Props = { clientId: string };
@@ -162,6 +163,20 @@ export function ClanSpreadsheet({ clientId }: Props) {
     };
   }, []);
 
+  // Cliente é sempre o foco: garante que o proband exista no genograma,
+  // espelhando os dados do cadastro clínico. Roda uma vez ao abrir a aba.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const result = await ensureProband(clientId);
+      if (!cancelled && result) {
+        qc.invalidateQueries({ queryKey: ["genogram-persons", clientId] });
+        qc.invalidateQueries({ queryKey: ["genogram", clientId] });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [clientId, qc]);
+
   const rows = useMemo(() => {
     const base = (persons ?? []).map((p) => ({ ...p, ...(drafts[p.id] ?? {}) }));
     // Ordena genealogicamente: Consulente no topo, depois por geração
@@ -291,8 +306,8 @@ export function ClanSpreadsheet({ clientId }: Props) {
               notes: obs?.trim() || null
             };
           })
-          // Remove linhas completamente vazias (sem nome E sem nascimento)
-          .filter(r => !!(r.full_name) || !!(r.birth_date));
+          // Remove linhas vazias E a linha "Consulente" — o proband vem do cadastro do cliente
+          .filter(r => (!!(r.full_name) || !!(r.birth_date)) && r.relationship_to_proband !== "Consulente");
         
         if (inserts.length > 0) {
           if (shouldOverwrite) {
@@ -305,8 +320,12 @@ export function ClanSpreadsheet({ clientId }: Props) {
             console.error("Insert error:", error);
             throw new Error(`Erro no banco de dados: ${error.message}`);
           }
-          
+
+          // Garante o proband a partir do cadastro do cliente
+          await ensureProband(clientId);
+
           qc.invalidateQueries({ queryKey: ["genogram-persons", clientId] });
+          qc.invalidateQueries({ queryKey: ["genogram", clientId] });
           toast.success(`${inserts.length} familiares importados com sucesso!`);
         } else {
           toast.info("Nenhum dado válido encontrado para importar.");
