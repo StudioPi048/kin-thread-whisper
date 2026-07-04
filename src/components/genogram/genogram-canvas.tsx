@@ -54,7 +54,16 @@ function StraightStepEdge({
   sourceY,
   targetX,
   targetY,
-  ...props
+  style,
+  markerEnd,
+  markerStart,
+  label,
+  labelStyle,
+  labelShowBg,
+  labelBgStyle,
+  labelBgPadding,
+  labelBgBorderRadius,
+  interactionWidth,
 }: EdgeProps) {
   const isStraight = Math.abs(sourceX - targetX) < 1 || Math.abs(sourceY - targetY) < 1;
   const midY = sourceY + (targetY - sourceY) / 2;
@@ -64,8 +73,17 @@ function StraightStepEdge({
 
   return (
     <BaseEdge
-      {...props}
       path={path}
+      style={style}
+      markerEnd={markerEnd}
+      markerStart={markerStart}
+      label={label}
+      labelStyle={labelStyle}
+      labelShowBg={labelShowBg}
+      labelBgStyle={labelBgStyle}
+      labelBgPadding={labelBgPadding}
+      labelBgBorderRadius={labelBgBorderRadius}
+      interactionWidth={interactionWidth}
       labelX={(sourceX + targetX) / 2}
       labelY={Math.abs(sourceY - targetY) < 1 ? sourceY - 10 : midY - 10}
     />
