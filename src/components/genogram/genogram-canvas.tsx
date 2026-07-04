@@ -14,6 +14,8 @@ import {
   type EdgeMouseHandler,
   type Node,
   type NodeMouseHandler,
+  Handle,
+  Position,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -34,7 +36,16 @@ import type { Database } from "@/integrations/supabase/types";
 type PersonRow = Database["public"]["Tables"]["genogram_persons"]["Row"];
 type RelRow = Database["public"]["Tables"]["genogram_relationships"]["Row"];
 
-const nodeTypes = { person: PersonNode };
+const UnionNodeComponent = () => (
+  <div style={{ width: 1, height: 1, position: "relative" }}>
+    <Handle type="target" position={Position.Top} className="opacity-0 pointer-events-none" />
+    <Handle type="source" position={Position.Bottom} className="opacity-0 pointer-events-none" />
+    <Handle type="target" position={Position.Left} className="opacity-0 pointer-events-none" />
+    <Handle type="source" position={Position.Right} className="opacity-0 pointer-events-none" />
+  </div>
+);
+
+const nodeTypes = { person: PersonNode, union: UnionNodeComponent };
 
 function GenerationRuler() {
   return (
@@ -233,7 +244,73 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     }
   }
 
-  return { nodes: layoutedNodes, edges };
+  // ── Geometric Pedigree Routing (Union Nodes) ──
+  const finalNodes = [...layoutedNodes];
+  const finalEdges: Edge[] = [];
+  const unionNodeMap = new Map<string, string>(); // key: parent1_parent2 -> unionId
+
+  edges.forEach((edge) => {
+    // Identify structural union edges
+    if (edge.type === "step" && edge.style?.stroke === "var(--color-gold)") {
+      const sourceNode = finalNodes.find((n) => n.id === edge.source);
+      const targetNode = finalNodes.find((n) => n.id === edge.target);
+      if (sourceNode && targetNode) {
+        const unionId = `union_${sourceNode.id}_${targetNode.id}`;
+        const centerX1 = sourceNode.position.x + NODE_W / 2;
+        const centerX2 = targetNode.position.x + NODE_W / 2;
+        
+        finalNodes.push({
+          id: unionId,
+          type: "union",
+          position: { x: (centerX1 + centerX2) / 2, y: sourceNode.position.y + 50 },
+          data: {},
+        });
+        
+        unionNodeMap.set(`${sourceNode.id}_${targetNode.id}`, unionId);
+        unionNodeMap.set(`${targetNode.id}_${sourceNode.id}`, unionId);
+      }
+    }
+  });
+
+  const parentEdgesByChild = new Map<string, Edge[]>();
+  const otherEdges: Edge[] = [];
+
+  edges.forEach((edge) => {
+    if (edge.type === "step" && edge.style?.stroke === "var(--color-plum)") {
+      if (!parentEdgesByChild.has(edge.source)) parentEdgesByChild.set(edge.source, []);
+      parentEdgesByChild.get(edge.source)!.push(edge);
+    } else {
+      otherEdges.push(edge);
+    }
+  });
+
+  parentEdgesByChild.forEach((pEdges, childId) => {
+    let routedToUnion = false;
+    for (let i = 0; i < pEdges.length; i++) {
+      for (let j = i + 1; j < pEdges.length; j++) {
+        const p1 = pEdges[i].target;
+        const p2 = pEdges[j].target;
+        const unionId = unionNodeMap.get(`${p1}_${p2}`);
+        if (unionId) {
+          finalEdges.push({
+            id: `route_${childId}_to_union`,
+            source: childId,
+            target: unionId,
+            type: "step",
+            style: { stroke: "var(--color-plum)", strokeWidth: 2 },
+          });
+          routedToUnion = true;
+          break;
+        }
+      }
+      if (routedToUnion) break;
+    }
+    if (!routedToUnion) {
+      finalEdges.push(...pEdges);
+    }
+  });
+
+  return { nodes: finalNodes, edges: [...otherEdges, ...finalEdges] };
 }
 
 
@@ -560,6 +637,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
+            onNodeClick={onNodeDoubleClick}
             onNodeDoubleClick={onNodeDoubleClick}
             onEdgeDoubleClick={onEdgeDoubleClick}
             nodesDraggable={false}
