@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, Trash2, Download, Table2, Upload } from "lucide-react";
+import { Loader2, Plus, Trash2, Download, Table2, Upload, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables, TablesUpdate } from "@/integrations/supabase/types";
 import * as XLSX from "xlsx";
+import { smartNormalizeRelationship, genealogicalOrder } from "@/lib/relationship-normalizer";
 
 type Person = Tables<"genogram_persons">;
 type Props = { clientId: string };
@@ -114,6 +115,26 @@ export function ClanSpreadsheet({ clientId }: Props) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["genogram-persons", clientId] }),
   });
 
+  const removeEmptyPersons = useMutation({
+    mutationFn: async () => {
+      const emptyIds = (persons ?? [])
+        .filter(p => !p.is_proband && !p.full_name?.trim() && !p.birth_date?.trim())
+        .map(p => p.id);
+      
+      if (emptyIds.length === 0) return 0;
+      
+      const { error } = await supabase.from("genogram_persons").delete().in("id", emptyIds);
+      if (error) throw error;
+      return emptyIds.length;
+    },
+    onSuccess: (count) => {
+      qc.invalidateQueries({ queryKey: ["genogram-persons", clientId] });
+      if (count > 0) toast.success(`${count} linhas vazias removidas.`);
+      else toast.info("Nenhuma linha vazia encontrada.");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao limpar planilha"),
+  });
+
   const scheduleSave = (id: string, patch: TablesUpdate<"genogram_persons">) => {
     setDrafts((d) => ({ ...d, [id]: { ...d[id], ...patch } }));
     if (timers.current[id]) clearTimeout(timers.current[id]);
@@ -129,10 +150,17 @@ export function ClanSpreadsheet({ clientId }: Props) {
     };
   }, []);
 
-  const rows = useMemo(
-    () => (persons ?? []).map((p) => ({ ...p, ...(drafts[p.id] ?? {}) })),
-    [persons, drafts],
-  );
+  const rows = useMemo(() => {
+    const base = (persons ?? []).map((p) => ({ ...p, ...(drafts[p.id] ?? {}) }));
+    // Ordena genealogicamente: Consulente no topo, depois por geração
+    return base.sort((a, b) => {
+      const orderA = genealogicalOrder(a.relationship_to_proband);
+      const orderB = genealogicalOrder(b.relationship_to_proband);
+      if (orderA !== orderB) return orderA - orderB;
+      // Dentro do mesmo rank, ordena por nome
+      return (a.full_name ?? "").localeCompare(b.full_name ?? "");
+    });
+  }, [persons, drafts]);
 
   const scaffoldTemplate = async () => {
     if (rows.length > 0) {
@@ -218,26 +246,34 @@ export function ClanSpreadsheet({ clientId }: Props) {
           });
         }
         
-        const inserts = parsedRows.filter(r => r.length > 1).map(row => {
-          const [nome, parentesco, nascimento, gestacao, morte, enfermidades, profissao, vicios, temperamento, ordem, obs] = row;
-          
-          return {
-            client_id: clientId,
-            full_name: nome?.trim() || "",
-            relationship_to_proband: parentesco?.trim() || null,
-            gender: inferGenderFromRelationship(parentesco?.trim()) || "unknown",
-            birth_date: parseDateString(nascimento),
-            gestational_weeks: gestacao?.trim() || null,
-            death_date: parseDateString(morte),
-            is_deceased: !!morte?.trim(),
-            health_conditions: enfermidades ? enfermidades.split(',').map(s => s.trim()).filter(Boolean) : [],
-            occupation: profissao?.trim() || null,
-            vices: vicios?.trim() || null,
-            temperament: temperamento?.trim() || null,
-            birth_order: ordem && !isNaN(parseInt(ordem)) ? parseInt(ordem) : null,
-            notes: obs?.trim() || null
-          };
-        });
+        // Normalizar e filtrar: skip linhas sem nenhum dado útil
+        const inserts = parsedRows
+          .filter(r => r.length > 1)
+          .map(row => {
+            const [nome, parentesco, nascimento, gestacao, morte, enfermidades, profissao, vicios, temperamento, ordem, obs] = row;
+            // Normaliza o parentesco para a tag canônica do sistema
+            const relCanonical = parentesco?.trim()
+              ? smartNormalizeRelationship(parentesco.trim())
+              : null;
+            return {
+              client_id: clientId,
+              full_name: nome?.trim() || "",
+              relationship_to_proband: relCanonical,
+              gender: inferGenderFromRelationship(relCanonical ?? "") || "unknown",
+              birth_date: parseDateString(nascimento),
+              gestational_weeks: gestacao?.trim() || null,
+              death_date: parseDateString(morte),
+              is_deceased: !!morte?.trim(),
+              health_conditions: enfermidades ? enfermidades.split(',').map(s => s.trim()).filter(Boolean) : [],
+              occupation: profissao?.trim() || null,
+              vices: vicios?.trim() || null,
+              temperament: temperamento?.trim() || null,
+              birth_order: ordem && !isNaN(parseInt(ordem)) ? parseInt(ordem) : null,
+              notes: obs?.trim() || null
+            };
+          })
+          // Remove linhas completamente vazias (sem nome E sem nascimento)
+          .filter(r => !!(r.full_name) || !!(r.birth_date));
         
         if (inserts.length > 0) {
           const { error } = await supabase.from("genogram_persons").insert(inserts);
@@ -347,7 +383,17 @@ export function ClanSpreadsheet({ clientId }: Props) {
             className="font-bold border-plum/20 text-plum hover:bg-plum/5"
           >
             {isImporting ? <Loader2 className="size-4 mr-2 animate-spin" /> : <Upload className="size-4 mr-2" />}
-            Importar CSV
+            Importar XLS/CSV
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => removeEmptyPersons.mutate()}
+            disabled={removeEmptyPersons.isPending}
+            className="font-bold border-amber-500/20 text-amber-600 hover:bg-amber-500/5"
+          >
+            {removeEmptyPersons.isPending ? <Loader2 className="size-4 mr-2 animate-spin" /> : <Sparkles className="size-4 mr-2" />}
+            Limpar vazios
           </Button>
           <Button
             variant="outline"

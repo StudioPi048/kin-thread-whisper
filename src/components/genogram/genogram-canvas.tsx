@@ -47,90 +47,64 @@ export function GenogramCanvas(props: CanvasProps) {
   );
 }
 
-// Tamanho real do nó no DOM (shape 96px + label ~60px abaixo)
-// O Dagre precisa saber o espaço TOTAL que cada nó ocupa.
-const NODE_W = 100;  // largura do shape (ligeiramente maior que 96 para margem)
-const NODE_H = 160;  // shape (96) + label (nome + anos + badge ≈ 64px)
+// Tamanho real do nó no DOM
+const NODE_W = 110;  // largura do shape + padding
+const NODE_H = 155;  // shape (72px) + label (nome + datas + badge ≈ 83px)
 
 const getLayoutedElements = (nodes: Node[], edges: Edge[], probandId?: string) => {
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
-  
-  // rankdir BT: source (Consulente/filhos) fica no TOPO, targets (pais/avós) ficam embaixo.
-  // nodesep: espaço horizontal entre nós do mesmo nível
-  // ranksep: espaço vertical entre gerações (aumentado para não sobrepar labels)
-  dagreGraph.setGraph({ rankdir: 'BT', nodesep: 60, edgesep: 20, ranksep: 100, marginx: 40, marginy: 40 });
+
+  // rankdir TB (top-to-bottom):
+  // - Source fica ACIMA do Target
+  // - Nossas arestas vão DE filho PARA pai: filho.source → pai.target
+  // - Logo: filho (source) fica no TOPO, pai (target) fica ABAIXO → correto!
+  dagreGraph.setGraph({
+    rankdir: "TB",
+    nodesep: 55,    // espaço horizontal entre nós do mesmo rank
+    ranksep: 90,    // espaço vertical entre gerações
+    edgesep: 10,
+    marginx: 40,
+    marginy: 40,
+  });
 
   nodes.forEach((node) => {
     dagreGraph.setNode(node.id, { width: NODE_W, height: NODE_H });
   });
 
-  // 1. Identificar Uniões (casamentos)
-  // Como as cores já estão configuradas, uniões usam var(--color-gold)
-  const unionEdges = edges.filter(e => e.style?.stroke === "var(--color-gold)");
-  const unionMap = new Map<string, string>(); // Mapa: pessoa_id -> nó_virtual_do_casal
-
-  unionEdges.forEach(union => {
-    const virtualId = `V_${union.id}`;
-    // Adiciona um nó invisível sem tamanho real
-    dagreGraph.setNode(virtualId, { width: 1, height: 1 });
-    
-    // Força o marido e esposa apontarem para o nó virtual para ficarem LADO A LADO na mesma linha
-    dagreGraph.setEdge(union.source, virtualId, { minlen: 1, weight: 100 });
-    dagreGraph.setEdge(union.target, virtualId, { minlen: 1, weight: 100 });
-
-    unionMap.set(union.source, virtualId);
-    unionMap.set(union.target, virtualId);
-  });
-
-  // 2. Mapear Arestas Parentais e Irmãos
+  // Adiciona ao Dagre apenas arestas de parentesco (cor plum).
+  // Arestas de união (gold) são VISUAIS apenas — o Dagre não precisa delas
+  // porque os cônjuges já ficam no mesmo rank naturalmente (mesmos filhos apontam para ambos).
   edges.forEach((edge) => {
-    // Pula uniões, pois já as tratamos acima
-    if (unionEdges.includes(edge)) return;
-
-    // Se for aresta de irmãos, ignoramos no Dagre para não estragar as linhas horizontais
-    if (edge.style?.stroke === "var(--color-lavender)") return;
-
-    // Se for aresta parental (var(--color-plum))
-    if (edge.style?.stroke === "var(--color-plum)") {
-      const virtualSource = unionMap.get(edge.source);
-      // Se o pai/mãe for casado, faz o filho descer matematicamente do meio do casal
-      if (virtualSource) {
-        dagreGraph.setEdge(virtualSource, edge.target, { minlen: 1 });
-      } else {
-        // Se for mãe/pai solteiro
-        dagreGraph.setEdge(edge.source, edge.target, { minlen: 1 });
-      }
-    } else {
-      // Qualquer outra aresta de reserva
-      dagreGraph.setEdge(edge.source, edge.target);
-    }
+    const isUnion = edge.style?.stroke === "var(--color-gold)";
+    if (isUnion) return; // pula uniões no layout
+    dagreGraph.setEdge(edge.source, edge.target, { minlen: 1 });
   });
 
   dagre.layout(dagreGraph);
 
-  // Se há um proband, translacionar o canvas para que o proband fique em x=0
-  // Isso vai centralizar a árvore em torno do paciente-índice.
+  // Centralizar horizontalmente em torno do proband
   let probandX = 0;
   if (probandId) {
-    const pNode = dagreGraph.node(probandId);
-    if (pNode) probandX = pNode.x;
+    const pn = dagreGraph.node(probandId);
+    if (pn) probandX = pn.x;
   }
 
-  nodes.forEach((node) => {
-    const nodeWithPosition = dagreGraph.node(node.id);
-    if (!nodeWithPosition) return;
-    node.targetPosition = undefined as any; 
-    node.sourcePosition = undefined as any;
-
-    node.position = {
-      x: nodeWithPosition.x - NODE_W / 2 - probandX + 0, // centralizar em torno do proband
-      y: nodeWithPosition.y - NODE_H / 2,
+  const layoutedNodes = nodes.map((node) => {
+    const pos = dagreGraph.node(node.id);
+    if (!pos) return node;
+    return {
+      ...node,
+      position: {
+        x: pos.x - NODE_W / 2 - probandX,
+        y: pos.y - NODE_H / 2,
+      },
     };
   });
 
-  return { nodes, edges };
+  return { nodes: layoutedNodes, edges };
 };
+
 
 function GenogramCanvasInner({ clientId }: CanvasProps) {
   const qc = useQueryClient();
