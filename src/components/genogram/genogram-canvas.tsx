@@ -452,7 +452,6 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
   );
 
   const layoutedNodes: Node[] = [];
-  const finalEdges: Edge[] = [];
   
   const mappedIds = new Set(blockRoot.nodes.map(n => n.node.id));
   let unmappedOffsetX = blockRoot.width + HORIZONTAL_STEP;
@@ -476,7 +475,7 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
   // Recreate union nodes exactly as before
   const unionNodeMap = new Map<string, string>();
   edges.forEach((edge) => {
-    if (edge.type === "step" && edge.style?.stroke === "var(--color-gold)") {
+    if (edge.style?.stroke === "var(--color-gold)") {
       const sourceNode = layoutedNodes.find((n) => n.id === edge.source);
       const targetNode = layoutedNodes.find((n) => n.id === edge.target);
       if (sourceNode && targetNode) {
@@ -487,7 +486,8 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
         layoutedNodes.push({
           id: unionId,
           type: "union",
-          position: { x: (centerX1 + centerX2) / 2, y: sourceNode.position.y + 50 },
+          // Position it perfectly halfway down the node
+          position: { x: (centerX1 + centerX2) / 2, y: sourceNode.position.y + 40 },
           data: {},
         });
         
@@ -497,26 +497,30 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     }
   });
 
-  const parentEdgesByChild = new Map<string, Edge[]>();
-  const otherEdges: Edge[] = [];
   const parentToUnionMap = new Map<string, string>();
-
   unionNodeMap.forEach((unionId, parentsKey) => {
     const [p1, p2] = parentsKey.split("_");
     parentToUnionMap.set(p1, unionId);
     parentToUnionMap.set(p2, unionId);
   });
 
+  const parentEdgesByChild = new Map<string, Edge[]>();
+  const otherEdges: Edge[] = [];
+
   edges.forEach((edge) => {
-    if (edge.type === "step" && edge.style?.stroke === "var(--color-plum)") {
+    if (edge.style?.stroke === "var(--color-plum)") {
+      // In structural-tree, source is Child, target is Parent.
       if (!parentEdgesByChild.has(edge.source)) parentEdgesByChild.set(edge.source, []);
       parentEdgesByChild.get(edge.source)!.push(edge);
     } else {
-      otherEdges.push(edge);
+      otherEdges.push({
+        ...edge,
+        type: edge.style?.stroke === "var(--color-gold)" ? "straightStep" : edge.type,
+      });
     }
   });
 
-  const childrenByUnion = new Map<string, string[]>();
+  const finalEdges: Edge[] = [];
 
   parentEdgesByChild.forEach((pEdges, childId) => {
     let matchedUnionId: string | null = null;
@@ -529,71 +533,30 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     }
 
     if (matchedUnionId) {
-      if (!childrenByUnion.has(matchedUnionId)) childrenByUnion.set(matchedUnionId, []);
-      childrenByUnion.get(matchedUnionId)!.push(childId);
+      finalEdges.push({
+        id: `descendant_${matchedUnionId}_${childId}`,
+        source: matchedUnionId, // Union is at Y=340
+        target: childId,        // Child is at Y=0
+        type: "straightStep",
+        style: { stroke: "var(--color-plum)", strokeWidth: 2 },
+      });
     } else {
       pEdges.forEach((e) => {
-        otherEdges.push({
+        finalEdges.push({
           ...e,
           id: `direct_${e.id}`,
-          source: e.target,
-          target: e.source, // wait, parent to child?
-          // original logic was: source: e.target, target: e.source.
-          // Wait! The line is drawn from child (source) to parent (target).
-          // If we revert, we draw from parent to child? The previous code was:
-          // source: e.target, target: e.source
-          // Which means source is parent (Top of node) to child (Bottom of node).
-          // Let's keep the original edge!
-          type: "step",
+          source: e.target, // Parent
+          target: e.source, // Child
+          type: "straightStep",
           style: { stroke: "var(--color-plum)", strokeWidth: 2 },
         });
       });
     }
   });
 
-  childrenByUnion.forEach((childIds, unionId) => {
-    const childNodes = childIds
-      .map((id) => layoutedNodes.find((n) => n.id === id))
-      .filter((n): n is Node => Boolean(n));
-    if (childNodes.length === 0) return;
-
-    const centersX = childNodes.map((n) => n.position.x + NODE_W / 2);
-    const busX = (Math.min(...centersX) + Math.max(...centersX)) / 2;
-    const childTopY = Math.min(...childNodes.map((n) => n.position.y));
-    const busY = childTopY - 70;
-    const busId = `bus_${unionId}`;
-
-    layoutedNodes.push({
-      id: busId,
-      type: "union",
-      position: { x: busX, y: busY },
-      data: {},
-      draggable: false,
-      selectable: false,
-      focusable: false,
-    });
-
-    finalEdges.push({
-      id: `trunk_${unionId}`,
-      source: unionId,
-      target: busId,
-      type: "step",
-      style: { stroke: "var(--color-plum)", strokeWidth: 2 },
-    });
-
-    childNodes.forEach((child) => {
-      finalEdges.push({
-        id: `sib_${busId}_${child.id}`,
-        source: busId,
-        target: child.id,
-        type: "step",
-        style: { stroke: "var(--color-plum)", strokeWidth: 2 },
-      });
-    });
-  });
-
   return { nodes: layoutedNodes, edges: [...otherEdges, ...finalEdges] };
 }
+
 
 
 
