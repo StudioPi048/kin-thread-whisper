@@ -775,6 +775,42 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
 
   }, [query.data, setNodes, setEdges, rfInstance]);
 
+  
+  // Lock dragging strictly to X axis
+  const onNodesChangeCustom = useCallback((changes: any[]) => {
+    const nextChanges = changes.map(change => {
+      if (change.type === 'position' && change.dragging && change.position) {
+        const node = nodes.find(n => n.id === change.id);
+        if (node) {
+          return {
+            ...change,
+            position: { x: change.position.x, y: node.position.y },
+            positionAbsolute: change.positionAbsolute ? { x: change.positionAbsolute.x, y: node.position.y } : undefined
+          };
+        }
+      }
+      return change;
+    });
+    onNodesChange(nextChanges);
+  }, [nodes, onNodesChange]);
+
+  
+  useEffect(() => {
+    const handleEdgeDelete = async (e: Event) => {
+      const customEvent = e as CustomEvent<string>;
+      const relId = customEvent.detail;
+      if (!relId) return;
+      
+      const { error } = await supabase.from("genogram_relationships").delete().eq("id", relId);
+      if (!error) {
+        toast.success("Vínculo removido");
+        query.refetch();
+      }
+    };
+    window.addEventListener('delete-edge', handleEdgeDelete);
+    return () => window.removeEventListener('delete-edge', handleEdgeDelete);
+  }, [query]);
+
   const onConnect = useCallback(
     (conn: Connection) => {
       setEdges((eds) => addEdge({ ...conn, style: { stroke: "var(--color-lavender)" } }, eds));
@@ -974,7 +1010,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
             edges={edges}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
-            onNodesChange={onNodesChange}
+            onNodesChange={onNodesChangeCustom}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             onNodeClick={onNodeDoubleClick}

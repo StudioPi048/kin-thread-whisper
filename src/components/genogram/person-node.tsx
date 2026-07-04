@@ -66,7 +66,7 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
   return (
     <div
       className={cn(
-        "relative flex flex-col items-center",
+        "relative flex flex-col items-center group",
         d.is_proband && "z-20",
       )}
       style={{ userSelect: "none", width: 160 }}
@@ -167,6 +167,18 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
         style={{ top: shapeSize / 2 }}
         className="!size-2.5 !rounded-sm !border-2 !border-card !bg-lavender opacity-0"
       />
+      {/* Visual drag handle to connect people */}
+      <div className="absolute -bottom-7 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-50 flex items-center justify-center pointer-events-auto">
+        <Handle
+          id="visual-connect"
+          type="source"
+          position={Position.Bottom}
+          className="!w-7 !h-7 !bg-plum !border-2 !border-white flex items-center justify-center cursor-crosshair !rounded-full shadow-lg z-50 !relative !transform-none !left-0 !top-0"
+        >
+          <Plus className="w-4 h-4 text-white pointer-events-none" />
+        </Handle>
+      </div>
+
 
     </div>
   );
