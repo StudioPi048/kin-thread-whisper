@@ -135,6 +135,18 @@ export function ClanSpreadsheet({ clientId }: Props) {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao limpar planilha"),
   });
 
+  const deleteAllPersons = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("genogram_persons").delete().eq("client_id", clientId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["genogram-persons", clientId] });
+      toast.success("Planilha completamente apagada.");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao apagar planilha"),
+  });
+
   const scheduleSave = (id: string, patch: TablesUpdate<"genogram_persons">) => {
     setDrafts((d) => ({ ...d, [id]: { ...d[id], ...patch } }));
     if (timers.current[id]) clearTimeout(timers.current[id]);
@@ -246,6 +258,13 @@ export function ClanSpreadsheet({ clientId }: Props) {
           });
         }
         
+        // Pergunta se deseja substituir a planilha inteira
+        const shouldOverwrite = (persons && persons.length > 0) 
+          ? window.confirm(
+              "Deseja substituir a planilha atual pelos dados do arquivo?\n\n[OK] = Apagar tudo e usar apenas o arquivo\n[Cancelar] = Adicionar as novas linhas no final"
+            )
+          : false;
+
         // Normalizar e filtrar: skip linhas sem nenhum dado útil
         const inserts = parsedRows
           .filter(r => r.length > 1)
@@ -276,9 +295,14 @@ export function ClanSpreadsheet({ clientId }: Props) {
           .filter(r => !!(r.full_name) || !!(r.birth_date));
         
         if (inserts.length > 0) {
+          if (shouldOverwrite) {
+            const { error: delError } = await supabase.from("genogram_persons").delete().eq("client_id", clientId);
+            if (delError) throw delError;
+          }
+
           const { error } = await supabase.from("genogram_persons").insert(inserts);
           if (error) {
-            console.error("Supabase Error:", error);
+            console.error("Insert error:", error);
             throw new Error(`Erro no banco de dados: ${error.message}`);
           }
           
@@ -391,9 +415,25 @@ export function ClanSpreadsheet({ clientId }: Props) {
             onClick={() => removeEmptyPersons.mutate()}
             disabled={removeEmptyPersons.isPending}
             className="font-bold border-amber-500/20 text-amber-600 hover:bg-amber-500/5"
+            title="Remove linhas sem nome e data"
           >
             {removeEmptyPersons.isPending ? <Loader2 className="size-4 mr-2 animate-spin" /> : <Sparkles className="size-4 mr-2" />}
             Limpar vazios
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              if (window.confirm("ATENÇÃO: Deseja apagar TODAS as linhas da planilha deste cliente? Esta ação não pode ser desfeita.")) {
+                deleteAllPersons.mutate();
+              }
+            }}
+            disabled={deleteAllPersons.isPending}
+            className="font-bold border-destructive/20 text-destructive hover:bg-destructive/5"
+            title="Apaga a planilha inteira"
+          >
+            {deleteAllPersons.isPending ? <Loader2 className="size-4 mr-2 animate-spin" /> : <Trash2 className="size-4 mr-2" />}
+            Limpar Tudo
           </Button>
           <Button
             variant="outline"
