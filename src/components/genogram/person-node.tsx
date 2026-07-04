@@ -76,23 +76,12 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
           selected && "scale-105 ring-2 ring-lavender ring-offset-2 ring-offset-background",
         )}
       >
-        {/* Símbolo de gênero */}
-        <span
-          className={cn(
-            "text-[22px] font-light leading-none select-none",
-            symbolColor,
-            gender === "nao_binario" || gender === "outro" ? "-rotate-45" : "",
-          )}
-        >
-          {genderSymbol(gender)}
-        </span>
-
         {/* Cruz de falecido */}
         {d.is_deceased && (
           <span
             aria-hidden
             className={cn(
-              "pointer-events-none absolute inset-0 flex items-center justify-center text-4xl leading-none text-destructive/70",
+              "pointer-events-none absolute inset-0 flex items-center justify-center text-[44px] font-bold leading-none text-red-500",
               gender === "nao_binario" || gender === "outro" ? "-rotate-45" : "",
             )}
           >

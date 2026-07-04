@@ -28,6 +28,7 @@ import { PersonFormDialog } from "./person-form-dialog";
 import { RelationshipFormDialog } from "./relationship-form-dialog";
 import { relationshipLabel } from "@/lib/genogram";
 import { computeStructuralEdges } from "@/lib/structural-tree";
+import { getGeneration, smartNormalizeRelationship } from "@/lib/relationship-normalizer";
 import type { Database } from "@/integrations/supabase/types";
 
 type PersonRow = Database["public"]["Tables"]["genogram_persons"]["Row"];
@@ -79,6 +80,35 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[], probandId?: string) =
     const isUnion = edge.style?.stroke === "var(--color-gold)";
     if (isUnion) return; // pula uniões no layout
     dagreGraph.setEdge(edge.source, edge.target, { minlen: 1 });
+  });
+
+  // ── FORÇAR HIERARQUIA VERTICAL (SPINE) ──
+  // Cria âncoras invisíveis para cada geração para garantir
+  // que tios sem avós não flutuem para a geração 0 (Consulente).
+  dagreGraph.setNode("V_GEN0", { width: 1, height: 1 });
+  dagreGraph.setNode("V_GEN1", { width: 1, height: 1 });
+  dagreGraph.setNode("V_GEN2", { width: 1, height: 1 });
+  dagreGraph.setNode("V_GEN3", { width: 1, height: 1 });
+  // O Dagre Rankdir TB significa que target fica ABAIXO do source.
+  // V_GEN0 -> V_GEN1 (V_GEN1 fica no rank 1)
+  // Mas nossa árvore estrutural faz: Proband (0) -> Pai (1).
+  // Então o ROOT tem que apontar PARA o pai!
+  dagreGraph.setEdge("V_GEN0", "V_GEN1", { weight: 100 });
+  dagreGraph.setEdge("V_GEN1", "V_GEN2", { weight: 100 });
+  dagreGraph.setEdge("V_GEN2", "V_GEN3", { weight: 100 });
+
+  nodes.forEach((node) => {
+    const d = node.data as unknown as PersonNodeData;
+    const rel = d.person?.relationship_to_proband;
+    const canon = smartNormalizeRelationship(rel);
+    const gen = getGeneration(canon);
+    
+    // Conecta o nó à sua âncora geracional para forçar a altura.
+    // Isso impede que um "Irmão do pai" sem um "Avô" suba para o lado do Proband.
+    if (gen === 1) dagreGraph.setEdge("V_GEN0", node.id, { weight: 1 });
+    if (gen === 2) dagreGraph.setEdge("V_GEN1", node.id, { weight: 1 });
+    if (gen === 3) dagreGraph.setEdge("V_GEN2", node.id, { weight: 1 });
+    // Gen0 (Consulente, irmãos) não precisa de edge, fica no topo por padrão.
   });
 
   dagre.layout(dagreGraph);
