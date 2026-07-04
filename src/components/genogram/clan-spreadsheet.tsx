@@ -210,9 +210,9 @@ export function ClanSpreadsheet({ clientId }: Props) {
             full_name: nome?.trim() || "",
             relationship_to_proband: parentesco?.trim() || null,
             gender: inferGenderFromRelationship(parentesco?.trim()) || "unknown",
-            birth_date: nascimento?.trim() || null,
+            birth_date: parseDateString(nascimento),
             gestational_weeks: gestacao?.trim() || null,
-            death_date: morte?.trim() || null,
+            death_date: parseDateString(morte),
             is_deceased: !!morte?.trim(),
             health_conditions: enfermidades ? enfermidades.split(',').map(s => s.trim()).filter(Boolean) : [],
             occupation: profissao?.trim() || null,
@@ -225,16 +225,19 @@ export function ClanSpreadsheet({ clientId }: Props) {
         
         if (inserts.length > 0) {
           const { error } = await supabase.from("genogram_persons").insert(inserts);
-          if (error) throw error;
+          if (error) {
+            console.error("Supabase Error:", error);
+            throw new Error(`Erro no banco de dados: ${error.message}`);
+          }
           
           qc.invalidateQueries({ queryKey: ["genogram-persons", clientId] });
           toast.success(`${inserts.length} familiares importados com sucesso!`);
         } else {
           toast.info("Nenhum dado válido encontrado para importar.");
         }
-      } catch (error) {
-        console.error(error);
-        toast.error("Erro ao importar arquivo. Verifique o formato.");
+      } catch (error: any) {
+        console.error("Import Error:", error);
+        toast.error(`Erro ao importar: ${error?.message || "Verifique o formato."}`);
       } finally {
         setIsImporting(false);
         if (fileInputRef.current) fileInputRef.current.value = "";
@@ -527,6 +530,24 @@ function inferGenderFromRelationship(rel?: string): "male" | "female" | undefine
   if (/\b(pai|avô|bisavô|tio\b|irmão)\b/.test(r)) return "male";
   if (/\b(mãe|avó|bisavó|tia\b|irmã)\b/.test(r)) return "female";
   return undefined;
+}
+
+function parseDateString(d?: string): string | null {
+  if (!d) return null;
+  const val = d.trim();
+  if (!val) return null;
+  // Se já for YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
+  // Tentar parsear DD/MM/YYYY ou DD-MM-YYYY
+  const parts = val.split(/[\/\-]/);
+  if (parts.length === 3) {
+    const [dOrM, mOrD, y] = parts;
+    if (y.length === 4) {
+      // Assumindo padrão brasileiro DD/MM/YYYY
+      return `${y}-${mOrD.padStart(2, "0")}-${dOrM.padStart(2, "0")}`;
+    }
+  }
+  return null;
 }
 
 function Th({ children, w }: { children?: React.ReactNode; w?: string }) {
