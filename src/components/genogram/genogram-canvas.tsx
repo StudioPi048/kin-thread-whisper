@@ -4,7 +4,6 @@ import {
   Background,
   BackgroundVariant,
   Controls,
-  Panel,
   ReactFlow,
   ReactFlowProvider,
   addEdge,
@@ -608,9 +607,6 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
             snapToGrid
             snapGrid={[20, 20]}
           >
-            <Panel position="top-left" className="hidden md:block">
-              <GenerationRuler />
-            </Panel>
             <Background
               variant={BackgroundVariant.Dots}
               gap={24}
@@ -619,6 +615,11 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
             />
             <Controls showInteractive={false} style={{ bottom: 16, left: 16, top: "auto" }} />
           </ReactFlow>
+        )}
+        {!query.isLoading && persons.length > 0 && (
+          <div className="pointer-events-none absolute left-4 top-4 z-50 hidden md:block">
+            <GenerationRuler />
+          </div>
         )}
       </div>
 
