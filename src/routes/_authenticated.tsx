@@ -110,30 +110,7 @@ function AuthenticatedLayout() {
           })}
         </nav>
 
-        {/* Separador */}
-        <div className="mx-4 my-2 h-px bg-sidebar-border" />
 
-        {/* Ferramentas em desenvolvimento */}
-        <div className="px-4 pb-3">
-          <p className="px-4 pb-2 text-[10px] font-bold uppercase tracking-[0.3em] text-sidebar-foreground/28">
-            Em desenvolvimento
-          </p>
-          {[
-            { icon: Mic, label: "Prontuário por voz" },
-            { icon: GitBranch, label: "Motor de padrões" },
-          ].map((t) => (
-            <div
-              key={t.label}
-              className="flex items-center gap-4 px-4 py-3.5 text-[14px] text-sidebar-foreground/28 cursor-not-allowed"
-            >
-              <t.icon className="size-5 shrink-0" />
-              <span>{t.label}</span>
-              <span className="ml-auto rounded border border-gold/30 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-gold/60">
-                breve
-              </span>
-            </div>
-          ))}
-        </div>
 
         {/* Usuário */}
         <div className="border-t-2 border-sidebar-border p-4">

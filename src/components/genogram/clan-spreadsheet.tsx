@@ -158,10 +158,10 @@ export function ClanSpreadsheet({ clientId }: Props) {
       try {
         let parsedRows: string[][] = [];
 
-        if (file.name.endsWith(".xlsx")) {
+        if (file.name.toLowerCase().endsWith(".xlsx")) {
           // Process Excel
           const data = new Uint8Array(event.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: "array" });
+          const workbook = XLSX.read(data, { type: "array", cellDates: true });
           const firstSheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[firstSheetName];
           // Obter formato JSON de matriz (array of arrays)
@@ -169,10 +169,19 @@ export function ClanSpreadsheet({ clientId }: Props) {
           
           if (jsonData.length < 2) throw new Error("Arquivo vazio ou sem cabeçalho.");
           
-          // Ignorar cabeçalho e converter tudo para string
-          parsedRows = jsonData.slice(1).map(row => 
-            Array.from({ length: 11 }).map((_, i) => (row[i] !== undefined && row[i] !== null ? String(row[i]) : ""))
-          );
+          // Ignorar cabeçalho, remover linhas totalmente vazias e converter tudo para string
+          parsedRows = jsonData
+            .slice(1)
+            .filter(row => row.some(cell => cell !== undefined && cell !== null && String(cell).trim() !== ""))
+            .map(row => 
+              Array.from({ length: 11 }).map((_, i) => {
+                const cell = row[i];
+                if (cell instanceof Date) {
+                  return cell.toISOString().split('T')[0]; // Converte data do Excel para YYYY-MM-DD
+                }
+                return cell !== undefined && cell !== null ? String(cell) : "";
+              })
+            );
         } else {
           // Process CSV
           const text = event.target?.result as string;
@@ -232,7 +241,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
       }
     };
     
-    if (file.name.endsWith(".xlsx")) {
+    if (file.name.toLowerCase().endsWith(".xlsx")) {
       reader.readAsArrayBuffer(file);
     } else {
       reader.readAsText(file);
