@@ -625,28 +625,52 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
   );
 }
 
+const MARRIAGE_MARK: Record<number, string> = {
+  1: "①",
+  2: "②",
+  3: "③",
+  4: "④",
+  5: "⑤",
+};
+
+function unionLabel(r: RelRow): string {
+  const base = relationshipLabel(r.relationship_type, r.qualifier);
+  if (r.relationship_type !== "union") return base;
+  const order = (r as RelRow & { marriage_order?: number | null }).marriage_order;
+  if (!order || order < 1) return base;
+  const mark = MARRIAGE_MARK[order] ?? `${order}ª`;
+  return `${mark} ${base}`;
+}
+
 function relToEdge(r: RelRow): Edge {
   const stroke = colorFor(r);
   const dashed =
     r.qualifier === "divorce" || r.qualifier === "separation" || r.qualifier === "rupture";
   const thick = r.qualifier === "fusion";
+  const isUnion = r.relationship_type === "union";
+  const order = (r as RelRow & { marriage_order?: number | null }).marriage_order ?? null;
+  // 2ª/3ª união: linha um pouco mais grossa para diferenciar
+  const unionExtra = isUnion && order && order > 1 ? 1 : 0;
   return {
     id: r.id,
     source: r.from_person_id,
     target: r.to_person_id,
+    sourceHandle: isUnion ? "right" : undefined,
+    targetHandle: isUnion ? "left" : undefined,
     type: "step",
-    label: relationshipLabel(r.relationship_type, r.qualifier),
+    label: unionLabel(r),
     labelStyle: {
-      fontSize: 11,
-      fill: "var(--color-muted-foreground)",
+      fontSize: 12,
+      fontWeight: 600,
+      fill: isUnion ? "var(--color-plum)" : "var(--color-muted-foreground)",
       fontFamily: "var(--font-sans)",
     },
-    labelBgStyle: { fill: "var(--color-card)", fillOpacity: 0.95, rx: 3, ry: 3 },
+    labelBgStyle: { fill: "var(--color-card)", fillOpacity: 0.98, rx: 3, ry: 3 },
     labelBgPadding: [4, 6] as [number, number],
     animated: r.qualifier === "conflict",
     style: {
       stroke,
-      strokeWidth: thick ? 3 : 2,
+      strokeWidth: (thick ? 3 : 2) + unionExtra,
       strokeDasharray: dashed ? "8 5" : undefined,
     },
   };
@@ -667,6 +691,7 @@ function colorFor(r: RelRow): string {
       return "var(--color-muted-foreground)";
   }
 }
+
 
 function EmptyCanvas({ onCreate }: { onCreate: () => void }) {
   return (
