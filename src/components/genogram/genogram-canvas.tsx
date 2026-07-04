@@ -624,7 +624,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
         <div className="border-b border-border bg-lavender-soft px-4 py-3">
           <div className="flex flex-wrap gap-6 text-[13px] text-foreground/70">
             {[
-              ["Clique duplo", "Editar pessoa ou vínculo"],
+              ["Clique no nó", "Editar pessoa ou vínculo"],
               ["Selecionar + Remover", "Excluir o selecionado"],
               ["Scroll", "Zoom in/out"],
               ["Ramo paterno", "sempre à esquerda"],
