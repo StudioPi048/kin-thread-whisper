@@ -104,7 +104,7 @@ const NODE_W = 110;  // largura do shape + padding
 const NODE_H = 155;  // shape (72px) + label (nome + datas + badge ≈ 83px)
 const GENERATION_GAP = 260;
 const GENERATION_BAND_HEIGHT = 210;
-const HORIZONTAL_GAP = 78;
+const HORIZONTAL_GAP = 96;
 
 const GENERATION_COPY: Record<number, { label: string; subtitle: string }> = {
   0: { label: "Cliente", subtitle: "ponto de partida" },
@@ -141,22 +141,12 @@ function generationForData(data: unknown): number {
 }
 
 function spreadGeneration(nodes: Node[]) {
-  const ordered = [...nodes].sort((a, b) => a.position.x - b.position.x);
-  const originalCenter =
-    nodes.reduce((sum, node) => sum + node.position.x + NODE_W / 2, 0) / Math.max(nodes.length, 1);
-  let previousRight = Number.NEGATIVE_INFINITY;
+  const ordered = [...nodes].sort((a, b) => a.position.x - b.position.x || a.id.localeCompare(b.id));
+  const step = NODE_W + HORIZONTAL_GAP;
+  const start = -((ordered.length - 1) * step) / 2 - NODE_W / 2;
 
-  for (const node of ordered) {
-    const minX = previousRight + HORIZONTAL_GAP;
-    if (node.position.x < minX) node.position.x = minX;
-    previousRight = node.position.x + NODE_W;
-  }
-
-  const newCenter =
-    ordered.reduce((sum, node) => sum + node.position.x + NODE_W / 2, 0) / Math.max(ordered.length, 1);
-  const shift = originalCenter - newCenter;
-  ordered.forEach((node) => {
-    node.position.x += shift;
+  ordered.forEach((node, index) => {
+    node.position.x = start + index * step;
   });
 }
 
@@ -232,19 +222,7 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[], probandId?: string) =
   const probandNodeBeforeCenter = probandId
     ? layoutedNodes.find((node) => node.id === probandId)
     : undefined;
-  if (probandNodeBeforeCenter) {
-    const probandCenter = probandNodeBeforeCenter.position.x + NODE_W / 2;
-    byGeneration.forEach((generationNodes, generation) => {
-      if (generation === 0 || generationNodes.length === 0) return;
-      const minGenerationX = Math.min(...generationNodes.map((node) => node.position.x));
-      const maxGenerationX = Math.max(...generationNodes.map((node) => node.position.x + NODE_W));
-      const generationCenter = (minGenerationX + maxGenerationX) / 2;
-      const shift = probandCenter - generationCenter;
-      generationNodes.forEach((node) => {
-        node.position.x += shift;
-      });
-    });
-  }
+  if (probandNodeBeforeCenter) probandNodeBeforeCenter.position.x = -NODE_W / 2;
 
   // Centralizar horizontalmente em torno do cliente/proband.
   let probandX = 0;
