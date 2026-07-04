@@ -328,20 +328,31 @@ function EmptyState({
     );
   }
   return (
-    <div className="border-l-[5px] border-l-lavender bg-white p-16 text-center shadow-sm">
-      <p className="font-serif text-2xl font-bold text-primary">
-        {tab === "active" ? "Comece pelo primeiro cliente" : "Nenhum dossiê arquivado"}
-      </p>
-      <p className="mt-2 text-[15px] text-muted-foreground">
-        {tab === "active"
-          ? "Todo caso começa por um nome. O resto — árvore, sessões, padrões — se constrói a partir daqui."
-          : "Quando arquivar um dossiê, ele aparece aqui."}
-      </p>
+    <div className="flex flex-col md:flex-row items-center border-l-[5px] border-l-lavender bg-white shadow-sm overflow-hidden">
+      <div className="flex-1 p-10 md:p-16 text-center md:text-left">
+        <p className="font-serif text-3xl font-bold text-primary">
+          {tab === "active" ? "A jornada começa aqui" : "Nenhum dossiê arquivado"}
+        </p>
+        <p className="mt-4 text-[15px] max-w-md text-muted-foreground leading-relaxed">
+          {tab === "active"
+            ? "Todo caso começa por um nome. O resto — a árvore genealógica, as sessões e a detecção de padrões sistêmicos — se constrói a partir do paciente-índice."
+            : "Quando arquivar um dossiê, ele aparecerá aqui para consulta."}
+        </p>
+        {tab === "active" && (
+          <Button onClick={onCreate} className="mt-8" size="lg" variant="lavender">
+            <Plus className="size-4" />
+            Cadastrar primeiro cliente
+          </Button>
+        )}
+      </div>
       {tab === "active" && (
-        <Button onClick={onCreate} className="mt-6" size="lg" variant="lavender">
-          <Plus className="size-4" />
-          Cadastrar cliente
-        </Button>
+        <div className="hidden md:block flex-1 bg-lavender-soft/30 w-full h-full min-h-[300px] relative">
+          <img 
+            src="/empty_clients.png" 
+            alt="Ilustração editorial de um consultório" 
+            className="absolute inset-0 w-full h-full object-cover mix-blend-multiply"
+          />
+        </div>
       )}
     </div>
   );
