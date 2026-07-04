@@ -104,7 +104,7 @@ export function PatternsPanel({ clientId }: Props) {
           }}
         >
           {patterns.map((p) => {
-            const isHigh = p.severity === "high";
+            const isHigh = p.severity === "critical";
             const borderAccent = isHigh ? "accent-bar-plum" : "accent-bar-lavender";
             const badgeClass = isHigh ? "bg-plum text-white" : "bg-lavender text-white";
 
