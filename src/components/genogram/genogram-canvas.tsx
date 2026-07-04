@@ -272,6 +272,10 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     }
   });
 
+  // ── Sibling Bus: um único ponto de convergência por casal ──
+  // Todos os filhos de um mesmo casal descem de UMA linha horizontal comum,
+  // que por sua vez desce em linha vertical única a partir do nó de união
+  // dos pais. Estética padronizada de genossociograma clínico.
   const parentEdgesByChild = new Map<string, Edge[]>();
   const otherEdges: Edge[] = [];
 
@@ -284,34 +288,84 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     }
   });
 
+  const childrenByUnion = new Map<string, string[]>();
+  const orphanParentEdges: Edge[] = [];
+
   parentEdgesByChild.forEach((pEdges, childId) => {
-    let routedToUnion = false;
-    for (let i = 0; i < pEdges.length; i++) {
-      for (let j = i + 1; j < pEdges.length; j++) {
-        const p1 = pEdges[i].target;
-        const p2 = pEdges[j].target;
-        const unionId = unionNodeMap.get(`${p1}_${p2}`);
+    let matched = false;
+    for (let i = 0; i < pEdges.length && !matched; i++) {
+      for (let j = i + 1; j < pEdges.length && !matched; j++) {
+        const unionId = unionNodeMap.get(`${pEdges[i].target}_${pEdges[j].target}`);
         if (unionId) {
-          finalEdges.push({
-            id: `route_${childId}_to_union`,
-            source: childId,
-            target: unionId,
-            type: "step",
-            style: { stroke: "var(--color-plum)", strokeWidth: 2 },
-          });
-          routedToUnion = true;
-          break;
+          if (!childrenByUnion.has(unionId)) childrenByUnion.set(unionId, []);
+          childrenByUnion.get(unionId)!.push(childId);
+          matched = true;
         }
       }
-      if (routedToUnion) break;
     }
-    if (!routedToUnion) {
-      finalEdges.push(...pEdges);
+    if (!matched) {
+      // Filho com um único progenitor conhecido → linha direta pai/mãe → filho
+      pEdges.forEach((e) => {
+        orphanParentEdges.push({
+          ...e,
+          id: `direct_${e.id}`,
+          source: e.target,
+          target: e.source,
+          type: "step",
+          style: { stroke: "var(--color-plum)", strokeWidth: 2 },
+        });
+      });
     }
   });
 
+  childrenByUnion.forEach((childIds, unionId) => {
+    const childNodes = childIds
+      .map((id) => finalNodes.find((n) => n.id === id))
+      .filter((n): n is Node => Boolean(n));
+    if (childNodes.length === 0) return;
+
+    const centersX = childNodes.map((n) => n.position.x + NODE_W / 2);
+    const busX = (Math.min(...centersX) + Math.max(...centersX)) / 2;
+    const childTopY = Math.min(...childNodes.map((n) => n.position.y));
+    const busY = childTopY - 70;
+    const busId = `bus_${unionId}`;
+
+    finalNodes.push({
+      id: busId,
+      type: "union",
+      position: { x: busX, y: busY },
+      data: {},
+      draggable: false,
+      selectable: false,
+      focusable: false,
+    });
+
+    // Tronco vertical: união dos pais → barra dos irmãos
+    finalEdges.push({
+      id: `trunk_${unionId}`,
+      source: unionId,
+      target: busId,
+      type: "step",
+      style: { stroke: "var(--color-plum)", strokeWidth: 2 },
+    });
+
+    // Cada filho parte da MESMA barra horizontal (T-junction único)
+    childNodes.forEach((child) => {
+      finalEdges.push({
+        id: `sib_${busId}_${child.id}`,
+        source: busId,
+        target: child.id,
+        type: "step",
+        style: { stroke: "var(--color-plum)", strokeWidth: 2 },
+      });
+    });
+  });
+
+  finalEdges.push(...orphanParentEdges);
+
   return { nodes: finalNodes, edges: [...otherEdges, ...finalEdges] };
 }
+
 
 
 function GenogramCanvasInner({ clientId }: CanvasProps) {
@@ -570,7 +624,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
         <div className="border-b border-border bg-lavender-soft px-4 py-3">
           <div className="flex flex-wrap gap-6 text-[13px] text-foreground/70">
             {[
-              ["Clique duplo", "Editar pessoa ou vínculo"],
+              ["Clique no nó", "Editar pessoa ou vínculo"],
               ["Selecionar + Remover", "Excluir o selecionado"],
               ["Scroll", "Zoom in/out"],
               ["Ramo paterno", "sempre à esquerda"],
