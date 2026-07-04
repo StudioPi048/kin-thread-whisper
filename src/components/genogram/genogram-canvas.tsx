@@ -944,11 +944,11 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
         <div className="border-b border-border bg-lavender-soft px-4 py-3">
           <div className="flex flex-wrap gap-6 text-[13px] text-foreground/70">
             {[
-              ["Clique no nó", "Editar pessoa ou vínculo"],
+              ["Espaço + Arrastar", "Navegar pela tela"],
+              ["Arrastar Pessoa", "Reposicionar horizontalmente"],
+              ["Duplo Clique", "Ver informações completas"],
               ["Selecionar + Remover", "Excluir o selecionado"],
               ["Scroll", "Zoom in/out"],
-              ["Ramo paterno", "sempre à esquerda"],
-              ["Ramo materno", "sempre à direita"],
             ].map(([key, desc]) => (
               <span key={key} className="flex items-center gap-2">
                 <kbd className="rounded border border-border bg-white px-1.5 py-0.5 text-[11px] font-mono font-semibold">
@@ -1013,11 +1013,12 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
             onNodesChange={onNodesChangeCustom}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
-            onNodeClick={onNodeDoubleClick}
             onNodeDoubleClick={onNodeDoubleClick}
             onEdgeDoubleClick={onEdgeDoubleClick}
-            nodesDraggable={false}
+            nodesDraggable={true}
             nodesConnectable={false}
+            panOnDrag={false}
+            panActivationKeyCode="Space"
             fitView
             fitViewOptions={{ padding: 0.2, minZoom: 0.3, maxZoom: 1.2 }}
             minZoom={0.15}
