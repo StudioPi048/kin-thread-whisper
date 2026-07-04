@@ -52,7 +52,7 @@ function GenerationBandNode({ data }: NodeProps) {
       className="pointer-events-none relative border-y border-border/60 bg-lavender-soft/45"
       style={{ width: d.width, height: d.height }}
     >
-      <div className="absolute inset-y-0 left-[560px] flex w-[330px] items-center border-x border-border/50 bg-background/90 px-7 shadow-sm">
+      <div className="absolute inset-y-0 left-[1040px] flex w-[360px] items-center border-x border-plum/30 bg-background/95 px-7 shadow-md">
         <div>
           <p className="font-serif text-[34px] font-bold leading-tight text-primary">{d.label}</p>
           <p className="mt-2 max-w-[260px] text-[16px] font-bold uppercase leading-snug tracking-[0.14em] text-muted-foreground">
@@ -60,7 +60,7 @@ function GenerationBandNode({ data }: NodeProps) {
           </p>
         </div>
       </div>
-      <div className="absolute inset-x-[920px] top-1/2 h-px -translate-y-1/2 bg-border/70" />
+      <div className="absolute inset-x-[1420px] top-1/2 h-px -translate-y-1/2 bg-border/70" />
     </div>
   );
 }
@@ -69,16 +69,16 @@ const nodeTypes = { person: PersonNode, generationBand: GenerationBandNode };
 
 function GenerationRuler() {
   return (
-    <div className="w-[178px] overflow-hidden rounded-sm border border-border/70 bg-background/95 shadow-md backdrop-blur-sm">
+    <div className="w-[178px] overflow-hidden rounded-sm border border-plum/30 bg-plum shadow-md backdrop-blur-sm">
       {[
         ["Cliente", "ponto de partida"],
         ["Geração 1", "pais, irmãos e tios"],
         ["Geração 2", "avós e tios-avós"],
         ["Geração 3", "bisavós e colaterais"],
       ].map(([label, subtitle]) => (
-        <div key={label} className="border-b border-border/50 px-3 py-3 last:border-b-0">
-          <p className="font-serif text-[18px] font-bold leading-tight text-primary">{label}</p>
-          <p className="mt-1 text-[10px] font-bold uppercase leading-snug tracking-[0.12em] text-muted-foreground">
+        <div key={label} className="border-b border-white/15 px-3 py-3 last:border-b-0">
+          <p className="font-serif text-[18px] font-bold leading-tight text-white">{label}</p>
+          <p className="mt-1 text-[10px] font-bold uppercase leading-snug tracking-[0.12em] text-white/65">
             {subtitle}
           </p>
         </div>
