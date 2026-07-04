@@ -1,0 +1,2 @@
+ALTER TABLE public.genogram_relationships ADD COLUMN IF NOT EXISTS marriage_order SMALLINT;
+COMMENT ON COLUMN public.genogram_relationships.marriage_order IS 'Ordem da união quando a pessoa teve múltiplos casamentos: 1 = primeira união, 2 = segunda, etc.';
