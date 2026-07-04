@@ -94,16 +94,42 @@ export function RelationshipFormDialog({
     mutationFn: async (form: FormState) => {
       if (!form.from_person_id || !form.to_person_id) throw new Error("Escolha as duas pessoas");
       if (form.from_person_id === form.to_person_id) throw new Error("Escolha pessoas diferentes");
+      const marriageOrder =
+        form.relationship_type === "union" && form.marriage_order
+          ? Number(form.marriage_order)
+          : null;
+
+      // Pre-check: bloquear união duplicada com mesma ordem para o mesmo par.
+      if (form.relationship_type === "union") {
+        const { data: existing, error: checkErr } = await supabase
+          .from("genogram_relationships")
+          .select("id, from_person_id, to_person_id, marriage_order")
+          .eq("client_id", clientId)
+          .eq("relationship_type", "union");
+        if (checkErr) throw checkErr;
+        const pair = [form.from_person_id, form.to_person_id].sort().join("|");
+        const clash = (existing ?? []).find((r) => {
+          if (editing && r.id === editing.id) return false;
+          const other = [r.from_person_id, r.to_person_id].sort().join("|");
+          if (other !== pair) return false;
+          return (r.marriage_order ?? null) === marriageOrder;
+        });
+        if (clash) {
+          throw new Error(
+            marriageOrder
+              ? `Já existe uma união de ordem ${marriageOrder} entre essas duas pessoas.`
+              : "Já existe uma união entre essas duas pessoas. Defina uma ordem (①, ②...) para diferenciar.",
+          );
+        }
+      }
+
       const payload = {
         client_id: clientId,
         from_person_id: form.from_person_id,
         to_person_id: form.to_person_id,
         relationship_type: form.relationship_type,
         qualifier: form.qualifier || null,
-        marriage_order:
-          form.relationship_type === "union" && form.marriage_order
-            ? Number(form.marriage_order)
-            : null,
+        marriage_order: marriageOrder,
         notes: form.notes.trim() || null,
       };
       if (editing) {
@@ -123,7 +149,15 @@ export function RelationshipFormDialog({
       toast.success(editing ? "Vínculo salvo." : "Vínculo criado na árvore.");
       onOpenChange(false);
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
+    onError: (e) => {
+      const msg = e instanceof Error ? e.message : "Erro";
+      // Postgres unique_violation (23505) — fallback amigável caso o pré-check não pegue.
+      if (/genogram_rel_union_unique_pair_order|duplicate key/i.test(msg)) {
+        toast.error("União duplicada: já existe um vínculo com essa mesma ordem entre esse par.");
+      } else {
+        toast.error(msg);
+      }
+    },
   });
 
   const fromHint = v.relationship_type === "parent" ? "Pai/mãe" : "Pessoa A";
