@@ -290,21 +290,30 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
 
   const childrenByUnion = new Map<string, string[]>();
   const orphanParentEdges: Edge[] = [];
+  const parentToUnionMap = new Map<string, string>();
+
+  unionNodeMap.forEach((unionId, parentsKey) => {
+    const [p1, p2] = parentsKey.split("_");
+    parentToUnionMap.set(p1, unionId);
+    parentToUnionMap.set(p2, unionId);
+  });
 
   parentEdgesByChild.forEach((pEdges, childId) => {
-    let matched = false;
-    for (let i = 0; i < pEdges.length && !matched; i++) {
-      for (let j = i + 1; j < pEdges.length && !matched; j++) {
-        const unionId = unionNodeMap.get(`${pEdges[i].target}_${pEdges[j].target}`);
-        if (unionId) {
-          if (!childrenByUnion.has(unionId)) childrenByUnion.set(unionId, []);
-          childrenByUnion.get(unionId)!.push(childId);
-          matched = true;
-        }
+    let matchedUnionId: string | null = null;
+    
+    for (const edge of pEdges) {
+      const unionId = parentToUnionMap.get(edge.target);
+      if (unionId) {
+        matchedUnionId = unionId;
+        break;
       }
     }
-    if (!matched) {
-      // Filho com um único progenitor conhecido → linha direta pai/mãe → filho
+
+    if (matchedUnionId) {
+      if (!childrenByUnion.has(matchedUnionId)) childrenByUnion.set(matchedUnionId, []);
+      childrenByUnion.get(matchedUnionId)!.push(childId);
+    } else {
+      // Filho com um único progenitor conhecido (que não está em nenhuma união)
       pEdges.forEach((e) => {
         orphanParentEdges.push({
           ...e,
@@ -674,7 +683,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
       {/* ── CANVAS: altura adaptativa ao viewport ──────── */}
       <div
         className="relative bg-background"
-        style={{ height: "calc(100vh - 260px)", minHeight: 640 }}
+        style={{ height: "calc(100vh - 170px)", minHeight: 700 }}
       >
         {query.isLoading ? (
           <div className="flex h-full flex-col items-center justify-center gap-3">
