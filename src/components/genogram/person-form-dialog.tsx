@@ -38,6 +38,7 @@ interface Props {
   clientId: string;
   editing?: PersonRow | null;
   defaultPosition?: { x: number; y: number };
+  defaultRelationship?: string;
 }
 
 interface FormState {
@@ -53,6 +54,7 @@ interface FormState {
   health_conditions: string[];
   life_events: LifeEvent[];
   notes: string;
+  relationship_to_proband: string;
 }
 
 const empty: FormState = {
@@ -68,6 +70,7 @@ const empty: FormState = {
   health_conditions: [],
   life_events: [],
   notes: "",
+  relationship_to_proband: "",
 };
 
 export function PersonFormDialog({
@@ -76,6 +79,7 @@ export function PersonFormDialog({
   clientId,
   editing,
   defaultPosition,
+  defaultRelationship,
 }: Props) {
   const qc = useQueryClient();
   const [v, setV] = useState<FormState>(empty);
@@ -100,15 +104,16 @@ export function PersonFormDialog({
         health_conditions: editing.health_conditions ?? [],
         life_events: personLifeEvents(editing),
         notes: editing.notes ?? "",
+        relationship_to_proband: editing.relationship_to_proband ?? "",
       });
     } else {
-      setV(empty);
+      setV({ ...empty, relationship_to_proband: defaultRelationship ?? "" });
     }
     setConditionInput("");
     setEventDate("");
     setEventType("");
     setEventDesc("");
-  }, [open, editing]);
+  }, [open, editing, defaultRelationship]);
 
   const mutation = useMutation({
     mutationFn: async (form: FormState) => {
@@ -128,6 +133,7 @@ export function PersonFormDialog({
         life_events:
           form.life_events as unknown as Database["public"]["Tables"]["genogram_persons"]["Insert"]["life_events"],
         notes: form.notes.trim() || null,
+        relationship_to_proband: form.relationship_to_proband.trim() || null,
       };
       if (editing) {
         const { error } = await supabase
@@ -224,13 +230,18 @@ export function PersonFormDialog({
                 <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-lavender-mid">
                   Dossiê
                 </p>
-                <SheetTitle className="font-serif text-3xl font-bold text-white mt-1">
-                  {editing ? v.preferred_name || v.full_name || "Membro da árvore" : "Nova pessoa"}
+                <SheetTitle className="font-serif text-3xl font-normal text-white">
+                  {editing ? "Editar Dossiê" : "Nova Adição"}
                 </SheetTitle>
               </div>
             </div>
-            <SheetDescription className="text-white/60 text-[14px]">
-              Cada detalhe preenchido aqui alimenta o motor de padrões e a memória do sistema.
+            {!v.is_proband && v.relationship_to_proband && (
+              <span className="mt-2 inline-block rounded-full bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white">
+                Contexto: {v.relationship_to_proband}
+              </span>
+            )}
+            <SheetDescription className="mt-2 font-sans text-[13px] text-white/70">
+              Preencha os dados do {editing ? "dossiê selecionado" : "novo integrante da árvore"}.
             </SheetDescription>
           </SheetHeader>
         </div>

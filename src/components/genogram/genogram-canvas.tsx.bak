@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from "react";
 import {
   Background,
   BackgroundVariant,
-  BaseEdge,
   Controls,
   ReactFlow,
   ReactFlowProvider,
@@ -12,14 +11,11 @@ import {
   useReactFlow,
   type Connection,
   type Edge,
-  type EdgeProps,
   type EdgeMouseHandler,
   type Node,
   type NodeMouseHandler,
   Handle,
   Position,
-  ConnectionMode,
-  type NodeProps
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -42,84 +38,27 @@ type RelRow = Database["public"]["Tables"]["genogram_relationships"]["Row"];
 
 const UnionNodeComponent = () => (
   <div style={{ width: 1, height: 1, position: "relative" }}>
-    <Handle id="top" type="source" position={Position.Top} className="opacity-0 pointer-events-none" />
-    <Handle id="bottom" type="source" position={Position.Bottom} className="opacity-0 pointer-events-none" />
-    <Handle id="left" type="source" position={Position.Left} className="opacity-0 pointer-events-none" />
-    <Handle id="right" type="source" position={Position.Right} className="opacity-0 pointer-events-none" />
-    <Handle id="top-target" type="target" position={Position.Top} className="opacity-0 pointer-events-none" />
-    <Handle id="bottom-target" type="target" position={Position.Bottom} className="opacity-0 pointer-events-none" />
-    <Handle id="left-target" type="target" position={Position.Left} className="opacity-0 pointer-events-none" />
-    <Handle id="right-target" type="target" position={Position.Right} className="opacity-0 pointer-events-none" />
+    <Handle type="target" position={Position.Top} className="opacity-0 pointer-events-none" />
+    <Handle type="source" position={Position.Bottom} className="opacity-0 pointer-events-none" />
+    <Handle type="target" position={Position.Left} className="opacity-0 pointer-events-none" />
+    <Handle type="source" position={Position.Right} className="opacity-0 pointer-events-none" />
   </div>
 );
 
-function GenerationBandNode({ data }: NodeProps) {
-  const isEven = (data.generation as number) % 2 === 0;
-  return (
-    <div 
-      style={{ width: 15000, height: GENERATION_GAP, pointerEvents: 'none' }}
-      className={`border-b border-dashed border-plum/20 ${isEven ? 'bg-plum/[0.02]' : 'bg-transparent'}`}
-    />
-  );
-}
-
-const nodeTypes = { person: PersonNode, union: UnionNodeComponent, band: GenerationBandNode };
-
-function StraightStepEdge({
-  sourceX,
-  sourceY,
-  targetX,
-  targetY,
-  style,
-  markerEnd,
-  markerStart,
-  label,
-  labelStyle,
-  labelShowBg,
-  labelBgStyle,
-  labelBgPadding,
-  labelBgBorderRadius,
-  interactionWidth,
-}: EdgeProps) {
-  const isStraight = Math.abs(sourceX - targetX) < 1 || Math.abs(sourceY - targetY) < 1;
-  const midY = sourceY + (targetY - sourceY) / 2;
-  const path = isStraight
-    ? `M ${sourceX} ${sourceY} L ${targetX} ${targetY}`
-    : `M ${sourceX} ${sourceY} L ${sourceX} ${midY} L ${targetX} ${midY} L ${targetX} ${targetY}`;
-
-  return (
-    <BaseEdge
-      path={path}
-      style={style}
-      markerEnd={markerEnd}
-      markerStart={markerStart}
-      label={label}
-      labelStyle={labelStyle}
-      labelShowBg={labelShowBg}
-      labelBgStyle={labelBgStyle}
-      labelBgPadding={labelBgPadding}
-      labelBgBorderRadius={labelBgBorderRadius}
-      interactionWidth={interactionWidth}
-      labelX={(sourceX + targetX) / 2}
-      labelY={Math.abs(sourceY - targetY) < 1 ? sourceY - 10 : midY - 10}
-    />
-  );
-}
-
-const edgeTypes = { straightStep: StraightStepEdge };
+const nodeTypes = { person: PersonNode, union: UnionNodeComponent };
 
 function GenerationRuler() {
   return (
-    <div className="w-[154px] overflow-hidden rounded-md border border-plum/25 bg-card/92 shadow-sm backdrop-blur">
+    <div className="w-[188px] overflow-hidden rounded-md border border-plum/40 bg-plum/95 shadow-lg">
       {[
         ["Paciente", "ponto de partida"],
         ["Geração 1", "pais e tios"],
         ["Geração 2", "avós e tios-avós"],
         ["Geração 3", "bisavós"],
       ].map(([label, subtitle]) => (
-        <div key={label} className="border-b border-border/60 px-2.5 py-2 last:border-b-0">
-          <p className="font-serif text-[14px] font-bold leading-tight text-plum">{label}</p>
-          <p className="mt-0.5 text-[9px] font-bold uppercase leading-snug tracking-[0.08em] text-muted-foreground">
+        <div key={label} className="border-b border-white/15 px-3 py-3 last:border-b-0">
+          <p className="font-serif text-[17px] font-bold leading-tight text-white">{label}</p>
+          <p className="mt-1 text-[10px] font-bold uppercase leading-snug tracking-[0.12em] text-white/70">
             {subtitle}
           </p>
         </div>
@@ -143,12 +82,8 @@ export function GenogramCanvas(props: CanvasProps) {
 // ── Tamanhos generosos, otimizados para leitura em 4K ────────
 const NODE_W = 170;   // Largura do nó (shape + label)
 const NODE_H = 210;   // Altura total do nó
-const GENERATION_GAP = 250;   // Distância vertical entre gerações
-const HORIZONTAL_STEP = NODE_W + 10; // Espaço horizontal entre nós de uma geração
-const DIRECT_PARENT_X = 450;
-const GRANDPARENT_PAIR_GAP = 400;
-const GREAT_GRANDPARENT_PAIR_GAP = 200;
-const COLLATERAL_GAP = 270;
+const GENERATION_GAP = 300;   // Distância vertical entre gerações
+const HORIZONTAL_STEP = NODE_W + 90; // Espaço horizontal entre nós de uma geração
 
 /**
  * Descobre a geração da pessoa (0 = cliente, 1 = pais, 2 = avós, 3 = bisavós).
@@ -169,75 +104,8 @@ function generationForData(data: unknown): number {
     canonical.includes("mae") ||
     canonical.startsWith("tio")
   ) return 1;
-  if (canonical.includes("irmã") || canonical.includes("irma")) return 0;
-  if (canonical.includes("cônjuge") || canonical.includes("conjuge") || canonical.includes("filho")) return 0;
+  if (canonical.includes("irmã") || canonical.includes("irma")) return 1;
   return 1;
-}
-
-function alternatingCenter(anchor: number, orderIndex: number, gap = COLLATERAL_GAP): number {
-  const step = Math.floor(orderIndex / 2) + 1;
-  return anchor + (orderIndex % 2 === 0 ? -step : step) * gap;
-}
-
-function duplicateOffset(base: number, orderIndex: number, side: "left" | "right", gap = COLLATERAL_GAP): number {
-  if (orderIndex === 0) return base;
-  return base + (side === "left" ? -1 : 1) * orderIndex * gap;
-}
-
-function directBloodCenter(canonical: string, orderIndex: number, isProband: boolean): number | null {
-  if (isProband) return 0;
-  const c = canonical.toLowerCase();
-
-  const fatherX = -DIRECT_PARENT_X;
-  const motherX = DIRECT_PARENT_X;
-  const paternalGrandfatherX = fatherX - GRANDPARENT_PAIR_GAP / 2;
-  const paternalGrandmotherX = fatherX + GRANDPARENT_PAIR_GAP / 2;
-  const maternalGrandfatherX = motherX - GRANDPARENT_PAIR_GAP / 2;
-  const maternalGrandmotherX = motherX + GRANDPARENT_PAIR_GAP / 2;
-
-  if (c === "pai") return duplicateOffset(fatherX, orderIndex, "left");
-  if (c === "mãe" || c === "mae") return duplicateOffset(motherX, orderIndex, "right");
-  if (c.startsWith("tio(a) paterno")) return fatherX - GRANDPARENT_PAIR_GAP / 2 - (orderIndex + 1) * COLLATERAL_GAP;
-  if (c.startsWith("tio(a) materno")) return motherX + GRANDPARENT_PAIR_GAP / 2 + (orderIndex + 1) * COLLATERAL_GAP;
-
-  if (c === "avô paterno") return duplicateOffset(paternalGrandfatherX, orderIndex, "left");
-  if (c === "avó paterna") return duplicateOffset(paternalGrandmotherX, orderIndex, "right");
-  if (c === "avô materno") return duplicateOffset(maternalGrandfatherX, orderIndex, "left");
-  if (c === "avó materna") return duplicateOffset(maternalGrandmotherX, orderIndex, "right");
-  if (c.includes("irmã(o) do avô paterno") || c.includes("irmã(o) da avó paterna")) {
-    return paternalGrandfatherX - GRANDPARENT_PAIR_GAP / 2 - (orderIndex + 1) * COLLATERAL_GAP;
-  }
-  if (c.includes("irmã(o) do avô materno") || c.includes("irmã(o) da avó materna")) {
-    return maternalGrandmotherX + GRANDPARENT_PAIR_GAP / 2 + (orderIndex + 1) * COLLATERAL_GAP;
-  }
-
-  if (c.includes("bisavô paterno (pai do avô)")) return duplicateOffset(paternalGrandfatherX - GREAT_GRANDPARENT_PAIR_GAP / 2, orderIndex, "left");
-  if (c.includes("bisavó paterna (mãe do avô)")) return duplicateOffset(paternalGrandfatherX + GREAT_GRANDPARENT_PAIR_GAP / 2, orderIndex, "right");
-  if (c.includes("bisavô paterno (pai da avó)")) return duplicateOffset(paternalGrandmotherX - GREAT_GRANDPARENT_PAIR_GAP / 2, orderIndex, "left");
-  if (c.includes("bisavó paterna (mãe da avó)")) return duplicateOffset(paternalGrandmotherX + GREAT_GRANDPARENT_PAIR_GAP / 2, orderIndex, "right");
-  if (c.includes("bisavô materno (pai do avô)")) return duplicateOffset(maternalGrandfatherX - GREAT_GRANDPARENT_PAIR_GAP / 2, orderIndex, "left");
-  if (c.includes("bisavó materna (mãe do avô)")) return duplicateOffset(maternalGrandfatherX + GREAT_GRANDPARENT_PAIR_GAP / 2, orderIndex, "right");
-  if (c.includes("bisavô materno (pai da avó)")) return duplicateOffset(maternalGrandmotherX - GREAT_GRANDPARENT_PAIR_GAP / 2, orderIndex, "left");
-  if (c.includes("bisavó materna (mãe da avó)")) return duplicateOffset(maternalGrandmotherX + GREAT_GRANDPARENT_PAIR_GAP / 2, orderIndex, "right");
-  if (c.includes("irmã(o) do bisavô paterno")) return paternalGrandfatherX - GRANDPARENT_PAIR_GAP / 2 - (orderIndex + 1) * COLLATERAL_GAP;
-  if (c.includes("irmã(o) do bisavô materno")) return maternalGrandmotherX + GRANDPARENT_PAIR_GAP / 2 + (orderIndex + 1) * COLLATERAL_GAP;
-
-  if ((c.includes("irmã(o)") || c.startsWith("irmã") || c.startsWith("irma")) && !c.includes("av")) {
-    return alternatingCenter(0, orderIndex);
-  }
-
-  return null;
-}
-
-type EdgeWithPathOptions = Edge & { pathOptions?: { borderRadius?: number } };
-
-function forceRightAngle(edge: Edge): Edge {
-  const existing = (edge as EdgeWithPathOptions).pathOptions ?? {};
-  return {
-    ...edge,
-    type: "straightStep",
-    pathOptions: { ...existing, borderRadius: 0 },
-  } as Edge;
 }
 
 /**
@@ -376,7 +244,7 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     isHusbandSide: boolean,
     generation: number
   ): Block {
-    const FAMILY_GAP = 40; 
+    const FAMILY_GAP = 160; 
     const rightOffsetX = leftBlock.width + (leftBlock.width > 0 && rightBlock.width > 0 ? FAMILY_GAP : 0);
     
     const combinedNodes = [
@@ -468,6 +336,7 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
   );
 
   const layoutedNodes: Node[] = [];
+  const finalEdges: Edge[] = [];
   
   const mappedIds = new Set(blockRoot.nodes.map(n => n.node.id));
   let unmappedOffsetX = blockRoot.width + HORIZONTAL_STEP;
@@ -491,7 +360,7 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
   // Recreate union nodes exactly as before
   const unionNodeMap = new Map<string, string>();
   edges.forEach((edge) => {
-    if (edge.style?.stroke === "var(--color-gold)") {
+    if (edge.type === "step" && edge.style?.stroke === "var(--color-gold)") {
       const sourceNode = layoutedNodes.find((n) => n.id === edge.source);
       const targetNode = layoutedNodes.find((n) => n.id === edge.target);
       if (sourceNode && targetNode) {
@@ -502,8 +371,7 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
         layoutedNodes.push({
           id: unionId,
           type: "union",
-          // Position it perfectly halfway down the node
-          position: { x: (centerX1 + centerX2) / 2, y: sourceNode.position.y + 40 },
+          position: { x: (centerX1 + centerX2) / 2, y: sourceNode.position.y + 50 },
           data: {},
         });
         
@@ -513,30 +381,26 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     }
   });
 
+  const parentEdgesByChild = new Map<string, Edge[]>();
+  const otherEdges: Edge[] = [];
   const parentToUnionMap = new Map<string, string>();
+
   unionNodeMap.forEach((unionId, parentsKey) => {
     const [p1, p2] = parentsKey.split("_");
     parentToUnionMap.set(p1, unionId);
     parentToUnionMap.set(p2, unionId);
   });
 
-  const parentEdgesByChild = new Map<string, Edge[]>();
-  const otherEdges: Edge[] = [];
-
   edges.forEach((edge) => {
-    if (edge.style?.stroke === "var(--color-plum)") {
-      // In structural-tree, source is Child, target is Parent.
+    if (edge.type === "step" && edge.style?.stroke === "var(--color-plum)") {
       if (!parentEdgesByChild.has(edge.source)) parentEdgesByChild.set(edge.source, []);
       parentEdgesByChild.get(edge.source)!.push(edge);
     } else {
-      otherEdges.push({
-        ...edge,
-        type: edge.style?.stroke === "var(--color-gold)" ? "straightStep" : edge.type,
-      });
+      otherEdges.push(edge);
     }
   });
 
-  const finalEdges: Edge[] = [];
+  const childrenByUnion = new Map<string, string[]>();
 
   parentEdgesByChild.forEach((pEdges, childId) => {
     let matchedUnionId: string | null = null;
@@ -549,49 +413,71 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     }
 
     if (matchedUnionId) {
-            finalEdges.push({
-        id: `descendant_${matchedUnionId}_${childId}`,
-        source: matchedUnionId, 
-        target: childId,
-        sourceHandle: "top",
-        targetHandle: "bottom",
-        type: "straightStep",
-        style: { stroke: "var(--color-plum)", strokeWidth: 2 },
-      });
+      if (!childrenByUnion.has(matchedUnionId)) childrenByUnion.set(matchedUnionId, []);
+      childrenByUnion.get(matchedUnionId)!.push(childId);
     } else {
       pEdges.forEach((e) => {
-                finalEdges.push({
+        otherEdges.push({
           ...e,
           id: `direct_${e.id}`,
-          source: e.target, 
-          target: e.source, 
-          sourceHandle: "top",
-          targetHandle: "bottom",
-          type: "straightStep",
+          source: e.target,
+          target: e.source, // wait, parent to child?
+          // original logic was: source: e.target, target: e.source.
+          // Wait! The line is drawn from child (source) to parent (target).
+          // If we revert, we draw from parent to child? The previous code was:
+          // source: e.target, target: e.source
+          // Which means source is parent (Top of node) to child (Bottom of node).
+          // Let's keep the original edge!
+          type: "step",
           style: { stroke: "var(--color-plum)", strokeWidth: 2 },
         });
       });
     }
   });
 
-  
-  // Create background bands
-  for (let g = 0; g <= 3; g++) {
-    layoutedNodes.unshift({
-      id: `gen_bg_${g}`,
-      type: "band",
-      position: { x: -7500, y: g * GENERATION_GAP - 20 },
-      data: { generation: g },
+  childrenByUnion.forEach((childIds, unionId) => {
+    const childNodes = childIds
+      .map((id) => layoutedNodes.find((n) => n.id === id))
+      .filter((n): n is Node => Boolean(n));
+    if (childNodes.length === 0) return;
+
+    const centersX = childNodes.map((n) => n.position.x + NODE_W / 2);
+    const busX = (Math.min(...centersX) + Math.max(...centersX)) / 2;
+    const childTopY = Math.min(...childNodes.map((n) => n.position.y));
+    const busY = childTopY - 70;
+    const busId = `bus_${unionId}`;
+
+    layoutedNodes.push({
+      id: busId,
+      type: "union",
+      position: { x: busX, y: busY },
+      data: {},
       draggable: false,
       selectable: false,
-      zIndex: -1,
+      focusable: false,
     });
-  }
+
+    finalEdges.push({
+      id: `trunk_${unionId}`,
+      source: unionId,
+      target: busId,
+      type: "step",
+      style: { stroke: "var(--color-plum)", strokeWidth: 2 },
+    });
+
+    childNodes.forEach((child) => {
+      finalEdges.push({
+        id: `sib_${busId}_${child.id}`,
+        source: busId,
+        target: child.id,
+        type: "step",
+        style: { stroke: "var(--color-plum)", strokeWidth: 2 },
+      });
+    });
+  });
 
   return { nodes: layoutedNodes, edges: [...otherEdges, ...finalEdges] };
-
 }
-
 
 
 
@@ -618,7 +504,6 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [creatingPerson, setCreatingPerson] = useState(false);
   const [editingPerson, setEditingPerson] = useState<PersonRow | null>(null);
-  const [defaultRelationship, setDefaultRelationship] = useState<string>("");
   const [relDialog, setRelDialog] = useState<{
     open: boolean;
     seed?: { from?: string; to?: string };
@@ -626,22 +511,6 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
   }>({ open: false });
   const [showGuide, setShowGuide] = useState(false);
   const rfInstance = useReactFlow();
-
-  function handleQuickAdd(personId: string, relativeType: string) {
-    const person = query.data?.persons.find((p) => p.id === personId);
-    if (!person) return;
-    
-    let newRel = relativeType;
-    if (!person.is_proband && person.relationship_to_proband) {
-      newRel = `${relativeType} do ${person.relationship_to_proband}`;
-      // Clean up string like "do mae" -> "da mae"
-      newRel = newRel.replace(/do mãe/gi, "da mãe").replace(/do tia/gi, "da tia").replace(/do avó/gi, "da avó").replace(/do bisavó/gi, "da bisavó");
-    }
-    
-    setDefaultRelationship(newRel);
-    setCreatingPerson(true);
-  }
-
 
   useEffect(() => {
     let cancelled = false;
@@ -658,7 +527,6 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
 
   useEffect(() => {
     if (!query.data) return;
-    let cancelled = false;
 
     const qualifiedPersons = query.data.persons.filter((p) => {
       if (p.is_proband) return true;
@@ -680,7 +548,6 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
         is_deceased: p.is_deceased,
         is_proband: p.is_proband,
         relationship_to_proband: p.relationship_to_proband,
-        onQuickAdd: (relType: string) => handleQuickAdd(p.id, relType),
         notes: p.notes,
       } satisfies PersonNodeData,
     }));
@@ -704,8 +571,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
     setNodes(layoutedNodes);
     setEdges(layoutedEdges);
 
-    const centerTimer = window.setTimeout(() => {
-      if (cancelled) return;
+    setTimeout(() => {
       // Enquadramento: cliente próximo ao topo do canvas, gerações descendo.
       // Escolhemos zoom de acordo com a largura da árvore para manter legível
       // em 1080p e 4K sem exigir zoom manual.
@@ -735,11 +601,6 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
       }
       rfInstance.fitView({ padding: 0.12, duration: 600, minZoom: 0.28, maxZoom: 1.1 });
     }, 120);
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(centerTimer);
-    };
 
   }, [query.data, setNodes, setEdges, rfInstance]);
 
@@ -937,11 +798,9 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
           <EmptyCanvas onCreate={() => setCreatingPerson(true)} />
         ) : (
           <ReactFlow
-            connectionMode={ConnectionMode.Loose}
             nodes={nodes}
             edges={edges}
             nodeTypes={nodeTypes}
-            edgeTypes={edgeTypes}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
@@ -975,7 +834,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
           </ReactFlow>
         )}
         {!query.isLoading && persons.length > 0 && (
-          <div className="pointer-events-none absolute bottom-4 right-4 z-50 hidden md:block">
+          <div className="pointer-events-none absolute left-4 top-4 z-50 hidden md:block">
             <GenerationRuler />
           </div>
         )}
@@ -983,7 +842,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
 
       <PersonFormDialog
         open={creatingPerson}
-        onOpenChange={(open) => { setCreatingPerson(open); if (!open) setDefaultRelationship(""); }}
+        onOpenChange={setCreatingPerson}
         clientId={clientId}
         defaultPosition={{ x: 120 + persons.length * 200, y: 120 }}
       />

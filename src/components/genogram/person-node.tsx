@@ -1,5 +1,8 @@
 import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
+import { Plus } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 import { personYears } from "@/lib/genogram";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +16,7 @@ export interface PersonNodeData {
   is_proband: boolean;
   notes?: string | null;
   relationship_to_proband?: string | null;
+  onQuickAdd?: (relativeType: string) => void;
   [key: string]: unknown;
 }
 
