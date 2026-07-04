@@ -101,79 +101,103 @@ export default function LandingPage() {
 
       {/* ── HERO — full-plum ────────────────────────────── */}
       <section className="block-plum relative overflow-hidden">
-        <div className="container-liz relative py-28 md:py-44">
-          {/* Elemento decorativo — número de fundo */}
-          <span
-            aria-hidden
-            className="section-number pointer-events-none absolute right-0 bottom-0 select-none translate-x-8 translate-y-4 opacity-[0.07]"
-          >
-            01
-          </span>
-
-          {/* Badge */}
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2 rounded border border-lavender/30 bg-lavender/10 px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.3em] text-lavender-mid"
-          >
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-lavender" />
-            Beta fechado · Psicogenealogistas
-          </motion.div>
-
-          {/* Título editorial — quebra intencional de linhas */}
-          <motion.h1
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.08 }}
-            className="mt-8 font-serif text-6xl font-bold leading-[0.95] tracking-tight text-white md:text-8xl lg:text-[100px]"
-          >
-            O segundo
-            <br />
-            <em className="italic text-gold">cérebro</em>
-            <br />
-            do psicogene-
-            <br />
-            alogista.
-          </motion.h1>
-
-          {/* Linha dourada decorativa */}
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: 96 }}
-            transition={{ duration: 0.8, delay: 0.3 }}
-            className="my-8 h-px bg-gold"
-          />
-
-          <motion.p
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.18 }}
-            className="max-w-lg text-xl leading-relaxed text-white/65 md:text-2xl"
-          >
-            Não é um CRM. É o sistema operacional onde toda a inteligência clínica{" "}
-            <strong className="text-white">vive, cresce e se retroalimenta.</strong>
-          </motion.p>
-
-          <motion.div
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.26 }}
-            className="mt-12 flex flex-wrap gap-4"
-          >
-            <Button asChild size="xl" variant="hero">
-              <Link to="/auth" search={{ mode: "signup" }}>
-                Solicitar acesso beta →
-              </Link>
-            </Button>
-            <Button
-              asChild
-              size="xl"
-              variant="outline"
-              className="border-white/25 text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold"
+        <div className="container-liz relative py-20 md:py-32 flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
+          <div className="flex-1 z-10 relative">
+            {/* Elemento decorativo — número de fundo */}
+            <span
+              aria-hidden
+              className="section-number pointer-events-none absolute left-0 top-0 select-none -translate-x-12 -translate-y-12 opacity-[0.05]"
             >
-              <Link to="/auth">Já tenho conta</Link>
-            </Button>
+              01
+            </span>
+
+            {/* Badge */}
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="inline-flex items-center gap-2 rounded border border-lavender/30 bg-lavender/10 px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.3em] text-lavender-mid"
+            >
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-lavender" />
+              Beta fechado · Psicogenealogistas
+            </motion.div>
+
+            {/* Título editorial — quebra intencional de linhas */}
+            <motion.h1
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: 0.08 }}
+              className="mt-8 font-serif text-5xl font-bold leading-[0.95] tracking-tight text-white md:text-7xl lg:text-[85px]"
+            >
+              O segundo
+              <br />
+              <em className="italic text-gold">cérebro</em>
+              <br />
+              do psicogene-
+              <br />
+              alogista.
+            </motion.h1>
+
+            {/* Linha dourada decorativa */}
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: 96 }}
+              transition={{ duration: 0.8, delay: 0.3 }}
+              className="my-8 h-px bg-gold"
+            />
+
+            <motion.p
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: 0.18 }}
+              className="max-w-lg text-lg leading-relaxed text-white/65 md:text-xl"
+            >
+              Não é um CRM. É o sistema operacional onde toda a inteligência clínica{" "}
+              <strong className="text-white">vive, cresce e se retroalimenta.</strong>
+            </motion.p>
+
+            <motion.div
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.26 }}
+              className="mt-10 flex flex-wrap gap-4"
+            >
+              <Button asChild size="xl" variant="hero">
+                <Link to="/auth" search={{ mode: "signup" }}>
+                  Solicitar acesso beta →
+                </Link>
+              </Button>
+              <Button
+                asChild
+                size="xl"
+                variant="outline"
+                className="border-white/25 text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold"
+              >
+                <Link to="/auth">Já tenho conta</Link>
+              </Button>
+            </motion.div>
+          </div>
+          
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95, x: 20 }}
+            animate={{ opacity: 1, scale: 1, x: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="flex-1 relative z-10 w-full max-w-[600px] lg:max-w-none mt-10 lg:mt-0"
+          >
+            <div className="aspect-[4/3] lg:aspect-square rounded-2xl overflow-hidden border border-white/10 shadow-2xl relative group">
+              {/* Fallback color and image */}
+              <div className="absolute inset-0 bg-plum/50" />
+              <img 
+                src="/hero-1.png" 
+                alt="Psicogenealogista utilizando a plataforma" 
+                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&q=80&w=1000";
+                }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-tr from-plum/80 via-plum/20 to-transparent mix-blend-multiply" />
+              <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-2xl" />
+            </div>
           </motion.div>
         </div>
       </section>
@@ -268,6 +292,87 @@ export default function LandingPage() {
                 <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">{m.body}</p>
               </motion.article>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── SEÇÃO VISUAL: A SESSÃO ───────────────────────────── */}
+      <section className="bg-white py-24 md:py-32 overflow-hidden">
+        <div className="container-liz flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+            className="flex-1 w-full"
+          >
+            <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl relative">
+              <img 
+                src="/hero-2.png" 
+                alt="Conexão com o paciente" 
+                className="absolute inset-0 w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&q=80&w=1000";
+                }}
+              />
+            </div>
+          </motion.div>
+          <div className="flex-1">
+            <h2 className="font-serif text-3xl font-bold text-primary md:text-5xl mb-6 leading-tight">
+              O fio invisível da <span className="text-gold italic">sessão.</span>
+            </h2>
+            <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
+              Mapeie em tempo real o histórico do seu paciente. Conecte gerações e descubra padrões transgeracionais profundos sem perder o foco visual na pessoa à sua frente.
+            </p>
+            <ul className="space-y-4">
+              {[
+                "Genograma dinâmico gerado no clique.",
+                "Foco absoluto na fala do paciente.",
+                "Menos papel, mais insight estruturado."
+              ].map((item, i) => (
+                <li key={i} className="flex items-center gap-3">
+                  <div className="flex-shrink-0 size-1.5 rounded-full bg-lavender" />
+                  <span className="text-[15px] font-medium text-primary/80">{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* ── SEÇÃO VISUAL: A VIDA SIMPLIFICADA ───────────────── */}
+      <section className="block-lavender py-24 md:py-32 overflow-hidden">
+        <div className="container-liz flex flex-col lg:flex-row-reverse items-center gap-12 lg:gap-20">
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+            className="flex-1 w-full"
+          >
+            <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl relative">
+              <img 
+                src="/hero-3.png" 
+                alt="A vida simplificada" 
+                className="absolute inset-0 w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&q=80&w=1000";
+                }}
+              />
+            </div>
+          </motion.div>
+          <div className="flex-1">
+            <h2 className="font-serif text-3xl font-bold text-primary md:text-5xl mb-6 leading-tight">
+              A <span className="text-lavender italic">leveza</span> de uma <br/>gestão impecável.
+            </h2>
+            <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
+              O Dossiê Inteligente cuida da organização dos seus casos, permitindo que você retorne à sua essência terapêutica. Relaxe sabendo que o sistema operacional faz o trabalho pesado.
+            </p>
+            <div className="flex gap-4 items-center mt-10">
+              <Button asChild size="lg" className="bg-primary hover:bg-primary/90 text-white rounded-md">
+                <Link to="/auth" search={{ mode: "signup" }}>Começar agora</Link>
+              </Button>
+            </div>
           </div>
         </div>
       </section>
