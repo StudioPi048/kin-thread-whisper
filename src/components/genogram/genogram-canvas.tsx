@@ -245,12 +245,22 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
   }
 
   // ── Geometric Pedigree Routing (Union Nodes) ──
+  //
+  // Layout invertido (cliente NO TOPO, gerações descendo):
+  //   - Filho está ACIMA (Y menor) e Pai está ABAIXO (Y maior).
+  //   - Handles do PersonNode: top=target, bottom=source. Então uma aresta
+  //     source=filho → target=pai roteia limpo: filho.bottom desce até pai.top.
+  //   - Handles do UnionNode: top=target, bottom=source (+ left/right para casal).
+  //
+  // Colocamos o nó de união (pivô do casal) NA fileira dos pais e o "bus"
+  // dos irmãos ENTRE gerações (logo abaixo dos filhos). As arestas partem
+  // do FILHO (source, bottom) para o bus (target, top) e do bus (source,
+  // bottom) para o pivô do casal (target, top) — todas orthogonais para baixo.
   const finalNodes = [...layoutedNodes];
   const finalEdges: Edge[] = [];
   const unionNodeMap = new Map<string, string>(); // key: parent1_parent2 -> unionId
 
   edges.forEach((edge) => {
-    // Identify structural union edges
     if (edge.type === "step" && edge.style?.stroke === "var(--color-gold)") {
       const sourceNode = finalNodes.find((n) => n.id === edge.source);
       const targetNode = finalNodes.find((n) => n.id === edge.target);
@@ -258,14 +268,21 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
         const unionId = `union_${sourceNode.id}_${targetNode.id}`;
         const centerX1 = sourceNode.position.x + NODE_W / 2;
         const centerX2 = targetNode.position.x + NODE_W / 2;
-        
+
+        // Pivô ao centro do casal, na linha horizontal do casal (meio-altura).
         finalNodes.push({
           id: unionId,
           type: "union",
-          position: { x: (centerX1 + centerX2) / 2, y: sourceNode.position.y + 50 },
+          position: {
+            x: (centerX1 + centerX2) / 2,
+            y: sourceNode.position.y + NODE_H / 2,
+          },
           data: {},
+          draggable: false,
+          selectable: false,
+          focusable: false,
         });
-        
+
         unionNodeMap.set(`${sourceNode.id}_${targetNode.id}`, unionId);
         unionNodeMap.set(`${targetNode.id}_${sourceNode.id}`, unionId);
       }
@@ -273,9 +290,6 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
   });
 
   // ── Sibling Bus: um único ponto de convergência por casal ──
-  // Todos os filhos de um mesmo casal descem de UMA linha horizontal comum,
-  // que por sua vez desce em linha vertical única a partir do nó de união
-  // dos pais. Estética padronizada de genossociograma clínico.
   const parentEdgesByChild = new Map<string, Edge[]>();
   const otherEdges: Edge[] = [];
 
@@ -300,26 +314,21 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
 
   parentEdgesByChild.forEach((pEdges, childId) => {
     let matchedUnionId: string | null = null;
-    
     for (const edge of pEdges) {
       const unionId = parentToUnionMap.get(edge.target);
-      if (unionId) {
-        matchedUnionId = unionId;
-        break;
-      }
+      if (unionId) { matchedUnionId = unionId; break; }
     }
 
     if (matchedUnionId) {
       if (!childrenByUnion.has(matchedUnionId)) childrenByUnion.set(matchedUnionId, []);
       childrenByUnion.get(matchedUnionId)!.push(childId);
     } else {
-      // Filho com um único progenitor conhecido (que não está em nenhuma união)
+      // Filho com um único progenitor conhecido — mantemos a direção
+      // filho → pai para preservar o roteamento limpo (bottom→top).
       pEdges.forEach((e) => {
         orphanParentEdges.push({
           ...e,
           id: `direct_${e.id}`,
-          source: e.target,
-          target: e.source,
           type: "step",
           style: { stroke: "var(--color-plum)", strokeWidth: 2 },
         });
@@ -333,10 +342,18 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
       .filter((n): n is Node => Boolean(n));
     if (childNodes.length === 0) return;
 
+    const unionNode = finalNodes.find((n) => n.id === unionId);
+    if (!unionNode) return;
+
     const centersX = childNodes.map((n) => n.position.x + NODE_W / 2);
     const busX = (Math.min(...centersX) + Math.max(...centersX)) / 2;
-    const childTopY = Math.min(...childNodes.map((n) => n.position.y));
-    const busY = childTopY - 70;
+    // Bus entre gerações: logo ABAIXO da fileira dos filhos (que está por
+    // cima), e ACIMA do pivô do casal (que está na fileira dos pais).
+    const childBottomY = Math.max(...childNodes.map((n) => n.position.y)) + NODE_H;
+    const busY = Math.min(
+      childBottomY + 40,
+      unionNode.position.y - 30,
+    );
     const busId = `bus_${unionId}`;
 
     finalNodes.push({
@@ -349,21 +366,23 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
       focusable: false,
     });
 
-    // Tronco vertical: união dos pais → barra dos irmãos
+    // Tronco vertical: barra dos irmãos (source, bottom) → pivô do casal
+    // (target, top). Como pivô está ABAIXO do bus, roteia reto para baixo.
     finalEdges.push({
       id: `trunk_${unionId}`,
-      source: unionId,
-      target: busId,
+      source: busId,
+      target: unionId,
       type: "step",
       style: { stroke: "var(--color-plum)", strokeWidth: 2 },
     });
 
-    // Cada filho parte da MESMA barra horizontal (T-junction único)
+    // Cada filho conecta na MESMA barra: filho (source, bottom) → bus
+    // (target, top). Todos os irmãos convergem no mesmo ponto do bus.
     childNodes.forEach((child) => {
       finalEdges.push({
         id: `sib_${busId}_${child.id}`,
-        source: busId,
-        target: child.id,
+        source: child.id,
+        target: busId,
         type: "step",
         style: { stroke: "var(--color-plum)", strokeWidth: 2 },
       });
