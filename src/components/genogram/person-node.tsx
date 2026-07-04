@@ -150,6 +150,12 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
         className="!size-2.5 !rounded-sm !border-2 !border-card !bg-lavender opacity-0"
       />
       <Handle
+        id="bottom-target"
+        type="target"
+        position={Position.Bottom}
+        className="opacity-0 pointer-events-none"
+      />
+      <Handle
         type="target"
         position={Position.Left}
         id="left"

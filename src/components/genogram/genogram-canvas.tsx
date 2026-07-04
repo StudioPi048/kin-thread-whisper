@@ -562,7 +562,7 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
         source: matchedUnionId, 
         target: childId,
         sourceHandle: "top",
-        targetHandle: "bottom",
+        targetHandle: "bottom-target",
         type: "straightStep",
         style: { stroke: "var(--color-plum)", strokeWidth: 2 },
       });
@@ -592,7 +592,7 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
         source: matchedUnionId, 
         target: siblingId,
         sourceHandle: "top",
-        targetHandle: "bottom",
+        targetHandle: "bottom-target",
         type: "straightStep",
         style: { stroke: "var(--color-plum)", strokeWidth: 2 },
       });
