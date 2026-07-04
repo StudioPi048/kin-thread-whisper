@@ -84,7 +84,7 @@ const NODE_W = 110;  // largura do shape + padding
 const NODE_H = 155;  // shape (72px) + label (nome + datas + badge ≈ 83px)
 const GENERATION_GAP = 260;
 const GENERATION_BAND_HEIGHT = 210;
-const HORIZONTAL_GAP = 82;
+const HORIZONTAL_GAP = 110;
 
 const GENERATION_COPY: Record<number, { label: string; subtitle: string }> = {
   0: { label: "Cliente", subtitle: "ponto de partida" },
@@ -122,6 +122,8 @@ function generationForData(data: unknown): number {
 
 function spreadGeneration(nodes: Node[]) {
   const ordered = [...nodes].sort((a, b) => a.position.x - b.position.x);
+  const originalCenter =
+    nodes.reduce((sum, node) => sum + node.position.x + NODE_W / 2, 0) / Math.max(nodes.length, 1);
   let previousRight = Number.NEGATIVE_INFINITY;
 
   for (const node of ordered) {
@@ -130,8 +132,6 @@ function spreadGeneration(nodes: Node[]) {
     previousRight = node.position.x + NODE_W;
   }
 
-  const originalCenter =
-    nodes.reduce((sum, node) => sum + node.position.x + NODE_W / 2, 0) / Math.max(nodes.length, 1);
   const newCenter =
     ordered.reduce((sum, node) => sum + node.position.x + NODE_W / 2, 0) / Math.max(ordered.length, 1);
   const shift = originalCenter - newCenter;
@@ -209,6 +209,20 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[], probandId?: string) =
   });
   byGeneration.forEach(spreadGeneration);
 
+  const probandNodeBeforeCenter = probandId
+    ? layoutedNodes.find((node) => node.id === probandId)
+    : undefined;
+  const immediateFamily = byGeneration.get(1) ?? [];
+  if (probandNodeBeforeCenter && immediateFamily.length > 0) {
+    const generationOneCenter =
+      immediateFamily.reduce((sum, node) => sum + node.position.x + NODE_W / 2, 0) / immediateFamily.length;
+    const probandCenter = probandNodeBeforeCenter.position.x + NODE_W / 2;
+    const shift = probandCenter - generationOneCenter;
+    immediateFamily.forEach((node) => {
+      node.position.x += shift;
+    });
+  }
+
   // Centralizar horizontalmente em torno do cliente/proband.
   let probandX = 0;
   if (probandId) {
@@ -226,8 +240,8 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[], probandId?: string) =
 
   const minX = Math.min(...centeredNodes.map((node) => node.position.x), -NODE_W / 2);
   const maxX = Math.max(...centeredNodes.map((node) => node.position.x + NODE_W), NODE_W / 2);
-  const bandWidth = Math.max(1500, maxX - minX + 420);
-  const bandX = minX - 210;
+  const bandWidth = Math.max(1200, maxX - minX + 300);
+  const bandX = minX - 150;
 
   const generationBands: Node[] = Array.from(byGeneration.keys())
     .filter((generation) => generation >= 0)
@@ -353,12 +367,31 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
 
     // Aguardar o próximo frame para o ReactFlow renderizar antes de calcular fitView
     setTimeout(() => {
+      const personNodes = layoutedNodes
+        .filter((node) => node.type === "person")
+        .map((node) => ({ id: node.id }));
+
       rfInstance.fitView({
-        padding: 0.16,
+        nodes: personNodes,
+        padding: 0.12,
         duration: 800,
-        minZoom: 0.25,
-        maxZoom: 0.72,
+        minZoom: 0.42,
+        maxZoom: 0.86,
       });
+
+      if (probandId) {
+        const probandNode = layoutedNodes.find((node) => node.id === probandId);
+        if (probandNode) {
+          const bounds = rfInstance.getViewport();
+          rfInstance.setViewport(
+            {
+              ...bounds,
+              x: rfInstance.getViewport().x - (probandNode.position.x + NODE_W / 2) * bounds.zoom + 420,
+            },
+            { duration: 250 },
+          );
+        }
+      }
     }, 50);
   }, [query.data, setNodes, setEdges, rfInstance]);
 
