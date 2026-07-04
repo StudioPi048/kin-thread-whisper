@@ -18,6 +18,8 @@ import {
   type NodeMouseHandler,
   Handle,
   Position,
+  ConnectionMode,
+  type NodeProps
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -40,14 +42,28 @@ type RelRow = Database["public"]["Tables"]["genogram_relationships"]["Row"];
 
 const UnionNodeComponent = () => (
   <div style={{ width: 1, height: 1, position: "relative" }}>
-    <Handle type="target" position={Position.Top} className="opacity-0 pointer-events-none" />
-    <Handle type="source" position={Position.Bottom} className="opacity-0 pointer-events-none" />
-    <Handle type="target" position={Position.Left} className="opacity-0 pointer-events-none" />
-    <Handle type="source" position={Position.Right} className="opacity-0 pointer-events-none" />
+    <Handle id="top" type="source" position={Position.Top} className="opacity-0 pointer-events-none" />
+    <Handle id="bottom" type="source" position={Position.Bottom} className="opacity-0 pointer-events-none" />
+    <Handle id="left" type="source" position={Position.Left} className="opacity-0 pointer-events-none" />
+    <Handle id="right" type="source" position={Position.Right} className="opacity-0 pointer-events-none" />
+    <Handle id="top-target" type="target" position={Position.Top} className="opacity-0 pointer-events-none" />
+    <Handle id="bottom-target" type="target" position={Position.Bottom} className="opacity-0 pointer-events-none" />
+    <Handle id="left-target" type="target" position={Position.Left} className="opacity-0 pointer-events-none" />
+    <Handle id="right-target" type="target" position={Position.Right} className="opacity-0 pointer-events-none" />
   </div>
 );
 
-const nodeTypes = { person: PersonNode, union: UnionNodeComponent };
+function GenerationBandNode({ data }: NodeProps) {
+  const isEven = (data.generation as number) % 2 === 0;
+  return (
+    <div 
+      style={{ width: 15000, height: GENERATION_GAP, pointerEvents: 'none' }}
+      className={`border-b border-dashed border-plum/20 ${isEven ? 'bg-plum/[0.02]' : 'bg-transparent'}`}
+    />
+  );
+}
+
+const nodeTypes = { person: PersonNode, union: UnionNodeComponent, band: GenerationBandNode };
 
 function StraightStepEdge({
   sourceX,
@@ -127,8 +143,8 @@ export function GenogramCanvas(props: CanvasProps) {
 // ── Tamanhos generosos, otimizados para leitura em 4K ────────
 const NODE_W = 170;   // Largura do nó (shape + label)
 const NODE_H = 210;   // Altura total do nó
-const GENERATION_GAP = 340;   // Distância vertical entre gerações
-const HORIZONTAL_STEP = NODE_W + 90; // Espaço horizontal entre nós de uma geração
+const GENERATION_GAP = 280;   // Distância vertical entre gerações
+const HORIZONTAL_STEP = NODE_W + 40; // Espaço horizontal entre nós de uma geração
 const DIRECT_PARENT_X = 450;
 const GRANDPARENT_PAIR_GAP = 400;
 const GREAT_GRANDPARENT_PAIR_GAP = 200;
@@ -533,20 +549,24 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     }
 
     if (matchedUnionId) {
-      finalEdges.push({
+            finalEdges.push({
         id: `descendant_${matchedUnionId}_${childId}`,
-        source: matchedUnionId, // Union is at Y=340
-        target: childId,        // Child is at Y=0
+        source: matchedUnionId, 
+        target: childId,
+        sourceHandle: "top",
+        targetHandle: "bottom",
         type: "straightStep",
         style: { stroke: "var(--color-plum)", strokeWidth: 2 },
       });
     } else {
       pEdges.forEach((e) => {
-        finalEdges.push({
+                finalEdges.push({
           ...e,
           id: `direct_${e.id}`,
-          source: e.target, // Parent
-          target: e.source, // Child
+          source: e.target, 
+          target: e.source, 
+          sourceHandle: "top",
+          targetHandle: "bottom",
           type: "straightStep",
           style: { stroke: "var(--color-plum)", strokeWidth: 2 },
         });
@@ -554,7 +574,22 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     }
   });
 
+  
+  // Create background bands
+  for (let g = 0; g <= 3; g++) {
+    layoutedNodes.unshift({
+      id: `gen_bg_${g}`,
+      type: "band",
+      position: { x: -7500, y: g * GENERATION_GAP - 20 },
+      data: { generation: g },
+      draggable: false,
+      selectable: false,
+      zIndex: -1,
+    });
+  }
+
   return { nodes: layoutedNodes, edges: [...otherEdges, ...finalEdges] };
+
 }
 
 
@@ -884,6 +919,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
           <EmptyCanvas onCreate={() => setCreatingPerson(true)} />
         ) : (
           <ReactFlow
+            connectionMode={ConnectionMode.Loose}
             nodes={nodes}
             edges={edges}
             nodeTypes={nodeTypes}
