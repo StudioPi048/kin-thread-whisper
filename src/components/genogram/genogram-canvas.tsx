@@ -525,6 +525,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
 
   useEffect(() => {
     if (!query.data) return;
+    let cancelled = false;
 
     const qualifiedPersons = query.data.persons.filter((p) => {
       if (p.is_proband) return true;
@@ -569,7 +570,8 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
     setNodes(layoutedNodes);
     setEdges(layoutedEdges);
 
-    setTimeout(() => {
+    const centerTimer = window.setTimeout(() => {
+      if (cancelled) return;
       // Enquadramento: cliente próximo ao topo do canvas, gerações descendo.
       // Escolhemos zoom de acordo com a largura da árvore para manter legível
       // em 1080p e 4K sem exigir zoom manual.
@@ -599,6 +601,11 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
       }
       rfInstance.fitView({ padding: 0.12, duration: 600, minZoom: 0.28, maxZoom: 1.1 });
     }, 120);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(centerTimer);
+    };
 
   }, [query.data, setNodes, setEdges, rfInstance]);
 
