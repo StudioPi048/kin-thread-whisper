@@ -177,7 +177,11 @@ export function ClanSpreadsheet({ clientId }: Props) {
               Array.from({ length: 11 }).map((_, i) => {
                 const cell = row[i];
                 if (cell instanceof Date) {
-                  return cell.toISOString().split('T')[0]; // Converte data do Excel para YYYY-MM-DD
+                  // Usa componentes LOCAIS para evitar shift de fuso (BR = UTC-3)
+                  const y = cell.getFullYear();
+                  const m = String(cell.getMonth() + 1).padStart(2, "0");
+                  const d = String(cell.getDate()).padStart(2, "0");
+                  return `${y}-${m}-${d}`;
                 }
                 return cell !== undefined && cell !== null ? String(cell) : "";
               })
