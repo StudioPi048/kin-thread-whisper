@@ -26,6 +26,7 @@ import { PersonNode, type PersonNodeData } from "./person-node";
 import { PersonFormDialog } from "./person-form-dialog";
 import { RelationshipFormDialog } from "./relationship-form-dialog";
 import { relationshipLabel } from "@/lib/genogram";
+import { computeStructuralEdges } from "@/lib/structural-tree";
 import type { Database } from "@/integrations/supabase/types";
 
 type PersonRow = Database["public"]["Tables"]["genogram_persons"]["Row"];
@@ -53,7 +54,9 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
   dagreGraph.setDefaultEdgeLabel(() => ({}));
   
   // Aumentamos o espaçamento horizontal e vertical para respiro da árvore familiar
-  dagreGraph.setGraph({ rankdir: 'TB', nodesep: 140, edgesep: 60, ranksep: 120 });
+  // Usamos rankdir BT (Bottom-To-Top) porque na nossa lógica, Filhos apontam para Pais (source -> target).
+  // Se BT é usado, o Source (Filho/Consulente) ficará no Topo, e os Targets (Pais/Avós) ficarão Embaixo!
+  dagreGraph.setGraph({ rankdir: 'BT', nodesep: 140, edgesep: 60, ranksep: 120 });
 
   nodes.forEach((node) => {
     dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
@@ -166,7 +169,11 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
       } satisfies PersonNodeData,
     }));
     
-    const initialEdges: Edge[] = query.data.rels.map(relToEdge);
+    const manualEdges: Edge[] = query.data.rels.map(relToEdge);
+    const structuralEdges: Edge[] = computeStructuralEdges(query.data.persons);
+    
+    // Filtramos os "nodes virtuais de casal" da lista visual (Eles existem no dagre apenas)
+    const initialEdges = [...structuralEdges, ...manualEdges];
     
     const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(initialNodes, initialEdges);
     
