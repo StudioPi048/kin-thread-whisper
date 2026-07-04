@@ -94,16 +94,16 @@ const edgeTypes = { straightStep: StraightStepEdge };
 
 function GenerationRuler() {
   return (
-    <div className="w-[188px] overflow-hidden rounded-md border border-plum/40 bg-plum/95 shadow-lg">
+    <div className="w-[154px] overflow-hidden rounded-md border border-plum/25 bg-card/92 shadow-sm backdrop-blur">
       {[
         ["Paciente", "ponto de partida"],
         ["Geração 1", "pais e tios"],
         ["Geração 2", "avós e tios-avós"],
         ["Geração 3", "bisavós"],
       ].map(([label, subtitle]) => (
-        <div key={label} className="border-b border-white/15 px-3 py-3 last:border-b-0">
-          <p className="font-serif text-[17px] font-bold leading-tight text-white">{label}</p>
-          <p className="mt-1 text-[10px] font-bold uppercase leading-snug tracking-[0.12em] text-white/70">
+        <div key={label} className="border-b border-border/60 px-2.5 py-2 last:border-b-0">
+          <p className="font-serif text-[14px] font-bold leading-tight text-plum">{label}</p>
+          <p className="mt-0.5 text-[9px] font-bold uppercase leading-snug tracking-[0.08em] text-muted-foreground">
             {subtitle}
           </p>
         </div>
@@ -833,7 +833,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
           </ReactFlow>
         )}
         {!query.isLoading && persons.length > 0 && (
-          <div className="pointer-events-none absolute left-4 top-4 z-50 hidden md:block">
+          <div className="pointer-events-none absolute bottom-4 right-4 z-50 hidden md:block">
             <GenerationRuler />
           </div>
         )}
