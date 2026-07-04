@@ -6,7 +6,7 @@ import {
   Archive,
   ArchiveRestore,
   ChevronRight,
-  Library,
+
   Pencil,
   ShieldCheck,
   ShieldAlert,
@@ -423,13 +423,7 @@ function ClientDossierPage() {
               <SessionsPanel clientId={client.id} />
             </TabsContent>
 
-            <TabsContent value="library">
-              <ComingSoon
-                icon={Library}
-                title="Referências ligadas ao caso"
-                body="Etapa 6: referências bibliográficas sugeridas automaticamente baseadas nas dinâmicas do dossiê."
-              />
-            </TabsContent>
+
           </div>
         </Tabs>
       </div>
@@ -528,24 +522,3 @@ function EmptyLine({ children }: { children: React.ReactNode }) {
   return <p className="text-[14px] italic text-muted-foreground">{children}</p>;
 }
 
-function ComingSoon({
-  icon: Icon,
-  title,
-  body,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  body: string;
-}) {
-  return (
-    <div className="rounded-sm border border-dashed border-border bg-white/50 p-16 text-center">
-      <div className="mx-auto flex size-12 items-center justify-center rounded-md bg-lavender-soft">
-        <Icon className="size-6 text-lavender" />
-      </div>
-      <p className="mt-4 font-serif text-2xl font-bold text-primary">{title}</p>
-      <p className="mx-auto mt-2 max-w-md text-[14px] text-muted-foreground leading-relaxed">
-        {body}
-      </p>
-    </div>
-  );
-}

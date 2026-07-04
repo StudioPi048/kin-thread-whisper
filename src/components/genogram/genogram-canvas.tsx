@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import dagre from "dagre";
 import {
   Background,
   BackgroundVariant,
@@ -13,7 +14,6 @@ import {
   type EdgeMouseHandler,
   type Node,
   type NodeMouseHandler,
-  type OnNodeDrag,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -44,6 +44,40 @@ export function GenogramCanvas(props: CanvasProps) {
     </ReactFlowProvider>
   );
 }
+
+const nodeWidth = 90;
+const nodeHeight = 90;
+
+const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
+  const dagreGraph = new dagre.graphlib.Graph();
+  dagreGraph.setDefaultEdgeLabel(() => ({}));
+  
+  // TB = Top to Bottom layout (Generations)
+  dagreGraph.setGraph({ rankdir: 'TB', nodesep: 120, edgesep: 60, ranksep: 120 });
+
+  nodes.forEach((node) => {
+    dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
+  });
+
+  edges.forEach((edge) => {
+    dagreGraph.setEdge(edge.source, edge.target);
+  });
+
+  dagre.layout(dagreGraph);
+
+  nodes.forEach((node) => {
+    const nodeWithPosition = dagreGraph.node(node.id);
+    node.targetPosition = undefined as any; 
+    node.sourcePosition = undefined as any;
+
+    node.position = {
+      x: nodeWithPosition.x - nodeWidth / 2,
+      y: nodeWithPosition.y - nodeHeight / 2,
+    };
+  });
+
+  return { nodes, edges };
+};
 
 function GenogramCanvasInner({ clientId }: CanvasProps) {
   const qc = useQueryClient();
@@ -77,42 +111,30 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
 
   useEffect(() => {
     if (!query.data) return;
-    setNodes(
-      query.data.persons.map((p) => ({
-        id: p.id,
-        type: "person",
-        position: { x: p.position_x, y: p.position_y },
-        data: {
-          full_name: p.full_name,
-          preferred_name: p.preferred_name,
-          gender: p.gender,
-          birth_date: p.birth_date,
-          death_date: p.death_date,
-          is_deceased: p.is_deceased,
-          is_proband: p.is_proband,
-          notes: p.notes,
-        } satisfies PersonNodeData,
-      })),
-    );
-    setEdges(query.data.rels.map(relToEdge));
+    
+    const initialNodes: Node[] = query.data.persons.map((p) => ({
+      id: p.id,
+      type: "person",
+      position: { x: 0, y: 0 },
+      data: {
+        full_name: p.full_name,
+        preferred_name: p.preferred_name,
+        gender: p.gender,
+        birth_date: p.birth_date,
+        death_date: p.death_date,
+        is_deceased: p.is_deceased,
+        is_proband: p.is_proband,
+        notes: p.notes,
+      } satisfies PersonNodeData,
+    }));
+    
+    const initialEdges: Edge[] = query.data.rels.map(relToEdge);
+    
+    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(initialNodes, initialEdges);
+    
+    setNodes(layoutedNodes);
+    setEdges(layoutedEdges);
   }, [query.data, setNodes, setEdges]);
-
-  const positionTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
-  const savePosition = useCallback((id: string, x: number, y: number) => {
-    clearTimeout(positionTimers.current[id]);
-    positionTimers.current[id] = setTimeout(async () => {
-      const { error } = await supabase
-        .from("genogram_persons")
-        .update({ position_x: x, position_y: y })
-        .eq("id", id);
-      if (error) toast.error("Não consegui salvar a posição");
-    }, 400);
-  }, []);
-
-  const onNodeDragStop = useCallback<OnNodeDrag>(
-    (_, node) => savePosition(node.id, node.position.x, node.position.y),
-    [savePosition],
-  );
 
   const onConnect = useCallback(
     (conn: Connection) => {
@@ -244,7 +266,6 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
           <div className="flex flex-wrap gap-6 text-[13px] text-foreground/70">
             {[
               ["Clique duplo", "Editar pessoa ou vínculo"],
-              ["Arrastar ponto lavanda", "Criar vínculo entre pessoas"],
               ["Selecionar + Remover", "Excluir o selecionado"],
               ["Scroll", "Zoom in/out"],
             ].map(([key, desc]) => (
@@ -285,10 +306,11 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
             nodeTypes={nodeTypes}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
-            onNodeDragStop={onNodeDragStop}
             onConnect={onConnect}
             onNodeDoubleClick={onNodeDoubleClick}
             onEdgeDoubleClick={onEdgeDoubleClick}
+            nodesDraggable={false}
+            nodesConnectable={false}
             fitView
             fitViewOptions={{ padding: 0.3 }}
             proOptions={{ hideAttribution: true }}
@@ -405,10 +427,10 @@ function EmptyCanvas({ onCreate }: { onCreate: () => void }) {
         </p>
         {[
           "1. Adicione o paciente-índice (borda dupla lavanda)",
-          '2. Clique em "Adicionar pessoa" para cada familiar',
-          "3. Arraste o ponto lavanda de uma pessoa para outra para criar vínculos",
+          '2. Preencha os dados na aba "Planilha" ou clique em Adicionar pessoa',
+          "3. A árvore calculará as posições e hierarquias automaticamente",
           "4. Clique duplo em qualquer elemento para editar",
-          '5. Use "A3" para exportar a árvore para impressão',
+          '5. Use "A3" para exportar a árvore perfeita',
         ].map((step) => (
           <p key={step} className="py-1 text-[14px] text-foreground/75">
             {step}
