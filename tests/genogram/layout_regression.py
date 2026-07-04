@@ -82,7 +82,7 @@ async def collect_person_nodes(page: Page) -> list[dict]:
             const labelEl = node.querySelector('p.font-sans, p');
             const name = labelEl ? labelEl.textContent.trim() : '';
             const isProband = Array.from(node.querySelectorAll('span'))
-              .some(s => s.textContent.trim().toLowerCase() === 'cliente');
+              .some(s => /paciente|cliente/i.test(s.textContent.trim()));
             return {
               id: node.getAttribute('data-id'),
               x: r.x + r.width / 2,
@@ -179,21 +179,30 @@ async def run_viewport(
                 f"(±{tolerance_x:.0f})",
             ))
 
-        # ── Check 4: existe nó acima E à esquerda do proband (ramo paterno)
-        above = [p for p in persons if p["y"] < proband["y"] - 20 and not p["is_proband"]]
-        left_of_proband = [p for p in above if p["x"] < proband["x"] - 10]
-        right_of_proband = [p for p in above if p["x"] > proband["x"] + 10]
+        # ── Check 4: ancestrais devem estar ABAIXO do cliente (hierarquia
+        # de cima para baixo — cliente no topo, gerações descendo).
+        below = [p for p in persons if p["y"] > proband["y"] + 20 and not p["is_proband"]]
+        above_proband = [p for p in persons if p["y"] < proband["y"] - 20 and not p["is_proband"]]
+        left_below = [p for p in below if p["x"] < proband["x"] - 10]
+        right_below = [p for p in below if p["x"] > proband["x"] + 10]
 
-        if not left_of_proband:
+        if above_proband:
+            failures.append(Failure(
+                viewport_name, "hierarquia-invertida",
+                f"{len(above_proband)} nó(s) renderizados ACIMA do cliente — "
+                "hierarquia deve ser top-down (cliente no topo)",
+            ))
+        if not left_below:
             failures.append(Failure(
                 viewport_name, "ramo-paterno-esquerda",
-                "nenhum ancestral posicionado à esquerda do cliente",
+                "nenhum ancestral abaixo-esquerda do cliente (ramo paterno)",
             ))
-        if not right_of_proband:
+        if not right_below:
             failures.append(Failure(
                 viewport_name, "ramo-materno-direita",
-                "nenhum ancestral posicionado à direita do cliente",
+                "nenhum ancestral abaixo-direita do cliente (ramo materno)",
             ))
+
 
         # ── Check 5: nenhum erro no console (filtra ruído conhecido)
         real_errors = [e for e in console_errors
