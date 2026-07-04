@@ -91,6 +91,9 @@ const RULES: TagRule[] = [
 
   // ── FILHOS ──────────────────────────────────────────────────
   { tag: "Filho(a)", keywords: ["filho", "filha", "child", "son", "daughter", "enteado", "enteada"] },
+
+  // ── ABORTO ──────────────────────────────────────────────────
+  { tag: "Aborto", keywords: ["aborto", "aborto espontaneo", "aborto provocado", "miscarriage", "abortion"] },
 ];
 
 /**
@@ -182,6 +185,7 @@ export function getGeneration(tag: string): number {
   if (lower.includes("avô") || lower.includes("avo") || lower.includes("avó")) return 2;
   if (lower.includes("pai") || lower.includes("mãe") || lower.includes("mae") || lower.includes("tio") || lower.includes("tia")) return 1;
   if (lower.includes("filho")) return -1;
+  if (lower.includes("aborto")) return 0; // abortos geralmente contam na mesma linha dos filhos ou irmãos, dependendo de quem teve. Como costumam ser da mãe da paciente, ficam na linha da paciente (0)
   
   return 0; // Consulente, Irmãos, Cônjuge
 }

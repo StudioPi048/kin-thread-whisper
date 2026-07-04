@@ -93,12 +93,21 @@ export function computeStructuralEdges(persons: PersonRow[]): Edge[] {
   // União de pais (linha horizontal visual)
   if (pai && mae) {
     edges.push(createEdge("struct_union_pais", pai.id, mae.id, "union"));
+    // Força pai à esquerda da mãe no layout
+    edges.push({ id: "order_pai_mae", source: pai.id, target: mae.id, type: "order", hidden: true } as Edge);
   }
 
   // ── RAMO PATERNO ──────────────────────────────────────────
   const avoPat  = first("Avô paterno");
   const avoPatF = first("Avó paterna");
   const tiosPat = get("Tio(a) paterno(a)");
+
+  if (tiosPat.length > 0 && pai) {
+    // Força os tios paternos à esquerda do pai
+    tiosPat.forEach((tio, i) => {
+      edges.push({ id: `order_tio_pat_${i}`, source: tio.id, target: pai.id, type: "order", hidden: true } as Edge);
+    });
+  }
 
   if (pai && (avoPat || avoPatF)) {
     const avoRef = avoPat || avoPatF!;
@@ -145,6 +154,13 @@ export function computeStructuralEdges(persons: PersonRow[]): Edge[] {
   const avoMat  = first("Avô materno");
   const avoMatF = first("Avó materna");
   const tiosMat = get("Tio(a) materno(a)");
+
+  if (tiosMat.length > 0 && mae) {
+    // Força os tios maternos à direita da mãe (mãe aponta para tio = mãe fica à esquerda)
+    tiosMat.forEach((tio, i) => {
+      edges.push({ id: `order_tio_mat_${i}`, source: mae.id, target: tio.id, type: "order", hidden: true } as Edge);
+    });
+  }
 
   if (mae && (avoMat || avoMatF)) {
     const avoRef = avoMat || avoMatF!;

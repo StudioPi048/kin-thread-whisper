@@ -162,9 +162,13 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[], probandId?: string) =
   });
 
   // Adiciona ao Dagre apenas arestas de parentesco (cor plum).
-  // Arestas de união (gold) são VISUAIS apenas — o Dagre não precisa delas
-  // porque os cônjuges já ficam no mesmo rank naturalmente (mesmos filhos apontam para ambos).
+  // Arestas de união (gold) são VISUAIS apenas — o Dagre não precisa delas.
   edges.forEach((edge) => {
+    if (edge.type === "order") {
+      // Arestas de ordenação forçam a ordem da esquerda pra direita no mesmo nível
+      dagreGraph.setEdge(edge.source, edge.target, { minlen: 0, weight: 100 });
+      return;
+    }
     const isUnion = edge.style?.stroke === "var(--color-gold)";
     if (isUnion) return; // pula uniões no layout
     dagreGraph.setEdge(edge.source, edge.target, { minlen: 1 });
@@ -191,11 +195,12 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[], probandId?: string) =
     const pos = dagreGraph.node(node.id);
     if (!pos) return node;
     const generation = generationForData(node.data);
+    const invertedGeneration = maxGeneration - generation;
     return {
       ...node,
       position: {
         x: pos.x - NODE_W / 2,
-        y: generation * GENERATION_GAP,
+        y: invertedGeneration * GENERATION_GAP,
       },
       data: { ...node.data, generation },
     };
@@ -239,10 +244,11 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[], probandId?: string) =
     .sort((a, b) => a - b)
     .map((generation) => {
       const copy = generationCopy(generation);
+      const invertedGeneration = maxGeneration - generation;
       return {
         id: `generation-band-${generation}`,
         type: "generationBand",
-        position: { x: bandX, y: generation * GENERATION_GAP - 28 },
+        position: { x: bandX, y: invertedGeneration * GENERATION_GAP - 28 },
         data: {
           ...copy,
           width: bandWidth,
@@ -371,12 +377,13 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
       });
 
       if (probandId) {
-        const probandNode = layoutedNodes.find((node) => node.id === probandId);
+        const probandNode = layoutedNodes.find((n) => n.id === probandId);
         if (probandNode) {
-          rfInstance.setCenter(probandNode.position.x + NODE_W / 2, GENERATION_GAP, {
-            zoom: 0.58,
-            duration: 500,
-          });
+          // Centraliza EXATAMENTE no nó do paciente
+          const x = probandNode.position.x + NODE_W / 2;
+          const y = probandNode.position.y + NODE_H / 2;
+          rfInstance.setCenter(x, y, { zoom: 0.9, duration: 800 });
+          focused = true;
         }
       }
     }, 50);
@@ -575,13 +582,17 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
             snapToGrid
             snapGrid={[20, 20]}
           >
-            <Background
-              variant={BackgroundVariant.Dots}
-              gap={24}
-              size={1.2}
-              color="oklch(0.85 0.05 295)"
+            <Background 
+              color="#e2dcf2" // lavender soft
+              variant={BackgroundVariant.Dots} 
+              gap={20} 
+              size={1.5}
+              style={{ opacity: 0.3 }} 
             />
-            <Controls showInteractive={false} style={{ bottom: 16, left: 16, top: "auto" }} />
+            <Controls 
+              className="bg-card border-none shadow-md overflow-hidden rounded-md [&>button]:border-b [&>button]:border-sidebar-border [&>button]:hover:bg-lavender-soft [&>button]:text-plum" 
+              showInteractive={false} 
+            />
           </ReactFlow>
         )}
         {!query.isLoading && persons.length > 0 && (

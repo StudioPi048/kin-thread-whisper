@@ -30,19 +30,25 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
   const d = data as unknown as PersonNodeData;
   const gender = d.gender ?? "desconhecido";
 
+  const isAbortion = gender === "aborto";
+
   const shapeClass =
-    gender === "masculino"
-      ? "rounded-none"
-      : gender === "feminino"
-        ? "rounded-full"
-        : "rotate-45 rounded-sm";
+    isAbortion
+      ? ""
+      : gender === "masculino"
+        ? "rounded-none"
+        : gender === "feminino"
+          ? "rounded-full"
+          : "rotate-45 rounded-sm";
 
   const borderColor =
-    gender === "masculino"
-      ? "border-plum"
-      : gender === "feminino"
-        ? "border-lavender"
-        : "border-gold";
+    isAbortion
+      ? ""
+      : gender === "masculino"
+        ? "border-plum"
+        : gender === "feminino"
+          ? "border-lavender"
+          : "border-gold";
 
   const symbolColor =
     gender === "masculino" ? "text-plum" : gender === "feminino" ? "text-lavender" : "text-gold";
@@ -69,16 +75,23 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
       {/* Shape principal — 72×72 px */}
       <div
         className={cn(
-          "relative flex size-[72px] items-center justify-center border-[3px] bg-card font-serif transition-all duration-150",
-          shapeClass,
-          borderColor,
+          "relative flex size-[72px] items-center justify-center font-serif transition-all duration-150",
+          !isAbortion && "border-[3px] bg-card",
+          !isAbortion && shapeClass,
+          !isAbortion && borderColor,
           // Proband: destaque visual maior (cliente como centro)
           d.is_proband
-            ? "scale-[1.45] border-[4px] shadow-[0_0_0_5px_white,0_0_0_11px_var(--color-plum),0_18px_34px_rgba(58,24,86,0.24)] z-10"
+            ? "shadow-[0_0_0_4px_white,0_0_0_8px_var(--color-plum)] scale-125 z-10"
             : "shadow-sm",
           selected && "scale-105 ring-2 ring-lavender ring-offset-2 ring-offset-background",
         )}
       >
+        {/* SVG para Aborto */}
+        {isAbortion && (
+          <svg viewBox="0 0 100 100" className="absolute inset-0 size-full text-foreground" fill="none" stroke="currentColor" strokeWidth="4">
+             <polygon points="50,10 90,85 10,85" />
+          </svg>
+        )}
         {/* Cruz de falecido */}
         {d.is_deceased && (
           <span
@@ -93,18 +106,18 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
         )}
       </div>
 
-      {/* Label: nome + datas — área compacta de até 56px */}
-      <div className={cn("mt-1.5 text-center", d.is_proband ? "mt-5 max-w-[132px]" : "max-w-[100px]")}> 
-        <p className={cn("truncate font-sans font-bold text-foreground leading-snug", d.is_proband ? "text-[13px]" : "text-[11px]")}> 
+      {/* Label: nome + datas — área compacta para 4K */}
+      <div className={cn("mt-2 text-center bg-background/80 rounded-sm px-1 py-0.5 backdrop-blur-sm", d.is_proband ? "max-w-[132px]" : "max-w-[120px]")}> 
+        <p className={cn("truncate font-sans font-bold text-foreground leading-snug drop-shadow-sm", d.is_proband ? "text-base" : "text-sm")}> 
           {shortName}
         </p>
         {years && (
-          <p className="mt-0.5 text-[10px] font-medium text-muted-foreground leading-snug">
+          <p className="mt-0.5 text-xs font-semibold text-muted-foreground leading-snug">
             {years}
           </p>
         )}
         {d.is_proband && (
-          <span className="mt-1 inline-block rounded bg-plum px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">
+          <span className="mt-1 inline-block rounded bg-plum px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-white shadow-sm">
             Cliente
           </span>
         )}
