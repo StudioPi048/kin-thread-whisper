@@ -538,21 +538,50 @@ function inferGenderFromRelationship(rel?: string): "male" | "female" | undefine
 
 function parseDateString(d?: string): string | null {
   if (!d) return null;
-  const val = d.trim();
+  const val = String(d).trim();
   if (!val) return null;
-  // Se já for YYYY-MM-DD
-  if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
-  // Tentar parsear DD/MM/YYYY ou DD-MM-YYYY
-  const parts = val.split(/[\/\-]/);
-  if (parts.length === 3) {
-    const [dOrM, mOrD, y] = parts;
-    if (y.length === 4) {
-      // Assumindo padrão brasileiro DD/MM/YYYY
-      return `${y}-${mOrD.padStart(2, "0")}-${dOrM.padStart(2, "0")}`;
-    }
+
+  // ISO YYYY-MM-DD (já normalizado)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+    return isValidYMD(val) ? val : null;
   }
+
+  // Aceita separadores /, -, ou . com espaços opcionais
+  const parts = val.split(/[\/\-.]/).map((p) => p.trim()).filter(Boolean);
+
+  // DD/MM/YYYY ou DD/MM/YY (padrão brasileiro)
+  if (parts.length === 3) {
+    let [dd, mm, yy] = parts;
+    if (!/^\d+$/.test(dd) || !/^\d+$/.test(mm) || !/^\d+$/.test(yy)) return null;
+
+    // Ano com 2 dígitos: 00-30 → 2000-2030, 31-99 → 1931-1999
+    if (yy.length === 2) {
+      const n = parseInt(yy, 10);
+      yy = String(n <= 30 ? 2000 + n : 1900 + n);
+    }
+    if (yy.length !== 4) return null;
+
+    const iso = `${yy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
+    return isValidYMD(iso) ? iso : null;
+  }
+
+  // Apenas ano (ex.: "1985") → assume 01/01 para não perder o dado
+  if (/^\d{4}$/.test(val)) return `${val}-01-01`;
+
   return null;
 }
+
+function isValidYMD(iso: string): boolean {
+  const [y, m, d] = iso.split("-").map(Number);
+  if (m < 1 || m > 12 || d < 1 || d > 31) return false;
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  return (
+    dt.getUTCFullYear() === y &&
+    dt.getUTCMonth() === m - 1 &&
+    dt.getUTCDate() === d
+  );
+}
+
 
 function Th({ children, w }: { children?: React.ReactNode; w?: string }) {
   return <th className={`px-3 py-3 text-left font-bold ${w ?? ""}`}>{children}</th>;
