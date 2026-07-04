@@ -213,8 +213,7 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
       anchorAvgX = xs.reduce((s, x) => s + x, 0) / xs.length;
     }
 
-    const invertedGeneration = maxGeneration - generation;
-    const y = invertedGeneration * GENERATION_GAP;
+    const y = generation * GENERATION_GAP;
 
     placed.forEach((p, i) => {
       layoutedNodes.push({
