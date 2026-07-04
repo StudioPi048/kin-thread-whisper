@@ -23,10 +23,7 @@ function ConfigPage() {
   const { data: roles } = useQuery({
     queryKey: ["roles", user.id],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id);
+      const { data } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
       return data ?? [];
     },
   });
@@ -44,10 +41,7 @@ function ConfigPage() {
             <Row label="E-mail" value={profile?.email ?? user.email ?? "—"} />
             <Row label="Formação" value={profile?.formation ?? "—"} />
             <Row label="Cidade" value={profile?.city ?? "—"} />
-            <Row
-              label="Papel"
-              value={roles?.map((r) => r.role).join(", ") || "professional"}
-            />
+            <Row label="Papel" value={roles?.map((r) => r.role).join(", ") || "professional"} />
           </dl>
           <p className="mt-6 text-xs text-muted-foreground">
             A edição de perfil chega na Etapa 2, junto do cadastro completo de clientes.

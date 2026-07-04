@@ -21,9 +21,18 @@ export function CaseDashboard({ clientId }: Props) {
           .from("genogram_persons")
           .select("gender, is_deceased, health_conditions, cause_of_death")
           .eq("client_id", clientId),
-        supabase.from("genogram_relationships").select("id", { count: "exact", head: true }).eq("client_id", clientId),
-        supabase.from("patterns_detected").select("id", { count: "exact", head: true }).eq("client_id", clientId),
-        supabase.from("clinical_sessions").select("id", { count: "exact", head: true }).eq("client_id", clientId),
+        supabase
+          .from("genogram_relationships")
+          .select("id", { count: "exact", head: true })
+          .eq("client_id", clientId),
+        supabase
+          .from("patterns_detected")
+          .select("id", { count: "exact", head: true })
+          .eq("client_id", clientId),
+        supabase
+          .from("clinical_sessions")
+          .select("id", { count: "exact", head: true })
+          .eq("client_id", clientId),
       ]);
       return {
         persons: (persons.data ?? []) as Person[],

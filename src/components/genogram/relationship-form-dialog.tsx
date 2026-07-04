@@ -23,11 +23,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  relationshipQualifiers,
-  relationshipTypes,
-  type RelationshipType,
-} from "@/lib/genogram";
+import { relationshipQualifiers, relationshipTypes, type RelationshipType } from "@/lib/genogram";
 import type { Database } from "@/integrations/supabase/types";
 
 type PersonRow = Database["public"]["Tables"]["genogram_persons"]["Row"];
@@ -92,8 +88,7 @@ export function RelationshipFormDialog({
   const mutation = useMutation({
     mutationFn: async (form: FormState) => {
       if (!form.from_person_id || !form.to_person_id) throw new Error("Escolha as duas pessoas");
-      if (form.from_person_id === form.to_person_id)
-        throw new Error("Escolha pessoas diferentes");
+      if (form.from_person_id === form.to_person_id) throw new Error("Escolha pessoas diferentes");
       const payload = {
         client_id: clientId,
         from_person_id: form.from_person_id,
@@ -126,13 +121,13 @@ export function RelationshipFormDialog({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="flex flex-col gap-0 p-0 sm:max-w-lg w-full border-l-[5px] border-l-gold">
-        
+      <SheetContent
+        side="right"
+        className="flex flex-col gap-0 p-0 sm:max-w-lg w-full border-l-[5px] border-l-gold"
+      >
         {/* Header Magazine Style */}
         <div className="bg-plum px-8 py-10 relative overflow-hidden shrink-0">
-          <span className="section-number absolute right-4 top-4 opacity-10 text-white">
-            ∞
-          </span>
+          <span className="section-number absolute right-4 top-4 opacity-10 text-white">∞</span>
           <SheetHeader className="relative z-10">
             <div className="flex items-center gap-4 mb-4">
               <div className="flex h-16 w-16 items-center justify-center rounded-md bg-gold text-2xl font-bold text-plum shadow-md">
@@ -148,7 +143,8 @@ export function RelationshipFormDialog({
               </div>
             </div>
             <SheetDescription className="text-white/60 text-[14px]">
-              Vínculos entrelaçam os dados. Registre parentalidade, uniões, rupturas ou aproximações.
+              Vínculos entrelaçam os dados. Registre parentalidade, uniões, rupturas ou
+              aproximações.
             </SheetDescription>
           </SheetHeader>
         </div>
@@ -227,7 +223,9 @@ export function RelationshipFormDialog({
 
             {qualifierOptions.length > 0 && (
               <div className="space-y-2 pt-2">
-                <Label className="text-[13px] font-bold text-foreground">Intensidade / Qualificador</Label>
+                <Label className="text-[13px] font-bold text-foreground">
+                  Intensidade / Qualificador
+                </Label>
                 <Select
                   value={v.qualifier || undefined}
                   onValueChange={(x) => setV((p) => ({ ...p, qualifier: x }))}
@@ -273,7 +271,6 @@ export function RelationshipFormDialog({
             {mutation.isPending ? "Salvando..." : editing ? "Salvar vínculo" : "Criar conexão"}
           </Button>
         </div>
-
       </SheetContent>
     </Sheet>
   );

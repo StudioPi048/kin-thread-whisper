@@ -27,24 +27,18 @@ function AppHome() {
   const { data: clients = [] } = useQuery({
     queryKey: ["clients", "active"],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("clients")
-        .select("id")
-        .eq("status", "active");
+      const { data } = await supabase.from("clients").select("id").eq("status", "active");
       return data ?? [];
     },
   });
 
-  const firstName =
-    profile?.full_name?.split(" ")[0] ??
-    user.email?.split("@")[0] ??
-    "terapeuta";
+  const firstName = profile?.full_name?.split(" ")[0] ?? user.email?.split("@")[0] ?? "terapeuta";
 
   const stats = [
-    { label: "Clientes ativos",      value: clients.length, icon: Users,     color: "lavender" },
-    { label: "Sessões este mês",     value: "—",            icon: Calendar,  color: "gold"     },
-    { label: "Árvores construídas",  value: "—",            icon: TreePine,  color: "lavender" },
-    { label: "Padrões detectados",   value: "—",            icon: Sparkles,  color: "gold"     },
+    { label: "Clientes ativos", value: clients.length, icon: Users, color: "lavender" },
+    { label: "Sessões este mês", value: "—", icon: Calendar, color: "gold" },
+    { label: "Árvores construídas", value: "—", icon: TreePine, color: "lavender" },
+    { label: "Padrões detectados", value: "—", icon: Sparkles, color: "gold" },
   ];
 
   return (
@@ -67,7 +61,8 @@ function AppHome() {
           </h1>
           <div className="my-5 h-[3px] w-14 bg-gold" />
           <p className="max-w-xl text-[15px] leading-relaxed text-muted-foreground">
-            Seu consultório digital. Comece cadastrando um cliente ou acesse a árvore de um caso ativo.
+            Seu consultório digital. Comece cadastrando um cliente ou acesse a árvore de um caso
+            ativo.
           </p>
         </div>
 
@@ -88,15 +83,11 @@ function AppHome() {
                 }
               >
                 <s.icon
-                  className={
-                    "size-5 " + (s.color === "lavender" ? "text-lavender" : "text-gold")
-                  }
+                  className={"size-5 " + (s.color === "lavender" ? "text-lavender" : "text-gold")}
                 />
               </div>
               <div>
-                <p className="font-serif text-5xl font-bold text-primary leading-none">
-                  {s.value}
-                </p>
+                <p className="font-serif text-5xl font-bold text-primary leading-none">{s.value}</p>
                 <p className="mt-1.5 text-[13px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
                   {s.label}
                 </p>
@@ -162,7 +153,11 @@ function AppHome() {
 }
 
 function ModuleCard({
-  to, icon: Icon, title, body, color,
+  to,
+  icon: Icon,
+  title,
+  body,
+  color,
 }: {
   to: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -175,7 +170,9 @@ function ModuleCard({
       to={to}
       className={
         "group flex flex-col bg-white p-6 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 " +
-        (color === "lavender" ? "border-l-[5px] border-l-transparent hover:border-l-lavender" : "border-l-[5px] border-l-transparent hover:border-l-gold")
+        (color === "lavender"
+          ? "border-l-[5px] border-l-transparent hover:border-l-lavender"
+          : "border-l-[5px] border-l-transparent hover:border-l-gold")
       }
     >
       <div

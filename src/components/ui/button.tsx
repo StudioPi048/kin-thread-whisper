@@ -15,25 +15,19 @@ const buttonVariants = cva(
           "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90 active:scale-[0.98]",
         outline:
           "border-2 border-primary bg-transparent text-primary shadow-sm hover:bg-primary hover:text-primary-foreground active:scale-[0.98]",
-        secondary:
-          "bg-lavender-soft text-plum hover:bg-lavender/20 active:scale-[0.98]",
-        ghost:
-          "hover:bg-secondary hover:text-secondary-foreground active:scale-[0.98]",
-        link:
-          "text-primary underline-offset-4 hover:underline p-0 h-auto normal-case tracking-normal font-semibold text-[15px]",
-        gold:
-          "bg-gold text-[oklch(0.10_0.04_295)] shadow-md hover:bg-gold/90 active:scale-[0.98]",
-        lavender:
-          "bg-lavender text-white shadow-sm hover:bg-lavender-mid active:scale-[0.98]",
-        hero:
-          "bg-gold text-[oklch(0.10_0.04_295)] shadow-xl hover:bg-gold/90 active:scale-[0.97] text-[15px] tracking-[0.12em]",
+        secondary: "bg-lavender-soft text-plum hover:bg-lavender/20 active:scale-[0.98]",
+        ghost: "hover:bg-secondary hover:text-secondary-foreground active:scale-[0.98]",
+        link: "text-primary underline-offset-4 hover:underline p-0 h-auto normal-case tracking-normal font-semibold text-[15px]",
+        gold: "bg-gold text-[oklch(0.10_0.04_295)] shadow-md hover:bg-gold/90 active:scale-[0.98]",
+        lavender: "bg-lavender text-white shadow-sm hover:bg-lavender-mid active:scale-[0.98]",
+        hero: "bg-gold text-[oklch(0.10_0.04_295)] shadow-xl hover:bg-gold/90 active:scale-[0.97] text-[15px] tracking-[0.12em]",
       },
       size: {
-        default:   "h-[52px] px-7 py-3",
-        sm:        "h-10 px-4 text-[12px]",
-        lg:        "h-[58px] px-10 text-[14px]",
-        xl:        "h-16 px-14 text-[15px]",
-        icon:      "h-[52px] w-[52px]",
+        default: "h-[52px] px-7 py-3",
+        sm: "h-10 px-4 text-[12px]",
+        lg: "h-[58px] px-10 text-[14px]",
+        xl: "h-16 px-14 text-[15px]",
+        icon: "h-[52px] w-[52px]",
         "icon-sm": "h-10 w-10 rounded-md",
       },
     },
@@ -42,8 +36,7 @@ const buttonVariants = cva(
 );
 
 export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
   asChild?: boolean;
 }
 

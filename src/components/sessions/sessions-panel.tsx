@@ -4,7 +4,16 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Mic, Square, Loader2, Trash2, FileText, AlertCircle, RefreshCw, AudioLines } from "lucide-react";
+import {
+  Mic,
+  Square,
+  Loader2,
+  Trash2,
+  FileText,
+  AlertCircle,
+  RefreshCw,
+  AudioLines,
+} from "lucide-react";
 import { motion } from "framer-motion";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -63,7 +72,9 @@ export function SessionsPanel({ clientId }: Props) {
 
   // Poll while any session is processing
   useEffect(() => {
-    const processing = sessions.some((s) => s.status === "transcribing" || s.status === "structuring");
+    const processing = sessions.some(
+      (s) => s.status === "transcribing" || s.status === "structuring",
+    );
     if (!processing) return;
     const t = setInterval(() => {
       qc.invalidateQueries({ queryKey: ["clinical_sessions", clientId] });
@@ -80,15 +91,20 @@ export function SessionsPanel({ clientId }: Props) {
   const timerRef = useRef<number | null>(null);
   const startedAtRef = useRef<number>(0);
 
-  useEffect(() => () => {
-    mediaRecorderRef.current?.stream.getTracks().forEach((t) => t.stop());
-    if (timerRef.current) window.clearInterval(timerRef.current);
-  }, []);
+  useEffect(
+    () => () => {
+      mediaRecorderRef.current?.stream.getTracks().forEach((t) => t.stop());
+      if (timerRef.current) window.clearInterval(timerRef.current);
+    },
+    [],
+  );
 
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : "audio/webm";
+      const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : "audio/webm";
       const mr = new MediaRecorder(stream, { mimeType: mime });
       chunksRef.current = [];
       mr.ondataavailable = (e) => e.data.size && chunksRef.current.push(e.data);
@@ -200,7 +216,9 @@ export function SessionsPanel({ clientId }: Props) {
           <div className="flex-1 text-center md:text-left">
             <h3 className="font-serif text-3xl font-bold">Gravar Relato da Sessão</h3>
             <p className="text-sm text-white/70 mt-2 max-w-xl leading-relaxed">
-              Grave suas observações logo após o término da sessão. A inteligência transcreverá e extrairá automaticamente fatos, hipóteses sistêmicas e figuras mencionadas para o prontuário.
+              Grave suas observações logo após o término da sessão. A inteligência transcreverá e
+              extrairá automaticamente fatos, hipóteses sistêmicas e figuras mencionadas para o
+              prontuário.
             </p>
           </div>
           <div className="shrink-0 flex items-center">
@@ -210,19 +228,27 @@ export function SessionsPanel({ clientId }: Props) {
                   <span className="h-3 w-3 rounded-full bg-destructive animate-pulse" />
                   {formatDuration(elapsed)}
                 </span>
-                <Button onClick={stopRecording} variant="outline" className="bg-destructive border-transparent text-white hover:bg-destructive/90 transition-colors h-12 px-6">
+                <Button
+                  onClick={stopRecording}
+                  variant="outline"
+                  className="bg-destructive border-transparent text-white hover:bg-destructive/90 transition-colors h-12 px-6"
+                >
                   <Square className="h-4 w-4 mr-2" />
                   Finalizar
                 </Button>
               </div>
             ) : (
-              <Button 
-                onClick={startRecording} 
-                disabled={uploading} 
+              <Button
+                onClick={startRecording}
+                disabled={uploading}
                 variant="hero"
                 className="h-14 px-8 text-[14px]"
               >
-                {uploading ? <Loader2 className="h-5 w-5 mr-3 animate-spin" /> : <Mic className="h-5 w-5 mr-3" />}
+                {uploading ? (
+                  <Loader2 className="h-5 w-5 mr-3 animate-spin" />
+                ) : (
+                  <Mic className="h-5 w-5 mr-3" />
+                )}
                 {uploading ? "Enviando áudio…" : "Iniciar gravação"}
               </Button>
             )}
@@ -235,40 +261,45 @@ export function SessionsPanel({ clientId }: Props) {
         <div className="flex items-center justify-between border-b border-border/60 pb-3">
           <h3 className="font-serif text-2xl font-bold text-primary">Histórico de Sessões</h3>
         </div>
-        
+
         {isLoading && <div className="h-32 animate-pulse rounded-lg bg-muted/30" />}
-        
+
         {!isLoading && sessions.length === 0 && (
-           <motion.div 
-             initial={{ opacity: 0, y: 10 }}
-             animate={{ opacity: 1, y: 0 }}
-             className="rounded-sm border border-dashed border-border bg-lavender-soft/40 p-16 text-center"
-           >
-             <AudioLines className="mx-auto size-10 text-lavender opacity-60" />
-             <p className="mt-4 font-serif text-2xl font-bold text-primary">
-               Nenhuma sessão gravada
-             </p>
-             <p className="mx-auto mt-2 max-w-md text-[14px] leading-relaxed text-muted-foreground">
-               Os registros de voz são transformados em anotações estruturadas automaticamente. Experimente iniciar uma gravação.
-             </p>
-           </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-sm border border-dashed border-border bg-lavender-soft/40 p-16 text-center"
+          >
+            <AudioLines className="mx-auto size-10 text-lavender opacity-60" />
+            <p className="mt-4 font-serif text-2xl font-bold text-primary">
+              Nenhuma sessão gravada
+            </p>
+            <p className="mx-auto mt-2 max-w-md text-[14px] leading-relaxed text-muted-foreground">
+              Os registros de voz são transformados em anotações estruturadas automaticamente.
+              Experimente iniciar uma gravação.
+            </p>
+          </motion.div>
         )}
-        
-        <motion.div 
+
+        <motion.div
           className="grid gap-6"
           initial="hidden"
           animate="visible"
           variants={{
             hidden: { opacity: 0 },
-            visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+            visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
           }}
         >
           {sessions.map((s) => (
-            <motion.div 
+            <motion.div
               key={s.id}
               variants={{
                 hidden: { opacity: 0, y: 15 },
-                visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+                visible: {
+                  opacity: 1,
+                  y: 0,
+                  transition: { type: "spring", stiffness: 300, damping: 24 },
+                },
               }}
             >
               <SessionCard
@@ -317,9 +348,9 @@ function SessionCard({
   const isProcessing = session.status === "transcribing" || session.status === "structuring";
   const isError = session.status === "error";
 
-  const statusBadge = isError 
-    ? "bg-destructive text-white" 
-    : isProcessing 
+  const statusBadge = isError
+    ? "bg-destructive text-white"
+    : isProcessing
       ? "bg-lavender text-white"
       : "bg-emerald-600 text-white";
 
@@ -331,22 +362,34 @@ function SessionCard({
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-1">
             {format(new Date(session.session_date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
           </p>
-          <h4 className="font-serif text-2xl font-bold text-primary">{session.title ?? "Sessão"}</h4>
+          <h4 className="font-serif text-2xl font-bold text-primary">
+            {session.title ?? "Sessão"}
+          </h4>
           <p className="text-[13px] text-muted-foreground/70 font-mono mt-1 flex items-center gap-2">
             <Mic className="size-3" />
             {formatDuration(session.duration_seconds)} de áudio registrado
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Badge className={`${statusBadge} border-0 uppercase tracking-widest text-[9px] px-2 py-1`}>
+          <Badge
+            className={`${statusBadge} border-0 uppercase tracking-widest text-[9px] px-2 py-1`}
+          >
             {isProcessing && <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />}
             {STATUS_LABEL[session.status] ?? session.status}
           </Badge>
-          
+
           <div className="flex items-center gap-1 border-l border-border/60 pl-3 ml-1">
             {(session.status === "error" || session.status === "draft") && session.audio_path && (
-              <Button size="icon-sm" variant="ghost" onClick={onReprocess} disabled={reprocessing} title="Reprocessar áudio">
-                <RefreshCw className={`h-4 w-4 text-muted-foreground hover:text-plum ${reprocessing ? "animate-spin" : ""}`} />
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                onClick={onReprocess}
+                disabled={reprocessing}
+                title="Reprocessar áudio"
+              >
+                <RefreshCw
+                  className={`h-4 w-4 text-muted-foreground hover:text-plum ${reprocessing ? "animate-spin" : ""}`}
+                />
               </Button>
             )}
             <Button size="icon-sm" variant="ghost" onClick={onDelete} title="Excluir sessão">
@@ -367,8 +410,13 @@ function SessionCard({
         {rows.length > 0 ? (
           <div className="grid gap-6 md:grid-cols-2">
             {rows.map(([label, value]) => (
-              <div key={label as string} className="bg-background border border-border/40 p-4 rounded-sm">
-                <p className="text-[11px] font-bold text-gold uppercase tracking-[0.15em] mb-2">{label as string}</p>
+              <div
+                key={label as string}
+                className="bg-background border border-border/40 p-4 rounded-sm"
+              >
+                <p className="text-[11px] font-bold text-gold uppercase tracking-[0.15em] mb-2">
+                  {label as string}
+                </p>
                 {Array.isArray(value) ? (
                   <ul className="list-disc list-inside space-y-1.5 font-serif text-[15px] leading-relaxed text-foreground/85">
                     {(value as unknown[]).map((v, i) => (
@@ -384,7 +432,8 @@ function SessionCard({
             ))}
           </div>
         ) : (
-          !isProcessing && !isError && (
+          !isProcessing &&
+          !isError && (
             <p className="text-[14px] text-muted-foreground italic">
               Nenhuma anotação estruturada extraída para esta sessão.
             </p>
@@ -393,12 +442,17 @@ function SessionCard({
 
         {session.transcript && (
           <div className="mt-8 border-t border-border/40 pt-4">
-            <Button variant="ghost" size="sm" onClick={() => setShowTranscript((v) => !v)} className="text-[13px] text-muted-foreground hover:text-primary">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowTranscript((v) => !v)}
+              className="text-[13px] text-muted-foreground hover:text-primary"
+            >
               <FileText className="h-4 w-4 mr-2" />
               {showTranscript ? "Ocultar" : "Ver"} transcrição bruta gerada pela IA
             </Button>
             {showTranscript && (
-              <motion.div 
+              <motion.div
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: "auto", opacity: 1 }}
                 className="overflow-hidden mt-3"

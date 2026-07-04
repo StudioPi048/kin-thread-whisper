@@ -32,7 +32,8 @@ async function callGateway(path: string, init: RequestInit): Promise<Response> {
   const res = await fetch(`${AI_GATEWAY}${path}`, { ...init, headers });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    if (res.status === 429) throw new Error("Limite de uso da IA atingido. Tente novamente em instantes.");
+    if (res.status === 429)
+      throw new Error("Limite de uso da IA atingido. Tente novamente em instantes.");
     if (res.status === 402) throw new Error("Créditos de IA insuficientes na workspace.");
     throw new Error(`AI gateway ${res.status}: ${body.slice(0, 300)}`);
   }

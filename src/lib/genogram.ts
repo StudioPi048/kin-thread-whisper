@@ -23,45 +23,41 @@ export const relationshipTypes = [
 
 export type RelationshipType = (typeof relationshipTypes)[number]["value"];
 
-export const relationshipQualifiers: Record<
-  RelationshipType,
-  { value: string; label: string }[]
-> = {
-  parent: [
-    { value: "biological", label: "Biológico" },
-    { value: "adoptive", label: "Adotivo" },
-    { value: "foster", label: "Acolhimento" },
-    { value: "stepparent", label: "Padrasto/madrasta" },
-  ],
-  union: [
-    { value: "marriage", label: "Casamento" },
-    { value: "cohabitation", label: "União estável" },
-    { value: "engagement", label: "Noivado" },
-    { value: "divorce", label: "Divórcio" },
-    { value: "separation", label: "Separação" },
-    { value: "affair", label: "Caso / amante" },
-  ],
-  sibling: [
-    { value: "biological", label: "Biológico" },
-    { value: "twin", label: "Gêmeos" },
-    { value: "half", label: "Meio-irmão(ã)" },
-    { value: "adoptive", label: "Adotivo" },
-  ],
-  emotional: [
-    { value: "close", label: "Próximo" },
-    { value: "fusion", label: "Fusão" },
-    { value: "conflict", label: "Conflito" },
-    { value: "rupture", label: "Ruptura" },
-    { value: "distance", label: "Distância" },
-    { value: "grief", label: "Luto não elaborado" },
-    { value: "secret", label: "Segredo compartilhado" },
-  ],
-};
+export const relationshipQualifiers: Record<RelationshipType, { value: string; label: string }[]> =
+  {
+    parent: [
+      { value: "biological", label: "Biológico" },
+      { value: "adoptive", label: "Adotivo" },
+      { value: "foster", label: "Acolhimento" },
+      { value: "stepparent", label: "Padrasto/madrasta" },
+    ],
+    union: [
+      { value: "marriage", label: "Casamento" },
+      { value: "cohabitation", label: "União estável" },
+      { value: "engagement", label: "Noivado" },
+      { value: "divorce", label: "Divórcio" },
+      { value: "separation", label: "Separação" },
+      { value: "affair", label: "Caso / amante" },
+    ],
+    sibling: [
+      { value: "biological", label: "Biológico" },
+      { value: "twin", label: "Gêmeos" },
+      { value: "half", label: "Meio-irmão(ã)" },
+      { value: "adoptive", label: "Adotivo" },
+    ],
+    emotional: [
+      { value: "close", label: "Próximo" },
+      { value: "fusion", label: "Fusão" },
+      { value: "conflict", label: "Conflito" },
+      { value: "rupture", label: "Ruptura" },
+      { value: "distance", label: "Distância" },
+      { value: "grief", label: "Luto não elaborado" },
+      { value: "secret", label: "Segredo compartilhado" },
+    ],
+  };
 
 export function genderSymbol(gender?: string | null): string {
-  return (
-    genogramGenderOptions.find((g) => g.value === gender)?.symbol ?? "◇"
-  );
+  return genogramGenderOptions.find((g) => g.value === gender)?.symbol ?? "◇";
 }
 
 export function relationshipLabel(type: string, qualifier?: string | null): string {

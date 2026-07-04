@@ -17,10 +17,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  UserPlus, Link2, Trash2, Printer,
-  HelpCircle, Users, TreePine,
-} from "lucide-react";
+import { UserPlus, Link2, Trash2, Printer, HelpCircle, Users, TreePine } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -36,7 +33,9 @@ type RelRow = Database["public"]["Tables"]["genogram_relationships"]["Row"];
 
 const nodeTypes = { person: PersonNode };
 
-interface CanvasProps { clientId: string; }
+interface CanvasProps {
+  clientId: string;
+}
 
 export function GenogramCanvas(props: CanvasProps) {
   return (
@@ -118,7 +117,10 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
   const onConnect = useCallback(
     (conn: Connection) => {
       setEdges((eds) => addEdge({ ...conn, style: { stroke: "var(--color-lavender)" } }, eds));
-      setRelDialog({ open: true, seed: { from: conn.source ?? undefined, to: conn.target ?? undefined } });
+      setRelDialog({
+        open: true,
+        seed: { from: conn.source ?? undefined, to: conn.target ?? undefined },
+      });
     },
     [setEdges],
   );
@@ -153,7 +155,10 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
         if (error) throw error;
       }
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["genogram", clientId] }); toast.success("Removido."); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["genogram", clientId] });
+      toast.success("Removido.");
+    },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
 
@@ -163,7 +168,6 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
 
   return (
     <div className="relative flex flex-col overflow-hidden rounded-sm border border-border bg-card shadow-sm">
-
       {/* ── BARRA DE AÇÕES — fundo ameixa ─────────────────── */}
       <div className="block-plum flex flex-wrap items-center gap-2 px-4 py-3">
         {/* Label */}
@@ -301,10 +305,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
               size={1.2}
               color="oklch(0.85 0.05 295)"
             />
-            <Controls
-              showInteractive={false}
-              style={{ bottom: 16, left: 16, top: "auto" }}
-            />
+            <Controls showInteractive={false} style={{ bottom: 16, left: 16, top: "auto" }} />
           </ReactFlow>
         )}
       </div>
@@ -325,7 +326,11 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
       <RelationshipFormDialog
         open={relDialog.open}
         onOpenChange={(o) =>
-          setRelDialog((prev) => ({ ...prev, open: o, ...(o ? {} : { seed: undefined, editing: null }) }))
+          setRelDialog((prev) => ({
+            ...prev,
+            open: o,
+            ...(o ? {} : { seed: undefined, editing: null }),
+          }))
         }
         clientId={clientId}
         persons={persons}
@@ -338,15 +343,20 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
 
 function relToEdge(r: RelRow): Edge {
   const stroke = colorFor(r);
-  const dashed = r.qualifier === "divorce" || r.qualifier === "separation" || r.qualifier === "rupture";
-  const thick   = r.qualifier === "fusion";
+  const dashed =
+    r.qualifier === "divorce" || r.qualifier === "separation" || r.qualifier === "rupture";
+  const thick = r.qualifier === "fusion";
   return {
     id: r.id,
     source: r.from_person_id,
     target: r.to_person_id,
     type: "smoothstep",
     label: relationshipLabel(r.relationship_type, r.qualifier),
-    labelStyle: { fontSize: 11, fill: "var(--color-muted-foreground)", fontFamily: "var(--font-sans)" },
+    labelStyle: {
+      fontSize: 11,
+      fill: "var(--color-muted-foreground)",
+      fontFamily: "var(--font-sans)",
+    },
     labelBgStyle: { fill: "var(--color-card)", fillOpacity: 0.95, rx: 3, ry: 3 },
     labelBgPadding: [4, 6] as [number, number],
     animated: r.qualifier === "conflict",
@@ -359,9 +369,9 @@ function relToEdge(r: RelRow): Edge {
 }
 
 function colorFor(r: RelRow): string {
-  if (r.relationship_type === "parent")  return "var(--color-plum)";
+  if (r.relationship_type === "parent") return "var(--color-plum)";
   if (r.relationship_type === "sibling") return "var(--color-lavender)";
-  if (r.relationship_type === "union")   return "var(--color-gold)";
+  if (r.relationship_type === "union") return "var(--color-gold)";
   switch (r.qualifier) {
     case "conflict":
     case "rupture":
@@ -382,12 +392,10 @@ function EmptyCanvas({ onCreate }: { onCreate: () => void }) {
       </div>
 
       <div>
-        <p className="font-serif text-2xl font-bold text-primary">
-          A árvore começa por uma pessoa
-        </p>
+        <p className="font-serif text-2xl font-bold text-primary">A árvore começa por uma pessoa</p>
         <p className="mt-3 max-w-md text-[15px] leading-relaxed text-muted-foreground">
-          Adicione o <strong>paciente-índice</strong> primeiro. Depois construa em torno dele:
-          pais, avós, irmãos, uniões, filhos.
+          Adicione o <strong>paciente-índice</strong> primeiro. Depois construa em torno dele: pais,
+          avós, irmãos, uniões, filhos.
         </p>
       </div>
 
@@ -397,12 +405,14 @@ function EmptyCanvas({ onCreate }: { onCreate: () => void }) {
         </p>
         {[
           "1. Adicione o paciente-índice (borda dupla lavanda)",
-          "2. Clique em \"Adicionar pessoa\" para cada familiar",
+          '2. Clique em "Adicionar pessoa" para cada familiar',
           "3. Arraste o ponto lavanda de uma pessoa para outra para criar vínculos",
           "4. Clique duplo em qualquer elemento para editar",
-          "5. Use \"A3\" para exportar a árvore para impressão",
+          '5. Use "A3" para exportar a árvore para impressão',
         ].map((step) => (
-          <p key={step} className="py-1 text-[14px] text-foreground/75">{step}</p>
+          <p key={step} className="py-1 text-[14px] text-foreground/75">
+            {step}
+          </p>
         ))}
       </div>
 

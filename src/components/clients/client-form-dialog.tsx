@@ -98,7 +98,7 @@ export function ClientFormDialog({ open, onOpenChange, professionalId, editing }
         clinical_notes: parsed.clinical_notes || null,
         tags: parseTags(parsed.tags_input),
         consent_given_at: parsed.consent_given
-          ? editing?.consent_given_at ?? new Date().toISOString()
+          ? (editing?.consent_given_at ?? new Date().toISOString())
           : null,
         consent_notes: parsed.consent_notes || null,
       };

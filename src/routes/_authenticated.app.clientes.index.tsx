@@ -1,7 +1,15 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Archive, ArchiveRestore, MoreHorizontal, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import {
+  Archive,
+  ArchiveRestore,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 
@@ -154,28 +162,35 @@ function ClientesIndex() {
           ) : filtered.length === 0 ? (
             <EmptyState hasQuery={query.length > 0} onCreate={() => setCreating(true)} tab={tab} />
           ) : (
-            <motion.ul 
+            <motion.ul
               className="grid gap-4 md:grid-cols-2 xl:grid-cols-3"
               initial="hidden"
               animate="visible"
               variants={{
                 hidden: { opacity: 0 },
-                visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+                visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
               }}
             >
               {filtered.map((c) => (
-                <motion.li 
+                <motion.li
                   key={c.id}
                   variants={{
                     hidden: { opacity: 0, y: 20 },
-                    visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+                    visible: {
+                      opacity: 1,
+                      y: 0,
+                      transition: { type: "spring", stiffness: 300, damping: 24 },
+                    },
                   }}
                 >
                   <ClientCard
                     client={c}
                     onEdit={() => setEditing(c)}
                     onArchive={() =>
-                      setStatus.mutate({ id: c.id, status: c.status === "active" ? "archived" : "active" })
+                      setStatus.mutate({
+                        id: c.id,
+                        status: c.status === "active" ? "archived" : "active",
+                      })
                     }
                     onDelete={() => setDeleting(c)}
                   />
@@ -221,7 +236,10 @@ function ClientesIndex() {
 }
 
 function ClientCard({
-  client, onEdit, onArchive, onDelete,
+  client,
+  onEdit,
+  onArchive,
+  onDelete,
 }: {
   client: ClientRow;
   onEdit: () => void;
@@ -263,13 +281,20 @@ function ClientCard({
             </DropdownMenuItem>
             <DropdownMenuItem onClick={onArchive}>
               {client.status === "active" ? (
-                <><Archive className="size-4" /> Arquivar</>
+                <>
+                  <Archive className="size-4" /> Arquivar
+                </>
               ) : (
-                <><ArchiveRestore className="size-4" /> Reativar</>
+                <>
+                  <ArchiveRestore className="size-4" /> Reativar
+                </>
               )}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={onDelete}>
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={onDelete}
+            >
               <Trash2 className="size-4" /> Excluir
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -313,7 +338,9 @@ function ClientCard({
 }
 
 function EmptyState({
-  hasQuery, onCreate, tab,
+  hasQuery,
+  onCreate,
+  tab,
 }: {
   hasQuery: boolean;
   onCreate: () => void;
@@ -323,7 +350,9 @@ function EmptyState({
     return (
       <div className="border-l-[5px] border-l-muted bg-white p-16 text-center shadow-sm">
         <p className="font-serif text-2xl font-bold text-primary">Nada encontrado</p>
-        <p className="mt-2 text-[15px] text-muted-foreground">Tente outro termo ou remova o filtro.</p>
+        <p className="mt-2 text-[15px] text-muted-foreground">
+          Tente outro termo ou remova o filtro.
+        </p>
       </div>
     );
   }
@@ -347,9 +376,9 @@ function EmptyState({
       </div>
       {tab === "active" && (
         <div className="hidden md:block flex-1 bg-lavender-soft/30 w-full h-full min-h-[300px] relative">
-          <img 
-            src="/empty_clients.png" 
-            alt="Ilustração editorial de um consultório" 
+          <img
+            src="/empty_clients.png"
+            alt="Ilustração editorial de um consultório"
             className="absolute inset-0 w-full h-full object-cover mix-blend-multiply"
           />
         </div>

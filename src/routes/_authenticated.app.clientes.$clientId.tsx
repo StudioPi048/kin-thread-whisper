@@ -14,7 +14,7 @@ import {
   TreePine,
   Activity,
   History,
-  FileText
+  FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -116,21 +116,20 @@ function ClientDossierPage() {
   const initials = initialsFrom(client.full_name);
 
   return (
-    <motion.div 
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="pb-12"
-    >
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pb-12">
       {/* Editorial Plum Header */}
       <div className="block-plum pb-10 pt-4 px-6 relative overflow-hidden">
         {/* Giant decorative initial */}
         <span className="section-number absolute -right-4 -bottom-10 opacity-[0.03] text-white">
           {initials}
         </span>
-        
+
         <div className="container-liz relative z-10">
           <nav className="flex items-center gap-1 text-[12px] uppercase tracking-[0.1em] font-bold text-white/50 mb-8">
-            <Link to="/app/clientes" className="inline-flex items-center gap-1 hover:text-white transition-colors">
+            <Link
+              to="/app/clientes"
+              className="inline-flex items-center gap-1 hover:text-white transition-colors"
+            >
               <ArrowLeft className="size-3.5" /> Clientes
             </Link>
             <ChevronRight className="size-3.5" />
@@ -139,7 +138,7 @@ function ClientDossierPage() {
 
           <header className="flex flex-wrap items-start justify-between gap-6">
             <div className="flex items-start gap-5">
-              <motion.div 
+              <motion.div
                 layoutId={`avatar-${client.id}`}
                 className="flex size-20 shrink-0 items-center justify-center rounded-md bg-lavender font-serif text-3xl font-bold text-white shadow-lg"
               >
@@ -149,27 +148,46 @@ function ClientDossierPage() {
                 <p className="text-[11px] font-bold uppercase tracking-[0.35em] text-lavender-mid">
                   Dossiê Clínico
                 </p>
-                <h1 className="mt-1 font-serif text-4xl font-bold text-white md:text-5xl">{display}</h1>
+                <h1 className="mt-1 font-serif text-4xl font-bold text-white md:text-5xl">
+                  {display}
+                </h1>
                 <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-[14px] font-medium text-white/70">
                   {age !== null && <span className="text-white">{age} anos</span>}
                   {client.birth_date && <span>· {formatBirthDate(client.birth_date)}</span>}
                   {client.birthplace && <span>· {client.birthplace}</span>}
                   {client.status === "archived" && (
-                    <Badge variant="secondary" className="ml-1 bg-white/10 text-white hover:bg-white/20">Arquivado</Badge>
+                    <Badge
+                      variant="secondary"
+                      className="ml-1 bg-white/10 text-white hover:bg-white/20"
+                    >
+                      Arquivado
+                    </Badge>
                   )}
                 </div>
               </div>
             </div>
-            
+
             <div className="flex flex-wrap gap-2 mt-2">
-              <Button variant="outline" onClick={() => setEditing(true)} className="border-white/20 text-white hover:bg-white/10 hover:text-white">
+              <Button
+                variant="outline"
+                onClick={() => setEditing(true)}
+                className="border-white/20 text-white hover:bg-white/10 hover:text-white"
+              >
                 <Pencil className="size-4 mr-2" /> Editar
               </Button>
-              <Button variant="outline" onClick={() => toggleArchive.mutate()} className="border-white/20 text-white hover:bg-white/10 hover:text-white">
+              <Button
+                variant="outline"
+                onClick={() => toggleArchive.mutate()}
+                className="border-white/20 text-white hover:bg-white/10 hover:text-white"
+              >
                 {client.status === "active" ? (
-                  <><Archive className="size-4 mr-2" /> Arquivar</>
+                  <>
+                    <Archive className="size-4 mr-2" /> Arquivar
+                  </>
                 ) : (
-                  <><ArchiveRestore className="size-4 mr-2" /> Reativar</>
+                  <>
+                    <ArchiveRestore className="size-4 mr-2" /> Reativar
+                  </>
                 )}
               </Button>
               <Button
@@ -187,21 +205,48 @@ function ClientDossierPage() {
       <div className="container-liz -mt-6 relative z-20">
         <Tabs defaultValue="genogram" className="w-full">
           <TabsList className="w-full justify-start h-auto p-1 bg-white border border-border rounded-md shadow-sm overflow-x-auto flex-nowrap">
-            <TabsTrigger value="overview" className="flex items-center gap-2 py-2.5 px-4 rounded-sm data-[state=active]:bg-lavender-soft data-[state=active]:text-plum">
+            <TabsTrigger
+              value="overview"
+              className="flex items-center gap-2 py-2.5 px-4 rounded-sm data-[state=active]:bg-lavender-soft data-[state=active]:text-plum"
+            >
               <FileText className="size-4" /> Visão geral
             </TabsTrigger>
-            <TabsTrigger value="genogram" className="flex items-center gap-2 py-2.5 px-4 rounded-sm data-[state=active]:bg-lavender-soft data-[state=active]:text-plum">
+            <TabsTrigger
+              value="genogram"
+              className="flex items-center gap-2 py-2.5 px-4 rounded-sm data-[state=active]:bg-lavender-soft data-[state=active]:text-plum"
+            >
               <TreePine className="size-4" /> Genossociograma
             </TabsTrigger>
-            <TabsTrigger value="timeline" className="flex items-center gap-2 py-2.5 px-4 rounded-sm data-[state=active]:bg-lavender-soft data-[state=active]:text-plum">
+            <TabsTrigger
+              value="timeline"
+              className="flex items-center gap-2 py-2.5 px-4 rounded-sm data-[state=active]:bg-lavender-soft data-[state=active]:text-plum"
+            >
               <History className="size-4" /> Linha do tempo
             </TabsTrigger>
-            <TabsTrigger value="patterns" className="flex items-center gap-2 py-2.5 px-4 rounded-sm data-[state=active]:bg-lavender-soft data-[state=active]:text-plum">
+            <TabsTrigger
+              value="patterns"
+              className="flex items-center gap-2 py-2.5 px-4 rounded-sm data-[state=active]:bg-lavender-soft data-[state=active]:text-plum"
+            >
               <Activity className="size-4" /> Padrões
             </TabsTrigger>
-            <TabsTrigger value="intake" className="py-2.5 px-4 rounded-sm data-[state=active]:bg-lavender-soft data-[state=active]:text-plum">Anamnese</TabsTrigger>
-            <TabsTrigger value="sessions" className="py-2.5 px-4 rounded-sm data-[state=active]:bg-lavender-soft data-[state=active]:text-plum">Sessões</TabsTrigger>
-            <TabsTrigger value="clan" className="py-2.5 px-4 rounded-sm data-[state=active]:bg-lavender-soft data-[state=active]:text-plum">Planilha</TabsTrigger>
+            <TabsTrigger
+              value="intake"
+              className="py-2.5 px-4 rounded-sm data-[state=active]:bg-lavender-soft data-[state=active]:text-plum"
+            >
+              Anamnese
+            </TabsTrigger>
+            <TabsTrigger
+              value="sessions"
+              className="py-2.5 px-4 rounded-sm data-[state=active]:bg-lavender-soft data-[state=active]:text-plum"
+            >
+              Sessões
+            </TabsTrigger>
+            <TabsTrigger
+              value="clan"
+              className="py-2.5 px-4 rounded-sm data-[state=active]:bg-lavender-soft data-[state=active]:text-plum"
+            >
+              Planilha
+            </TabsTrigger>
           </TabsList>
 
           <div className="mt-8">
@@ -230,7 +275,11 @@ function ClientDossierPage() {
                     <Panel title="Tags">
                       <div className="flex flex-wrap gap-2">
                         {client.tags.map((t) => (
-                          <Badge key={t} variant="secondary" className="font-semibold px-2 py-1 bg-background border border-border">
+                          <Badge
+                            key={t}
+                            variant="secondary"
+                            className="font-semibold px-2 py-1 bg-background border border-border"
+                          >
                             {t}
                           </Badge>
                         ))}
@@ -267,7 +316,9 @@ function ClientDossierPage() {
                           </strong>
                         </p>
                         {client.consent_notes && (
-                          <p className="mt-2 text-[12px] text-muted-foreground">{client.consent_notes}</p>
+                          <p className="mt-2 text-[12px] text-muted-foreground">
+                            {client.consent_notes}
+                          </p>
                         )}
                       </>
                     ) : (
@@ -374,13 +425,22 @@ function Panel({
   accent?: "lavender" | "gold" | "plum";
   children: React.ReactNode;
 }) {
-  const accentClass = accent === "lavender" ? "accent-bar-lavender" : accent === "gold" ? "accent-bar-gold" : accent === "plum" ? "accent-bar-plum" : "";
-  
+  const accentClass =
+    accent === "lavender"
+      ? "accent-bar-lavender"
+      : accent === "gold"
+        ? "accent-bar-gold"
+        : accent === "plum"
+          ? "accent-bar-plum"
+          : "";
+
   return (
     <section className={`rounded-sm border border-border bg-white p-6 shadow-sm ${accentClass}`}>
       <div className="mb-4 flex items-center gap-2 border-b border-border/50 pb-2">
         {icon}
-        <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">{title}</h3>
+        <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+          {title}
+        </h3>
       </div>
       {children}
     </section>
@@ -415,7 +475,9 @@ function ComingSoon({
         <Icon className="size-6 text-lavender" />
       </div>
       <p className="mt-4 font-serif text-2xl font-bold text-primary">{title}</p>
-      <p className="mx-auto mt-2 max-w-md text-[14px] text-muted-foreground leading-relaxed">{body}</p>
+      <p className="mx-auto mt-2 max-w-md text-[14px] text-muted-foreground leading-relaxed">
+        {body}
+      </p>
     </div>
   );
 }

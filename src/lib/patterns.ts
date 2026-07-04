@@ -8,8 +8,7 @@
 import type { Database } from "@/integrations/supabase/types";
 
 export type PersonRow = Database["public"]["Tables"]["genogram_persons"]["Row"];
-export type RelationshipRow =
-  Database["public"]["Tables"]["genogram_relationships"]["Row"];
+export type RelationshipRow = Database["public"]["Tables"]["genogram_relationships"]["Row"];
 
 export type LifeEvent = {
   date: string; // YYYY-MM-DD
@@ -110,8 +109,7 @@ export function buildTimeline(persons: PersonRow[]): TimelineItem[] {
       });
     }
     if (p.death_date) {
-      const age =
-        p.birth_date && p.death_date ? ageAt(p.birth_date, p.death_date) : null;
+      const age = p.birth_date && p.death_date ? ageAt(p.birth_date, p.death_date) : null;
       items.push({
         date: p.death_date,
         year: yearOf(p.death_date) ?? 0,
@@ -153,9 +151,7 @@ export function detectPatterns(
   // 1) Mesma idade de falecimento (± 2 anos)
   const deathAges = persons
     .map((p) =>
-      p.birth_date && p.death_date
-        ? { p, age: ageAt(p.birth_date, p.death_date) }
-        : null,
+      p.birth_date && p.death_date ? { p, age: ageAt(p.birth_date, p.death_date) } : null,
     )
     .filter((x): x is { p: PersonRow; age: number } => !!x && x.age !== null);
 
@@ -249,8 +245,7 @@ export function detectPatterns(
   // 5) Rupturas emocionais concentradas
   const ruptures = relationships.filter(
     (r) =>
-      r.relationship_type === "emotional" &&
-      ["rupture", "conflict"].includes(r.qualifier ?? ""),
+      r.relationship_type === "emotional" && ["rupture", "conflict"].includes(r.qualifier ?? ""),
   );
   if (ruptures.length >= 2) {
     const involved = new Set<string>();
@@ -332,10 +327,7 @@ export function detectPatterns(
   return patterns;
 }
 
-function groupBy<T, K extends string>(
-  arr: T[],
-  keyFn: (t: T) => K,
-): [K, T[]][] {
+function groupBy<T, K extends string>(arr: T[], keyFn: (t: T) => K): [K, T[]][] {
   const map = new Map<K, T[]>();
   for (const item of arr) {
     const k = keyFn(item);
