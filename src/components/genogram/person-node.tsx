@@ -69,9 +69,9 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
           "relative flex size-[72px] items-center justify-center border-[3px] bg-card font-serif transition-all duration-150",
           shapeClass,
           borderColor,
-          // Proband: borda dupla marcante
+          // Proband: destaque visual maior (cliente como centro)
           d.is_proband
-            ? "shadow-[0_0_0_3px_white,0_0_0_6px_var(--color-lavender)] scale-110"
+            ? "shadow-[0_0_0_4px_white,0_0_0_8px_var(--color-plum)] scale-125 z-10"
             : "shadow-sm",
           selected && "scale-105 ring-2 ring-lavender ring-offset-2 ring-offset-background",
         )}
@@ -112,8 +112,8 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
           </p>
         )}
         {d.is_proband && (
-          <span className="mt-0.5 inline-block rounded bg-lavender/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-lavender">
-            Paciente
+          <span className="mt-1 inline-block rounded bg-plum/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-plum">
+            Cliente
           </span>
         )}
       </div>

@@ -74,10 +74,14 @@ const RULES: TagRule[] = [
   { tag: "Bisavó paterna (mãe do avô)", keywords: ["bisavoa", "bisaba", "great-grandmother", "great-grandma"] },
 
   // ── IRMÃOS DOS AVÔS (tios-avós) ────────────────────────────
-  { tag: "Irmã(o) do avô paterno", keywords: ["irmao do avo paterno", "irma do avo paterno", "tio avo paterno", "grand-uncle paternal"] },
-  { tag: "Irmã(o) da avó paterna", keywords: ["irmao da avo paterna", "irma da avo paterna", "tia avo paterna", "grand-aunt paternal"] },
+  { tag: "Irmã(o) do avô paterno", keywords: ["irmao do avo paterno", "irma da avo paterna", "irma do avo paterno", "tio avo paterno", "grand-uncle paternal", "irmaos do avo"] },
+  { tag: "Irmã(o) da avó paterna", keywords: ["irmao da avo paterna", "irma da avo paterna", "tia avo paterna", "grand-aunt paternal", "irmaos da avo"] },
   { tag: "Irmã(o) do avô materno", keywords: ["irmao do avo materno", "irma do avo materno", "tio avo materno", "grand-uncle maternal"] },
   { tag: "Irmã(o) da avó materna", keywords: ["irmao da avo materna", "irma da avo materna", "tia avo materna", "grand-aunt maternal"] },
+
+  // ── IRMÃOS DOS BISAVÔS ──────────────────────────────────────
+  { tag: "Irmã(o) do bisavô paterno", keywords: ["irmao do bisavo paterno", "irmaos do bisavo", "irmaos da bisavo", "irmao da bisavo", "irma da bisavo", "irmaos da bisavo paterna"] },
+  { tag: "Irmã(o) do bisavô materno", keywords: ["irmao do bisavo materno", "irmaos do bisavo materno", "irmaos da bisavo materna", "irmao da bisavo materna", "irma da bisavo materna"] },
 
   // ── CÔNJUGE / PARCEIRO(A) ───────────────────────────────────
   { tag: "Cônjuge", keywords: ["conjuge", "esposo", "esposa", "marido", "mulher", "parceiro", "parceira", "namorado", "namorada", "companheiro", "companheira", "husband", "wife", "partner", "spouse"] },
@@ -103,13 +107,22 @@ export function smartNormalizeRelationship(input: string | null | undefined): st
   }
 
   // Busca por inclusão (o texto normalizado CONTÉM a keyword)
+  // Prioriza o keyword mais LONGO para evitar que "irmao" dê match em "irmao da bisavo"
+  let bestMatch: TagRule | null = null;
+  let bestMatchLen = 0;
+
   for (const rule of RULES) {
     for (const kw of rule.keywords) {
       if (normalized.includes(kw) || kw.includes(normalized)) {
-        return rule.tag;
+        if (kw.length > bestMatchLen) {
+          bestMatchLen = kw.length;
+          bestMatch = rule;
+        }
       }
     }
   }
+
+  if (bestMatch) return bestMatch.tag;
 
   // Sem match: retorna o original (o sistema vai ignorar na árvore mas preserva o dado)
   return input.trim();

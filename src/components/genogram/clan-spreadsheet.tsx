@@ -280,19 +280,35 @@ export function ClanSpreadsheet({ clientId }: Props) {
             )
           : false;
 
+        let currentContext = "Consulente";
+
         // Normalizar e filtrar: skip linhas sem nenhum dado útil
         const inserts = parsedRows
           .filter(r => r.length > 1)
           .map(row => {
             const [nome, parentesco, nascimento, gestacao, morte, enfermidades, profissao, vicios, temperamento, ordem, obs] = row;
-            // Normaliza o parentesco para a tag canônica do sistema
-            const relCanonical = parentesco?.trim()
-              ? smartNormalizeRelationship(parentesco.trim())
-              : null;
+            
+            let rawRel = parentesco?.trim() || "";
+            const lowerRel = rawRel.toLowerCase();
+            
+            // Se for um ancestral direto, salva como contexto atual
+            if (rawRel && !lowerRel.includes("irmã") && !lowerRel.includes("irmão")) {
+                currentContext = rawRel;
+            } 
+            // Se for SÓ "irmãos" genérico abaixo de um ancestral, injeta o contexto para o sistema entender
+            else if (lowerRel === "irmãos" || lowerRel === "irmãs" || lowerRel === "irmão" || lowerRel === "irmã" || lowerRel === "irmao" || lowerRel === "irma" || lowerRel === "irmaos") {
+                if (currentContext !== "Consulente" && currentContext !== "Paciente") {
+                    rawRel = `Irmão(ã) do(a) ${currentContext}`;
+                }
+            }
+
+            // Apenas para inferir o gênero corretamente no momento do import
+            const relCanonical = rawRel ? smartNormalizeRelationship(rawRel) : null;
+
             return {
               client_id: clientId,
               full_name: nome?.trim() || "",
-              relationship_to_proband: relCanonical,
+              relationship_to_proband: rawRel || null, // Mantém a nomenclatura que o usuário digitou (com o contexto injetado se necessário)
               gender: inferGenderFromRelationship(relCanonical ?? "") || "unknown",
               birth_date: parseDateString(nascimento),
               gestational_weeks: gestacao?.trim() || null,

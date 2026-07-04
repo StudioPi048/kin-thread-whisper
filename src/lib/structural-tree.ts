@@ -133,6 +133,12 @@ export function computeStructuralEdges(persons: PersonRow[]): Edge[] {
     get("Irmã(o) da avó paterna").forEach((p, i) => {
       if (avoPatF) edges.push(createEdge(`struct_irmao_avopatf_${i}`, p.id, avoPatF.id, "parent"));
     });
+
+    // Irmãos dos bisavós paternos
+    get("Irmã(o) do bisavô paterno").forEach((p, i) => {
+      if (bp1) edges.push(createEdge(`struct_irmao_bisavo_pat_${i}`, p.id, bp1.id, "parent"));
+      else if (bp3) edges.push(createEdge(`struct_irmao_bisavo_pat_alt_${i}`, p.id, bp3.id, "parent"));
+    });
   }
 
   // ── RAMO MATERNO ──────────────────────────────────────────
@@ -166,11 +172,18 @@ export function computeStructuralEdges(persons: PersonRow[]): Edge[] {
       if (bm3 && bm4) edges.push(createEdge("struct_union_bisavos_mat2", bm3.id, bm4.id, "union"));
     }
 
+    // Irmãos dos avós maternos
     get("Irmã(o) do avô materno").forEach((p, i) => {
       if (avoMat) edges.push(createEdge(`struct_irmao_avomat_${i}`, p.id, avoMat.id, "parent"));
     });
     get("Irmã(o) da avó materna").forEach((p, i) => {
       if (avoMatF) edges.push(createEdge(`struct_irmao_avomatf_${i}`, p.id, avoMatF.id, "parent"));
+    });
+
+    // Irmãos dos bisavós maternos
+    get("Irmã(o) do bisavô materno").forEach((p, i) => {
+      if (bm1) edges.push(createEdge(`struct_irmao_bisavo_mat_${i}`, p.id, bm1.id, "parent"));
+      else if (bm3) edges.push(createEdge(`struct_irmao_bisavo_mat_alt_${i}`, p.id, bm3.id, "parent"));
     });
   }
 
