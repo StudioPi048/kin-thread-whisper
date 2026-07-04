@@ -188,10 +188,21 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
 
     // Aguardar o próximo frame para o ReactFlow renderizar antes de calcular fitView
     setTimeout(() => {
+      let focused = false;
       if (probandId) {
-        // Foca na área do proband com zoom confortável, depois faz fitView de tudo
+        const probandNode = layoutedNodes.find((n) => n.id === probandId);
+        if (probandNode) {
+          // Centraliza EXATAMENTE no nó do paciente
+          const x = probandNode.position.x + NODE_W / 2;
+          const y = probandNode.position.y + NODE_H / 2;
+          rfInstance.setCenter(x, y, { zoom: 0.9, duration: 800 });
+          focused = true;
+        }
+      }
+      
+      if (!focused) {
+        // Fallback: tenta fitView geral
         rfInstance.fitView({
-          nodes: layoutedNodes,
           padding: 0.25,
           duration: 600,
           minZoom: 0.3,
