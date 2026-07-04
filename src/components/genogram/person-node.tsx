@@ -144,17 +144,18 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
         className="!size-2.5 !rounded-sm !border-2 !border-card !bg-lavender opacity-0"
       />
       <Handle
-        type="source"
+        type="target"
         position={Position.Left}
         id="left"
         className="!size-2.5 !rounded-sm !border-2 !border-card !bg-lavender opacity-0"
       />
       <Handle
-        type="target"
+        type="source"
         position={Position.Right}
         id="right"
         className="!size-2.5 !rounded-sm !border-2 !border-card !bg-lavender opacity-0"
       />
+
     </div>
   );
 }
