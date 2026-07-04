@@ -324,6 +324,7 @@ export type Database = {
       }
       clients: {
         Row: {
+          avatar_url: string | null
           birth_date: string | null
           birthplace: string | null
           clinical_notes: string | null
@@ -343,6 +344,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          avatar_url?: string | null
           birth_date?: string | null
           birthplace?: string | null
           clinical_notes?: string | null
@@ -362,6 +364,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          avatar_url?: string | null
           birth_date?: string | null
           birthplace?: string | null
           clinical_notes?: string | null
