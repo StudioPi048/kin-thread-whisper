@@ -126,27 +126,6 @@ function AppHome() {
             color="lavender"
           />
         </div>
-
-        {/* Roadmap */}
-        <div className="mt-12 border-l-[5px] border-l-lavender glass-card rounded-r-[1rem] p-8 shadow-sm hover-lift">
-          <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-muted-foreground">
-            Roadmap beta
-          </p>
-          <h2 className="mt-2 font-serif text-2xl font-bold text-primary">Próximas entregas</h2>
-          <ul className="mt-4 space-y-2">
-            {[
-              "Dossiê multi-dimensional do cliente",
-              "Genossociograma interativo com React Flow",
-              "Prontuário por voz com transcrição automática",
-              "Motor de padrões transgeracionais v1",
-            ].map((item) => (
-              <li key={item} className="flex items-start gap-2 text-[15px] text-muted-foreground">
-                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-lavender" />
-                {item}
-              </li>
-            ))}
-          </ul>
-        </div>
       </div>
     </div>
   );
