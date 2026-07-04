@@ -12,6 +12,7 @@ export interface PersonNodeData {
   is_deceased: boolean;
   is_proband: boolean;
   notes?: string | null;
+  relationship_to_proband?: string | null;
   [key: string]: unknown;
 }
 
