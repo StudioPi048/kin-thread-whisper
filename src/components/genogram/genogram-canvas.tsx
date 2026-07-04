@@ -559,7 +559,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
       {/* ── CANVAS ──────────────────────────────────────────── */}
       <div className="relative" style={{ height: "80vh" }}>
         {!query.isLoading && persons.length > 0 && (
-          <div className="pointer-events-none absolute left-3 top-[47%] z-10 hidden w-[170px] -translate-y-1/2 flex-col overflow-hidden rounded-sm border border-border/70 bg-background/92 shadow-md backdrop-blur-sm md:flex">
+          <div className="pointer-events-none absolute left-3 top-3 z-10 hidden w-[170px] flex-col overflow-hidden rounded-sm border border-border/70 bg-background/92 shadow-md backdrop-blur-sm md:flex">
             {[
               ["Cliente", "ponto de partida"],
               ["Geração 1", "pais, irmãos e tios"],
