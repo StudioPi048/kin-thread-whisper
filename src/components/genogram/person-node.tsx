@@ -133,7 +133,7 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
         )}
         {d.is_proband && (
           <span className="mt-1.5 inline-block rounded bg-plum px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.15em] text-white">
-            Cliente
+            Paciente
           </span>
         )}
       </div>

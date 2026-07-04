@@ -17,13 +17,16 @@ function clean(s: string | null | undefined): string {
 }
 
 function createEdge(id: string, source: string, target: string, type: "union" | "parent"): Edge {
+  const isUnion = type === "union";
   return {
     id,
     source,
     target,
-    type: "smoothstep",
+    sourceHandle: isUnion ? "right" : undefined,
+    targetHandle: isUnion ? "left" : undefined,
+    type: "step",
     style: {
-      stroke: type === "union" ? "var(--color-gold)" : "var(--color-plum)",
+      stroke: isUnion ? "var(--color-gold)" : "var(--color-plum)",
       strokeWidth: 2,
     },
     data: { isStructural: true },

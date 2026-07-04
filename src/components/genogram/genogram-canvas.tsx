@@ -40,7 +40,7 @@ function GenerationRuler() {
   return (
     <div className="w-[188px] overflow-hidden rounded-md border border-plum/40 bg-plum/95 shadow-lg">
       {[
-        ["Cliente", "ponto de partida"],
+        ["Paciente", "ponto de partida"],
         ["Geração 1", "pais e tios"],
         ["Geração 2", "avós e tios-avós"],
         ["Geração 3", "bisavós"],
@@ -525,7 +525,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
           <span className="text-foreground/80">Falecido</span>
         </span>
         <span className="ml-auto text-plum font-bold uppercase tracking-[0.1em] text-[11px]">
-          Cliente destacado em ameixa
+          Paciente destacado em ameixa
         </span>
       </div>
 
@@ -622,7 +622,7 @@ function relToEdge(r: RelRow): Edge {
     id: r.id,
     source: r.from_person_id,
     target: r.to_person_id,
-    type: "smoothstep",
+    type: "step",
     label: relationshipLabel(r.relationship_type, r.qualifier),
     labelStyle: {
       fontSize: 11,
