@@ -382,7 +382,14 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     generation: number
   ): Block {
     const FAMILY_GAP = 40; 
-    const rightOffsetX = leftBlock.width + (leftBlock.width > 0 && rightBlock.width > 0 ? FAMILY_GAP : 0);
+    let rightOffsetX = leftBlock.width + (leftBlock.width > 0 && rightBlock.width > 0 ? FAMILY_GAP : 0);
+    // TIGHT LAYOUT FIX: If both blocks have a childTarget, we can pull them closer 
+    // to prevent massive empty gaps, as long as it doesn't cause negative coordinates.
+    if (leftBlock.childTargetX !== undefined && rightBlock.childTargetX !== undefined) {
+      const desiredOffset = leftBlock.childTargetX + HORIZONTAL_STEP + FAMILY_GAP - rightBlock.childTargetX;
+      // We use desiredOffset, but ensure we don't overlap the child targets themselves
+      rightOffsetX = Math.max(desiredOffset, leftBlock.childTargetX + HORIZONTAL_STEP - rightBlock.childTargetX);
+    }
     
     const combinedNodes = [
       ...leftBlock.nodes,
@@ -573,8 +580,8 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
           id: `direct_${e.id}`,
           source: e.target, 
           target: e.source, 
-          sourceHandle: "bottom",
-          targetHandle: "top",
+          sourceHandle: "top",
+          targetHandle: "bottom-target",
           type: "straightStep",
           style: { stroke: "var(--color-plum)", strokeWidth: 2 },
         });
