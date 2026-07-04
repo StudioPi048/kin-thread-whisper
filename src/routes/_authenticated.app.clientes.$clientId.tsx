@@ -133,22 +133,10 @@ function ClientDossierPage() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
 
-  if (isLoading) {
-    return (
-      <div className="container-liz py-12">
-        <div className="h-8 w-1/2 animate-pulse rounded bg-muted" />
-        <div className="mt-6 h-40 animate-pulse rounded-lg bg-muted/70" />
-      </div>
-    );
-  }
-
-  if (!client) return <ClientNotFound />;
-
   // Resolve stored avatar path to a signed URL (bucket is private).
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
     let cancelled = false;
-    const path = (client as { avatar_url?: string | null }).avatar_url;
+    const path = (client as { avatar_url?: string | null } | undefined)?.avatar_url;
     if (!path) {
       setAvatarUrl(null);
       return;
@@ -163,6 +151,17 @@ function ClientDossierPage() {
       cancelled = true;
     };
   }, [client]);
+
+  if (isLoading) {
+    return (
+      <div className="container-liz py-12">
+        <div className="h-8 w-1/2 animate-pulse rounded bg-muted" />
+        <div className="mt-6 h-40 animate-pulse rounded-lg bg-muted/70" />
+      </div>
+    );
+  }
+
+  if (!client) return <ClientNotFound />;
 
   const display = client.preferred_name || client.full_name;
   const age = calcAge(client.birth_date);
