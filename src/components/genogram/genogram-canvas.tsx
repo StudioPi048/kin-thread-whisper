@@ -84,7 +84,7 @@ const NODE_W = 110;  // largura do shape + padding
 const NODE_H = 155;  // shape (72px) + label (nome + datas + badge ≈ 83px)
 const GENERATION_GAP = 260;
 const GENERATION_BAND_HEIGHT = 210;
-const HORIZONTAL_GAP = 110;
+const HORIZONTAL_GAP = 78;
 
 const GENERATION_COPY: Record<number, { label: string; subtitle: string }> = {
   0: { label: "Cliente", subtitle: "ponto de partida" },
@@ -381,6 +381,16 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
         minZoom: 0.42,
         maxZoom: 0.86,
       });
+
+      if (probandId) {
+        const probandNode = layoutedNodes.find((node) => node.id === probandId);
+        if (probandNode) {
+          rfInstance.setCenter(probandNode.position.x + NODE_W / 2, GENERATION_GAP, {
+            zoom: 0.58,
+            duration: 500,
+          });
+        }
+      }
     }, 50);
   }, [query.data, setNodes, setEdges, rfInstance]);
 
