@@ -28,22 +28,22 @@ const ESSENTIAL_BOOKS = [
     title: "A Síndrome dos Ancestrais",
     author: "Anne Ancelin Schützenberger",
     desc: "A bíblia da psicogenealogia. Introduz a síndrome de aniversário e a transmissão transgeracional do trauma.",
-    color: "bg-[#1E0A3C]",
-    textColor: "text-white",
+    color: "bg-plum",
+    textColor: "text-primary-foreground",
   },
   {
     title: "Metagenealogia",
     author: "Alejandro Jodorowsky",
     desc: "A árvore como arte e cura. A visão psicomágica e os 4 centros do indivíduo na leitura do sistema.",
-    color: "bg-[#A78BFA]",
-    textColor: "text-[#1E0A3C]",
+    color: "bg-lavender",
+    textColor: "text-primary",
   },
   {
     title: "O Casca de Noz",
     author: "Nicolas Abraham & Maria Torok",
     desc: "A teoria do 'Fantasma' e da 'Cripta'. Segredos de família não ditos que assombram as gerações futuras.",
-    color: "bg-[#D4A843]",
-    textColor: "text-[#1E0A3C]",
+    color: "bg-gold",
+    textColor: "text-primary",
   },
 ];
 
@@ -153,7 +153,7 @@ function BibliotecaPage() {
             {KEY_CONCEPTS.map((concept) => (
               <div
                 key={concept.term}
-                className="border-l-[4px] border-l-lavender bg-white p-5 rounded-r-[1rem] shadow-sm hover-lift"
+                className="border-l-[4px] border-l-lavender glass-card p-5 rounded-r-[1rem] shadow-sm hover-lift"
               >
                 <h4 className="font-bold text-primary text-[15px]">{concept.term}</h4>
                 <p className="text-[13px] text-muted-foreground mt-1 leading-relaxed">
@@ -178,7 +178,7 @@ function BibliotecaPage() {
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="Buscar (ex: lealdade, luto, Hellinger)"
-                className="pl-9 h-10 bg-white"
+                className="pl-9 h-10"
               />
             </div>
           </div>

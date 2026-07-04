@@ -250,7 +250,7 @@ function ClientCard({
   const display = client.preferred_name || client.full_name;
 
   return (
-    <article className="group relative flex h-full flex-col bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 accent-bar-lavender">
+    <article className="group relative flex h-full flex-col glass-card rounded-[1rem] hover-lift accent-bar-lavender">
       <div className="flex items-start gap-3 p-5">
         {/* Avatar lavanda */}
         <div className="flex size-11 shrink-0 items-center justify-center rounded-md bg-lavender font-serif text-base font-bold text-white">
@@ -348,7 +348,7 @@ function EmptyState({
 }) {
   if (hasQuery) {
     return (
-      <div className="border-l-[5px] border-l-muted bg-white p-16 text-center shadow-sm">
+      <div className="border-l-[5px] border-l-muted glass-card rounded-r-[1rem] p-16 text-center shadow-sm">
         <p className="font-serif text-2xl font-bold text-primary">Nada encontrado</p>
         <p className="mt-2 text-[15px] text-muted-foreground">
           Tente outro termo ou remova o filtro.
@@ -357,7 +357,7 @@ function EmptyState({
     );
   }
   return (
-    <div className="flex flex-col md:flex-row items-center border-l-[5px] border-l-lavender bg-white shadow-sm overflow-hidden">
+    <div className="flex flex-col md:flex-row items-center border-l-[5px] border-l-lavender glass-card rounded-r-[1rem] shadow-sm overflow-hidden">
       <div className="flex-1 p-10 md:p-16 text-center md:text-left">
         <p className="font-serif text-3xl font-bold text-primary">
           {tab === "active" ? "A jornada começa aqui" : "Nenhum dossiê arquivado"}

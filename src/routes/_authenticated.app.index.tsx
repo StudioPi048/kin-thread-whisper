@@ -72,7 +72,7 @@ function AppHome() {
             <div
               key={s.label}
               className={
-                "bg-white p-6 shadow-sm flex flex-col gap-3 " +
+                "glass-card rounded-[1rem] p-6 flex flex-col gap-3 hover-lift " +
                 (s.color === "lavender" ? "accent-bar-lavender" : "accent-bar-gold")
               }
             >
@@ -128,7 +128,7 @@ function AppHome() {
         </div>
 
         {/* Roadmap */}
-        <div className="mt-12 border-l-[5px] border-l-lavender bg-white p-8 shadow-sm">
+        <div className="mt-12 border-l-[5px] border-l-lavender glass-card rounded-r-[1rem] p-8 shadow-sm hover-lift">
           <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-muted-foreground">
             Roadmap beta
           </p>
@@ -169,7 +169,7 @@ function ModuleCard({
     <Link
       to={to}
       className={
-        "group flex flex-col bg-white p-6 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 " +
+        "group flex flex-col glass-card rounded-[1rem] p-6 hover-lift " +
         (color === "lavender"
           ? "border-l-[5px] border-l-transparent hover:border-l-lavender"
           : "border-l-[5px] border-l-transparent hover:border-l-gold")
