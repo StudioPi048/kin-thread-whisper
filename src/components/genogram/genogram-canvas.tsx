@@ -176,18 +176,18 @@ function directBloodCenter(canonical: string, orderIndex: number, isProband: boo
 
   if (c === "pai") return fatherX - orderIndex * COLLATERAL_GAP;
   if (c === "mãe" || c === "mae") return motherX + orderIndex * COLLATERAL_GAP;
-  if (c.startsWith("tio(a) paterno")) return fatherX - (orderIndex + 1) * COLLATERAL_GAP;
-  if (c.startsWith("tio(a) materno")) return motherX + (orderIndex + 1) * COLLATERAL_GAP;
+  if (c.startsWith("tio(a) paterno")) return fatherX - GRANDPARENT_PAIR_GAP / 2 - (orderIndex + 1) * COLLATERAL_GAP;
+  if (c.startsWith("tio(a) materno")) return motherX + GRANDPARENT_PAIR_GAP / 2 + (orderIndex + 1) * COLLATERAL_GAP;
 
   if (c === "avô paterno") return paternalGrandfatherX;
   if (c === "avó paterna") return paternalGrandmotherX;
   if (c === "avô materno") return maternalGrandfatherX;
   if (c === "avó materna") return maternalGrandmotherX;
   if (c.includes("irmã(o) do avô paterno") || c.includes("irmã(o) da avó paterna")) {
-    return paternalGrandfatherX - (orderIndex + 1) * COLLATERAL_GAP;
+    return paternalGrandfatherX - GRANDPARENT_PAIR_GAP / 2 - (orderIndex + 1) * COLLATERAL_GAP;
   }
   if (c.includes("irmã(o) do avô materno") || c.includes("irmã(o) da avó materna")) {
-    return maternalGrandmotherX + (orderIndex + 1) * COLLATERAL_GAP;
+    return maternalGrandmotherX + GRANDPARENT_PAIR_GAP / 2 + (orderIndex + 1) * COLLATERAL_GAP;
   }
 
   if (c.includes("bisavô paterno (pai do avô)")) return paternalGrandfatherX - GREAT_GRANDPARENT_PAIR_GAP / 2;
@@ -198,8 +198,8 @@ function directBloodCenter(canonical: string, orderIndex: number, isProband: boo
   if (c.includes("bisavó materna (mãe do avô)")) return maternalGrandfatherX + GREAT_GRANDPARENT_PAIR_GAP / 2;
   if (c.includes("bisavô materno (pai da avó)")) return maternalGrandmotherX - GREAT_GRANDPARENT_PAIR_GAP / 2;
   if (c.includes("bisavó materna (mãe da avó)")) return maternalGrandmotherX + GREAT_GRANDPARENT_PAIR_GAP / 2;
-  if (c.includes("irmã(o) do bisavô paterno")) return paternalGrandfatherX - (orderIndex + 2) * COLLATERAL_GAP;
-  if (c.includes("irmã(o) do bisavô materno")) return maternalGrandmotherX + (orderIndex + 2) * COLLATERAL_GAP;
+  if (c.includes("irmã(o) do bisavô paterno")) return paternalGrandfatherX - GRANDPARENT_PAIR_GAP / 2 - (orderIndex + 1) * COLLATERAL_GAP;
+  if (c.includes("irmã(o) do bisavô materno")) return maternalGrandMotherX + GRANDPARENT_PAIR_GAP / 2 + (orderIndex + 1) * COLLATERAL_GAP;
 
   if ((c.includes("irmã(o)") || c.startsWith("irmã") || c.startsWith("irma")) && !c.includes("av")) {
     return alternatingCenter(0, orderIndex);
