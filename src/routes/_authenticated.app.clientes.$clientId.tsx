@@ -1,4 +1,14 @@
 import { useEffect, useState } from "react";
+
+import { lazy, Suspense } from "react";
+const ClientTimeline = lazy(() => import("@/components/clients/client-timeline").then(m => ({ default: m.ClientTimeline })));
+const CaseDashboard = lazy(() => import("@/components/clients/case-dashboard").then(m => ({ default: m.CaseDashboard })));
+const PatternsPanel = lazy(() => import("@/components/clients/patterns-panel").then(m => ({ default: m.PatternsPanel })));
+const GenogramCanvas = lazy(() => import("@/components/genogram/genogram-canvas").then(m => ({ default: m.GenogramCanvas })));
+const ClanSpreadsheet = lazy(() => import("@/components/genogram/clan-spreadsheet").then(m => ({ default: m.ClanSpreadsheet })));
+const IntakeForm = lazy(() => import("@/components/intake/intake-form").then(m => ({ default: m.IntakeForm })));
+const SessionsPanel = lazy(() => import("@/components/sessions/sessions-panel").then(m => ({ default: m.SessionsPanel })));
+
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -35,14 +45,23 @@ import {
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { ClientFormDialog } from "@/components/clients/client-form-dialog";
-import { ClientTimeline } from "@/components/clients/client-timeline";
-import { CaseDashboard } from "@/components/clients/case-dashboard";
-import { PatternsPanel } from "@/components/clients/patterns-panel";
-import { GenogramCanvas } from "@/components/genogram/genogram-canvas";
-import { ClanSpreadsheet } from "@/components/genogram/clan-spreadsheet";
-import { IntakeForm } from "@/components/intake/intake-form";
-import { SessionsPanel } from "@/components/sessions/sessions-panel";
+
+
+
+
+
+
+
 import { calcAge, formatBirthDate, genderOptions, initialsFrom } from "@/lib/clients";
+
+
+function TabSuspense({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={<div className="flex h-64 items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-plum border-r-transparent"></div></div>}>
+      {children}
+    </Suspense>
+  );
+}
 
 export const Route = createFileRoute("/_authenticated/app/clientes/$clientId")({
   component: ClientDossierPage,
@@ -357,7 +376,7 @@ function ClientDossierPage() {
                 </section>
 
                 <aside className="space-y-6">
-                  <CaseDashboard clientId={client.id} />
+                  <TabSuspense><CaseDashboard clientId={client.id} /></TabSuspense>
                   <Panel title="Identificação">
                     <InfoRow label="Nome completo" value={client.full_name} />
                     <InfoRow label="Gênero" value={genderLabel} />
@@ -400,27 +419,27 @@ function ClientDossierPage() {
             </TabsContent>
 
             <TabsContent value="genogram">
-              <GenogramCanvas clientId={client.id} />
+              <TabSuspense><GenogramCanvas clientId={client.id} /></TabSuspense>
             </TabsContent>
 
             <TabsContent value="timeline">
-              <ClientTimeline clientId={client.id} />
+              <TabSuspense><ClientTimeline clientId={client.id} /></TabSuspense>
             </TabsContent>
 
             <TabsContent value="patterns">
-              <PatternsPanel clientId={client.id} />
+              <TabSuspense><PatternsPanel clientId={client.id} /></TabSuspense>
             </TabsContent>
 
             <TabsContent value="intake">
-              <IntakeForm clientId={client.id} professionalId={user.id} />
+              <TabSuspense><IntakeForm clientId={client.id} professionalId={user.id} /></TabSuspense>
             </TabsContent>
 
             <TabsContent value="clan">
-              <ClanSpreadsheet clientId={client.id} />
+              <TabSuspense><ClanSpreadsheet clientId={client.id} /></TabSuspense>
             </TabsContent>
 
             <TabsContent value="sessions">
-              <SessionsPanel clientId={client.id} />
+              <TabSuspense><SessionsPanel clientId={client.id} /></TabSuspense>
             </TabsContent>
 
 
