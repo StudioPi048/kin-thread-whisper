@@ -328,22 +328,36 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
     setEdges(layoutedEdges);
 
     setTimeout(() => {
-      rfInstance.fitView({
-        padding: 0.15,
-        duration: 700,
-        minZoom: 0.3,
-        maxZoom: 1.1,
-      });
+      // Enquadramento: cliente próximo ao topo do canvas, gerações descendo.
+      // Escolhemos zoom de acordo com a largura da árvore para manter legível
+      // em 1080p e 4K sem exigir zoom manual.
+      const container = document.querySelector(".react-flow") as HTMLElement | null;
+      const canvasW = container?.clientWidth ?? 1200;
+      const canvasH = container?.clientHeight ?? 800;
+
+      const xs = layoutedNodes.map((n) => n.position.x);
+      const treeW = Math.max(1, Math.max(...xs) - Math.min(...xs) + NODE_W);
+      const treeH = Math.max(1, (Math.max(3, ...Array.from({ length: layoutedNodes.length }, (_, i) => (layoutedNodes[i].data as { generation?: number }).generation ?? 0)) + 1) * GENERATION_GAP);
+
+      const zoomX = (canvasW * 0.92) / treeW;
+      const zoomY = (canvasH * 0.92) / treeH;
+      const zoom = Math.min(1.1, Math.max(0.28, Math.min(zoomX, zoomY)));
+
       if (probandId) {
         const probandNode = layoutedNodes.find((n) => n.id === probandId);
         if (probandNode) {
-          const x = probandNode.position.x + NODE_W / 2;
-          // Centralizar visualmente com o cliente no topo (offset vertical para baixo)
-          const y = probandNode.position.y + NODE_H / 2 + GENERATION_GAP * 0.9;
-          rfInstance.setCenter(x, y, { zoom: 0.75, duration: 700 });
+          const cx = probandNode.position.x + NODE_W / 2;
+          // Desloca o centro para BAIXO para que o cliente apareça no TOPO do canvas.
+          // Offset ≈ metade da altura visível em coords do flow, menos margem.
+          const halfVisibleY = canvasH / (2 * zoom);
+          const cy = probandNode.position.y + halfVisibleY - NODE_H;
+          rfInstance.setCenter(cx, cy, { zoom, duration: 600 });
+          return;
         }
       }
-    }, 80);
+      rfInstance.fitView({ padding: 0.12, duration: 600, minZoom: 0.28, maxZoom: 1.1 });
+    }, 120);
+
   }, [query.data, setNodes, setEdges, rfInstance]);
 
   const onConnect = useCallback(
