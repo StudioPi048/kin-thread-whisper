@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables, TablesUpdate } from "@/integrations/supabase/types";
 import * as XLSX from "xlsx";
 import { smartNormalizeRelationship, genealogicalOrder } from "@/lib/relationship-normalizer";
+import { ensureProband } from "@/lib/ensure-proband";
 
 type Person = Tables<"genogram_persons">;
 type Props = { clientId: string };
