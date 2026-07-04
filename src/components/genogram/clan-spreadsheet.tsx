@@ -164,38 +164,37 @@ export function ClanSpreadsheet({ clientId }: Props) {
           const workbook = XLSX.read(data, { type: "array", cellDates: true });
           const firstSheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[firstSheetName];
-          // Obter formato JSON de matriz (array of arrays)
-          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+          // cellDates:true garante que células de data do Excel virem como Date objects
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, cellDates: true }) as any[][];
           
           if (jsonData.length < 2) throw new Error("Arquivo vazio ou sem cabeçalho.");
           
-          // Ignorar cabeçalho, remover linhas totalmente vazias e converter tudo para string
           parsedRows = jsonData
             .slice(1)
             .filter(row => row.some(cell => cell !== undefined && cell !== null && String(cell).trim() !== ""))
             .map(row => 
               Array.from({ length: 11 }).map((_, i) => {
                 const cell = row[i];
+
+                // 1) Objeto Date nativo (cellDates:true funcionou)
                 if (cell instanceof Date) {
-                  // Objeto Date nativo (cellDates:true funcionou)
-                  const y = cell.getFullYear();
-                  const m = String(cell.getMonth() + 1).padStart(2, "0");
-                  const d = String(cell.getDate()).padStart(2, "0");
+                  const y = cell.getUTCFullYear();
+                  const m = String(cell.getUTCMonth() + 1).padStart(2, "0");
+                  const d = String(cell.getUTCDate()).padStart(2, "0");
                   return `${y}-${m}-${d}`;
                 }
+
+                // 2) Número serial do Excel (ex: 44927 = 2023-01-01)
+                // Fórmula: epoch Excel = 1899-12-30, epoch JS = 1970-01-01
+                // Diferença = 25569 dias. (serial - 25569) * 86400000 = ms JS
                 if (typeof cell === "number" && cell > 25000 && cell < 60000) {
-                  // Número serial do Excel (ex: 44927 = 01/01/2023)
-                  // Converte usando XLSX.SSF.parse_date_code
-                  try {
-                    const parsed = XLSX.SSF.parse_date_code(cell);
-                    const y = parsed.y;
-                    const m = String(parsed.m).padStart(2, "0");
-                    const d = String(parsed.d).padStart(2, "0");
-                    return `${y}-${m}-${d}`;
-                  } catch {
-                    return String(cell);
-                  }
+                  const jsDate = new Date((cell - 25569) * 86400000);
+                  const y = jsDate.getUTCFullYear();
+                  const m = String(jsDate.getUTCMonth() + 1).padStart(2, "0");
+                  const d = String(jsDate.getUTCDate()).padStart(2, "0");
+                  return `${y}-${m}-${d}`;
                 }
+
                 return cell !== undefined && cell !== null ? String(cell) : "";
               })
             );
@@ -562,10 +561,33 @@ function parseDateString(d?: string): string | null {
   // Aceita separadores /, -, ou . com espaços opcionais
   const parts = val.split(/[\/\-.]/).map((p) => p.trim()).filter(Boolean);
 
-  // DD/MM/YYYY ou DD/MM/YY (padrão brasileiro)
   if (parts.length === 3) {
-    let [dd, mm, yy] = parts;
-    if (!/^\d+$/.test(dd) || !/^\d+$/.test(mm) || !/^\d+$/.test(yy)) return null;
+    if (!parts.every(p => /^\d+$/.test(p))) return null;
+    const nums = parts.map(Number);
+
+    let dd: string, mm: string, yy: string;
+
+    // Detecta o formato pelo tamanho e range dos valores
+    // Se o primeiro número > 31, provavelmente é o ano (YYYY/MM/DD)
+    if (nums[0] > 31) {
+      [yy, mm, dd] = parts;
+    }
+    // Se o terceiro número > 31 ou tem 4 dígitos, é DD/MM/YYYY ou MM/DD/YYYY
+    else if (nums[2] > 31 || parts[2].length === 4) {
+      // Distingue DD/MM/YYYY de MM/DD/YYYY:
+      // Se o primeiro número > 12, é dia (não pode ser mês)
+      if (nums[0] > 12) {
+        [dd, mm, yy] = parts; // DD/MM/YYYY (brasileiro)
+      } else if (nums[1] > 12) {
+        [mm, dd, yy] = parts; // MM/DD/YYYY (americano)
+      } else {
+        // Ambíguo: assume brasileiro (DD/MM/YYYY) por ser o padrão local
+        [dd, mm, yy] = parts;
+      }
+    } else {
+      // Fallback: assume DD/MM/YY
+      [dd, mm, yy] = parts;
+    }
 
     // Ano com 2 dígitos: 00-30 → 2000-2030, 31-99 → 1931-1999
     if (yy.length === 2) {
