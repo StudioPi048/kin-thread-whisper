@@ -9,6 +9,7 @@ import {
   addEdge,
   useEdgesState,
   useNodesState,
+  useReactFlow,
   type Connection,
   type Edge,
   type EdgeMouseHandler,
@@ -46,20 +47,22 @@ export function GenogramCanvas(props: CanvasProps) {
   );
 }
 
-const nodeWidth = 90;
-const nodeHeight = 90;
+// Tamanho real do nó no DOM (shape 96px + label ~60px abaixo)
+// O Dagre precisa saber o espaço TOTAL que cada nó ocupa.
+const NODE_W = 100;  // largura do shape (ligeiramente maior que 96 para margem)
+const NODE_H = 160;  // shape (96) + label (nome + anos + badge ≈ 64px)
 
-const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
+const getLayoutedElements = (nodes: Node[], edges: Edge[], probandId?: string) => {
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
   
-  // Aumentamos o espaçamento horizontal e vertical para respiro da árvore familiar
-  // Usamos rankdir BT (Bottom-To-Top) porque na nossa lógica, Filhos apontam para Pais (source -> target).
-  // Se BT é usado, o Source (Filho/Consulente) ficará no Topo, e os Targets (Pais/Avós) ficarão Embaixo!
-  dagreGraph.setGraph({ rankdir: 'BT', nodesep: 140, edgesep: 60, ranksep: 120 });
+  // rankdir BT: source (Consulente/filhos) fica no TOPO, targets (pais/avós) ficam embaixo.
+  // nodesep: espaço horizontal entre nós do mesmo nível
+  // ranksep: espaço vertical entre gerações (aumentado para não sobrepar labels)
+  dagreGraph.setGraph({ rankdir: 'BT', nodesep: 60, edgesep: 20, ranksep: 100, marginx: 40, marginy: 40 });
 
   nodes.forEach((node) => {
-    dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
+    dagreGraph.setNode(node.id, { width: NODE_W, height: NODE_H });
   });
 
   // 1. Identificar Uniões (casamentos)
@@ -106,14 +109,23 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
 
   dagre.layout(dagreGraph);
 
+  // Se há um proband, translacionar o canvas para que o proband fique em x=0
+  // Isso vai centralizar a árvore em torno do paciente-índice.
+  let probandX = 0;
+  if (probandId) {
+    const pNode = dagreGraph.node(probandId);
+    if (pNode) probandX = pNode.x;
+  }
+
   nodes.forEach((node) => {
     const nodeWithPosition = dagreGraph.node(node.id);
+    if (!nodeWithPosition) return;
     node.targetPosition = undefined as any; 
     node.sourcePosition = undefined as any;
 
     node.position = {
-      x: nodeWithPosition.x - nodeWidth / 2,
-      y: nodeWithPosition.y - nodeHeight / 2,
+      x: nodeWithPosition.x - NODE_W / 2 - probandX + 0, // centralizar em torno do proband
+      y: nodeWithPosition.y - NODE_H / 2,
     };
   });
 
@@ -149,6 +161,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
     editing?: RelRow | null;
   }>({ open: false });
   const [showGuide, setShowGuide] = useState(false);
+  const rfInstance = useReactFlow();
 
   useEffect(() => {
     if (!query.data) return;
@@ -185,11 +198,33 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
     // Filtramos os "nodes virtuais de casal" da lista visual (Eles existem no dagre apenas)
     const initialEdges = [...structuralEdges, ...manualEdges];
     
-    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(initialNodes, initialEdges);
+    // Encontrar o proband para centralizar o canvas nele
+    const proband = qualifiedPersons.find(p => p.is_proband) || qualifiedPersons[0];
+    const probandId = proband?.id;
+
+    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
+      initialNodes,
+      initialEdges,
+      probandId,
+    );
     
     setNodes(layoutedNodes);
     setEdges(layoutedEdges);
-  }, [query.data, setNodes, setEdges]);
+
+    // Aguardar o próximo frame para o ReactFlow renderizar antes de calcular fitView
+    setTimeout(() => {
+      if (probandId) {
+        // Foca na área do proband com zoom confortável, depois faz fitView de tudo
+        rfInstance.fitView({
+          nodes: layoutedNodes,
+          padding: 0.25,
+          duration: 600,
+          minZoom: 0.3,
+          maxZoom: 1.2,
+        });
+      }
+    }, 50);
+  }, [query.data, setNodes, setEdges, rfInstance]);
 
   const onConnect = useCallback(
     (conn: Connection) => {
@@ -354,7 +389,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
       </div>
 
       {/* ── CANVAS ──────────────────────────────────────────── */}
-      <div className="relative" style={{ height: "65vh" }}>
+      <div className="relative" style={{ height: "80vh" }}>
         {query.isLoading ? (
           <div className="flex h-full flex-col items-center justify-center gap-3">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-lavender border-t-transparent" />
