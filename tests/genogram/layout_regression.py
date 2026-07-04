@@ -68,7 +68,11 @@ async def restore_supabase_session(page: Page) -> None:
 
 
 async def collect_person_nodes(page: Page) -> list[dict]:
-    """Retorna {id, x, y, w, h, label_w, label_h, name, is_proband} para cada nó."""
+    """Retorna {id, x, y, w, h, label_w, label_h, name, is_proband} para cada nó.
+
+    Usa offsetWidth/Height para o label (tamanho intrínseco, ignora o
+    transform do React Flow) e getBoundingClientRect para posição na tela.
+    """
     return await page.evaluate(
         """
         () => {
@@ -76,9 +80,7 @@ async def collect_person_nodes(page: Page) -> list[dict]:
           return nodes.map(node => {
             const r = node.getBoundingClientRect();
             const labelEl = node.querySelector('p.font-sans, p');
-            const lr = labelEl ? labelEl.getBoundingClientRect() : { width: 0, height: 0 };
             const name = labelEl ? labelEl.textContent.trim() : '';
-            const badgeEl = node.querySelector('span');
             const isProband = Array.from(node.querySelectorAll('span'))
               .some(s => s.textContent.trim().toLowerCase() === 'cliente');
             return {
@@ -87,8 +89,9 @@ async def collect_person_nodes(page: Page) -> list[dict]:
               y: r.y + r.height / 2,
               w: r.width,
               h: r.height,
-              label_w: lr.width,
-              label_h: lr.height,
+              // offset* = tamanho intrínseco em px CSS, sem CSS transform
+              label_w: labelEl ? labelEl.offsetWidth : 0,
+              label_h: labelEl ? labelEl.offsetHeight : 0,
               name,
               is_proband: isProband,
             };
@@ -96,6 +99,7 @@ async def collect_person_nodes(page: Page) -> list[dict]:
         }
         """
     )
+
 
 
 async def run_viewport(
