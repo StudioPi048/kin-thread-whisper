@@ -141,7 +141,7 @@ export function GenogramCanvas(props: CanvasProps) {
 }
 
 // ── Tamanhos generosos, otimizados para leitura em 4K ────────
-const NODE_W = 170;   // Largura do nó (shape + label)
+const NODE_W = 160;   // Largura do nó (shape + label)
 const NODE_H = 210;   // Altura total do nó
 const GENERATION_GAP = 250;   // Distância vertical entre gerações
 const HORIZONTAL_STEP = NODE_W + 70; // Espaço horizontal entre nós de uma geração
@@ -331,11 +331,11 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     
     let unionCenter = topWidth > 0 ? topWidth / 2 : 0;
     if (husband && wife) {
-      unionCenter = (topNodes.indexOf(husband) * HORIZONTAL_STEP + topNodes.indexOf(wife) * HORIZONTAL_STEP + HORIZONTAL_STEP) / 2;
+      unionCenter = (topNodes.indexOf(husband) * HORIZONTAL_STEP + topNodes.indexOf(wife) * HORIZONTAL_STEP + NODE_W) / 2;
     } else if (husband) {
-      unionCenter = topNodes.indexOf(husband) * HORIZONTAL_STEP + HORIZONTAL_STEP / 2;
+      unionCenter = topNodes.indexOf(husband) * HORIZONTAL_STEP + NODE_W / 2;
     } else if (wife) {
-      unionCenter = topNodes.indexOf(wife) * HORIZONTAL_STEP + HORIZONTAL_STEP / 2;
+      unionCenter = topNodes.indexOf(wife) * HORIZONTAL_STEP + NODE_W / 2;
     }
 
     const bottomNodes = isHusbandSide 
@@ -349,9 +349,9 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     
     let childLocalCenter = bottomWidth > 0 ? bottomWidth / 2 : 0;
     if (child) {
-      childLocalCenter = bottomNodes.indexOf(child) * HORIZONTAL_STEP + HORIZONTAL_STEP / 2;
+      childLocalCenter = bottomNodes.indexOf(child) * HORIZONTAL_STEP + NODE_W / 2;
     } else if (bottomNodes.length > 0) {
-      childLocalCenter = isHusbandSide ? bottomWidth - HORIZONTAL_STEP / 2 : HORIZONTAL_STEP / 2;
+      childLocalCenter = isHusbandSide ? bottomWidth - HORIZONTAL_STEP + NODE_W / 2 : NODE_W / 2;
     }
     
     let topOffset = 0, bottomOffset = 0;
@@ -415,9 +415,9 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     const bottomWidth = bottomNodes.length * HORIZONTAL_STEP;
     let childLocalCenter = bottomWidth > 0 ? bottomWidth / 2 : 0;
     if (childTarget) {
-      childLocalCenter = bottomNodes.indexOf(childTarget) * HORIZONTAL_STEP + HORIZONTAL_STEP / 2;
+      childLocalCenter = bottomNodes.indexOf(childTarget) * HORIZONTAL_STEP + NODE_W / 2;
     } else if (bottomNodes.length > 0) {
-      childLocalCenter = isHusbandSide ? bottomWidth - HORIZONTAL_STEP / 2 : HORIZONTAL_STEP / 2;
+      childLocalCenter = isHusbandSide ? bottomWidth - HORIZONTAL_STEP + NODE_W / 2 : NODE_W / 2;
     }
     
     let topOffset = 0, bottomOffset = 0;
@@ -432,7 +432,7 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     
     let cTargetX = undefined;
     if (childTarget) {
-      cTargetX = bottomOffset + bottomNodes.indexOf(childTarget) * HORIZONTAL_STEP + HORIZONTAL_STEP / 2;
+      cTargetX = bottomOffset + bottomNodes.indexOf(childTarget) * HORIZONTAL_STEP + NODE_W / 2;
     }
     return {
       nodes: finalNodes,
