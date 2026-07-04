@@ -545,8 +545,28 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
       if (!parentEdgesByChild.has(edge.source)) parentEdgesByChild.set(edge.source, []);
       parentEdgesByChild.get(edge.source)!.push(edge);
     } else {
+      let finalSourceHandle = edge.sourceHandle;
+      let finalTargetHandle = edge.targetHandle;
+      
+      if (edge.style?.stroke === "var(--color-gold)") {
+        const sourceNode = layoutedNodes.find((n) => n.id === edge.source);
+        const targetNode = layoutedNodes.find((n) => n.id === edge.target);
+        
+        if (sourceNode && targetNode) {
+          if (sourceNode.position.x > targetNode.position.x) {
+            finalSourceHandle = "left";
+            finalTargetHandle = "right";
+          } else {
+            finalSourceHandle = "right";
+            finalTargetHandle = "left";
+          }
+        }
+      }
+
       otherEdges.push({
         ...edge,
+        sourceHandle: finalSourceHandle,
+        targetHandle: finalTargetHandle,
         type: edge.style?.stroke === "var(--color-gold)" ? "straightStep" : edge.type,
       });
     }
