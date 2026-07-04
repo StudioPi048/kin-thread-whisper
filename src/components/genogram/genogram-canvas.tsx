@@ -147,50 +147,45 @@ function rankFor(canonical: string, orderIndex: number): number {
  * Layout determinístico baseado em papéis familiares.
  * Não usa dagre para posicionamento: as regras clínicas do genossociograma
  * (pai à esquerda, mãe à direita) precisam de posicionamento controlado.
+ *
+ * INVARIANTE: cliente SEMPRE em y=0 (topo). Gerações descem em +y.
  */
 function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
-  // Agrupar por geração
+  // Agrupar por geração — cliente forçado a 0
   const byGeneration = new Map<number, Node[]>();
   for (const n of nodes) {
-    const g = generationForData(n.data);
+    const g = n.id === probandId ? 0 : Math.max(1, generationForData(n.data));
     if (!byGeneration.has(g)) byGeneration.set(g, []);
     byGeneration.get(g)!.push(n);
   }
-
-  const maxGeneration = Math.max(3, ...Array.from(byGeneration.keys()));
 
   // Calcular rank para cada nó
   type Placed = { node: Node; rank: number; canonical: string };
   const placedByGen = new Map<number, Placed[]>();
 
   byGeneration.forEach((generationNodes, generation) => {
-    // Índice sequencial por CATEGORIA (para múltiplos tios/irmãos ficarem lado a lado)
     const perCategory = new Map<string, number>();
     const placed: Placed[] = generationNodes.map((node) => {
       const d = node.data as PersonNodeData & { relationship_to_proband?: string | null };
-      const canonical = d.is_proband
+      const canonical = node.id === probandId
         ? "consulente"
         : smartNormalizeRelationship(d.relationship_to_proband);
       const category = canonical.toLowerCase();
       const idx = perCategory.get(category) ?? 0;
       perCategory.set(category, idx + 1);
-      const rank = d.is_proband ? 0 : rankFor(canonical, idx);
+      const rank = node.id === probandId ? 0 : rankFor(canonical, idx);
       return { node, rank, canonical };
     });
     placedByGen.set(generation, placed);
   });
 
-  // Para cada geração, ordenar por rank e distribuir com HORIZONTAL_STEP.
-  // Depois deslocar horizontalmente para alinhar o "núcleo" da geração com x=0.
   const layoutedNodes: Node[] = [];
 
   placedByGen.forEach((placed, generation) => {
     placed.sort((a, b) => a.rank - b.rank || a.node.id.localeCompare(b.node.id));
 
-    // Posições sequenciais
     const xs = placed.map((_, i) => i * HORIZONTAL_STEP);
 
-    // Deslocamento: alinhar núcleo com 0
     let anchorAvgX = 0;
     const coreCanonicals: string[] = generation === 0
       ? ["consulente"]
@@ -213,6 +208,7 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
       anchorAvgX = xs.reduce((s, x) => s + x, 0) / xs.length;
     }
 
+    // y = geração * gap — cliente (gen 0) no topo, ancestrais descendo
     const y = generation * GENERATION_GAP;
 
     placed.forEach((p, i) => {
@@ -224,7 +220,7 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     });
   });
 
-  // Garantir que o cliente esteja EXATAMENTE em x = -NODE_W/2 (centro em 0)
+  // Cliente exatamente em x=-NODE_W/2 (centro em 0)
   if (probandId) {
     const proband = layoutedNodes.find((n) => n.id === probandId);
     if (proband) {
@@ -239,6 +235,7 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
 
   return { nodes: layoutedNodes, edges };
 }
+
 
 function GenogramCanvasInner({ clientId }: CanvasProps) {
   const qc = useQueryClient();
