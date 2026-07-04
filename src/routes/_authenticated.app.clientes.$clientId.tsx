@@ -196,8 +196,8 @@ function ClientDossierPage() {
                 layoutId={`avatar-${client.id}`}
                 className="relative flex size-24 shrink-0 items-center justify-center rounded-md bg-lavender font-serif text-3xl font-bold text-white shadow-lg overflow-hidden group cursor-pointer"
               >
-                {avatarPreview ? (
-                  <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
                   <span>{initials}</span>
                 )}
