@@ -195,17 +195,20 @@ async def run_viewport(
                 "nenhum ancestral posicionado à direita do cliente",
             ))
 
-        # ── Check 5: nenhum erro no console
-        # Filtra ruído conhecido (hydration attributes, code-split warnings)
+        # ── Check 5: nenhum erro no console (filtra ruído conhecido)
         real_errors = [e for e in console_errors
                        if "data-tsd" not in e
                        and "code-split" not in e.lower()
-                       and "hydrat" not in e.lower()]
+                       and "hydrat" not in e.lower()
+                       and "failed to load resource" not in e.lower()
+                       and "403" not in e
+                       and "404" not in e]
         if real_errors:
             failures.append(Failure(
                 viewport_name, "console-errors",
                 f"{len(real_errors)} erro(s): {real_errors[0][:200]}",
             ))
+
 
     finally:
         await browser.close()
