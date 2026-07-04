@@ -212,14 +212,17 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[], probandId?: string) =
   const probandNodeBeforeCenter = probandId
     ? layoutedNodes.find((node) => node.id === probandId)
     : undefined;
-  const immediateFamily = byGeneration.get(1) ?? [];
-  if (probandNodeBeforeCenter && immediateFamily.length > 0) {
-    const generationOneCenter =
-      immediateFamily.reduce((sum, node) => sum + node.position.x + NODE_W / 2, 0) / immediateFamily.length;
+  if (probandNodeBeforeCenter) {
     const probandCenter = probandNodeBeforeCenter.position.x + NODE_W / 2;
-    const shift = probandCenter - generationOneCenter;
-    immediateFamily.forEach((node) => {
-      node.position.x += shift;
+    byGeneration.forEach((generationNodes, generation) => {
+      if (generation === 0 || generationNodes.length === 0) return;
+      const minGenerationX = Math.min(...generationNodes.map((node) => node.position.x));
+      const maxGenerationX = Math.max(...generationNodes.map((node) => node.position.x + NODE_W));
+      const generationCenter = (minGenerationX + maxGenerationX) / 2;
+      const shift = probandCenter - generationCenter;
+      generationNodes.forEach((node) => {
+        node.position.x += shift;
+      });
     });
   }
 
@@ -378,20 +381,6 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
         minZoom: 0.42,
         maxZoom: 0.86,
       });
-
-      if (probandId) {
-        const probandNode = layoutedNodes.find((node) => node.id === probandId);
-        if (probandNode) {
-          const bounds = rfInstance.getViewport();
-          rfInstance.setViewport(
-            {
-              ...bounds,
-              x: rfInstance.getViewport().x - (probandNode.position.x + NODE_W / 2) * bounds.zoom + 420,
-            },
-            { duration: 250 },
-          );
-        }
-      }
     }, 50);
   }, [query.data, setNodes, setEdges, rfInstance]);
 
