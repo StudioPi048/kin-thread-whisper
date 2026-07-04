@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, Trash2, Download, Table2, Upload, Sparkles } from "lucide-react";
+import { Loader2, Plus, Trash2, Download, Table2, Upload, Sparkles, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 
@@ -557,11 +557,19 @@ export function ClanSpreadsheet({ clientId }: Props) {
                       />
                     </Td>
                     <Td>
-                      <CellInput
-                        list="relationship-suggestions"
-                        value={r.relationship_to_proband ?? ""}
-                        onChange={(v) => scheduleSave(r.id, { relationship_to_proband: v })}
-                      />
+                      <div className="relative flex w-full items-center">
+                        <CellInput
+                          list="relationship-suggestions"
+                          value={r.relationship_to_proband ?? ""}
+                          onChange={(v) => scheduleSave(r.id, { relationship_to_proband: v })}
+                          className={(!r.relationship_to_proband?.trim() && r.full_name?.trim()) ? "pr-8 border-red-300 bg-red-50/30" : ""}
+                        />
+                        {(!r.relationship_to_proband?.trim() && r.full_name?.trim()) && (
+                          <div className="absolute right-2 text-red-500" title="Vínculo pendente! Esta pessoa não aparecerá conectada na árvore.">
+                            <AlertCircle className="size-4" />
+                          </div>
+                        )}
+                      </div>
                     </Td>
                     <Td>
                       <CellInput

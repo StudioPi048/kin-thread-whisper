@@ -216,9 +216,40 @@ function ClientDossierPage() {
                 <p className="text-[11px] font-bold uppercase tracking-[0.35em] text-lavender-mid">
                   Dossiê Clínico
                 </p>
-                <h1 className="mt-1 font-serif text-4xl font-bold text-white md:text-5xl">
-                  {display}
-                </h1>
+                <div className="flex items-center gap-3 mt-1">
+                  <h1 className="font-serif text-4xl font-bold text-white md:text-5xl">
+                    {display}
+                  </h1>
+                  <div className="flex items-center gap-1 opacity-60 hover:opacity-100 transition-opacity">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setEditing(true)}
+                      className="text-white hover:bg-white/10"
+                      title="Editar"
+                    >
+                      <Pencil className="size-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => toggleArchive.mutate()}
+                      className="text-white hover:bg-white/10"
+                      title={client.status === "active" ? "Arquivar" : "Reativar"}
+                    >
+                      {client.status === "active" ? <Archive className="size-4" /> : <ArchiveRestore className="size-4" />}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-red-300 hover:bg-red-500/20 hover:text-red-200"
+                      onClick={() => setDeleting(true)}
+                      title="Excluir"
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
+                </div>
                 <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-[14px] font-medium text-white/70">
                   {age !== null && <span className="text-white">{age} anos</span>}
                   {client.birth_date && <span>· {formatBirthDate(client.birth_date)}</span>}
@@ -235,37 +266,6 @@ function ClientDossierPage() {
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2 mt-2">
-              <Button
-                variant="outline"
-                onClick={() => setEditing(true)}
-                className="border-white/20 text-white hover:bg-white/10 hover:text-white"
-              >
-                <Pencil className="size-4 mr-2" /> Editar
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => toggleArchive.mutate()}
-                className="border-white/20 text-white hover:bg-white/10 hover:text-white"
-              >
-                {client.status === "active" ? (
-                  <>
-                    <Archive className="size-4 mr-2" /> Arquivar
-                  </>
-                ) : (
-                  <>
-                    <ArchiveRestore className="size-4 mr-2" /> Reativar
-                  </>
-                )}
-              </Button>
-              <Button
-                variant="ghost"
-                className="text-destructive hover:bg-destructive/20 hover:text-destructive"
-                onClick={() => setDeleting(true)}
-              >
-                <Trash2 className="size-4 mr-2" /> Excluir
-              </Button>
-            </div>
           </header>
         </div>
       </div>
