@@ -177,11 +177,24 @@ export function ClanSpreadsheet({ clientId }: Props) {
               Array.from({ length: 11 }).map((_, i) => {
                 const cell = row[i];
                 if (cell instanceof Date) {
-                  // Usa componentes LOCAIS para evitar shift de fuso (BR = UTC-3)
+                  // Objeto Date nativo (cellDates:true funcionou)
                   const y = cell.getFullYear();
                   const m = String(cell.getMonth() + 1).padStart(2, "0");
                   const d = String(cell.getDate()).padStart(2, "0");
                   return `${y}-${m}-${d}`;
+                }
+                if (typeof cell === "number" && cell > 25000 && cell < 60000) {
+                  // Número serial do Excel (ex: 44927 = 01/01/2023)
+                  // Converte usando XLSX.SSF.parse_date_code
+                  try {
+                    const parsed = XLSX.SSF.parse_date_code(cell);
+                    const y = parsed.y;
+                    const m = String(parsed.m).padStart(2, "0");
+                    const d = String(parsed.d).padStart(2, "0");
+                    return `${y}-${m}-${d}`;
+                  } catch {
+                    return String(cell);
+                  }
                 }
                 return cell !== undefined && cell !== null ? String(cell) : "";
               })

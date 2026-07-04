@@ -153,7 +153,17 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
   useEffect(() => {
     if (!query.data) return;
     
-    const initialNodes: Node[] = query.data.persons.map((p) => ({
+    // ── Filtro de qualidade: só entra no genossociograma quem tem dados suficientes ──
+    // Exceção: o próprio consulente/proband sempre entra, mesmo que incompleto.
+    const qualifiedPersons = query.data.persons.filter(p => {
+      if (p.is_proband) return true; // Consulente sempre aparece
+      const hasName = !!(p.full_name?.trim());
+      const hasBirth = !!(p.birth_date?.trim());
+      const hasRel = !!(p.relationship_to_proband?.trim());
+      return hasName && hasBirth && hasRel;
+    });
+
+    const initialNodes: Node[] = qualifiedPersons.map((p) => ({
       id: p.id,
       type: "person",
       position: { x: 0, y: 0 },
@@ -170,7 +180,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
     }));
     
     const manualEdges: Edge[] = query.data.rels.map(relToEdge);
-    const structuralEdges: Edge[] = computeStructuralEdges(query.data.persons);
+    const structuralEdges: Edge[] = computeStructuralEdges(qualifiedPersons);
     
     // Filtramos os "nodes virtuais de casal" da lista visual (Eles existem no dagre apenas)
     const initialEdges = [...structuralEdges, ...manualEdges];
@@ -230,7 +240,9 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
   });
 
   const persons = query.data?.persons ?? [];
-  const personCount = persons.length;
+  const qualifiedCount = nodes.length;
+  const totalCount = persons.length;
+  const incompleteCount = totalCount - qualifiedCount;
   const relCount = query.data?.rels.length ?? 0;
 
   return (
@@ -270,7 +282,13 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
         <div className="hidden items-center gap-4 md:flex ml-3">
           <span className="flex items-center gap-1.5 text-[13px] text-white/55">
             <Users className="size-3.5 text-lavender" />
-            <strong className="text-white">{personCount}</strong> pessoas
+            <strong className="text-white">{qualifiedCount}</strong>
+            <span>no mapa</span>
+            {incompleteCount > 0 && (
+              <span className="ml-1 rounded-full bg-amber-500/25 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">
+                {incompleteCount} incompletos
+              </span>
+            )}
           </span>
           <span className="flex items-center gap-1.5 text-[13px] text-white/55">
             <Link2 className="size-3.5 text-gold" />
