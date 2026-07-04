@@ -15,6 +15,7 @@ import {
   type EdgeMouseHandler,
   type Node,
   type NodeMouseHandler,
+  type NodeProps,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -34,7 +35,36 @@ import type { Database } from "@/integrations/supabase/types";
 type PersonRow = Database["public"]["Tables"]["genogram_persons"]["Row"];
 type RelRow = Database["public"]["Tables"]["genogram_relationships"]["Row"];
 
-const nodeTypes = { person: PersonNode };
+interface GenerationBandData {
+  label: string;
+  subtitle: string;
+  width: number;
+  height: number;
+  [key: string]: unknown;
+}
+
+function GenerationBandNode({ data }: NodeProps) {
+  const d = data as unknown as GenerationBandData;
+
+  return (
+    <div
+      className="pointer-events-none relative border-y border-border/60 bg-lavender-soft/45"
+      style={{ width: d.width, height: d.height }}
+    >
+      <div className="absolute inset-y-0 left-0 flex w-48 items-center border-r border-border/50 bg-background/85 px-5">
+        <div>
+          <p className="font-serif text-[20px] font-bold leading-tight text-primary">{d.label}</p>
+          <p className="mt-1 max-w-36 text-[11px] font-bold uppercase leading-snug tracking-[0.16em] text-muted-foreground">
+            {d.subtitle}
+          </p>
+        </div>
+      </div>
+      <div className="absolute inset-x-52 top-1/2 h-px -translate-y-1/2 bg-border/70" />
+    </div>
+  );
+}
+
+const nodeTypes = { person: PersonNode, generationBand: GenerationBandNode };
 
 interface CanvasProps {
   clientId: string;
@@ -51,6 +81,63 @@ export function GenogramCanvas(props: CanvasProps) {
 // Tamanho real do nó no DOM
 const NODE_W = 110;  // largura do shape + padding
 const NODE_H = 155;  // shape (72px) + label (nome + datas + badge ≈ 83px)
+const GENERATION_GAP = 260;
+const GENERATION_BAND_HEIGHT = 210;
+const HORIZONTAL_GAP = 82;
+
+const GENERATION_COPY: Record<number, { label: string; subtitle: string }> = {
+  0: { label: "Cliente", subtitle: "ponto de partida" },
+  1: { label: "Geração 1", subtitle: "pais, irmãos e tios" },
+  2: { label: "Geração 2", subtitle: "avós e tios-avós" },
+  3: { label: "Geração 3", subtitle: "bisavós e colaterais" },
+};
+
+function generationCopy(generation: number) {
+  return GENERATION_COPY[generation] ?? {
+    label: `Geração ${generation}`,
+    subtitle: "ancestrais e colaterais",
+  };
+}
+
+function generationForData(data: unknown): number {
+  const d = data as PersonNodeData & { relationship_to_proband?: string | null };
+  if (d.is_proband) return 0;
+
+  const canonical = smartNormalizeRelationship(d.relationship_to_proband);
+  const lower = canonical.toLowerCase();
+
+  if (!lower) return 1;
+  if (lower.includes("consulente") || lower.includes("paciente")) return 0;
+
+  // O cliente precisa ficar sozinho no topo. Irmãos do cliente descem para a
+  // primeira faixa clínica, junto do núcleo familiar imediato.
+  if ((lower.includes("irmã") || lower.includes("irma")) && !lower.includes("av") && !lower.includes("bisav")) {
+    return 1;
+  }
+
+  const generation = getGeneration(canonical);
+  return generation <= 0 ? 1 : generation;
+}
+
+function spreadGeneration(nodes: Node[]) {
+  const ordered = [...nodes].sort((a, b) => a.position.x - b.position.x);
+  let previousRight = Number.NEGATIVE_INFINITY;
+
+  for (const node of ordered) {
+    const minX = previousRight + HORIZONTAL_GAP;
+    if (node.position.x < minX) node.position.x = minX;
+    previousRight = node.position.x + NODE_W;
+  }
+
+  const originalCenter =
+    nodes.reduce((sum, node) => sum + node.position.x + NODE_W / 2, 0) / Math.max(nodes.length, 1);
+  const newCenter =
+    ordered.reduce((sum, node) => sum + node.position.x + NODE_W / 2, 0) / Math.max(ordered.length, 1);
+  const shift = originalCenter - newCenter;
+  ordered.forEach((node) => {
+    node.position.x += shift;
+  });
+}
 
 const getLayoutedElements = (nodes: Node[], edges: Edge[], probandId?: string) => {
   const dagreGraph = new dagre.graphlib.Graph();
@@ -82,57 +169,88 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[], probandId?: string) =
     dagreGraph.setEdge(edge.source, edge.target, { minlen: 1 });
   });
 
-  // ── FORÇAR HIERARQUIA VERTICAL (SPINE) ──
-  // Cria âncoras invisíveis para cada geração para garantir
-  // que tios sem avós não flutuem para a geração 0 (Consulente).
-  dagreGraph.setNode("V_GEN0", { width: 1, height: 1 });
-  dagreGraph.setNode("V_GEN1", { width: 1, height: 1 });
-  dagreGraph.setNode("V_GEN2", { width: 1, height: 1 });
-  dagreGraph.setNode("V_GEN3", { width: 1, height: 1 });
-  // O Dagre Rankdir TB significa que target fica ABAIXO do source.
-  // V_GEN0 -> V_GEN1 (V_GEN1 fica no rank 1)
-  // Mas nossa árvore estrutural faz: Proband (0) -> Pai (1).
-  // Então o ROOT tem que apontar PARA o pai!
-  dagreGraph.setEdge("V_GEN0", "V_GEN1", { weight: 100 });
-  dagreGraph.setEdge("V_GEN1", "V_GEN2", { weight: 100 });
-  dagreGraph.setEdge("V_GEN2", "V_GEN3", { weight: 100 });
+  const maxGeneration = Math.max(3, ...nodes.map((node) => generationForData(node.data)));
+  for (let generation = 0; generation <= maxGeneration; generation += 1) {
+    dagreGraph.setNode(`V_GEN${generation}`, { width: 1, height: 1 });
+    if (generation > 0) {
+      dagreGraph.setEdge(`V_GEN${generation - 1}`, `V_GEN${generation}`, { weight: 100 });
+    }
+  }
 
   nodes.forEach((node) => {
-    const d = node.data as unknown as PersonNodeData;
-    const rel = d.person?.relationship_to_proband;
-    const canon = smartNormalizeRelationship(rel);
-    const gen = getGeneration(canon);
-    
-    // Conecta o nó à sua âncora geracional para forçar a altura.
-    // Isso impede que um "Irmão do pai" sem um "Avô" suba para o lado do Proband.
-    if (gen === 1) dagreGraph.setEdge("V_GEN0", node.id, { weight: 1 });
-    if (gen === 2) dagreGraph.setEdge("V_GEN1", node.id, { weight: 1 });
-    if (gen === 3) dagreGraph.setEdge("V_GEN2", node.id, { weight: 1 });
-    // Gen0 (Consulente, irmãos) não precisa de edge, fica no topo por padrão.
+    const generation = generationForData(node.data);
+    if (generation > 0) {
+      dagreGraph.setEdge(`V_GEN${generation - 1}`, node.id, { weight: 2 });
+    }
   });
 
   dagre.layout(dagreGraph);
 
-  // Centralizar horizontalmente em torno do proband
-  let probandX = 0;
-  if (probandId) {
-    const pn = dagreGraph.node(probandId);
-    if (pn) probandX = pn.x;
-  }
-
   const layoutedNodes = nodes.map((node) => {
     const pos = dagreGraph.node(node.id);
     if (!pos) return node;
+    const generation = generationForData(node.data);
     return {
       ...node,
       position: {
-        x: pos.x - NODE_W / 2 - probandX,
-        y: pos.y - NODE_H / 2,
+        x: pos.x - NODE_W / 2,
+        y: generation * GENERATION_GAP,
       },
+      data: { ...node.data, generation },
     };
   });
 
-  return { nodes: layoutedNodes, edges };
+  const byGeneration = new Map<number, Node[]>();
+  layoutedNodes.forEach((node) => {
+    const generation = generationForData(node.data);
+    if (!byGeneration.has(generation)) byGeneration.set(generation, []);
+    byGeneration.get(generation)!.push(node);
+  });
+  byGeneration.forEach(spreadGeneration);
+
+  // Centralizar horizontalmente em torno do cliente/proband.
+  let probandX = 0;
+  if (probandId) {
+    const probandNode = layoutedNodes.find((node) => node.id === probandId);
+    if (probandNode) probandX = probandNode.position.x + NODE_W / 2;
+  }
+
+  const centeredNodes = layoutedNodes.map((node) => ({
+    ...node,
+    position: {
+      x: node.position.x - probandX,
+      y: node.position.y,
+    },
+  }));
+
+  const minX = Math.min(...centeredNodes.map((node) => node.position.x), -NODE_W / 2);
+  const maxX = Math.max(...centeredNodes.map((node) => node.position.x + NODE_W), NODE_W / 2);
+  const bandWidth = Math.max(1500, maxX - minX + 420);
+  const bandX = minX - 210;
+
+  const generationBands: Node[] = Array.from(byGeneration.keys())
+    .filter((generation) => generation >= 0)
+    .sort((a, b) => a - b)
+    .map((generation) => {
+      const copy = generationCopy(generation);
+      return {
+        id: `generation-band-${generation}`,
+        type: "generationBand",
+        position: { x: bandX, y: generation * GENERATION_GAP - 28 },
+        data: {
+          ...copy,
+          width: bandWidth,
+          height: GENERATION_BAND_HEIGHT,
+        } satisfies GenerationBandData,
+        selectable: false,
+        draggable: false,
+        connectable: false,
+        focusable: false,
+        zIndex: -10,
+      };
+    });
+
+  return { nodes: [...generationBands, ...centeredNodes], edges };
 };
 
 
@@ -193,6 +311,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
         death_date: p.death_date,
         is_deceased: p.is_deceased,
         is_proband: p.is_proband,
+          relationship_to_proband: p.relationship_to_proband,
         notes: p.notes,
       } satisfies PersonNodeData,
     }));
@@ -216,29 +335,14 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
     setNodes(layoutedNodes);
     setEdges(layoutedEdges);
 
-    // Aguardar o próximo frame para o ReactFlow renderizar antes de calcular fitView
+      // Aguardar o próximo frame para o ReactFlow renderizar antes de calcular fitView
     setTimeout(() => {
-      let focused = false;
-      if (probandId) {
-        const probandNode = layoutedNodes.find((n) => n.id === probandId);
-        if (probandNode) {
-          // Centraliza EXATAMENTE no nó do paciente
-          const x = probandNode.position.x + NODE_W / 2;
-          const y = probandNode.position.y + NODE_H / 2;
-          rfInstance.setCenter(x, y, { zoom: 0.9, duration: 800 });
-          focused = true;
-        }
-      }
-      
-      if (!focused) {
-        // Fallback: tenta fitView geral
         rfInstance.fitView({
-          padding: 0.25,
-          duration: 600,
-          minZoom: 0.3,
-          maxZoom: 1.2,
+          padding: 0.16,
+          duration: 800,
+          minZoom: 0.25,
+          maxZoom: 0.72,
         });
-      }
     }, 50);
   }, [query.data, setNodes, setEdges, rfInstance]);
 
@@ -271,7 +375,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
 
   const deleteSelected = useMutation({
     mutationFn: async () => {
-      const nodeIds = nodes.filter((n) => n.selected).map((n) => n.id);
+      const nodeIds = nodes.filter((n) => n.type === "person" && n.selected).map((n) => n.id);
       const edgeIds = edges.filter((e) => e.selected).map((e) => e.id);
       if (nodeIds.length === 0 && edgeIds.length === 0) return;
       if (edgeIds.length > 0) {
@@ -291,7 +395,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
   });
 
   const persons = query.data?.persons ?? [];
-  const qualifiedCount = nodes.length;
+  const qualifiedCount = nodes.filter((node) => node.type === "person").length;
   const totalCount = persons.length;
   const incompleteCount = totalCount - qualifiedCount;
   const relCount = query.data?.rels.length ?? 0;
