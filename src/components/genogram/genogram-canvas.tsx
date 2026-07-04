@@ -299,6 +299,7 @@ type Block = {
   width: number;
   center: number;
   childTarget?: Node;
+  childTargetX?: number;
 };
 
 function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
@@ -388,8 +389,8 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
       ...rightBlock.nodes.map(n => ({ ...n, x: n.x + rightOffsetX }))
     ];
     
-    const hCenter = leftBlock.childTarget ? leftBlock.center : (leftBlock.width > 0 ? leftBlock.width / 2 : 0);
-    const wCenter = rightBlock.childTarget ? rightBlock.center + rightOffsetX : (rightBlock.width > 0 ? rightOffsetX + rightBlock.width / 2 : rightOffsetX);
+    const hCenter = leftBlock.childTargetX !== undefined ? leftBlock.childTargetX : leftBlock.center;
+    const wCenter = rightBlock.childTargetX !== undefined ? rightBlock.childTargetX + rightOffsetX : rightBlock.center + rightOffsetX;
     
     let unionCenter = 0;
     if (leftBlock.childTarget && rightBlock.childTarget) unionCenter = (hCenter + wCenter) / 2;
@@ -422,11 +423,16 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     const finalNodes = combinedNodes.map(n => ({ ...n, x: n.x + topOffset }));
     bottomNodes.forEach((n, i) => finalNodes.push({ node: n, x: bottomOffset + i * HORIZONTAL_STEP, y: generation * GENERATION_GAP, gen: generation }));
     
+    let cTargetX = undefined;
+    if (childTarget) {
+      cTargetX = bottomOffset + bottomNodes.indexOf(childTarget) * HORIZONTAL_STEP + HORIZONTAL_STEP / 2;
+    }
     return {
       nodes: finalNodes,
       width: Math.max(rightOffsetX + rightBlock.width + topOffset, bottomWidth + bottomOffset),
       center: childLocalCenter + bottomOffset,
-      childTarget: childTarget
+      childTarget: childTarget,
+      childTargetX: cTargetX
     };
   }
 
