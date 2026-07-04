@@ -320,8 +320,12 @@ export function ClanSpreadsheet({ clientId }: Props) {
             console.error("Insert error:", error);
             throw new Error(`Erro no banco de dados: ${error.message}`);
           }
-          
+
+          // Garante o proband a partir do cadastro do cliente
+          await ensureProband(clientId);
+
           qc.invalidateQueries({ queryKey: ["genogram-persons", clientId] });
+          qc.invalidateQueries({ queryKey: ["genogram", clientId] });
           toast.success(`${inserts.length} familiares importados com sucesso!`);
         } else {
           toast.info("Nenhum dado válido encontrado para importar.");
