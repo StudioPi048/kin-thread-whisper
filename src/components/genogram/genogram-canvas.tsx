@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from "react";
-import dagre from "dagre";
 import {
   Background,
   BackgroundVariant,
@@ -15,7 +14,6 @@ import {
   type EdgeMouseHandler,
   type Node,
   type NodeMouseHandler,
-  type NodeProps,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -29,46 +27,27 @@ import { PersonFormDialog } from "./person-form-dialog";
 import { RelationshipFormDialog } from "./relationship-form-dialog";
 import { relationshipLabel } from "@/lib/genogram";
 import { computeStructuralEdges } from "@/lib/structural-tree";
-import { getGeneration, smartNormalizeRelationship } from "@/lib/relationship-normalizer";
+import { smartNormalizeRelationship } from "@/lib/relationship-normalizer";
 import { ensureProband } from "@/lib/ensure-proband";
 import type { Database } from "@/integrations/supabase/types";
 
 type PersonRow = Database["public"]["Tables"]["genogram_persons"]["Row"];
 type RelRow = Database["public"]["Tables"]["genogram_relationships"]["Row"];
 
-interface GenerationBandData {
-  label: string;
-  subtitle: string;
-  width: number;
-  height: number;
-  [key: string]: unknown;
-}
-
-function GenerationBandNode({ data }: NodeProps) {
-  const d = data as unknown as GenerationBandData;
-
-  return (
-    <div
-      className="pointer-events-none relative border-y border-border/60 bg-lavender-soft/45"
-      style={{ width: d.width, height: d.height }}
-    />
-  );
-}
-
-const nodeTypes = { person: PersonNode, generationBand: GenerationBandNode };
+const nodeTypes = { person: PersonNode };
 
 function GenerationRuler() {
   return (
-    <div className="w-[178px] overflow-hidden rounded-sm border border-plum/30 bg-plum shadow-md backdrop-blur-sm">
+    <div className="w-[188px] overflow-hidden rounded-md border border-plum/40 bg-plum/95 shadow-lg">
       {[
         ["Cliente", "ponto de partida"],
-        ["Geração 1", "pais, irmãos e tios"],
+        ["Geração 1", "pais e tios"],
         ["Geração 2", "avós e tios-avós"],
-        ["Geração 3", "bisavós e colaterais"],
+        ["Geração 3", "bisavós"],
       ].map(([label, subtitle]) => (
         <div key={label} className="border-b border-white/15 px-3 py-3 last:border-b-0">
-          <p className="font-serif text-[18px] font-bold leading-tight text-white">{label}</p>
-          <p className="mt-1 text-[10px] font-bold uppercase leading-snug tracking-[0.12em] text-white/65">
+          <p className="font-serif text-[17px] font-bold leading-tight text-white">{label}</p>
+          <p className="mt-1 text-[10px] font-bold uppercase leading-snug tracking-[0.12em] text-white/70">
             {subtitle}
           </p>
         </div>
@@ -89,182 +68,178 @@ export function GenogramCanvas(props: CanvasProps) {
   );
 }
 
-// Tamanho real do nó no DOM
-const NODE_W = 110;  // largura do shape + padding
-const NODE_H = 155;  // shape (72px) + label (nome + datas + badge ≈ 83px)
-const GENERATION_GAP = 260;
-const GENERATION_BAND_HEIGHT = 210;
-const HORIZONTAL_GAP = 96;
+// ── Tamanhos generosos, otimizados para leitura em 4K ────────
+const NODE_W = 170;   // Largura do nó (shape + label)
+const NODE_H = 210;   // Altura total do nó
+const GENERATION_GAP = 300;   // Distância vertical entre gerações
+const HORIZONTAL_STEP = NODE_W + 90; // Espaço horizontal entre nós de uma geração
 
-const GENERATION_COPY: Record<number, { label: string; subtitle: string }> = {
-  0: { label: "Cliente", subtitle: "ponto de partida" },
-  1: { label: "Geração 1", subtitle: "pais, irmãos e tios" },
-  2: { label: "Geração 2", subtitle: "avós e tios-avós" },
-  3: { label: "Geração 3", subtitle: "bisavós e colaterais" },
-};
-
-function generationCopy(generation: number) {
-  return GENERATION_COPY[generation] ?? {
-    label: `Geração ${generation}`,
-    subtitle: "ancestrais e colaterais",
-  };
-}
-
+/**
+ * Descobre a geração da pessoa (0 = cliente, 1 = pais, 2 = avós, 3 = bisavós).
+ * Baseia-se na tag canônica após normalização.
+ */
 function generationForData(data: unknown): number {
   const d = data as PersonNodeData & { relationship_to_proband?: string | null };
   if (d.is_proband) return 0;
 
-  const canonical = smartNormalizeRelationship(d.relationship_to_proband);
-  const lower = canonical.toLowerCase();
-
-  if (!lower) return 1;
-  if (lower.includes("consulente") || lower.includes("paciente")) return 0;
-
-  // O cliente precisa ficar sozinho no topo. Irmãos do cliente descem para a
-  // primeira faixa clínica, junto do núcleo familiar imediato.
-  if ((lower.includes("irmã") || lower.includes("irma")) && !lower.includes("av") && !lower.includes("bisav")) {
-    return 1;
-  }
-
-  const generation = getGeneration(canonical);
-  return generation <= 0 ? 1 : generation;
+  const canonical = smartNormalizeRelationship(d.relationship_to_proband).toLowerCase();
+  if (!canonical) return 1;
+  if (canonical.includes("consulente") || canonical.includes("paciente")) return 0;
+  if (canonical.includes("bisav")) return 3;
+  if (canonical.includes("avô") || canonical.includes("avó") || canonical.startsWith("avo")) return 2;
+  if (
+    canonical.includes("pai") ||
+    canonical.includes("mãe") ||
+    canonical.includes("mae") ||
+    canonical.startsWith("tio")
+  ) return 1;
+  if (canonical.includes("irmã") || canonical.includes("irma")) return 1;
+  return 1;
 }
 
-function spreadGeneration(nodes: Node[]) {
-  const ordered = [...nodes].sort((a, b) => a.position.x - b.position.x || a.id.localeCompare(b.id));
-  const step = NODE_W + HORIZONTAL_GAP;
-  const start = -((ordered.length - 1) * step) / 2 - NODE_W / 2;
+/**
+ * Rank horizontal: número menor = mais à esquerda, maior = mais à direita.
+ * Regra clínica: RAMO PATERNO à ESQUERDA · RAMO MATERNO à DIREITA.
+ * O cliente é a referência (rank 0).
+ */
+function rankFor(canonical: string, orderIndex: number): number {
+  const c = canonical.toLowerCase();
 
-  ordered.forEach((node, index) => {
-    node.position.x = start + index * step;
-  });
-}
-
-const getLayoutedElements = (nodes: Node[], edges: Edge[], probandId?: string) => {
-  const dagreGraph = new dagre.graphlib.Graph();
-  dagreGraph.setDefaultEdgeLabel(() => ({}));
-
-  // rankdir TB (top-to-bottom):
-  // - Source fica ACIMA do Target
-  // - Nossas arestas vão DE filho PARA pai: filho.source → pai.target
-  // - Logo: filho (source) fica no TOPO, pai (target) fica ABAIXO → correto!
-  dagreGraph.setGraph({
-    rankdir: "TB",
-    nodesep: 55,    // espaço horizontal entre nós do mesmo rank
-    ranksep: 90,    // espaço vertical entre gerações
-    edgesep: 10,
-    marginx: 40,
-    marginy: 40,
-  });
-
-  nodes.forEach((node) => {
-    dagreGraph.setNode(node.id, { width: NODE_W, height: NODE_H });
-  });
-
-  // Adiciona ao Dagre apenas arestas de parentesco (cor plum).
-  // Arestas de união (gold) são VISUAIS apenas — o Dagre não precisa delas.
-  edges.forEach((edge) => {
-    if (edge.type === "order") {
-      // Arestas de ordenação forçam a ordem da esquerda pra direita no mesmo nível
-      dagreGraph.setEdge(edge.source, edge.target, { minlen: 0, weight: 100 });
-      return;
-    }
-    const isUnion = edge.style?.stroke === "var(--color-gold)";
-    if (isUnion) return; // pula uniões no layout
-    dagreGraph.setEdge(edge.source, edge.target, { minlen: 1 });
-  });
-
-  const maxGeneration = Math.max(3, ...nodes.map((node) => generationForData(node.data)));
-  for (let generation = 0; generation <= maxGeneration; generation += 1) {
-    dagreGraph.setNode(`V_GEN${generation}`, { width: 1, height: 1 });
-    if (generation > 0) {
-      dagreGraph.setEdge(`V_GEN${generation - 1}`, `V_GEN${generation}`, { weight: 100 });
-    }
+  // ── Geração 1 ────────────────────────────────────────────
+  if (c === "pai") return -10;
+  if (c === "mãe" || c === "mae") return 10;
+  if (c.startsWith("tio(a) paterno")) return -100 - orderIndex;
+  if (c.startsWith("tio(a) materno")) return 100 + orderIndex;
+  // Irmãos do cliente: alternam próximos ao centro (não interferem em pai/mãe).
+  if ((c.includes("irmã(o)") || c.startsWith("irmã") || c.startsWith("irma")) &&
+      !c.includes("av") && !c.includes("bisav")) {
+    // -1, +1, -2, +2, ...
+    const half = Math.floor(orderIndex / 2) + 1;
+    return orderIndex % 2 === 0 ? -half : half;
   }
 
-  nodes.forEach((node) => {
-    const generation = generationForData(node.data);
-    if (generation > 0) {
-      dagreGraph.setEdge(`V_GEN${generation - 1}`, node.id, { weight: 2 });
-    }
-  });
+  // ── Geração 2 ────────────────────────────────────────────
+  if (c === "avô paterno") return -30;
+  if (c === "avó paterna") return -20;
+  if (c === "avô materno") return 20;
+  if (c === "avó materna") return 30;
+  if (c.includes("irmã(o) do avô paterno")) return -200 - orderIndex;
+  if (c.includes("irmã(o) da avó paterna")) return -150 - orderIndex;
+  if (c.includes("irmã(o) do avô materno")) return 150 + orderIndex;
+  if (c.includes("irmã(o) da avó materna")) return 200 + orderIndex;
 
-  dagre.layout(dagreGraph);
+  // ── Geração 3 ────────────────────────────────────────────
+  if (c.includes("bisavô paterno (pai do avô)")) return -40;
+  if (c.includes("bisavó paterna (mãe do avô)")) return -30;
+  if (c.includes("bisavô paterno (pai da avó)")) return -20;
+  if (c.includes("bisavó paterna (mãe da avó)")) return -10;
+  if (c.includes("bisavô materno (pai do avô)")) return 10;
+  if (c.includes("bisavó materna (mãe do avô)")) return 20;
+  if (c.includes("bisavô materno (pai da avó)")) return 30;
+  if (c.includes("bisavó materna (mãe da avó)")) return 40;
+  if (c.includes("irmã(o) do bisavô paterno")) return -300 - orderIndex;
+  if (c.includes("irmã(o) do bisavô materno")) return 300 + orderIndex;
 
-  const layoutedNodes = nodes.map((node) => {
-    const pos = dagreGraph.node(node.id);
-    if (!pos) return node;
-    const generation = generationForData(node.data);
-    const invertedGeneration = maxGeneration - generation;
-    return {
-      ...node,
-      position: {
-        x: pos.x - NODE_W / 2,
-        y: invertedGeneration * GENERATION_GAP,
-      },
-      data: { ...node.data, generation },
-    };
-  });
+  return 0;
+}
 
+/**
+ * Layout determinístico baseado em papéis familiares.
+ * Não usa dagre para posicionamento: as regras clínicas do genossociograma
+ * (pai à esquerda, mãe à direita) precisam de posicionamento controlado.
+ */
+function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
+  // Agrupar por geração
   const byGeneration = new Map<number, Node[]>();
-  layoutedNodes.forEach((node) => {
-    const generation = generationForData(node.data);
-    if (!byGeneration.has(generation)) byGeneration.set(generation, []);
-    byGeneration.get(generation)!.push(node);
-  });
-  byGeneration.forEach(spreadGeneration);
-
-  const probandNodeBeforeCenter = probandId
-    ? layoutedNodes.find((node) => node.id === probandId)
-    : undefined;
-  if (probandNodeBeforeCenter) probandNodeBeforeCenter.position.x = -NODE_W / 2;
-
-  // Centralizar horizontalmente em torno do cliente/proband.
-  let probandX = 0;
-  if (probandId) {
-    const probandNode = layoutedNodes.find((node) => node.id === probandId);
-    if (probandNode) probandX = probandNode.position.x + NODE_W / 2;
+  for (const n of nodes) {
+    const g = generationForData(n.data);
+    if (!byGeneration.has(g)) byGeneration.set(g, []);
+    byGeneration.get(g)!.push(n);
   }
 
-  const centeredNodes = layoutedNodes.map((node) => ({
-    ...node,
-    position: {
-      x: node.position.x - probandX,
-      y: node.position.y,
-    },
-  }));
+  const maxGeneration = Math.max(3, ...Array.from(byGeneration.keys()));
 
-  const minX = Math.min(...centeredNodes.map((node) => node.position.x), -NODE_W / 2);
-  const maxX = Math.max(...centeredNodes.map((node) => node.position.x + NODE_W), NODE_W / 2);
-  const bandWidth = Math.max(1200, maxX - minX + 300);
-  const bandX = minX - 150;
+  // Calcular rank para cada nó
+  type Placed = { node: Node; rank: number; canonical: string };
+  const placedByGen = new Map<number, Placed[]>();
 
-  const generationBands: Node[] = Array.from(byGeneration.keys())
-    .filter((generation) => generation >= 0)
-    .sort((a, b) => a - b)
-    .map((generation) => {
-      const copy = generationCopy(generation);
-      const invertedGeneration = maxGeneration - generation;
-      return {
-        id: `generation-band-${generation}`,
-        type: "generationBand",
-        position: { x: bandX, y: invertedGeneration * GENERATION_GAP - 28 },
-        data: {
-          ...copy,
-          width: bandWidth,
-          height: GENERATION_BAND_HEIGHT,
-        } satisfies GenerationBandData,
-        selectable: false,
-        draggable: false,
-        connectable: false,
-        focusable: false,
-        zIndex: -10,
-      };
+  byGeneration.forEach((generationNodes, generation) => {
+    // Índice sequencial por CATEGORIA (para múltiplos tios/irmãos ficarem lado a lado)
+    const perCategory = new Map<string, number>();
+    const placed: Placed[] = generationNodes.map((node) => {
+      const d = node.data as PersonNodeData & { relationship_to_proband?: string | null };
+      const canonical = d.is_proband
+        ? "consulente"
+        : smartNormalizeRelationship(d.relationship_to_proband);
+      const category = canonical.toLowerCase();
+      const idx = perCategory.get(category) ?? 0;
+      perCategory.set(category, idx + 1);
+      const rank = d.is_proband ? 0 : rankFor(canonical, idx);
+      return { node, rank, canonical };
     });
+    placedByGen.set(generation, placed);
+  });
 
-  return { nodes: [...generationBands, ...centeredNodes], edges };
-};
+  // Para cada geração, ordenar por rank e distribuir com HORIZONTAL_STEP.
+  // Depois deslocar horizontalmente para alinhar o "núcleo" da geração com x=0.
+  const layoutedNodes: Node[] = [];
 
+  placedByGen.forEach((placed, generation) => {
+    placed.sort((a, b) => a.rank - b.rank || a.node.id.localeCompare(b.node.id));
+
+    // Posições sequenciais
+    const xs = placed.map((_, i) => i * HORIZONTAL_STEP);
+
+    // Deslocamento: alinhar núcleo com 0
+    let anchorAvgX = 0;
+    const coreCanonicals: string[] = generation === 0
+      ? ["consulente"]
+      : generation === 1
+        ? ["pai", "mãe", "mae"]
+        : generation === 2
+          ? ["avô paterno", "avó paterna", "avô materno", "avó materna"]
+          : ["bisavô paterno (pai do avô)", "bisavó paterna (mãe do avô)",
+             "bisavô paterno (pai da avó)", "bisavó paterna (mãe da avó)",
+             "bisavô materno (pai do avô)", "bisavó materna (mãe do avô)",
+             "bisavô materno (pai da avó)", "bisavó materna (mãe da avó)"];
+
+    const coreIdx = placed
+      .map((p, i) => (coreCanonicals.includes(p.canonical.toLowerCase()) ? i : -1))
+      .filter((i) => i >= 0);
+
+    if (coreIdx.length > 0) {
+      anchorAvgX = coreIdx.reduce((s, i) => s + xs[i], 0) / coreIdx.length;
+    } else if (placed.length > 0) {
+      anchorAvgX = xs.reduce((s, x) => s + x, 0) / xs.length;
+    }
+
+    const invertedGeneration = maxGeneration - generation;
+    const y = invertedGeneration * GENERATION_GAP;
+
+    placed.forEach((p, i) => {
+      layoutedNodes.push({
+        ...p.node,
+        position: { x: xs[i] - anchorAvgX - NODE_W / 2, y },
+        data: { ...p.node.data, generation },
+      });
+    });
+  });
+
+  // Garantir que o cliente esteja EXATAMENTE em x = -NODE_W/2 (centro em 0)
+  if (probandId) {
+    const proband = layoutedNodes.find((n) => n.id === probandId);
+    if (proband) {
+      const dx = -NODE_W / 2 - proband.position.x;
+      if (dx !== 0) {
+        layoutedNodes.forEach((n) => {
+          n.position = { x: n.position.x + dx, y: n.position.y };
+        });
+      }
+    }
+  }
+
+  return { nodes: layoutedNodes, edges };
+}
 
 function GenogramCanvasInner({ clientId }: CanvasProps) {
   const qc = useQueryClient();
@@ -299,14 +274,12 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
 
   useEffect(() => {
     let cancelled = false;
-
     (async () => {
       const result = await ensureProband(clientId);
       if (!cancelled && result) {
         qc.invalidateQueries({ queryKey: ["genogram", clientId] });
       }
     })();
-
     return () => {
       cancelled = true;
     };
@@ -314,15 +287,11 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
 
   useEffect(() => {
     if (!query.data) return;
-    
-    // ── Filtro de qualidade: entra no mapa quem tem nome OU parentesco ──
-    // Após import da planilha muitas pessoas não têm data de nascimento ainda —
-    // ainda assim precisam aparecer para receber layout automático via dagre.
-    // Exceção: o próprio consulente/proband sempre entra.
-    const qualifiedPersons = query.data.persons.filter(p => {
+
+    const qualifiedPersons = query.data.persons.filter((p) => {
       if (p.is_proband) return true;
-      const hasName = !!(p.full_name?.trim());
-      const hasRel = !!(p.relationship_to_proband?.trim());
+      const hasName = !!p.full_name?.trim();
+      const hasRel = !!p.relationship_to_proband?.trim();
       return hasName || hasRel;
     });
 
@@ -338,19 +307,19 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
         death_date: p.death_date,
         is_deceased: p.is_deceased,
         is_proband: p.is_proband,
-          relationship_to_proband: p.relationship_to_proband,
+        relationship_to_proband: p.relationship_to_proband,
         notes: p.notes,
       } satisfies PersonNodeData,
     }));
-    
+
     const manualEdges: Edge[] = query.data.rels.map(relToEdge);
     const structuralEdges: Edge[] = computeStructuralEdges(qualifiedPersons);
-    
-    // Filtramos os "nodes virtuais de casal" da lista visual (Eles existem no dagre apenas)
-    const initialEdges = [...structuralEdges, ...manualEdges];
-    
-    // Encontrar o proband para centralizar o canvas nele
-    const proband = qualifiedPersons.find(p => p.is_proband) || qualifiedPersons[0];
+    // Descartamos arestas "order" — não são visuais, eram dicas ao Dagre.
+    const initialEdges = [...structuralEdges, ...manualEdges].filter(
+      (e) => e.type !== "order",
+    );
+
+    const proband = qualifiedPersons.find((p) => p.is_proband) || qualifiedPersons[0];
     const probandId = proband?.id;
 
     const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
@@ -358,35 +327,27 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
       initialEdges,
       probandId,
     );
-    
+
     setNodes(layoutedNodes);
     setEdges(layoutedEdges);
 
-    // Aguardar o próximo frame para o ReactFlow renderizar antes de calcular fitView
     setTimeout(() => {
-      const personNodes = layoutedNodes
-        .filter((node) => node.type === "person")
-        .map((node) => ({ id: node.id }));
-
       rfInstance.fitView({
-        nodes: personNodes,
-        padding: 0.12,
-        duration: 800,
-        minZoom: 0.42,
-        maxZoom: 0.86,
+        padding: 0.15,
+        duration: 700,
+        minZoom: 0.3,
+        maxZoom: 1.1,
       });
-
       if (probandId) {
         const probandNode = layoutedNodes.find((n) => n.id === probandId);
         if (probandNode) {
-          // Centraliza EXATAMENTE no nó do paciente
           const x = probandNode.position.x + NODE_W / 2;
-          const y = probandNode.position.y + NODE_H / 2;
-          rfInstance.setCenter(x, y, { zoom: 0.9, duration: 800 });
-          focused = true;
+          // Centralizar visualmente com o cliente no topo (offset vertical para baixo)
+          const y = probandNode.position.y + NODE_H / 2 + GENERATION_GAP * 0.9;
+          rfInstance.setCenter(x, y, { zoom: 0.75, duration: 700 });
         }
       }
-    }, 50);
+    }, 80);
   }, [query.data, setNodes, setEdges, rfInstance]);
 
   const onConnect = useCallback(
@@ -445,9 +406,8 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
 
   return (
     <div className="relative flex flex-col overflow-hidden rounded-[1rem] border border-border glass-card shadow-md">
-      {/* ── BARRA DE AÇÕES — fundo ameixa ─────────────────── */}
+      {/* ── BARRA DE AÇÕES ─────────────────────────────────── */}
       <div className="block-plum flex flex-wrap items-center gap-2 px-4 py-3">
-        {/* Label */}
         <div className="flex items-center gap-2 mr-3">
           <TreePine className="size-4 text-gold" />
           <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/60">
@@ -476,7 +436,6 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
           Criar vínculo
         </Button>
 
-        {/* Stats */}
         <div className="hidden items-center gap-4 md:flex ml-3">
           <span className="flex items-center gap-1.5 text-[13px] text-white/55">
             <Users className="size-3.5 text-lavender" />
@@ -494,7 +453,6 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
           </span>
         </div>
 
-        {/* Ações secundárias */}
         <div className="ml-auto flex items-center gap-1">
           <button
             onClick={() => setShowGuide(!showGuide)}
@@ -521,7 +479,6 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
         </div>
       </div>
 
-      {/* ── GUIA RÁPIDO ─────────────────────────────────────── */}
       {showGuide && (
         <div className="border-b border-border bg-lavender-soft px-4 py-3">
           <div className="flex flex-wrap gap-6 text-[13px] text-foreground/70">
@@ -529,6 +486,8 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
               ["Clique duplo", "Editar pessoa ou vínculo"],
               ["Selecionar + Remover", "Excluir o selecionado"],
               ["Scroll", "Zoom in/out"],
+              ["Ramo paterno", "sempre à esquerda"],
+              ["Ramo materno", "sempre à direita"],
             ].map(([key, desc]) => (
               <span key={key} className="flex items-center gap-2">
                 <kbd className="rounded border border-border bg-white px-1.5 py-0.5 text-[11px] font-mono font-semibold">
@@ -541,18 +500,41 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
         </div>
       )}
 
-      {/* ── LEGENDA ─────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-4 border-b border-border/50 bg-background/60 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.15em]">
-        <span className="text-muted-foreground/50 mr-1">Legenda:</span>
-        <span style={{ color: "var(--color-plum)" }}>□ Masculino</span>
-        <span style={{ color: "var(--color-lavender)" }}>○ Feminino</span>
-        <span style={{ color: "var(--color-gold)" }}>⬡ Não-binário</span>
-        <span className="text-destructive">✕ Falecido</span>
-        <span className="ml-auto text-lavender">Borda dupla = Paciente-índice</span>
+      {/* ── LEGENDA — símbolos internacionais ────────────── */}
+      <div className="flex flex-wrap items-center gap-5 border-b border-border/50 bg-background/80 px-4 py-2.5 text-[12px] font-semibold">
+        <span className="text-muted-foreground/60 mr-1 uppercase tracking-[0.15em] text-[10px]">Legenda:</span>
+        <span className="flex items-center gap-2">
+          <span className="inline-block size-4 border-[2.5px] border-plum bg-card" />
+          <span className="text-foreground/80">Masculino</span>
+        </span>
+        <span className="flex items-center gap-2">
+          <span className="inline-block size-4 rounded-full border-[2.5px] border-lavender bg-card" />
+          <span className="text-foreground/80">Feminino</span>
+        </span>
+        <span className="flex items-center gap-2">
+          <span className="inline-block size-4 rotate-45 border-[2.5px] border-gold bg-card" />
+          <span className="text-foreground/80">Não-binário / desconhecido</span>
+        </span>
+        <span className="flex items-center gap-2">
+          <svg viewBox="0 0 10 10" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <polygon points="5,1 9,9 1,9" className="text-foreground/70" />
+          </svg>
+          <span className="text-foreground/80">Aborto</span>
+        </span>
+        <span className="flex items-center gap-2">
+          <span className="text-red-500 text-lg leading-none">✕</span>
+          <span className="text-foreground/80">Falecido</span>
+        </span>
+        <span className="ml-auto text-plum font-bold uppercase tracking-[0.1em] text-[11px]">
+          Cliente destacado em ameixa
+        </span>
       </div>
 
-      {/* ── CANVAS ──────────────────────────────────────────── */}
-      <div className="relative" style={{ height: "80vh" }}>
+      {/* ── CANVAS: altura adaptativa ao viewport ──────── */}
+      <div
+        className="relative bg-background"
+        style={{ height: "calc(100vh - 260px)", minHeight: 640 }}
+      >
         {query.isLoading ? (
           <div className="flex h-full flex-col items-center justify-center gap-3">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-lavender border-t-transparent" />
@@ -573,25 +555,25 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
             nodesDraggable={false}
             nodesConnectable={false}
             fitView
-            fitViewOptions={{ padding: 0.3 }}
+            fitViewOptions={{ padding: 0.2, minZoom: 0.3, maxZoom: 1.2 }}
+            minZoom={0.15}
+            maxZoom={2.5}
             proOptions={{ hideAttribution: true }}
             defaultEdgeOptions={{
-              type: "smoothstep", // Linhas retas em 90°
+              type: "smoothstep",
               style: { strokeWidth: 2 },
             }}
-            snapToGrid
-            snapGrid={[20, 20]}
           >
-            <Background 
-              color="#e2dcf2" // lavender soft
-              variant={BackgroundVariant.Dots} 
-              gap={20} 
-              size={1.5}
-              style={{ opacity: 0.3 }} 
+            <Background
+              color="#d8d0ec"
+              variant={BackgroundVariant.Dots}
+              gap={28}
+              size={1}
+              style={{ opacity: 0.35 }}
             />
-            <Controls 
-              className="bg-card border-none shadow-md overflow-hidden rounded-md [&>button]:border-b [&>button]:border-sidebar-border [&>button]:hover:bg-lavender-soft [&>button]:text-plum" 
-              showInteractive={false} 
+            <Controls
+              className="bg-card border-none shadow-md overflow-hidden rounded-md [&>button]:border-b [&>button]:border-sidebar-border [&>button]:hover:bg-lavender-soft [&>button]:text-plum"
+              showInteractive={false}
             />
           </ReactFlow>
         )}
@@ -602,7 +584,6 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
         )}
       </div>
 
-      {/* Dialogs */}
       <PersonFormDialog
         open={creatingPerson}
         onOpenChange={setCreatingPerson}
@@ -689,23 +670,6 @@ function EmptyCanvas({ onCreate }: { onCreate: () => void }) {
           Adicione o <strong>paciente-índice</strong> primeiro. Depois construa em torno dele: pais,
           avós, irmãos, uniões, filhos.
         </p>
-      </div>
-
-      <div className="w-full max-w-md border-l-[5px] border-l-lavender bg-white/70 backdrop-blur-md p-5 text-left rounded-r-[1rem] shadow-sm">
-        <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-          Como construir a árvore
-        </p>
-        {[
-          "1. Adicione o paciente-índice (borda dupla lavanda)",
-          '2. Preencha os dados na aba "Planilha" ou clique em Adicionar pessoa',
-          "3. A árvore calculará as posições e hierarquias automaticamente",
-          "4. Clique duplo em qualquer elemento para editar",
-          '5. Use "A3" para exportar a árvore perfeita',
-        ].map((step) => (
-          <p key={step} className="py-1 text-[14px] text-foreground/75">
-            {step}
-          </p>
-        ))}
       </div>
 
       <Button onClick={onCreate} size="lg" variant="lavender">
