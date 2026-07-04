@@ -43,6 +43,7 @@ interface FormState {
   to_person_id: string;
   relationship_type: RelationshipType;
   qualifier: string;
+  marriage_order: string; // "" | "1" | "2" | "3" | "4" | "5"
   notes: string;
 }
 
@@ -51,8 +52,10 @@ const empty: FormState = {
   to_person_id: "",
   relationship_type: "union",
   qualifier: "",
+  marriage_order: "",
   notes: "",
 };
+
 
 export function RelationshipFormDialog({
   open,
