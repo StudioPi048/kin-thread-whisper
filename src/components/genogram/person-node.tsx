@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import { genderSymbol, personYears } from "@/lib/genogram";
+import { personYears } from "@/lib/genogram";
 import { cn } from "@/lib/utils";
 
 export interface PersonNodeData {
@@ -17,131 +17,132 @@ export interface PersonNodeData {
 
 /**
  * Nó do genossociograma — convenção internacional:
- *  □ quadrado  = masculino (borda ameixa)
- *  ○ círculo   = feminino  (borda lavanda)
- *  ⬡ losango   = não-binário / outro (borda dourada)
- *  ✕ atravessando = falecido
- *  Borda dupla lavanda = paciente-índice (proband)
+ *  □ quadrado   = masculino  (borda ameixa)
+ *  ○ círculo    = feminino   (borda lavanda)
+ *  △ triângulo  = aborto
+ *  ◇ losango    = não-binário / desconhecido (borda dourada)
+ *  ✕ diagonal   = pessoa falecida
  *
- * Tamanho compacto: shape 72px + label até 56px = 128px total.
- * Compatível com NODE_H = 160 do layout Dagre (com margem de segurança).
+ * Foco: LEGIBILIDADE. Nome e datas sempre em primeiro plano, com fundo
+ * sólido; o símbolo é a moldura, nunca cobre o texto. Cliente destacado
+ * por moldura ameixa e badge — sem escala exagerada.
  */
 function PersonNodeComponent({ data, selected }: NodeProps) {
   const d = data as unknown as PersonNodeData;
   const gender = d.gender ?? "desconhecido";
 
+  const isMale = gender === "masculino";
+  const isFemale = gender === "feminino";
   const isAbortion = gender === "aborto";
+  const isDiamond = !isMale && !isFemale && !isAbortion;
 
-  const shapeClass =
-    isAbortion
-      ? ""
-      : gender === "masculino"
-        ? "rounded-none"
-        : gender === "feminino"
-          ? "rounded-full"
-          : "rotate-45 rounded-sm";
+  const shapeSize = d.is_proband ? 84 : 76;
 
-  const borderColor =
-    isAbortion
-      ? ""
-      : gender === "masculino"
-        ? "border-plum"
-        : gender === "feminino"
-          ? "border-lavender"
-          : "border-gold";
+  const borderColor = isMale
+    ? "border-plum"
+    : isFemale
+      ? "border-lavender"
+      : "border-gold";
 
-  const symbolColor =
-    gender === "masculino" ? "text-plum" : gender === "feminino" ? "text-lavender" : "text-gold";
-
-  const displayName = d.preferred_name || d.full_name;
-  // Abreviar nomes longos: pega as duas primeiras palavras
-  const shortName = displayName
-    ? displayName.split(" ").slice(0, 2).join(" ")
-    : "—";
+  const displayName = d.preferred_name || d.full_name || "—";
+  // Nome em duas linhas se necessário, sem cortar — o container é largo.
   const years = personYears(d.birth_date, d.death_date);
 
   return (
     <div
-      className={cn("relative flex flex-col items-center", d.is_proband && "z-20")}
-      style={{ userSelect: "none", width: d.is_proband ? 132 : 100 }}
+      className={cn(
+        "relative flex flex-col items-center",
+        d.is_proband && "z-20",
+      )}
+      style={{ userSelect: "none", width: 160 }}
     >
-      {/* Handle topo */}
       <Handle
         type="target"
         position={Position.Top}
-        className="!size-2.5 !rounded-sm !border-2 !border-card !bg-lavender opacity-0 transition-opacity hover:opacity-100"
+        className="!size-2.5 !rounded-sm !border-2 !border-card !bg-lavender opacity-0"
       />
 
-      {/* Shape principal — 72×72 px */}
+      {/* ── SHAPE ─────────────────────────────────────────── */}
       <div
-        className={cn(
-          "relative flex size-[72px] items-center justify-center font-serif transition-all duration-150",
-          !isAbortion && "border-[3px] bg-card",
-          !isAbortion && shapeClass,
-          !isAbortion && borderColor,
-          // Proband: destaque visual maior (cliente como centro)
-          d.is_proband
-            ? "shadow-[0_0_0_4px_white,0_0_0_8px_var(--color-plum)] scale-125 z-10"
-            : "shadow-sm",
-          selected && "scale-105 ring-2 ring-lavender ring-offset-2 ring-offset-background",
-        )}
+        className="relative flex items-center justify-center"
+        style={{ width: shapeSize, height: shapeSize }}
       >
-        {/* SVG para Aborto */}
-        {isAbortion && (
-          <svg viewBox="0 0 100 100" className="absolute inset-0 size-full text-foreground" fill="none" stroke="currentColor" strokeWidth="4">
-             <polygon points="50,10 90,85 10,85" />
+        {isAbortion ? (
+          <svg viewBox="0 0 100 100" className="size-full" fill="var(--color-card)" stroke="var(--color-foreground)" strokeWidth="6" strokeLinejoin="round">
+            <polygon points="50,8 92,88 8,88" />
           </svg>
+        ) : (
+          <div
+            className={cn(
+              "size-full bg-card transition-all",
+              "border-[3.5px]",
+              borderColor,
+              isMale && "rounded-sm",
+              isFemale && "rounded-full",
+              isDiamond && "rotate-45 rounded-sm",
+              d.is_proband && "shadow-[0_0_0_3px_var(--color-plum)] ring-1 ring-plum/30",
+              selected && "ring-2 ring-lavender ring-offset-2 ring-offset-background",
+            )}
+          />
         )}
-        {/* Cruz de falecido */}
+
+        {/* Cruz de falecido — SEMPRE contida no shape, nunca sobre o label */}
         {d.is_deceased && (
           <span
             aria-hidden
-            className={cn(
-              "pointer-events-none absolute inset-0 flex items-center justify-center text-[44px] font-bold leading-none text-red-500",
-              gender === "nao_binario" || gender === "outro" ? "-rotate-45" : "",
-            )}
+            className="pointer-events-none absolute inset-0 flex items-center justify-center text-red-500 font-black leading-none"
+            style={{ fontSize: shapeSize * 0.75 }}
           >
             ✕
           </span>
         )}
       </div>
 
-      {/* Label: nome + datas — área compacta para 4K */}
-      <div className={cn("mt-2 text-center bg-background/80 rounded-sm px-1 py-0.5 backdrop-blur-sm", d.is_proband ? "max-w-[132px]" : "max-w-[120px]")}> 
-        <p className={cn("truncate font-sans font-bold text-foreground leading-snug drop-shadow-sm", d.is_proband ? "text-base" : "text-sm")}> 
-          {shortName}
+      {/* ── LABEL — Nome + datas com fundo SÓLIDO para legibilidade ── */}
+      <div
+        className={cn(
+          "mt-2.5 w-full rounded-md border px-2 py-1.5 text-center shadow-sm",
+          d.is_proband
+            ? "border-plum/40 bg-white"
+            : "border-border/60 bg-card",
+        )}
+      >
+        <p
+          className={cn(
+            "font-sans font-bold text-foreground leading-tight break-words",
+            d.is_proband ? "text-[15px]" : "text-[13px]",
+          )}
+        >
+          {displayName}
         </p>
         {years && (
-          <p className="mt-0.5 text-xs font-semibold text-muted-foreground leading-snug">
+          <p className="mt-0.5 text-[11px] font-semibold text-muted-foreground leading-snug tabular-nums">
             {years}
           </p>
         )}
         {d.is_proband && (
-          <span className="mt-1 inline-block rounded bg-plum px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-white shadow-sm">
+          <span className="mt-1.5 inline-block rounded bg-plum px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.15em] text-white">
             Cliente
           </span>
         )}
       </div>
 
-      {/* Handle base */}
       <Handle
         type="source"
         position={Position.Bottom}
-        className="!size-2.5 !rounded-sm !border-2 !border-card !bg-lavender opacity-0 transition-opacity hover:opacity-100"
+        className="!size-2.5 !rounded-sm !border-2 !border-card !bg-lavender opacity-0"
       />
-      {/* Handle esquerdo */}
       <Handle
         type="source"
         position={Position.Left}
         id="left"
-        className="!size-2.5 !rounded-sm !border-2 !border-card !bg-lavender opacity-0 transition-opacity hover:opacity-100"
+        className="!size-2.5 !rounded-sm !border-2 !border-card !bg-lavender opacity-0"
       />
-      {/* Handle direito */}
       <Handle
         type="target"
         position={Position.Right}
         id="right"
-        className="!size-2.5 !rounded-sm !border-2 !border-card !bg-lavender opacity-0 transition-opacity hover:opacity-100"
+        className="!size-2.5 !rounded-sm !border-2 !border-card !bg-lavender opacity-0"
       />
     </div>
   );
