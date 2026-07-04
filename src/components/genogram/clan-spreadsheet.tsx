@@ -163,6 +163,20 @@ export function ClanSpreadsheet({ clientId }: Props) {
     };
   }, []);
 
+  // Cliente é sempre o foco: garante que o proband exista no genograma,
+  // espelhando os dados do cadastro clínico. Roda uma vez ao abrir a aba.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const result = await ensureProband(clientId);
+      if (!cancelled && result) {
+        qc.invalidateQueries({ queryKey: ["genogram-persons", clientId] });
+        qc.invalidateQueries({ queryKey: ["genogram", clientId] });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [clientId, qc]);
+
   const rows = useMemo(() => {
     const base = (persons ?? []).map((p) => ({ ...p, ...(drafts[p.id] ?? {}) }));
     // Ordena genealogicamente: Consulente no topo, depois por geração
