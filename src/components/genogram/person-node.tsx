@@ -68,6 +68,7 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
       style={{ userSelect: "none", width: 160 }}
     >
       <Handle
+        id="top"
         type="target"
         position={Position.Top}
         className="!size-2.5 !rounded-sm !border-2 !border-card !bg-lavender opacity-0"
@@ -139,6 +140,7 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
       </div>
 
       <Handle
+        id="bottom"
         type="source"
         position={Position.Bottom}
         className="!size-2.5 !rounded-sm !border-2 !border-card !bg-lavender opacity-0"
