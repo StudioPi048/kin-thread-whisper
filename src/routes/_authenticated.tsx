@@ -1,9 +1,13 @@
-import { createFileRoute, Link, Outlet, redirect, useLocation, useNavigate } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Home, LogOut, Users, Library, Settings,
-  GitBranch, Mic,
-} from "lucide-react";
+  createFileRoute,
+  Link,
+  Outlet,
+  redirect,
+  useLocation,
+  useNavigate,
+} from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Home, LogOut, Users, Library, Settings, GitBranch, Mic } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { LizLogoLockup } from "@/components/liz-logo";
@@ -19,17 +23,17 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 const nav = [
-  { to: "/app",            label: "Início",         icon: Home,     exact: true },
-  { to: "/app/clientes",   label: "Clientes",        icon: Users },
-  { to: "/app/biblioteca", label: "Biblioteca",      icon: Library },
+  { to: "/app", label: "Início", icon: Home, exact: true },
+  { to: "/app/clientes", label: "Clientes", icon: Users },
+  { to: "/app/biblioteca", label: "Biblioteca", icon: Library },
   { to: "/app/configuracoes", label: "Configurações", icon: Settings },
 ] as const;
 
 function AuthenticatedLayout() {
   const { user } = Route.useRouteContext();
-  const navigate    = useNavigate();
-  const qc          = useQueryClient();
-  const location    = useLocation();
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const location = useLocation();
 
   const { data: profile } = useQuery({
     queryKey: ["profile", user.id],
@@ -63,12 +67,8 @@ function AuthenticatedLayout() {
     <div className="flex min-h-screen bg-background">
       {/* ── SIDEBAR ────────────────────────────────────── */}
       <aside className="hidden w-72 shrink-0 flex-col bg-sidebar text-sidebar-foreground md:flex">
-
         {/* Logo — borda inferior dourada */}
-        <Link
-          to="/app"
-          className="flex items-center gap-3 border-b-2 border-gold/30 px-6 py-6"
-        >
+        <Link to="/app" className="flex items-center gap-3 border-b-2 border-gold/30 px-6 py-6">
           <LizLogoLockup variant="light" />
         </Link>
 
@@ -99,7 +99,9 @@ function AuthenticatedLayout() {
                 <item.icon
                   className={
                     "size-5 shrink-0 transition-colors " +
-                    (active ? "text-gold" : "text-sidebar-foreground/45 group-hover:text-sidebar-foreground/80")
+                    (active
+                      ? "text-gold"
+                      : "text-sidebar-foreground/45 group-hover:text-sidebar-foreground/80")
                   }
                 />
                 {item.label}
@@ -117,8 +119,8 @@ function AuthenticatedLayout() {
             Em desenvolvimento
           </p>
           {[
-            { icon: Mic,        label: "Prontuário por voz" },
-            { icon: GitBranch,  label: "Motor de padrões" },
+            { icon: Mic, label: "Prontuário por voz" },
+            { icon: GitBranch, label: "Motor de padrões" },
           ].map((t) => (
             <div
               key={t.label}
@@ -140,7 +142,9 @@ function AuthenticatedLayout() {
               {initials || "?"}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[13px] font-bold text-sidebar-foreground">{displayName}</p>
+              <p className="truncate text-[13px] font-bold text-sidebar-foreground">
+                {displayName}
+              </p>
               <p className="truncate text-[11px] text-sidebar-foreground/45">{user.email}</p>
             </div>
             <button

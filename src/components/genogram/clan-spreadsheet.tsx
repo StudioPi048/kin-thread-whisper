@@ -126,7 +126,10 @@ export function ClanSpreadsheet({ clientId }: Props) {
     };
   }, []);
 
-  const rows = useMemo(() => (persons ?? []).map((p) => ({ ...p, ...(drafts[p.id] ?? {}) })), [persons, drafts]);
+  const rows = useMemo(
+    () => (persons ?? []).map((p) => ({ ...p, ...(drafts[p.id] ?? {}) })),
+    [persons, drafts],
+  );
 
   const scaffoldTemplate = async () => {
     if (rows.length > 0) {
@@ -201,11 +204,18 @@ export function ClanSpreadsheet({ clientId }: Props) {
           </p>
           <h2 className="font-serif text-3xl font-bold text-primary">Atlas Familiar</h2>
           <p className="mt-2 text-[14px] text-muted-foreground max-w-xl leading-relaxed">
-            Mapeie o sistema familiar de forma ágil em lista. Cada linha digitada aqui atualiza o Genograma e alimenta o motor de padrões clínicos.
+            Mapeie o sistema familiar de forma ágil em lista. Cada linha digitada aqui atualiza o
+            Genograma e alimenta o motor de padrões clínicos.
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <Button variant="outline" size="sm" onClick={exportCsv} disabled={rows.length === 0} className="font-bold">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={exportCsv}
+            disabled={rows.length === 0}
+            className="font-bold"
+          >
             <Download className="size-4 mr-2" /> Exportar CSV
           </Button>
           <Button variant="outline" size="sm" onClick={scaffoldTemplate} className="font-bold">
@@ -218,7 +228,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
       </header>
 
       {rows.length === 0 ? (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className="rounded-sm border border-dashed border-border bg-lavender-soft/40 p-16 text-center"
@@ -226,15 +236,15 @@ export function ClanSpreadsheet({ clientId }: Props) {
           <Table2 className="mx-auto size-10 text-lavender opacity-60" />
           <p className="mt-4 font-serif text-2xl font-bold text-primary">Planilha Vazia</p>
           <p className="mx-auto mt-2 max-w-md text-[14px] text-muted-foreground leading-relaxed">
-            Aplique o modelo com as 40 linhas de parentesco padrão (consulente até bisavós dos dois lados)
-            e digite as informações rapidamente como num Excel.
+            Aplique o modelo com as 40 linhas de parentesco padrão (consulente até bisavós dos dois
+            lados) e digite as informações rapidamente como num Excel.
           </p>
           <Button className="mt-6 font-bold" variant="lavender" onClick={scaffoldTemplate}>
             <Plus className="size-4 mr-2" /> Aplicar Modelo Próprio
           </Button>
         </motion.div>
       ) : (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
@@ -266,8 +276,13 @@ export function ClanSpreadsheet({ clientId }: Props) {
               </thead>
               <tbody>
                 {rows.map((r, i) => (
-                  <tr key={r.id} className="border-b border-border/40 hover:bg-lavender-soft/20 transition-colors">
-                    <td className="px-3 text-center text-[11px] font-mono font-medium text-muted-foreground/60">{i + 1}</td>
+                  <tr
+                    key={r.id}
+                    className="border-b border-border/40 hover:bg-lavender-soft/20 transition-colors"
+                  >
+                    <td className="px-3 text-center text-[11px] font-mono font-medium text-muted-foreground/60">
+                      {i + 1}
+                    </td>
                     <Td>
                       <CellInput
                         value={r.full_name ?? ""}
@@ -325,7 +340,10 @@ export function ClanSpreadsheet({ clientId }: Props) {
                       />
                     </Td>
                     <Td>
-                      <CellInput value={r.vices ?? ""} onChange={(v) => scheduleSave(r.id, { vices: v })} />
+                      <CellInput
+                        value={r.vices ?? ""}
+                        onChange={(v) => scheduleSave(r.id, { vices: v })}
+                      />
                     </Td>
                     <Td>
                       <CellInput

@@ -24,10 +24,7 @@ export function PatternsPanel({ clientId }: Props) {
     queryFn: async () => {
       const [personsRes, relsRes] = await Promise.all([
         supabase.from("genogram_persons").select("*").eq("client_id", clientId),
-        supabase
-          .from("genogram_relationships")
-          .select("*")
-          .eq("client_id", clientId),
+        supabase.from("genogram_relationships").select("*").eq("client_id", clientId),
       ]);
       if (personsRes.error) throw personsRes.error;
       if (relsRes.error) throw relsRes.error;
@@ -45,9 +42,7 @@ export function PatternsPanel({ clientId }: Props) {
 
   const nameById = useMemo(() => {
     const m = new Map<string, string>();
-    (data?.persons ?? []).forEach((p) =>
-      m.set(p.id, p.preferred_name || p.full_name),
-    );
+    (data?.persons ?? []).forEach((p) => m.set(p.id, p.preferred_name || p.full_name));
     return m;
   }, [data]);
 
@@ -65,12 +60,10 @@ export function PatternsPanel({ clientId }: Props) {
               Motor de Padrões v1
             </p>
           </div>
-          <h3 className="font-serif text-3xl font-bold text-primary">
-            Repetições detectadas
-          </h3>
+          <h3 className="font-serif text-3xl font-bold text-primary">Repetições detectadas</h3>
           <p className="mt-2 text-[14px] text-muted-foreground max-w-xl leading-relaxed">
-            Leitura automática do genossociograma através de inteligência heurística. Sempre uma hipótese clínica —
-            nunca uma conclusão definitiva.
+            Leitura automática do genossociograma através de inteligência heurística. Sempre uma
+            hipótese clínica — nunca uma conclusão definitiva.
           </p>
         </div>
         <Button
@@ -86,7 +79,7 @@ export function PatternsPanel({ clientId }: Props) {
       </div>
 
       {patterns.length === 0 ? (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className="rounded-sm border border-dashed border-border bg-lavender-soft/40 p-16 text-center"
@@ -96,17 +89,18 @@ export function PatternsPanel({ clientId }: Props) {
             Nenhum padrão detectado ainda
           </p>
           <p className="mx-auto mt-2 max-w-md text-[14px] leading-relaxed text-muted-foreground">
-            Alimente a árvore genealógica. Adicione ocupações, causas de morte, idades e condições de saúde. O motor cruzará os dados automaticamente.
+            Alimente a árvore genealógica. Adicione ocupações, causas de morte, idades e condições
+            de saúde. O motor cruzará os dados automaticamente.
           </p>
         </motion.div>
       ) : (
-        <motion.ul 
+        <motion.ul
           className="grid gap-4 md:grid-cols-2"
           initial="hidden"
           animate="visible"
           variants={{
             hidden: { opacity: 0 },
-            visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+            visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
           }}
         >
           {patterns.map((p) => {
@@ -119,14 +113,22 @@ export function PatternsPanel({ clientId }: Props) {
                 key={p.id}
                 variants={{
                   hidden: { opacity: 0, scale: 0.96 },
-                  visible: { opacity: 1, scale: 1, transition: { type: "spring", stiffness: 300, damping: 24 } }
+                  visible: {
+                    opacity: 1,
+                    scale: 1,
+                    transition: { type: "spring", stiffness: 300, damping: 24 },
+                  },
                 }}
                 className={`rounded-sm border border-border bg-white p-6 shadow-sm hover:shadow-md transition-shadow ${borderAccent}`}
               >
                 <div className="flex flex-col gap-3">
                   <div className="flex items-start justify-between gap-2">
-                    <h4 className="font-serif text-xl font-bold text-primary leading-tight">{p.title}</h4>
-                    <Badge className={`${badgeClass} border-0 uppercase tracking-[0.1em] text-[10px] font-bold shrink-0`}>
+                    <h4 className="font-serif text-xl font-bold text-primary leading-tight">
+                      {p.title}
+                    </h4>
+                    <Badge
+                      className={`${badgeClass} border-0 uppercase tracking-[0.1em] text-[10px] font-bold shrink-0`}
+                    >
                       <AlertCircle className="size-3 mr-1" /> Nível {p.severity}
                     </Badge>
                   </div>
@@ -139,7 +141,11 @@ export function PatternsPanel({ clientId }: Props) {
                         Membros afetados:
                       </span>
                       {p.personIds.map((id) => (
-                        <Badge key={id} variant="secondary" className="font-semibold text-[12px] bg-background border border-border">
+                        <Badge
+                          key={id}
+                          variant="secondary"
+                          className="font-semibold text-[12px] bg-background border border-border"
+                        >
                           {nameById.get(id) ?? "—"}
                         </Badge>
                       ))}

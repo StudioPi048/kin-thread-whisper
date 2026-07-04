@@ -1,8 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import {
-  ArrowRight, Brain, GitBranch, Library,
-  Mic, ScanSearch, Sparkles, ShieldCheck,
+  ArrowRight,
+  Brain,
+  GitBranch,
+  Library,
+  Mic,
+  ScanSearch,
+  Sparkles,
+  ShieldCheck,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -46,18 +52,22 @@ const modules = [
   {
     icon: Sparkles,
     title: "Memória entre casos",
-    body: "\"Já atendi alguém parecido?\". Busca semântica em toda a sua base clínica, em linguagem natural.",
+    body: '"Já atendi alguém parecido?". Busca semântica em toda a sua base clínica, em linguagem natural.',
     color: "gold",
   },
 ];
 
 const comparisons = [
-  { before: "Papel e caneta",            after: "Memória estruturada e pesquisável",  color: "lavender" },
-  { before: "Árvore desenhada à mão",    after: "Banco de dados vivo e interativo",    color: "gold"     },
-  { before: "Memória do terapeuta",      after: "IA que lembra, compara e sugere",     color: "lavender" },
-  { before: "WhatsApp disperso",         after: "Formulário adaptativo pré-sessão",    color: "gold"     },
-  { before: "Word e prontuário manual",  after: "Registro por voz, gerado pela IA",   color: "lavender" },
-  { before: "Livros espalhados na mesa", after: "Biblioteca sistêmica contextual",     color: "gold"     },
+  { before: "Papel e caneta", after: "Memória estruturada e pesquisável", color: "lavender" },
+  { before: "Árvore desenhada à mão", after: "Banco de dados vivo e interativo", color: "gold" },
+  { before: "Memória do terapeuta", after: "IA que lembra, compara e sugere", color: "lavender" },
+  { before: "WhatsApp disperso", after: "Formulário adaptativo pré-sessão", color: "gold" },
+  {
+    before: "Word e prontuário manual",
+    after: "Registro por voz, gerado pela IA",
+    color: "lavender",
+  },
+  { before: "Livros espalhados na mesa", after: "Biblioteca sistêmica contextual", color: "gold" },
 ];
 
 const ethics = [
@@ -92,7 +102,6 @@ export default function LandingPage() {
       {/* ── HERO — full-plum ────────────────────────────── */}
       <section className="block-plum relative overflow-hidden">
         <div className="container-liz relative py-28 md:py-44">
-
           {/* Elemento decorativo — número de fundo */}
           <span
             aria-hidden
@@ -174,13 +183,17 @@ export default function LandingPage() {
         <div className="container-liz">
           {/* Header com número decorativo */}
           <div className="relative mb-16 flex items-end gap-6">
-            <span aria-hidden className="section-number leading-none select-none">01</span>
+            <span aria-hidden className="section-number leading-none select-none">
+              01
+            </span>
             <div className="pb-2">
               <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-lavender">
                 O que substitui
               </p>
               <h2 className="font-serif text-4xl font-bold text-primary md:text-5xl">
-                Seu consultório,<br />reimaginado.
+                Seu consultório,
+                <br />
+                reimaginado.
               </h2>
             </div>
           </div>
@@ -213,13 +226,17 @@ export default function LandingPage() {
       <section className="block-lavender py-24 md:py-32">
         <div className="container-liz">
           <div className="relative mb-16 flex items-end gap-6">
-            <span aria-hidden className="section-number leading-none select-none">02</span>
+            <span aria-hidden className="section-number leading-none select-none">
+              02
+            </span>
             <div className="pb-2">
               <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-lavender">
                 Arquitetura
               </p>
               <h2 className="font-serif text-4xl font-bold text-primary md:text-5xl">
-                Cinco camadas.<br />Um fluxo clínico.
+                Cinco camadas.
+                <br />
+                Um fluxo clínico.
               </h2>
             </div>
           </div>
@@ -234,9 +251,7 @@ export default function LandingPage() {
                 transition={{ duration: 0.4, delay: i * 0.06 }}
                 className={
                   "group bg-white p-8 shadow-sm transition-all duration-200 hover:shadow-lg hover:-translate-y-1 border-l-[5px] border-l-transparent " +
-                  (m.color === "lavender"
-                    ? "hover:border-l-lavender"
-                    : "hover:border-l-gold")
+                  (m.color === "lavender" ? "hover:border-l-lavender" : "hover:border-l-gold")
                 }
               >
                 <div
@@ -246,9 +261,7 @@ export default function LandingPage() {
                   }
                 >
                   <m.icon
-                    className={
-                      "size-5 " + (m.color === "lavender" ? "text-lavender" : "text-gold")
-                    }
+                    className={"size-5 " + (m.color === "lavender" ? "text-lavender" : "text-gold")}
                   />
                 </div>
                 <h3 className="font-serif text-2xl font-bold text-primary">{m.title}</h3>
@@ -286,7 +299,9 @@ export default function LandingPage() {
       <section className="bg-white py-24 md:py-32">
         <div className="container-liz">
           <div className="relative mb-16 flex items-end gap-6">
-            <span aria-hidden className="section-number leading-none select-none">03</span>
+            <span aria-hidden className="section-number leading-none select-none">
+              03
+            </span>
             <div className="pb-2">
               <div className="inline-flex items-center gap-2 rounded border border-lavender/30 bg-lavender/8 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-lavender mb-3">
                 <ShieldCheck className="size-3.5" />

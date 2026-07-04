@@ -96,7 +96,12 @@ export function IntakeForm({ clientId, professionalId }: Props) {
     [scheduleSave],
   );
 
-  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    [],
+  );
 
   const completion = useMemo(() => calculateCompletion(draft), [draft]);
   const sectionCompletion = useMemo(() => {
@@ -133,9 +138,14 @@ export function IntakeForm({ clientId, professionalId }: Props) {
           <Progress value={completion} className="mt-3 h-1.5" />
           <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
             {save.isPending ? (
-              <><Loader2 className="size-3 animate-spin" /> Salvando…</>
+              <>
+                <Loader2 className="size-3 animate-spin" /> Salvando…
+              </>
             ) : savedAt ? (
-              <><CheckCircle2 className="size-3 text-emerald-700" /> Salvo às {savedAt.toLocaleTimeString("pt-BR")}</>
+              <>
+                <CheckCircle2 className="size-3 text-emerald-700" /> Salvo às{" "}
+                {savedAt.toLocaleTimeString("pt-BR")}
+              </>
             ) : (
               <>Salvamento automático ativo</>
             )}
@@ -172,7 +182,12 @@ export function IntakeForm({ clientId, professionalId }: Props) {
           </div>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <span>{sectionCompletion}% desta seção</span>
-            <Button size="sm" variant="outline" onClick={() => save.mutate({})} disabled={save.isPending}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => save.mutate({})}
+              disabled={save.isPending}
+            >
               <Save className="size-3.5" /> Salvar agora
             </Button>
           </div>
@@ -238,7 +253,11 @@ function TextField(props: {
         onChange={(e) =>
           props.update({
             [props.field]:
-              props.type === "number" ? (e.target.value === "" ? null : Number(e.target.value)) : e.target.value,
+              props.type === "number"
+                ? e.target.value === ""
+                  ? null
+                  : Number(e.target.value)
+                : e.target.value,
           } as Partial<ClientIntake>)
         }
       />
@@ -272,8 +291,8 @@ function SectionOpening({ draft, update }: SectionProps) {
   return (
     <div className="space-y-5">
       <p className="text-sm text-muted-foreground">
-        Registre o que o cliente traz como foco do atendimento. Este é o "quero olhar isso" — o ponto de partida
-        da leitura psicogenealógica.
+        Registre o que o cliente traz como foco do atendimento. Este é o "quero olhar isso" — o
+        ponto de partida da leitura psicogenealógica.
       </p>
       <AreaField
         label="Intenção do atendimento — o que ele(a) quer ser visto?"
@@ -300,7 +319,13 @@ function SectionPersonal({ draft, update }: SectionProps) {
     <div className="grid gap-5 md:grid-cols-2">
       <TextField label="Nome completo" field="full_name" draft={draft} update={update} />
       <TextField label="Quem escolheu o nome" field="name_chooser" draft={draft} update={update} />
-      <AreaField label="Intenção do nome" field="name_intention" rows={2} draft={draft} update={update} />
+      <AreaField
+        label="Intenção do nome"
+        field="name_intention"
+        rows={2}
+        draft={draft}
+        update={update}
+      />
       <AreaField
         label="Repetição do nome no clã"
         field="name_repetition_in_family"
@@ -317,11 +342,10 @@ function SectionPersonal({ draft, update }: SectionProps) {
       />
       <TextField label="Local de nascimento" field="birth_place" draft={draft} update={update} />
       <Field label="Sexo">
-        <Select
-          value={(draft.gender as string) ?? ""}
-          onValueChange={(v) => update({ gender: v })}
-        >
-          <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
+        <Select value={(draft.gender as string) ?? ""} onValueChange={(v) => update({ gender: v })}>
+          <SelectTrigger>
+            <SelectValue placeholder="Selecionar" />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="F">Feminino</SelectItem>
             <SelectItem value="M">Masculino</SelectItem>
@@ -350,7 +374,9 @@ function SectionRelationships({ draft, update }: SectionProps) {
             value={(draft.civil_status as string) ?? ""}
             onValueChange={(v) => update({ civil_status: v })}
           >
-            <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecionar" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="single">Solteiro(a)</SelectItem>
               <SelectItem value="married">Casado(a)</SelectItem>
@@ -360,7 +386,13 @@ function SectionRelationships({ draft, update }: SectionProps) {
             </SelectContent>
           </Select>
         </Field>
-        <TextField label="Data do casamento / marco" field="union_date" type="date" draft={draft} update={update} />
+        <TextField
+          label="Data do casamento / marco"
+          field="union_date"
+          type="date"
+          draft={draft}
+          update={update}
+        />
         <TextField
           label="Nº de relacionamentos / separações"
           field="relationships_count"
@@ -378,7 +410,11 @@ function SectionRelationships({ draft, update }: SectionProps) {
         blank={{}}
         renderRow={(row, patch) => (
           <div className="grid gap-3 md:grid-cols-2">
-            <Input placeholder="Nome" value={row.name ?? ""} onChange={(e) => patch({ name: e.target.value })} />
+            <Input
+              placeholder="Nome"
+              value={row.name ?? ""}
+              onChange={(e) => patch({ name: e.target.value })}
+            />
             <Input
               type="date"
               placeholder="Nascimento"
@@ -423,7 +459,11 @@ function SectionRelationships({ draft, update }: SectionProps) {
         blank={{}}
         renderRow={(row, patch) => (
           <div className="grid gap-3 md:grid-cols-2">
-            <Input placeholder="Nome" value={row.name ?? ""} onChange={(e) => patch({ name: e.target.value })} />
+            <Input
+              placeholder="Nome"
+              value={row.name ?? ""}
+              onChange={(e) => patch({ name: e.target.value })}
+            />
             <Input
               type="date"
               placeholder="Data de nascimento"
@@ -447,10 +487,7 @@ function SectionRelationships({ draft, update }: SectionProps) {
               onChange={(e) => patch({ death_date: e.target.value })}
             />
             <label className="flex items-center gap-2 text-sm">
-              <Checkbox
-                checked={!!row.aborted}
-                onCheckedChange={(v) => patch({ aborted: !!v })}
-              />
+              <Checkbox checked={!!row.aborted} onCheckedChange={(v) => patch({ aborted: !!v })} />
               Gestação abortada
             </label>
             <Textarea
@@ -479,22 +516,81 @@ function SectionBody({ draft, update }: SectionProps) {
         blank={{}}
         renderRow={(row, patch) => (
           <div className="grid gap-3 md:grid-cols-2">
-            <Input placeholder="Local do corpo" value={row.location ?? ""} onChange={(e) => patch({ location: e.target.value })} />
-            <Input placeholder="Lado (esq/dir)" value={row.side ?? ""} onChange={(e) => patch({ side: e.target.value })} />
-            <Input type="date" placeholder="Quando" value={row.date ?? ""} onChange={(e) => patch({ date: e.target.value })} />
-            <Input placeholder="URL da foto (opcional)" value={row.photo_url ?? ""} onChange={(e) => patch({ photo_url: e.target.value })} />
-            <Textarea className="md:col-span-2" rows={2} placeholder="Significado / contexto" value={row.meaning ?? ""} onChange={(e) => patch({ meaning: e.target.value })} />
+            <Input
+              placeholder="Local do corpo"
+              value={row.location ?? ""}
+              onChange={(e) => patch({ location: e.target.value })}
+            />
+            <Input
+              placeholder="Lado (esq/dir)"
+              value={row.side ?? ""}
+              onChange={(e) => patch({ side: e.target.value })}
+            />
+            <Input
+              type="date"
+              placeholder="Quando"
+              value={row.date ?? ""}
+              onChange={(e) => patch({ date: e.target.value })}
+            />
+            <Input
+              placeholder="URL da foto (opcional)"
+              value={row.photo_url ?? ""}
+              onChange={(e) => patch({ photo_url: e.target.value })}
+            />
+            <Textarea
+              className="md:col-span-2"
+              rows={2}
+              placeholder="Significado / contexto"
+              value={row.meaning ?? ""}
+              onChange={(e) => patch({ meaning: e.target.value })}
+            />
           </div>
         )}
       />
-      <AreaField label="Pintas / manchas grandes" field="moles_notes" draft={draft} update={update} rows={3} hint="Local, e se há similar em outro membro da família." />
-      <AreaField label="Cicatrizes" field="scars_notes" draft={draft} update={update} rows={3} hint="Onde, quando, em qual contexto." />
+      <AreaField
+        label="Pintas / manchas grandes"
+        field="moles_notes"
+        draft={draft}
+        update={update}
+        rows={3}
+        hint="Local, e se há similar em outro membro da família."
+      />
+      <AreaField
+        label="Cicatrizes"
+        field="scars_notes"
+        draft={draft}
+        update={update}
+        rows={3}
+        hint="Onde, quando, em qual contexto."
+      />
       <div className="grid gap-4 md:grid-cols-2">
-        <TextField label="Alargador (quando colocou)" field="ear_stretcher" draft={draft} update={update} />
-        <TextField label="Piercing (quando colocou)" field="piercings" draft={draft} update={update} />
+        <TextField
+          label="Alargador (quando colocou)"
+          field="ear_stretcher"
+          draft={draft}
+          update={update}
+        />
+        <TextField
+          label="Piercing (quando colocou)"
+          field="piercings"
+          draft={draft}
+          update={update}
+        />
       </div>
-      <AreaField label="Falta de membros" field="missing_limbs" draft={draft} update={update} rows={2} />
-      <AreaField label="Membros supranumerários ou de lateralidade invertida" field="extra_or_inverted_limbs" draft={draft} update={update} rows={2} />
+      <AreaField
+        label="Falta de membros"
+        field="missing_limbs"
+        draft={draft}
+        update={update}
+        rows={2}
+      />
+      <AreaField
+        label="Membros supranumerários ou de lateralidade invertida"
+        field="extra_or_inverted_limbs"
+        draft={draft}
+        update={update}
+        rows={2}
+      />
     </div>
   );
 }
@@ -502,21 +598,75 @@ function SectionBody({ draft, update }: SectionProps) {
 function SectionOrigins({ draft, update }: SectionProps) {
   return (
     <div className="space-y-5">
-      <AreaField label="Concepção — programada? notícia no clã?" field="conception_notes" draft={draft} update={update} rows={4} />
-      <AreaField label="Gestação — preocupações, notícias impactantes, doenças, quedas" field="pregnancy_notes" draft={draft} update={update} rows={4} />
-      <AreaField label="Parto — tipo, duração, complicações" field="birth_notes" draft={draft} update={update} rows={4} />
+      <AreaField
+        label="Concepção — programada? notícia no clã?"
+        field="conception_notes"
+        draft={draft}
+        update={update}
+        rows={4}
+      />
+      <AreaField
+        label="Gestação — preocupações, notícias impactantes, doenças, quedas"
+        field="pregnancy_notes"
+        draft={draft}
+        update={update}
+        rows={4}
+      />
+      <AreaField
+        label="Parto — tipo, duração, complicações"
+        field="birth_notes"
+        draft={draft}
+        update={update}
+        rows={4}
+      />
 
       <div className="mt-4 rounded-md border border-lilac-soft bg-lilac-soft/40 p-4">
         <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-gold mb-3">
           Condições dos pais na gestação
         </p>
         <div className="grid gap-4 md:grid-cols-2">
-          <AreaField label="Financeiro — mãe" field="parents_financial_mother" rows={2} draft={draft} update={update} />
-          <AreaField label="Financeiro — pai" field="parents_financial_father" rows={2} draft={draft} update={update} />
-          <AreaField label="Emocional — mãe" field="parents_emotional_mother" rows={2} draft={draft} update={update} />
-          <AreaField label="Emocional — pai" field="parents_emotional_father" rows={2} draft={draft} update={update} />
-          <AreaField label="Profissional — mãe" field="parents_professional_mother" rows={2} draft={draft} update={update} />
-          <AreaField label="Profissional — pai" field="parents_professional_father" rows={2} draft={draft} update={update} />
+          <AreaField
+            label="Financeiro — mãe"
+            field="parents_financial_mother"
+            rows={2}
+            draft={draft}
+            update={update}
+          />
+          <AreaField
+            label="Financeiro — pai"
+            field="parents_financial_father"
+            rows={2}
+            draft={draft}
+            update={update}
+          />
+          <AreaField
+            label="Emocional — mãe"
+            field="parents_emotional_mother"
+            rows={2}
+            draft={draft}
+            update={update}
+          />
+          <AreaField
+            label="Emocional — pai"
+            field="parents_emotional_father"
+            rows={2}
+            draft={draft}
+            update={update}
+          />
+          <AreaField
+            label="Profissional — mãe"
+            field="parents_professional_mother"
+            rows={2}
+            draft={draft}
+            update={update}
+          />
+          <AreaField
+            label="Profissional — pai"
+            field="parents_professional_father"
+            rows={2}
+            draft={draft}
+            update={update}
+          />
         </div>
       </div>
 
@@ -535,10 +685,34 @@ function SectionOrigins({ draft, update }: SectionProps) {
 function SectionSubjective({ draft, update }: SectionProps) {
   return (
     <div className="space-y-5">
-      <AreaField label="Missão de vida (primeiro pensamento)" field="life_mission" draft={draft} update={update} rows={4} />
-      <AreaField label="Traumas de infância" field="childhood_traumas" draft={draft} update={update} rows={5} />
-      <AreaField label="Profissão dos sonhos na infância" field="childhood_dream_profession" draft={draft} update={update} rows={3} />
-      <AreaField label="Padrões que não gosta em si" field="disliked_patterns" draft={draft} update={update} rows={4} />
+      <AreaField
+        label="Missão de vida (primeiro pensamento)"
+        field="life_mission"
+        draft={draft}
+        update={update}
+        rows={4}
+      />
+      <AreaField
+        label="Traumas de infância"
+        field="childhood_traumas"
+        draft={draft}
+        update={update}
+        rows={5}
+      />
+      <AreaField
+        label="Profissão dos sonhos na infância"
+        field="childhood_dream_profession"
+        draft={draft}
+        update={update}
+        rows={3}
+      />
+      <AreaField
+        label="Padrões que não gosta em si"
+        field="disliked_patterns"
+        draft={draft}
+        update={update}
+        rows={4}
+      />
     </div>
   );
 }
@@ -547,7 +721,13 @@ function SectionSiblings({ draft, update }: SectionProps) {
   const siblings = (draft.siblings as SiblingEntry[] | null) ?? [];
   return (
     <div className="space-y-6">
-      <AreaField label="Como foi/é a relação com os irmãos" field="siblings_relationship" draft={draft} update={update} rows={3} />
+      <AreaField
+        label="Como foi/é a relação com os irmãos"
+        field="siblings_relationship"
+        draft={draft}
+        update={update}
+        rows={3}
+      />
       <RepeatableList
         title="Irmãos"
         emptyLabel="Sem irmãos registrados."
@@ -556,20 +736,80 @@ function SectionSiblings({ draft, update }: SectionProps) {
         blank={{}}
         renderRow={(row, patch) => (
           <div className="grid gap-3 md:grid-cols-2">
-            <Input placeholder="Nome" value={row.name ?? ""} onChange={(e) => patch({ name: e.target.value })} />
-            <Input placeholder="Ordem de nascimento" value={row.birth_order ?? ""} onChange={(e) => patch({ birth_order: e.target.value })} />
-            <Input type="date" placeholder="Nascimento" value={row.birth_date ?? ""} onChange={(e) => patch({ birth_date: e.target.value })} />
-            <Input type="date" placeholder="Morte (se aplicável)" value={row.death_date ?? ""} onChange={(e) => patch({ death_date: e.target.value })} />
-            <Textarea className="md:col-span-2" rows={2} placeholder="Características" value={row.characteristics ?? ""} onChange={(e) => patch({ characteristics: e.target.value })} />
+            <Input
+              placeholder="Nome"
+              value={row.name ?? ""}
+              onChange={(e) => patch({ name: e.target.value })}
+            />
+            <Input
+              placeholder="Ordem de nascimento"
+              value={row.birth_order ?? ""}
+              onChange={(e) => patch({ birth_order: e.target.value })}
+            />
+            <Input
+              type="date"
+              placeholder="Nascimento"
+              value={row.birth_date ?? ""}
+              onChange={(e) => patch({ birth_date: e.target.value })}
+            />
+            <Input
+              type="date"
+              placeholder="Morte (se aplicável)"
+              value={row.death_date ?? ""}
+              onChange={(e) => patch({ death_date: e.target.value })}
+            />
+            <Textarea
+              className="md:col-span-2"
+              rows={2}
+              placeholder="Características"
+              value={row.characteristics ?? ""}
+              onChange={(e) => patch({ characteristics: e.target.value })}
+            />
           </div>
         )}
       />
-      <AreaField label="Falecimentos de irmãos antes/depois do cliente (inclusive abortos e natimortos)" field="siblings_deaths_notes" draft={draft} update={update} rows={4} />
-      <AreaField label="Falecimentos precoces / abortos de irmãos dos pais" field="parents_siblings_deaths" draft={draft} update={update} rows={4} />
-      <AreaField label="Relação com os pais — segurança, apoio nas decisões" field="parents_relationship" draft={draft} update={update} rows={4} />
-      <AreaField label="Eventos marcantes no ambiente escolar" field="school_events" draft={draft} update={update} rows={4} />
-      <AreaField label="Abortos do(a) cliente — quantos e em que idades" field="own_abortions" draft={draft} update={update} rows={3} />
-      <AreaField label="Enfermidades e acidentes — breve relato com idades" field="own_illnesses" draft={draft} update={update} rows={5} />
+      <AreaField
+        label="Falecimentos de irmãos antes/depois do cliente (inclusive abortos e natimortos)"
+        field="siblings_deaths_notes"
+        draft={draft}
+        update={update}
+        rows={4}
+      />
+      <AreaField
+        label="Falecimentos precoces / abortos de irmãos dos pais"
+        field="parents_siblings_deaths"
+        draft={draft}
+        update={update}
+        rows={4}
+      />
+      <AreaField
+        label="Relação com os pais — segurança, apoio nas decisões"
+        field="parents_relationship"
+        draft={draft}
+        update={update}
+        rows={4}
+      />
+      <AreaField
+        label="Eventos marcantes no ambiente escolar"
+        field="school_events"
+        draft={draft}
+        update={update}
+        rows={4}
+      />
+      <AreaField
+        label="Abortos do(a) cliente — quantos e em que idades"
+        field="own_abortions"
+        draft={draft}
+        update={update}
+        rows={3}
+      />
+      <AreaField
+        label="Enfermidades e acidentes — breve relato com idades"
+        field="own_illnesses"
+        draft={draft}
+        update={update}
+        rows={5}
+      />
     </div>
   );
 }
@@ -582,26 +822,60 @@ function SectionProfessional({ draft, update }: SectionProps) {
         title="Histórico profissional"
         emptyLabel="Sem cargos registrados."
         items={work}
-        onChange={(next) => update({ work_history: next as unknown as ClientIntake["work_history"] })}
+        onChange={(next) =>
+          update({ work_history: next as unknown as ClientIntake["work_history"] })
+        }
         blank={{}}
         renderRow={(row, patch) => (
           <div className="grid gap-3 md:grid-cols-2">
-            <Input placeholder="Cargo" value={row.role ?? ""} onChange={(e) => patch({ role: e.target.value })} />
+            <Input
+              placeholder="Cargo"
+              value={row.role ?? ""}
+              onChange={(e) => patch({ role: e.target.value })}
+            />
             <div className="grid grid-cols-2 gap-2">
-              <Input type="date" value={row.start_date ?? ""} onChange={(e) => patch({ start_date: e.target.value })} />
-              <Input type="date" value={row.end_date ?? ""} onChange={(e) => patch({ end_date: e.target.value })} />
+              <Input
+                type="date"
+                value={row.start_date ?? ""}
+                onChange={(e) => patch({ start_date: e.target.value })}
+              />
+              <Input
+                type="date"
+                value={row.end_date ?? ""}
+                onChange={(e) => patch({ end_date: e.target.value })}
+              />
             </div>
-            <Textarea className="md:col-span-2" rows={2} placeholder="Como foi trabalhar aí?" value={row.experience ?? ""} onChange={(e) => patch({ experience: e.target.value })} />
+            <Textarea
+              className="md:col-span-2"
+              rows={2}
+              placeholder="Como foi trabalhar aí?"
+              value={row.experience ?? ""}
+              onChange={(e) => patch({ experience: e.target.value })}
+            />
           </div>
         )}
       />
-      <AreaField label="Formação acadêmica (seja específico)" field="formal_education" draft={draft} update={update} rows={3} />
+      <AreaField
+        label="Formação acadêmica (seja específico)"
+        field="formal_education"
+        draft={draft}
+        update={update}
+        rows={3}
+      />
       <Field label="A formação foi escolha do próprio cliente?">
         <Select
-          value={draft.education_chosen_by_self === null || draft.education_chosen_by_self === undefined ? "" : draft.education_chosen_by_self ? "yes" : "no"}
+          value={
+            draft.education_chosen_by_self === null || draft.education_chosen_by_self === undefined
+              ? ""
+              : draft.education_chosen_by_self
+                ? "yes"
+                : "no"
+          }
           onValueChange={(v) => update({ education_chosen_by_self: v === "" ? null : v === "yes" })}
         >
-          <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
+          <SelectTrigger>
+            <SelectValue placeholder="Selecionar" />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="yes">Sim</SelectItem>
             <SelectItem value="no">Não</SelectItem>
@@ -648,10 +922,23 @@ function SectionClanChecklist({ draft, update }: SectionProps) {
       </p>
       <div className="grid gap-4 md:grid-cols-2">
         {CLAN_ITEMS.map((it) => (
-          <AreaField key={it.field} label={it.label} field={it.field} draft={draft} update={update} rows={2} />
+          <AreaField
+            key={it.field}
+            label={it.label}
+            field={it.field}
+            draft={draft}
+            update={update}
+            rows={2}
+          />
         ))}
       </div>
-      <AreaField label="Outras observações" field="clan_other_observations" draft={draft} update={update} rows={4} />
+      <AreaField
+        label="Outras observações"
+        field="clan_other_observations"
+        draft={draft}
+        update={update}
+        rows={4}
+      />
     </div>
   );
 }
@@ -698,27 +985,123 @@ function SectionAdditional({ draft, update }: SectionProps) {
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2">
-        <AreaField label="Brincadeiras preferidas na infância" field="favorite_childhood_games" draft={draft} update={update} rows={3} />
-        <AreaField label="Medos na infância" field="childhood_fears" draft={draft} update={update} rows={3} />
-        <AreaField label="Sonhos / pesadelos reiterados" field="recurring_dreams" draft={draft} update={update} rows={3} />
-        <AreaField label="Contos de fada / histórias marcantes" field="marking_fairy_tales" draft={draft} update={update} rows={3} />
-        <TextField label="Agenesia de dente (qual?)" field="dental_agenesis" draft={draft} update={update} />
-        <TextField label="Canal em algum dente (qual?)" field="dental_root_canal" draft={draft} update={update} />
-        <AreaField label="Herança cultural materna" field="cultural_heritage_maternal" draft={draft} update={update} rows={4} />
-        <AreaField label="Herança cultural paterna" field="cultural_heritage_paternal" draft={draft} update={update} rows={4} />
+        <AreaField
+          label="Brincadeiras preferidas na infância"
+          field="favorite_childhood_games"
+          draft={draft}
+          update={update}
+          rows={3}
+        />
+        <AreaField
+          label="Medos na infância"
+          field="childhood_fears"
+          draft={draft}
+          update={update}
+          rows={3}
+        />
+        <AreaField
+          label="Sonhos / pesadelos reiterados"
+          field="recurring_dreams"
+          draft={draft}
+          update={update}
+          rows={3}
+        />
+        <AreaField
+          label="Contos de fada / histórias marcantes"
+          field="marking_fairy_tales"
+          draft={draft}
+          update={update}
+          rows={3}
+        />
+        <TextField
+          label="Agenesia de dente (qual?)"
+          field="dental_agenesis"
+          draft={draft}
+          update={update}
+        />
+        <TextField
+          label="Canal em algum dente (qual?)"
+          field="dental_root_canal"
+          draft={draft}
+          update={update}
+        />
+        <AreaField
+          label="Herança cultural materna"
+          field="cultural_heritage_maternal"
+          draft={draft}
+          update={update}
+          rows={4}
+        />
+        <AreaField
+          label="Herança cultural paterna"
+          field="cultural_heritage_paternal"
+          draft={draft}
+          update={update}
+          rows={4}
+        />
       </div>
 
       <div className="rounded-md border border-lilac-soft bg-lilac-soft/40 p-4">
-        <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-gold mb-3">Átomo social</p>
+        <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-gold mb-3">
+          Átomo social
+        </p>
         <div className="grid gap-4 md:grid-cols-2">
-          <AreaField label="Objeto marcante (nome e significado)" field="social_atom_object" draft={draft} update={update} rows={2} />
-          <AreaField label="Livro marcante" field="social_atom_book" draft={draft} update={update} rows={2} />
-          <AreaField label="Animal de estimação" field="social_atom_pet" draft={draft} update={update} rows={2} />
-          <AreaField label="Momento histórico marcante" field="social_atom_historic_moment" draft={draft} update={update} rows={2} />
-          <AreaField label="Música que marcou" field="social_atom_music" draft={draft} update={update} rows={2} />
-          <AreaField label="Pessoas mais próximas" field="social_atom_close_people" draft={draft} update={update} rows={2} />
-          <AreaField label="Símbolos, ideias, ideologias importantes" field="social_atom_symbols" draft={draft} update={update} rows={2} />
-          <AreaField label="Outras memórias do clã" field="social_atom_other" draft={draft} update={update} rows={2} />
+          <AreaField
+            label="Objeto marcante (nome e significado)"
+            field="social_atom_object"
+            draft={draft}
+            update={update}
+            rows={2}
+          />
+          <AreaField
+            label="Livro marcante"
+            field="social_atom_book"
+            draft={draft}
+            update={update}
+            rows={2}
+          />
+          <AreaField
+            label="Animal de estimação"
+            field="social_atom_pet"
+            draft={draft}
+            update={update}
+            rows={2}
+          />
+          <AreaField
+            label="Momento histórico marcante"
+            field="social_atom_historic_moment"
+            draft={draft}
+            update={update}
+            rows={2}
+          />
+          <AreaField
+            label="Música que marcou"
+            field="social_atom_music"
+            draft={draft}
+            update={update}
+            rows={2}
+          />
+          <AreaField
+            label="Pessoas mais próximas"
+            field="social_atom_close_people"
+            draft={draft}
+            update={update}
+            rows={2}
+          />
+          <AreaField
+            label="Símbolos, ideias, ideologias importantes"
+            field="social_atom_symbols"
+            draft={draft}
+            update={update}
+            rows={2}
+          />
+          <AreaField
+            label="Outras memórias do clã"
+            field="social_atom_other"
+            draft={draft}
+            update={update}
+            rows={2}
+          />
         </div>
       </div>
     </div>
@@ -746,11 +1129,7 @@ function RepeatableList<T extends object>({
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-gold">{title}</p>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => onChange([...items, { ...blank }])}
-        >
+        <Button size="sm" variant="outline" onClick={() => onChange([...items, { ...blank }])}>
           <Plus className="size-3.5" /> Adicionar
         </Button>
       </div>

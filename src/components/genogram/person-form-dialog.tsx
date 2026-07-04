@@ -125,7 +125,8 @@ export function PersonFormDialog({
         occupation: form.occupation.trim() || null,
         cause_of_death: form.cause_of_death.trim() || null,
         health_conditions: form.health_conditions,
-        life_events: form.life_events as unknown as Database["public"]["Tables"]["genogram_persons"]["Insert"]["life_events"],
+        life_events:
+          form.life_events as unknown as Database["public"]["Tables"]["genogram_persons"]["Insert"]["life_events"],
         notes: form.notes.trim() || null,
       };
       if (editing) {
@@ -167,7 +168,10 @@ export function PersonFormDialog({
   }
 
   function removeCondition(c: string) {
-    set("health_conditions", v.health_conditions.filter((x) => x !== c));
+    set(
+      "health_conditions",
+      v.health_conditions.filter((x) => x !== c),
+    );
   }
 
   function addEvent() {
@@ -182,19 +186,30 @@ export function PersonFormDialog({
   }
 
   function removeEvent(i: number) {
-    set("life_events", v.life_events.filter((_, idx) => idx !== i));
+    set(
+      "life_events",
+      v.life_events.filter((_, idx) => idx !== i),
+    );
   }
 
   // Visual header: initials
   const initials = v.full_name
-    ? v.full_name.split(" ").filter(Boolean).slice(0, 2).map(n => n[0]).join("").toUpperCase()
+    ? v.full_name
+        .split(" ")
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
     : "?";
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       {/* Editorial width: sm:max-w-2xl */}
-      <SheetContent side="right" className="flex flex-col gap-0 p-0 sm:max-w-xl w-full border-l-[5px] border-l-lavender">
-        
+      <SheetContent
+        side="right"
+        className="flex flex-col gap-0 p-0 sm:max-w-xl w-full border-l-[5px] border-l-lavender"
+      >
         {/* Header Magazine Style */}
         <div className="bg-plum px-8 py-10 relative overflow-hidden shrink-0">
           <span className="section-number absolute right-4 top-4 opacity-10 text-white">
@@ -210,7 +225,7 @@ export function PersonFormDialog({
                   Dossiê
                 </p>
                 <SheetTitle className="font-serif text-3xl font-bold text-white mt-1">
-                  {editing ? (v.preferred_name || v.full_name || "Membro da árvore") : "Nova pessoa"}
+                  {editing ? v.preferred_name || v.full_name || "Membro da árvore" : "Nova pessoa"}
                 </SheetTitle>
               </div>
             </div>
@@ -262,7 +277,10 @@ export function PersonFormDialog({
                     <SelectContent>
                       {genogramGenderOptions.map((g) => (
                         <SelectItem key={g.value} value={g.value}>
-                          <span className="mr-2 font-serif font-bold text-lavender">{g.symbol}</span> {g.label}
+                          <span className="mr-2 font-serif font-bold text-lavender">
+                            {g.symbol}
+                          </span>{" "}
+                          {g.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -337,7 +355,7 @@ export function PersonFormDialog({
               <h3 className="font-serif text-xl font-bold text-primary border-b border-border pb-2">
                 Padrões & Histórico
               </h3>
-              
+
               <Field label="Condições de saúde (física/mental)" id="health_conditions">
                 <div className="flex gap-2">
                   <Input
@@ -359,7 +377,11 @@ export function PersonFormDialog({
                 {v.health_conditions.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-2">
                     {v.health_conditions.map((c) => (
-                      <Badge key={c} variant="secondary" className="gap-1.5 font-semibold text-[13px] bg-accent/50 px-2 py-1">
+                      <Badge
+                        key={c}
+                        variant="secondary"
+                        className="gap-1.5 font-semibold text-[13px] bg-accent/50 px-2 py-1"
+                      >
                         {c}
                         <button
                           type="button"
@@ -406,7 +428,9 @@ export function PersonFormDialog({
                             <span className="font-mono text-[12px] font-bold text-muted-foreground">
                               {ev.date}
                             </span>
-                            <span className="flex-1 truncate text-[14px] font-medium">{ev.description}</span>
+                            <span className="flex-1 truncate text-[14px] font-medium">
+                              {ev.description}
+                            </span>
                             <button
                               type="button"
                               onClick={() => removeEvent(i)}
@@ -445,7 +469,13 @@ export function PersonFormDialog({
           >
             Cancelar
           </Button>
-          <Button type="submit" form="person-form" disabled={mutation.isPending} variant="lavender" size="lg">
+          <Button
+            type="submit"
+            form="person-form"
+            disabled={mutation.isPending}
+            variant="lavender"
+            size="lg"
+          >
             {mutation.isPending ? "Salvando..." : editing ? "Salvar dossiê" : "Adicionar à árvore"}
           </Button>
         </div>
@@ -458,15 +488,7 @@ function Row({ children }: { children: React.ReactNode }) {
   return <div className="grid gap-5 sm:grid-cols-2">{children}</div>;
 }
 
-function Field({
-  label,
-  id,
-  children,
-}: {
-  label: string;
-  id: string;
-  children: React.ReactNode;
-}) {
+function Field({ label, id, children }: { label: string; id: string; children: React.ReactNode }) {
   return (
     <div className="space-y-2">
       <Label htmlFor={id} className="text-[13px] font-bold text-foreground">

@@ -42,11 +42,7 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
         : "border-gold";
 
   const symbolColor =
-    gender === "masculino"
-      ? "text-plum"
-      : gender === "feminino"
-        ? "text-lavender"
-        : "text-gold";
+    gender === "masculino" ? "text-plum" : gender === "feminino" ? "text-lavender" : "text-gold";
 
   const displayName = d.preferred_name || d.full_name;
   const years = personYears(d.birth_date, d.death_date);
@@ -66,9 +62,7 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
           "relative flex size-24 items-center justify-center border-[3px] bg-card font-serif text-3xl transition-all duration-150",
           shapeClass,
           borderColor,
-          d.is_proband
-            ? "shadow-[0_0_0_4px_white,0_0_0_7px_var(--color-lavender)]"
-            : "shadow-sm",
+          d.is_proband ? "shadow-[0_0_0_4px_white,0_0_0_7px_var(--color-lavender)]" : "shadow-sm",
           selected && "scale-105 ring-3 ring-lavender ring-offset-3 ring-offset-background",
         )}
       >
@@ -77,7 +71,7 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
           className={cn(
             "text-[26px] font-light leading-none",
             symbolColor,
-            (gender === "nao_binario" || gender === "outro") ? "-rotate-45" : "",
+            gender === "nao_binario" || gender === "outro" ? "-rotate-45" : "",
           )}
         >
           {genderSymbol(gender)}
@@ -89,7 +83,7 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
             aria-hidden
             className={cn(
               "pointer-events-none absolute inset-0 flex items-center justify-center text-5xl leading-none text-destructive/70",
-              (gender === "nao_binario" || gender === "outro") ? "-rotate-45" : "",
+              gender === "nao_binario" || gender === "outro" ? "-rotate-45" : "",
             )}
           >
             ✕
@@ -102,9 +96,7 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
         <p className="truncate font-sans text-[13px] font-bold text-foreground leading-tight">
           {displayName}
         </p>
-        {years && (
-          <p className="mt-0.5 text-[11px] font-medium text-muted-foreground">{years}</p>
-        )}
+        {years && <p className="mt-0.5 text-[11px] font-medium text-muted-foreground">{years}</p>}
         {d.is_proband && (
           <span className="mt-1 inline-block rounded bg-lavender/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-lavender">
             Paciente

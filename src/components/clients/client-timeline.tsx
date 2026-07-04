@@ -29,7 +29,7 @@ export function ClientTimeline({ clientId }: Props) {
   const items = data ?? [];
   if (items.length === 0) {
     return (
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         className="rounded-sm border border-dashed border-border bg-lavender-soft/40 p-16 text-center"
@@ -39,7 +39,8 @@ export function ClientTimeline({ clientId }: Props) {
           A linha do tempo se desenha a partir do genograma
         </p>
         <p className="mx-auto mt-2 max-w-md text-[14px] leading-relaxed text-muted-foreground">
-          Adicione nascimentos, mortes e eventos biográficos às pessoas do sistema. Eles aparecerão aqui em ordem cronológica, revelando sincronicidades.
+          Adicione nascimentos, mortes e eventos biográficos às pessoas do sistema. Eles aparecerão
+          aqui em ordem cronológica, revelando sincronicidades.
         </p>
       </motion.div>
     );
@@ -59,32 +60,36 @@ export function ClientTimeline({ clientId }: Props) {
       {/* Editorial subtle timeline gradient line */}
       <div className="pointer-events-none absolute inset-y-0 left-[8rem] w-px bg-gradient-to-b from-plum/50 via-lavender/30 to-transparent" />
 
-      <motion.ol 
+      <motion.ol
         className="space-y-12"
         initial="hidden"
         animate="visible"
         variants={{
           hidden: { opacity: 0 },
-          visible: { opacity: 1, transition: { staggerChildren: 0.15 } }
+          visible: { opacity: 1, transition: { staggerChildren: 0.15 } },
         }}
       >
         {years.map((year) => (
-          <motion.li 
-            key={year} 
+          <motion.li
+            key={year}
             className="grid grid-cols-[8rem_auto_1fr] items-start gap-6"
             variants={{
               hidden: { opacity: 0, x: -15 },
-              visible: { opacity: 1, x: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+              visible: {
+                opacity: 1,
+                x: 0,
+                transition: { type: "spring", stiffness: 300, damping: 24 },
+              },
             }}
           >
             {/* Year Column */}
             <div className="pt-0.5 text-right relative pr-4">
               <span className="font-serif text-4xl font-bold text-plum/90">{year || "?"}</span>
             </div>
-            
+
             {/* Timeline Dot */}
             <div className="relative mt-3.5 z-10 flex size-3.5 items-center justify-center rounded-full bg-white border-[3px] border-plum shadow-sm" />
-            
+
             {/* Cards Column */}
             <div className="space-y-4 pt-1">
               {byYear.get(year)!.map((it, idx) => (
@@ -102,20 +107,24 @@ function TimelineCard({ item }: { item: TimelineItem }) {
   const Icon = item.kind === "birth" ? Baby : item.kind === "death" ? Cross : Sparkles;
   const isDeath = item.kind === "death";
   const isBirth = item.kind === "birth";
-  
+
   // Editorial tones based on event
-  const accentClass = isDeath 
-    ? "accent-bar-plum bg-white" 
-    : isBirth 
-      ? "accent-bar-gold bg-white" 
+  const accentClass = isDeath
+    ? "accent-bar-plum bg-white"
+    : isBirth
+      ? "accent-bar-gold bg-white"
       : "accent-bar-lavender bg-lavender-soft/20";
-      
+
   const iconColor = isDeath ? "text-plum" : isBirth ? "text-gold" : "text-lavender";
 
   return (
-    <div className={`rounded-sm border border-border shadow-sm px-5 py-4 transition-shadow hover:shadow-md ${accentClass}`}>
+    <div
+      className={`rounded-sm border border-border shadow-sm px-5 py-4 transition-shadow hover:shadow-md ${accentClass}`}
+    >
       <div className="flex items-center gap-3">
-        <div className={`flex size-8 shrink-0 items-center justify-center rounded-md bg-background border border-border ${iconColor}`}>
+        <div
+          className={`flex size-8 shrink-0 items-center justify-center rounded-md bg-background border border-border ${iconColor}`}
+        >
           <Icon className="size-4" />
         </div>
         <div className="flex-1 min-w-0">
@@ -132,7 +141,7 @@ function TimelineCard({ item }: { item: TimelineItem }) {
           </p>
         </div>
       </div>
-      
+
       {item.meta && (
         <div className="mt-3 pt-3 border-t border-border/50">
           <p className="flex items-start gap-2 text-[14px] leading-relaxed text-foreground/80 font-serif">

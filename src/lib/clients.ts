@@ -19,7 +19,10 @@ export const clientFormSchema = z.object({
   full_name: z.string().trim().min(2, "Nome muito curto").max(160),
   preferred_name: z.string().trim().max(80).optional().or(z.literal("")),
   birth_date: z.string().optional().or(z.literal("")),
-  gender: z.enum(["feminino", "masculino", "nao_binario", "outro", "nao_informado"]).optional().or(z.literal("")),
+  gender: z
+    .enum(["feminino", "masculino", "nao_binario", "outro", "nao_informado"])
+    .optional()
+    .or(z.literal("")),
   birthplace: z.string().trim().max(160).optional().or(z.literal("")),
   phone: z.string().trim().max(40).optional().or(z.literal("")),
   email: z.string().trim().email("E-mail inválido").max(255).optional().or(z.literal("")),
