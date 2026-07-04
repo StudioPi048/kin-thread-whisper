@@ -82,7 +82,7 @@ async def collect_person_nodes(page: Page) -> list[dict]:
             const labelEl = node.querySelector('p.font-sans, p');
             const name = labelEl ? labelEl.textContent.trim() : '';
             const isProband = Array.from(node.querySelectorAll('span'))
-              .some(s => s.textContent.trim().toLowerCase() === 'cliente');
+              .some(s => /paciente|cliente/i.test(s.textContent.trim()));
             return {
               id: node.getAttribute('data-id'),
               x: r.x + r.width / 2,
