@@ -496,13 +496,17 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
   });
 
   // Recreate union nodes exactly as before
-  const unionNodeMap = new Map<string, string>();
+  const parentToUnionMap = new Map<string, string>();
   edges.forEach((edge) => {
     if (edge.style?.stroke === "var(--color-gold)") {
       const sourceNode = layoutedNodes.find((n) => n.id === edge.source);
       const targetNode = layoutedNodes.find((n) => n.id === edge.target);
       if (sourceNode && targetNode) {
         const unionId = `union_${sourceNode.id}_${targetNode.id}`;
+        
+        parentToUnionMap.set(sourceNode.id, unionId);
+        parentToUnionMap.set(targetNode.id, unionId);
+        
         const centerX1 = sourceNode.position.x + NODE_W / 2;
         const centerX2 = targetNode.position.x + NODE_W / 2;
         
@@ -513,18 +517,8 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
           position: { x: (centerX1 + centerX2) / 2, y: sourceNode.position.y + 40 },
           data: {},
         });
-        
-        unionNodeMap.set(`${sourceNode.id}_${targetNode.id}`, unionId);
-        unionNodeMap.set(`${targetNode.id}_${sourceNode.id}`, unionId);
       }
     }
-  });
-
-  const parentToUnionMap = new Map<string, string>();
-  unionNodeMap.forEach((unionId, parentsKey) => {
-    const [p1, p2] = parentsKey.split("_");
-    parentToUnionMap.set(p1, unionId);
-    parentToUnionMap.set(p2, unionId);
   });
 
   const parentEdgesByChild = new Map<string, Edge[]>();
