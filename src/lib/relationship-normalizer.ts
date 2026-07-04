@@ -10,7 +10,7 @@ function clean(s: string): string {
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\([^)]*\)/g, "") // remove conteúdo entre parênteses
+    .replace(/[()]/g, " ") // mantém o contexto escrito entre parênteses
     .replace(/s$/g, "") // remove plural 's' at the end of words roughly (irmaos -> irmao)
     .replace(/oes$/g, "ao") // (irmaoes -> irmao)
     .replace(/\s+/g, " ")
@@ -36,10 +36,10 @@ const RULES: TagRule[] = [
   { tag: "Mãe", keywords: ["mae", "mama", "mamai", "madrasta", "mae biologica", "mae adotiva", "mae de criacao", "genitora", "mother", "mom", "stepmother", "stepmom"] },
 
   // ── TIOS PATERNOS (Irmãos do Pai) ───────────────────────────
-  { tag: "Tio(a) paterno(a)", keywords: ["tio paterno", "tia paterna", "tio do pai", "tia do pai", "irmao do pai", "irma do pai", "uncle father", "paternal uncle", "paternal aunt"] },
+  { tag: "Tio(a) paterno(a)", keywords: ["tio paterno", "tia paterna", "tio do pai", "tia do pai", "irmao do pai", "irmaos do pai", "irma do pai", "irmaa do pai", "irmas do pai", "uncle father", "paternal uncle", "paternal aunt"] },
 
   // ── TIOS MATERNOS (Irmãos da Mãe) ───────────────────────────
-  { tag: "Tio(a) materno(a)", keywords: ["tio materno", "tia materna", "tio da mae", "tia da mae", "irmao da mae", "irma da mae", "uncle mother", "maternal uncle", "maternal aunt"] },
+  { tag: "Tio(a) materno(a)", keywords: ["tio materno", "tia materna", "tio da mae", "tia da mae", "irmao da mae", "irmaos da mae", "irma da mae", "irmas da mae", "uncle mother", "maternal uncle", "maternal aunt"] },
 
   // ── TIOS (GENÉRICO sem lado) ────────────────────────────────
   { tag: "Tio(a) paterno(a)", keywords: ["tio", "tia", "uncle", "aunt"] }, // fallback → paterno
@@ -65,8 +65,8 @@ const RULES: TagRule[] = [
   { tag: "Bisavó paterna (mãe da avó)", keywords: ["bisavo paterna mae da avo", "bisava paterna da avo", "mae da avo paterna", "great-grandmother paternal grandmother"] },
 
   // ── BISAVÔS MATERNOS (avô) ──────────────────────────────────
-  { tag: "Bisavô materno (pai do avô)", keywords: ["bisavo materno pai do avo", "bisavo materno masculino", "pai do avo materno", "great-grandfather maternal grandfather"] },
-  { tag: "Bisavó materna (mãe do avô)", keywords: ["bisavo materna mae do avo", "bisava materna do avo", "mae do avo materno", "great-grandmother maternal grandfather"] },
+  { tag: "Bisavô materno (pai do avô)", keywords: ["bisavo materno pai do avo", "bisavo materno masculino", "bisavo pai avo mat", "bisavo pai avo materno", "pai do avo materno", "great-grandfather maternal grandfather"] },
+  { tag: "Bisavó materna (mãe do avô)", keywords: ["bisavo materna mae do avo", "bisava materna do avo", "bisavo mae avo mat", "bisavo mae avo materno", "mae do avo materno", "great-grandmother maternal grandfather"] },
 
   // ── BISAVÔS MATERNOS (avó) ──────────────────────────────────
   { tag: "Bisavô materno (pai da avó)", keywords: ["bisavo materno pai da avo", "bisavo materno da avo", "pai da avo materna", "great-grandfather maternal grandmother"] },
@@ -80,7 +80,7 @@ const RULES: TagRule[] = [
   { tag: "Irmã(o) do avô paterno", keywords: ["irmao do avo paterno", "irma da avo paterna", "irma do avo paterno", "tio avo paterno", "grand-uncle paternal", "irmao do avo"] },
   { tag: "Irmã(o) da avó paterna", keywords: ["irmao da avo paterna", "irma da avo paterna", "tia avo paterna", "grand-aunt paternal", "irmao da avo"] },
   { tag: "Irmã(o) do avô materno", keywords: ["irmao do avo materno", "irma do avo materno", "tio avo materno", "grand-uncle maternal", "irmao do avo matern"] },
-  { tag: "Irmã(o) da avó materna", keywords: ["irmao da avo materna", "irma da avo materna", "tia avo materna", "grand-aunt maternal", "irmao da avo matern"] },
+  { tag: "Irmã(o) da avó materna", keywords: ["irmao da avo materna", "irmaos da avo materna", "irma da avo materna", "irmas da avo materna", "tia avo materna", "grand-aunt maternal", "irmao da avo matern"] },
 
   // ── IRMÃOS DOS BISAVÔS ──────────────────────────────────────
   { tag: "Irmã(o) do bisavô paterno", keywords: ["irmao do bisavo paterno", "irmao do bisavo", "irmao da bisavo", "irma da bisavo", "irmao da bisavo paterna"] },
