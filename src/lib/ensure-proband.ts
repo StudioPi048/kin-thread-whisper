@@ -31,7 +31,12 @@ export async function ensureProband(clientId: string): Promise<{ probandId: stri
     .maybeSingle();
 
   if (existingProband) {
-    const patch: Record<string, unknown> = {};
+    const patch: {
+      full_name?: string;
+      birth_date?: string | null;
+      gender?: string;
+      notes?: string;
+    } = {};
     if (!existingProband.full_name?.trim() && client.full_name) patch.full_name = client.full_name;
     if (!existingProband.birth_date && client.birth_date) patch.birth_date = client.birth_date;
     if ((!existingProband.gender || existingProband.gender === "unknown") && client.gender) {
