@@ -144,7 +144,7 @@ export function GenogramCanvas(props: CanvasProps) {
 const NODE_W = 170;   // Largura do nó (shape + label)
 const NODE_H = 210;   // Altura total do nó
 const GENERATION_GAP = 250;   // Distância vertical entre gerações
-const HORIZONTAL_STEP = NODE_W + 10; // Espaço horizontal entre nós de uma geração
+const HORIZONTAL_STEP = NODE_W + 70; // Espaço horizontal entre nós de uma geração
 const DIRECT_PARENT_X = 450;
 const GRANDPARENT_PAIR_GAP = 400;
 const GREAT_GRANDPARENT_PAIR_GAP = 200;
@@ -381,7 +381,7 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     isHusbandSide: boolean,
     generation: number
   ): Block {
-    const FAMILY_GAP = 40; 
+    const FAMILY_GAP = 160; 
     let rightOffsetX = leftBlock.width + (leftBlock.width > 0 && rightBlock.width > 0 ? FAMILY_GAP : 0);
     // TIGHT LAYOUT FIX: If both blocks have a childTarget, we can pull them closer 
     // to prevent massive empty gaps, as long as it doesn't cause negative coordinates.
@@ -995,10 +995,10 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
           >
             <Background
               color="#d8d0ec"
-              variant={BackgroundVariant.Dots}
-              gap={28}
+              variant={BackgroundVariant.Lines}
+              gap={40}
               size={1}
-              style={{ opacity: 0.35 }}
+              style={{ opacity: 0.25 }}
             />
             <Controls
               className="bg-card border-none shadow-md overflow-hidden rounded-md [&>button]:border-b [&>button]:border-sidebar-border [&>button]:hover:bg-lavender-soft [&>button]:text-plum"

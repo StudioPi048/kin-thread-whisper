@@ -117,10 +117,8 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
       {/* ── LABEL — Nome + datas com fundo SÓLIDO para legibilidade ── */}
       <div
         className={cn(
-          "mt-2.5 w-full rounded-md border px-2 py-1.5 text-center shadow-sm",
-          d.is_proband
-            ? "border-plum/40 bg-white"
-            : "border-border/60 bg-card",
+          "mt-2.5 w-full rounded-md px-1 py-1 text-center",
+          d.is_proband ? "bg-white/50 backdrop-blur-sm border border-plum/20" : ""
         )}
       >
         <p
@@ -159,12 +157,14 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
         type="target"
         position={Position.Left}
         id="left"
+        style={{ top: shapeSize / 2 }}
         className="!size-2.5 !rounded-sm !border-2 !border-card !bg-lavender opacity-0"
       />
       <Handle
         type="source"
         position={Position.Right}
         id="right"
+        style={{ top: shapeSize / 2 }}
         className="!size-2.5 !rounded-sm !border-2 !border-card !bg-lavender opacity-0"
       />
 
