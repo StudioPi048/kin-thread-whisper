@@ -163,6 +163,11 @@ function alternatingCenter(anchor: number, orderIndex: number, gap = COLLATERAL_
   return anchor + (orderIndex % 2 === 0 ? -step : step) * gap;
 }
 
+function duplicateOffset(base: number, orderIndex: number, side: "left" | "right", gap = COLLATERAL_GAP): number {
+  if (orderIndex === 0) return base;
+  return base + (side === "left" ? -1 : 1) * orderIndex * gap;
+}
+
 function directBloodCenter(canonical: string, orderIndex: number, isProband: boolean): number | null {
   if (isProband) return 0;
   const c = canonical.toLowerCase();
@@ -174,15 +179,15 @@ function directBloodCenter(canonical: string, orderIndex: number, isProband: boo
   const maternalGrandfatherX = motherX - GRANDPARENT_PAIR_GAP / 2;
   const maternalGrandmotherX = motherX + GRANDPARENT_PAIR_GAP / 2;
 
-  if (c === "pai") return fatherX - orderIndex * COLLATERAL_GAP;
-  if (c === "mãe" || c === "mae") return motherX + orderIndex * COLLATERAL_GAP;
+  if (c === "pai") return duplicateOffset(fatherX, orderIndex, "left");
+  if (c === "mãe" || c === "mae") return duplicateOffset(motherX, orderIndex, "right");
   if (c.startsWith("tio(a) paterno")) return fatherX - GRANDPARENT_PAIR_GAP / 2 - (orderIndex + 1) * COLLATERAL_GAP;
   if (c.startsWith("tio(a) materno")) return motherX + GRANDPARENT_PAIR_GAP / 2 + (orderIndex + 1) * COLLATERAL_GAP;
 
-  if (c === "avô paterno") return paternalGrandfatherX;
-  if (c === "avó paterna") return paternalGrandmotherX;
-  if (c === "avô materno") return maternalGrandfatherX;
-  if (c === "avó materna") return maternalGrandmotherX;
+  if (c === "avô paterno") return duplicateOffset(paternalGrandfatherX, orderIndex, "left");
+  if (c === "avó paterna") return duplicateOffset(paternalGrandmotherX, orderIndex, "right");
+  if (c === "avô materno") return duplicateOffset(maternalGrandfatherX, orderIndex, "left");
+  if (c === "avó materna") return duplicateOffset(maternalGrandmotherX, orderIndex, "right");
   if (c.includes("irmã(o) do avô paterno") || c.includes("irmã(o) da avó paterna")) {
     return paternalGrandfatherX - GRANDPARENT_PAIR_GAP / 2 - (orderIndex + 1) * COLLATERAL_GAP;
   }
@@ -190,14 +195,14 @@ function directBloodCenter(canonical: string, orderIndex: number, isProband: boo
     return maternalGrandmotherX + GRANDPARENT_PAIR_GAP / 2 + (orderIndex + 1) * COLLATERAL_GAP;
   }
 
-  if (c.includes("bisavô paterno (pai do avô)")) return paternalGrandfatherX - GREAT_GRANDPARENT_PAIR_GAP / 2;
-  if (c.includes("bisavó paterna (mãe do avô)")) return paternalGrandfatherX + GREAT_GRANDPARENT_PAIR_GAP / 2;
-  if (c.includes("bisavô paterno (pai da avó)")) return paternalGrandmotherX - GREAT_GRANDPARENT_PAIR_GAP / 2;
-  if (c.includes("bisavó paterna (mãe da avó)")) return paternalGrandmotherX + GREAT_GRANDPARENT_PAIR_GAP / 2;
-  if (c.includes("bisavô materno (pai do avô)")) return maternalGrandfatherX - GREAT_GRANDPARENT_PAIR_GAP / 2;
-  if (c.includes("bisavó materna (mãe do avô)")) return maternalGrandfatherX + GREAT_GRANDPARENT_PAIR_GAP / 2;
-  if (c.includes("bisavô materno (pai da avó)")) return maternalGrandmotherX - GREAT_GRANDPARENT_PAIR_GAP / 2;
-  if (c.includes("bisavó materna (mãe da avó)")) return maternalGrandmotherX + GREAT_GRANDPARENT_PAIR_GAP / 2;
+  if (c.includes("bisavô paterno (pai do avô)")) return duplicateOffset(paternalGrandfatherX - GREAT_GRANDPARENT_PAIR_GAP / 2, orderIndex, "left");
+  if (c.includes("bisavó paterna (mãe do avô)")) return duplicateOffset(paternalGrandfatherX + GREAT_GRANDPARENT_PAIR_GAP / 2, orderIndex, "right");
+  if (c.includes("bisavô paterno (pai da avó)")) return duplicateOffset(paternalGrandmotherX - GREAT_GRANDPARENT_PAIR_GAP / 2, orderIndex, "left");
+  if (c.includes("bisavó paterna (mãe da avó)")) return duplicateOffset(paternalGrandmotherX + GREAT_GRANDPARENT_PAIR_GAP / 2, orderIndex, "right");
+  if (c.includes("bisavô materno (pai do avô)")) return duplicateOffset(maternalGrandfatherX - GREAT_GRANDPARENT_PAIR_GAP / 2, orderIndex, "left");
+  if (c.includes("bisavó materna (mãe do avô)")) return duplicateOffset(maternalGrandfatherX + GREAT_GRANDPARENT_PAIR_GAP / 2, orderIndex, "right");
+  if (c.includes("bisavô materno (pai da avó)")) return duplicateOffset(maternalGrandmotherX - GREAT_GRANDPARENT_PAIR_GAP / 2, orderIndex, "left");
+  if (c.includes("bisavó materna (mãe da avó)")) return duplicateOffset(maternalGrandmotherX + GREAT_GRANDPARENT_PAIR_GAP / 2, orderIndex, "right");
   if (c.includes("irmã(o) do bisavô paterno")) return paternalGrandfatherX - GRANDPARENT_PAIR_GAP / 2 - (orderIndex + 1) * COLLATERAL_GAP;
   if (c.includes("irmã(o) do bisavô materno")) return maternalGrandmotherX + GRANDPARENT_PAIR_GAP / 2 + (orderIndex + 1) * COLLATERAL_GAP;
 
