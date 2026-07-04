@@ -254,6 +254,36 @@ export function RelationshipFormDialog({
               </div>
             )}
 
+            {v.relationship_type === "union" && (
+              <div className="space-y-2 pt-2">
+                <Label className="text-[13px] font-bold text-foreground">
+                  Ordem desta união
+                </Label>
+                <Select
+                  value={v.marriage_order || "none"}
+                  onValueChange={(x) =>
+                    setV((p) => ({ ...p, marriage_order: x === "none" ? "" : x }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="União única" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">União única (padrão)</SelectItem>
+                    <SelectItem value="1">① Primeira união</SelectItem>
+                    <SelectItem value="2">② Segunda união</SelectItem>
+                    <SelectItem value="3">③ Terceira união</SelectItem>
+                    <SelectItem value="4">④ Quarta união</SelectItem>
+                    <SelectItem value="5">⑤ Quinta união</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground leading-snug">
+                  Use quando a pessoa teve mais de um casamento — aparece como ①/②/③ na linha do casal para diferenciar cônjuges.
+                </p>
+              </div>
+            )}
+
+
             <div className="space-y-2 pt-2">
               <Label className="text-[13px] font-bold text-foreground">Anotações sistêmicas</Label>
               <Textarea
