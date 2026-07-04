@@ -140,7 +140,18 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
           </span>
         )}
       </div>
-
+      <Handle
+        id="top"
+        type="source"
+        position={Position.Top}
+        className="!size-2.5 !rounded-sm !border-2 !border-card !bg-lavender opacity-0"
+      />
+      <Handle
+        id="top-target"
+        type="target"
+        position={Position.Top}
+        className="opacity-0 pointer-events-none"
+      />
       <Handle
         id="bottom"
         type="source"

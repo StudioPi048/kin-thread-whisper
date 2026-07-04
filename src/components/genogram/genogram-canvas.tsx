@@ -508,42 +508,22 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     });
   });
 
-  // Recreate union nodes exactly as before
-  const parentToUnionMap = new Map<string, string>();
-  edges.forEach((edge) => {
-    if (edge.style?.stroke === "var(--color-gold)") {
-      const sourceNode = layoutedNodes.find((n) => n.id === edge.source);
-      const targetNode = layoutedNodes.find((n) => n.id === edge.target);
-      if (sourceNode && targetNode) {
-        const unionId = `union_${sourceNode.id}_${targetNode.id}`;
-        
-        parentToUnionMap.set(sourceNode.id, unionId);
-        parentToUnionMap.set(targetNode.id, unionId);
-        
-        const centerX1 = sourceNode.position.x + NODE_W / 2;
-        const centerX2 = targetNode.position.x + NODE_W / 2;
-        
-        layoutedNodes.push({
-          id: unionId,
-          type: "union",
-          // Position it perfectly halfway down the node
-          position: { x: (centerX1 + centerX2) / 2, y: sourceNode.position.y + 40 },
-          data: {},
-        });
-      }
-    }
-  });
-
+  // Remove invisible union nodes; we no longer anchor descendant lines to marriages.
+  // The marriage line (gold) will simply connect the spouses, while the descendant 
+  // lines will fork directly to the parents' top handles, matching the requested pedigree look.
+  
   const parentEdgesByChild = new Map<string, Edge[]>();
   const otherEdges: Edge[] = [];
   const finalEdges: Edge[] = [];
-  const childToUnion = new Map<string, string>();
 
   edges.forEach((edge) => {
+    let target = edge.target;
+    let source = edge.source;
+    
+    // We already identified parent edges earlier in relToEdge or query mapping.
+    // In our DB, "parent" relation means source=child, target=parent.
     if (edge.style?.stroke === "var(--color-plum)") {
-      // In structural-tree, source is Child, target is Parent.
-      if (!parentEdgesByChild.has(edge.source)) parentEdgesByChild.set(edge.source, []);
-      parentEdgesByChild.get(edge.source)!.push(edge);
+      parentEdgesByChild.set(source, [...(parentEdgesByChild.get(source) || []), edge]);
     } else {
       let finalSourceHandle = edge.sourceHandle;
       let finalTargetHandle = edge.targetHandle;
@@ -573,55 +553,35 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
   });
 
   parentEdgesByChild.forEach((pEdges, childId) => {
-    let matchedUnionId: string | null = null;
-    for (const edge of pEdges) {
-      const unionId = parentToUnionMap.get(edge.target);
-      if (unionId) {
-        matchedUnionId = unionId;
-        break;
-      }
-    }
-
-    if (matchedUnionId) {
-      childToUnion.set(childId, matchedUnionId);
+    pEdges.forEach((e) => {
       finalEdges.push({
-        id: `descendant_${matchedUnionId}_${childId}`,
-        source: matchedUnionId, 
-        target: childId,
+        ...e,
+        id: `direct_${e.id}`,
+        source: e.target, 
+        target: e.source, 
         sourceHandle: "top",
         targetHandle: "bottom-target",
         type: "straightStep",
         style: { stroke: "var(--color-plum)", strokeWidth: 2 },
       });
-    } else {
+    });
+  });
+
+  siblingToChildTarget.forEach((targetId, siblingId) => {
+    const pEdges = parentEdgesByChild.get(targetId);
+    if (pEdges) {
+      // If a sibling shares parents with the target, they should also fork to those parents
       pEdges.forEach((e) => {
         finalEdges.push({
           ...e,
-          id: `direct_${e.id}`,
+          id: `descendant_${e.id}_${siblingId}`,
           source: e.target, 
-          target: e.source, 
+          target: siblingId,
           sourceHandle: "top",
           targetHandle: "bottom-target",
           type: "straightStep",
           style: { stroke: "var(--color-plum)", strokeWidth: 2 },
         });
-      });
-    }
-  });
-
-  
-
-  siblingToChildTarget.forEach((targetId, siblingId) => {
-    const matchedUnionId = childToUnion.get(targetId);
-    if (matchedUnionId) {
-      finalEdges.push({
-        id: `descendant_${matchedUnionId}_${siblingId}`,
-        source: matchedUnionId, 
-        target: siblingId,
-        sourceHandle: "top",
-        targetHandle: "bottom-target",
-        type: "straightStep",
-        style: { stroke: "var(--color-plum)", strokeWidth: 2 },
       });
     }
   });
@@ -799,8 +759,8 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
   // Lock dragging strictly to X axis
   const onNodesChangeCustom = useCallback((changes: any[]) => {
     const nextChanges = changes.map(change => {
-      if (change.type === 'position' && change.dragging && change.position) {
-        const node = nodes.find(n => n.id === change.id);
+      if (change.type === 'position' && change.position) {
+        const node = rfInstance.getNode(change.id);
         if (node) {
           return {
             ...change,
@@ -812,7 +772,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
       return change;
     });
     onNodesChange(nextChanges);
-  }, [nodes, onNodesChange]);
+  }, [onNodesChange, rfInstance]);
 
   
   useEffect(() => {
