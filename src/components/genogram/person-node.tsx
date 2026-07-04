@@ -29,7 +29,17 @@ export interface PersonNodeData {
  */
 function PersonNodeComponent({ data, selected }: NodeProps) {
   const d = data as unknown as PersonNodeData;
-  const gender = d.gender ?? "desconhecido";
+  const rawGender = (d.gender || "").toLowerCase().trim();
+  const rel = (d.relationship_to_proband || "").toLowerCase();
+
+  let gender = "desconhecido";
+  if (rawGender.includes("masculino") || rawGender === "m" || rawGender === "homem" || rel.match(/pai|tio|avô|bisavô|filho|irmão|irmao/)) {
+    gender = "masculino";
+  } else if (rawGender.includes("feminino") || rawGender === "f" || rawGender === "mulher" || rel.match(/mãe|mae|tia|avó|avo|bisavó|filha|irmã|irma/)) {
+    gender = "feminino";
+  } else if (rawGender.includes("aborto")) {
+    gender = "aborto";
+  }
 
   const isMale = gender === "masculino";
   const isFemale = gender === "feminino";
@@ -57,7 +67,7 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
       style={{ userSelect: "none", width: 160 }}
     >
       <Handle
-        type="target"
+        type="source"
         position={Position.Top}
         className="!size-2.5 !rounded-sm !border-2 !border-card !bg-lavender opacity-0"
       />
@@ -128,7 +138,7 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
       </div>
 
       <Handle
-        type="source"
+        type="target"
         position={Position.Bottom}
         className="!size-2.5 !rounded-sm !border-2 !border-card !bg-lavender opacity-0"
       />
