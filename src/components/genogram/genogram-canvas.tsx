@@ -361,7 +361,7 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     }
   });
 
-  const childrenByUnion = new Map<string, string[]>();
+  const childrenByUnion = new Map<string, Set<string>>();
   const orphanParentEdges: Edge[] = [];
   const parentToUnionMap = new Map<string, string>();
 
@@ -379,8 +379,8 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     }
 
     if (matchedUnionId) {
-      if (!childrenByUnion.has(matchedUnionId)) childrenByUnion.set(matchedUnionId, []);
-      childrenByUnion.get(matchedUnionId)!.push(childId);
+      if (!childrenByUnion.has(matchedUnionId)) childrenByUnion.set(matchedUnionId, new Set());
+      childrenByUnion.get(matchedUnionId)!.add(childId);
     } else {
       // Filho com um único progenitor conhecido — mantemos a direção
       // filho → pai para preservar o roteamento limpo (bottom→top).
@@ -395,8 +395,8 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     }
   });
 
-  childrenByUnion.forEach((childIds, unionId) => {
-    const childNodes = childIds
+  childrenByUnion.forEach((childIdsSet, unionId) => {
+    const childNodes = Array.from(childIdsSet)
       .map((id) => finalNodes.find((n) => n.id === id))
       .filter((n): n is Node => Boolean(n));
     if (childNodes.length === 0) return;
@@ -776,6 +776,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
             nodes={nodes}
             edges={edges}
             nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
