@@ -70,7 +70,7 @@
 }
 
 :root {
-  --radius: 0.125rem; /* Bordas destiladas, quase zeradas (Cookbook) */
+  --radius: 1rem; /* Bordas arredondadas e acolhedoras */
 
   /* ─── AMEIXA PROFUNDA ─────────────────────────── */
   --plum:        oklch(0.18 0.12 295);
@@ -112,7 +112,7 @@
   --destructive:            oklch(0.55 0.19 25);
   --destructive-foreground: oklch(0.98 0.01 25);
 
-  --border: oklch(0.90 0.04 295); /* Hairline borders */
+  --border: oklch(0.94 0.02 295); /* Soft, subtle borders */
   --input:  oklch(0.93 0.03 295);
   --ring:   oklch(0.65 0.20 295);
 
@@ -259,6 +259,23 @@
 @utility block-lavender {
   background-color: oklch(0.94 0.05 295);
   color: oklch(0.18 0.12 295);
+}
+
+/* Micro-interações e Cards Premium */
+@utility hover-lift {
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@utility hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px -10px oklch(0.25 0.10 295 / 0.15);
+  border-color: var(--color-lavender-mid);
+}
+
+@utility glass-card {
+  background-color: oklch(1 0 0 / 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid oklch(0.96 0.01 295);
+  box-shadow: 0 4px 20px -8px oklch(0.25 0.10 295 / 0.08);
 }
 
 /* ────────────────────────────────────────────────────────────

@@ -62,7 +62,7 @@ export function CaseDashboard({ clientId }: Props) {
   if (unknown > 0) pieData.push({ name: "Outros/S/N", value: unknown, color: "oklch(0.95 0.03 295)" });
 
   return (
-    <div className="rounded-sm border border-border bg-white shadow-sm accent-bar-lavender overflow-hidden">
+    <div className="rounded-[1rem] glass-card shadow-sm accent-bar-lavender overflow-hidden hover-lift">
       <div className="border-b border-border/50 px-4 py-3 flex items-center justify-between">
         <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Estatísticas do Clã</h3>
       </div>
@@ -117,7 +117,7 @@ export function CaseDashboard({ clientId }: Props) {
 
 function Stat({ label, value, full }: { label: string; value: number; full?: boolean }) {
   return (
-    <div className={`bg-white p-3 ${full ? "col-span-2" : ""}`}>
+    <div className={`bg-white/50 backdrop-blur-sm p-4 transition-colors hover:bg-white/80 ${full ? "col-span-2" : ""}`}>
       <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-[0.05em]">{label}</p>
       <p className="mt-1 font-serif text-2xl font-bold text-primary">{value}</p>
     </div>

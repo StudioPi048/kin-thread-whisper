@@ -272,46 +272,46 @@ function ClientDossierPage() {
 
       <div className="container-liz -mt-6 relative z-20">
         <Tabs defaultValue="genogram" className="w-full">
-          <TabsList className="w-full justify-start h-auto p-1 bg-white border border-border rounded-md shadow-sm overflow-x-auto flex-nowrap">
+          <TabsList className="w-full justify-start h-auto p-1.5 glass-card rounded-[1rem] overflow-x-auto flex-nowrap">
             <TabsTrigger
               value="overview"
-              className="flex items-center gap-2 py-2.5 px-4 rounded-sm data-[state=active]:bg-lavender-soft data-[state=active]:text-plum"
+              className="flex items-center gap-2 py-2.5 px-4 rounded-[0.75rem] data-[state=active]:bg-lavender-soft data-[state=active]:text-plum data-[state=active]:shadow-sm transition-all"
             >
               <FileText className="size-4" /> Visão geral
             </TabsTrigger>
             <TabsTrigger
               value="genogram"
-              className="flex items-center gap-2 py-2.5 px-4 rounded-sm data-[state=active]:bg-lavender-soft data-[state=active]:text-plum"
+              className="flex items-center gap-2 py-2.5 px-4 rounded-[0.75rem] data-[state=active]:bg-lavender-soft data-[state=active]:text-plum data-[state=active]:shadow-sm transition-all"
             >
               <TreePine className="size-4" /> Genossociograma
             </TabsTrigger>
             <TabsTrigger
               value="timeline"
-              className="flex items-center gap-2 py-2.5 px-4 rounded-sm data-[state=active]:bg-lavender-soft data-[state=active]:text-plum"
+              className="flex items-center gap-2 py-2.5 px-4 rounded-[0.75rem] data-[state=active]:bg-lavender-soft data-[state=active]:text-plum data-[state=active]:shadow-sm transition-all"
             >
               <History className="size-4" /> Linha do tempo
             </TabsTrigger>
             <TabsTrigger
               value="patterns"
-              className="flex items-center gap-2 py-2.5 px-4 rounded-sm data-[state=active]:bg-lavender-soft data-[state=active]:text-plum"
+              className="flex items-center gap-2 py-2.5 px-4 rounded-[0.75rem] data-[state=active]:bg-lavender-soft data-[state=active]:text-plum data-[state=active]:shadow-sm transition-all"
             >
               <Activity className="size-4" /> Padrões
             </TabsTrigger>
             <TabsTrigger
               value="intake"
-              className="py-2.5 px-4 rounded-sm data-[state=active]:bg-lavender-soft data-[state=active]:text-plum"
+              className="py-2.5 px-4 rounded-[0.75rem] data-[state=active]:bg-lavender-soft data-[state=active]:text-plum data-[state=active]:shadow-sm transition-all"
             >
               Anamnese
             </TabsTrigger>
             <TabsTrigger
               value="sessions"
-              className="py-2.5 px-4 rounded-sm data-[state=active]:bg-lavender-soft data-[state=active]:text-plum"
+              className="py-2.5 px-4 rounded-[0.75rem] data-[state=active]:bg-lavender-soft data-[state=active]:text-plum data-[state=active]:shadow-sm transition-all"
             >
               Sessões
             </TabsTrigger>
             <TabsTrigger
               value="clan"
-              className="py-2.5 px-4 rounded-sm data-[state=active]:bg-lavender-soft data-[state=active]:text-plum"
+              className="py-2.5 px-4 rounded-[0.75rem] data-[state=active]:bg-lavender-soft data-[state=active]:text-plum data-[state=active]:shadow-sm transition-all"
             >
               Planilha
             </TabsTrigger>
@@ -497,7 +497,7 @@ function Panel({
           : "";
 
   return (
-    <section className={`rounded-sm border border-border bg-white p-6 shadow-sm ${accentClass}`}>
+    <section className={`rounded-[1rem] glass-card p-6 ${accentClass}`}>
       <div className="mb-4 flex items-center gap-2 border-b border-border/50 pb-2">
         {icon}
         <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">

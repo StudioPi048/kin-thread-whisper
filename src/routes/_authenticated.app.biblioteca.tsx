@@ -127,7 +127,7 @@ function BibliotecaPage() {
             {ESSENTIAL_BOOKS.map((book) => (
               <article
                 key={book.title}
-                className={`relative flex flex-col p-6 rounded-sm shadow-sm transition-transform hover:-translate-y-1 ${book.color} ${book.textColor}`}
+                className={`relative flex flex-col p-6 rounded-[1rem] shadow-md hover-lift ${book.color} ${book.textColor}`}
               >
                 <div className="mb-8">
                   <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-80 mb-2">
@@ -153,7 +153,7 @@ function BibliotecaPage() {
             {KEY_CONCEPTS.map((concept) => (
               <div
                 key={concept.term}
-                className="border-l-[4px] border-l-lavender bg-white p-5 shadow-sm"
+                className="border-l-[4px] border-l-lavender bg-white p-5 rounded-r-[1rem] shadow-sm hover-lift"
               >
                 <h4 className="font-bold text-primary text-[15px]">{concept.term}</h4>
                 <p className="text-[13px] text-muted-foreground mt-1 leading-relaxed">
@@ -219,7 +219,7 @@ function BibliotecaPage() {
                       transition: { type: "spring", stiffness: 300, damping: 24 },
                     },
                   }}
-                  className="rounded-sm border border-border bg-white p-6 transition-all hover:border-lavender hover:shadow-sm"
+                  className="rounded-[1rem] glass-card p-6 hover-lift"
                 >
                   <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2">
                     <h3 className="font-serif text-xl font-bold text-primary">{e.author}</h3>

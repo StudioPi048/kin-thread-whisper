@@ -189,7 +189,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
   const relCount = query.data?.rels.length ?? 0;
 
   return (
-    <div className="relative flex flex-col overflow-hidden rounded-sm border border-border bg-card shadow-sm">
+    <div className="relative flex flex-col overflow-hidden rounded-[1rem] border border-border glass-card shadow-md">
       {/* ── BARRA DE AÇÕES — fundo ameixa ─────────────────── */}
       <div className="block-plum flex flex-wrap items-center gap-2 px-4 py-3">
         {/* Label */}
@@ -421,7 +421,7 @@ function EmptyCanvas({ onCreate }: { onCreate: () => void }) {
         </p>
       </div>
 
-      <div className="w-full max-w-md border-l-[5px] border-l-lavender bg-cream p-5 text-left">
+      <div className="w-full max-w-md border-l-[5px] border-l-lavender bg-white/70 backdrop-blur-md p-5 text-left rounded-r-[1rem] shadow-sm">
         <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
           Como construir a árvore
         </p>
