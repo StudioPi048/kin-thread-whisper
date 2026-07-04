@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   Background,
   BackgroundVariant,
+  BaseEdge,
   Controls,
   ReactFlow,
   ReactFlowProvider,
@@ -11,6 +12,7 @@ import {
   useReactFlow,
   type Connection,
   type Edge,
+  type EdgeProps,
   type EdgeMouseHandler,
   type Node,
   type NodeMouseHandler,
@@ -46,6 +48,31 @@ const UnionNodeComponent = () => (
 );
 
 const nodeTypes = { person: PersonNode, union: UnionNodeComponent };
+
+function StraightStepEdge({
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  ...props
+}: EdgeProps) {
+  const isStraight = Math.abs(sourceX - targetX) < 1 || Math.abs(sourceY - targetY) < 1;
+  const midY = sourceY + (targetY - sourceY) / 2;
+  const path = isStraight
+    ? `M ${sourceX} ${sourceY} L ${targetX} ${targetY}`
+    : `M ${sourceX} ${sourceY} L ${sourceX} ${midY} L ${targetX} ${midY} L ${targetX} ${targetY}`;
+
+  return (
+    <BaseEdge
+      {...props}
+      path={path}
+      labelX={(sourceX + targetX) / 2}
+      labelY={Math.abs(sourceY - targetY) < 1 ? sourceY - 10 : midY - 10}
+    />
+  );
+}
+
+const edgeTypes = { straightStep: StraightStepEdge };
 
 function GenerationRuler() {
   return (
@@ -129,10 +156,6 @@ function directBloodCenter(canonical: string, orderIndex: number, isProband: boo
   const maternalGrandfatherX = motherX - GRANDPARENT_PAIR_GAP / 2;
   const maternalGrandmotherX = motherX + GRANDPARENT_PAIR_GAP / 2;
 
-  if (c.includes("irmã(o)") || c.startsWith("irmã") || c.startsWith("irma")) {
-    return alternatingCenter(0, orderIndex);
-  }
-
   if (c === "pai") return fatherX - orderIndex * COLLATERAL_GAP;
   if (c === "mãe" || c === "mae") return motherX + orderIndex * COLLATERAL_GAP;
   if (c.startsWith("tio(a) paterno")) return fatherX - (orderIndex + 1) * COLLATERAL_GAP;
@@ -160,6 +183,10 @@ function directBloodCenter(canonical: string, orderIndex: number, isProband: boo
   if (c.includes("irmã(o) do bisavô paterno")) return paternalGrandfatherX - (orderIndex + 2) * COLLATERAL_GAP;
   if (c.includes("irmã(o) do bisavô materno")) return maternalGrandmotherX + (orderIndex + 2) * COLLATERAL_GAP;
 
+  if ((c.includes("irmã(o)") || c.startsWith("irmã") || c.startsWith("irma")) && !c.includes("av")) {
+    return alternatingCenter(0, orderIndex);
+  }
+
   return null;
 }
 
@@ -169,7 +196,7 @@ function forceRightAngle(edge: Edge): Edge {
   const existing = (edge as EdgeWithPathOptions).pathOptions ?? {};
   return {
     ...edge,
-    type: edge.type ?? "step",
+    type: "straightStep",
     pathOptions: { ...existing, borderRadius: 0 },
   } as Edge;
 }
