@@ -679,8 +679,8 @@ function parseDateString(d?: string): string | null {
     return isValidYMD(val) ? val : null;
   }
 
-  // Aceita separadores /, -, ou . com espaços opcionais
-  const parts = val.split(/[\/\-.]/).map((p) => p.trim()).filter(Boolean);
+  // Aceita separadores /, -, ., ou \ com espaços opcionais
+  const parts = val.split(/[\/\-.\\ \t]/).map((p) => p.trim()).filter(Boolean);
 
   if (parts.length === 3) {
     if (!parts.every(p => /^\d+$/.test(p))) return null;
@@ -718,6 +718,21 @@ function parseDateString(d?: string): string | null {
     if (yy.length !== 4) return null;
 
     const iso = `${yy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
+    return isValidYMD(iso) ? iso : null;
+  }
+
+  // Apenas dia e mês (ex.: "01/03" ou "14\08") → assume o ano 2000 temporariamente para não perder o dado
+  if (parts.length === 2 && parts.every(p => /^\d+$/.test(p))) {
+    let [p1, p2] = parts;
+    let dd = p1, mm = p2;
+    if (Number(p1) > 12) {
+      // P1 não pode ser mês, então é DD/MM
+      dd = p1; mm = p2;
+    } else if (Number(p2) > 12) {
+      // P2 não pode ser mês, então é MM/DD
+      mm = p1; dd = p2;
+    }
+    const iso = `2000-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
     return isValidYMD(iso) ? iso : null;
   }
 
