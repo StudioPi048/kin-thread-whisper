@@ -199,7 +199,7 @@ function directBloodCenter(canonical: string, orderIndex: number, isProband: boo
   if (c.includes("bisavô materno (pai da avó)")) return maternalGrandmotherX - GREAT_GRANDPARENT_PAIR_GAP / 2;
   if (c.includes("bisavó materna (mãe da avó)")) return maternalGrandmotherX + GREAT_GRANDPARENT_PAIR_GAP / 2;
   if (c.includes("irmã(o) do bisavô paterno")) return paternalGrandfatherX - GRANDPARENT_PAIR_GAP / 2 - (orderIndex + 1) * COLLATERAL_GAP;
-  if (c.includes("irmã(o) do bisavô materno")) return maternalGrandMotherX + GRANDPARENT_PAIR_GAP / 2 + (orderIndex + 1) * COLLATERAL_GAP;
+  if (c.includes("irmã(o) do bisavô materno")) return maternalGrandmotherX + GRANDPARENT_PAIR_GAP / 2 + (orderIndex + 1) * COLLATERAL_GAP;
 
   if ((c.includes("irmã(o)") || c.startsWith("irmã") || c.startsWith("irma")) && !c.includes("av")) {
     return alternatingCenter(0, orderIndex);
