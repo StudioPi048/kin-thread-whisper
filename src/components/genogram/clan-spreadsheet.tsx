@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, Trash2, Download, Table2 } from "lucide-react";
+import { Loader2, Plus, Trash2, Download, Table2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 
@@ -60,6 +60,8 @@ export function ClanSpreadsheet({ clientId }: Props) {
   const qc = useQueryClient();
   const [drafts, setDrafts] = useState<Record<string, Partial<Person>>>({});
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isImporting, setIsImporting] = useState(false);
 
   const { data: persons, isLoading } = useQuery({
     queryKey: ["genogram-persons", clientId],
@@ -144,6 +146,77 @@ export function ClanSpreadsheet({ clientId }: Props) {
     toast.success("Modelo aplicado. Complete os nomes e datas.");
   };
 
+  const importCsv = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const text = event.target?.result as string;
+      if (!text) {
+        setIsImporting(false);
+        return;
+      }
+
+      try {
+        const lines = text.split(/\r?\n/).filter(line => line.trim());
+        if (lines.length < 2) throw new Error("Arquivo vazio ou sem cabeçalho.");
+
+        const separator = lines[0].includes(";") ? ";" : ",";
+        
+        const parsedRows = lines.slice(1).map(line => {
+          const regex = new RegExp(`(?:^|${separator})(?:"([^"]*)"|([^${separator}]*))`, 'g');
+          const row: string[] = [];
+          let match;
+          while ((match = regex.exec(line)) !== null) {
+            row.push(match[1] || match[2] || "");
+          }
+          return row;
+        });
+        
+        const inserts = parsedRows.filter(r => r.length > 1).map(row => {
+          const [nome, parentesco, nascimento, gestacao, morte, enfermidades, profissao, vicios, temperamento, ordem, obs] = row;
+          
+          return {
+            client_id: clientId,
+            full_name: nome?.trim() || "",
+            relationship_to_proband: parentesco?.trim() || null,
+            gender: inferGenderFromRelationship(parentesco?.trim()) || "unknown",
+            birth_date: nascimento?.trim() || null,
+            gestational_weeks: gestacao?.trim() || null,
+            death_date: morte?.trim() || null,
+            is_deceased: !!morte?.trim(),
+            health_conditions: enfermidades ? enfermidades.split(',').map(s => s.trim()).filter(Boolean) : [],
+            occupation: profissao?.trim() || null,
+            vices: vicios?.trim() || null,
+            temperament: temperamento?.trim() || null,
+            birth_order: ordem && !isNaN(parseInt(ordem)) ? parseInt(ordem) : null,
+            notes: obs?.trim() || null
+          };
+        });
+        
+        if (inserts.length > 0) {
+          const { error } = await supabase.from("genogram_persons").insert(inserts);
+          if (error) throw error;
+          
+          qc.invalidateQueries({ queryKey: ["genogram-persons", clientId] });
+          toast.success(`${inserts.length} familiares importados com sucesso!`);
+        } else {
+          toast.info("Nenhum dado válido encontrado para importar.");
+        }
+      } catch (error) {
+        console.error(error);
+        toast.error("Erro ao importar CSV. Verifique o formato do arquivo.");
+      } finally {
+        setIsImporting(false);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      }
+    };
+    
+    reader.readAsText(file);
+  };
+
   const exportCsv = () => {
     const header = [
       "NOME",
@@ -209,6 +282,23 @@ export function ClanSpreadsheet({ clientId }: Props) {
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
+          <input 
+            type="file" 
+            accept=".csv" 
+            className="hidden" 
+            ref={fileInputRef} 
+            onChange={importCsv} 
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isImporting}
+            className="font-bold border-plum/20 text-plum hover:bg-plum/5"
+          >
+            {isImporting ? <Loader2 className="size-4 mr-2 animate-spin" /> : <Upload className="size-4 mr-2" />}
+            Importar CSV
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -217,9 +307,6 @@ export function ClanSpreadsheet({ clientId }: Props) {
             className="font-bold"
           >
             <Download className="size-4 mr-2" /> Exportar CSV
-          </Button>
-          <Button variant="outline" size="sm" onClick={scaffoldTemplate} className="font-bold">
-            <Table2 className="size-4 mr-2" /> Aplicar modelo (4 gerações)
           </Button>
           <Button size="sm" onClick={() => addPerson.mutate(undefined)} variant="lavender">
             <Plus className="size-4 mr-2" /> Nova pessoa
@@ -231,17 +318,26 @@ export function ClanSpreadsheet({ clientId }: Props) {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-sm border border-dashed border-border bg-lavender-soft/40 p-16 text-center"
+          className="rounded-sm border-2 border-dashed border-border bg-white shadow-sm p-12 text-center relative overflow-hidden"
         >
-          <Table2 className="mx-auto size-10 text-lavender opacity-60" />
-          <p className="mt-4 font-serif text-2xl font-bold text-primary">Planilha Vazia</p>
-          <p className="mx-auto mt-2 max-w-md text-[14px] text-muted-foreground leading-relaxed">
-            Aplique o modelo com as 40 linhas de parentesco padrão (consulente até bisavós dos dois
-            lados) e digite as informações rapidamente como num Excel.
-          </p>
-          <Button className="mt-6 font-bold" variant="lavender" onClick={scaffoldTemplate}>
-            <Plus className="size-4 mr-2" /> Aplicar Modelo Próprio
-          </Button>
+          <div className="absolute top-0 right-0 opacity-10 pointer-events-none">
+             <img src="/data_import.png" alt="" className="w-[300px] h-[300px] object-cover" />
+          </div>
+          <div className="relative z-10 flex flex-col items-center">
+            <Table2 className="mx-auto size-12 text-lavender opacity-80 mb-4" />
+            <h3 className="font-serif text-3xl font-bold text-primary">Nenhum dado mapeado</h3>
+            <p className="mx-auto mt-3 max-w-md text-[14px] text-muted-foreground leading-relaxed">
+              Você pode importar uma planilha CSV com os dados da família, aplicar o modelo de 4 gerações ou adicionar as pessoas uma a uma.
+            </p>
+            <div className="mt-8 flex flex-wrap justify-center gap-4">
+              <Button className="font-bold" variant="lavender" onClick={() => fileInputRef.current?.click()}>
+                <Upload className="size-4 mr-2" /> Importar CSV
+              </Button>
+              <Button className="font-bold" variant="outline" onClick={scaffoldTemplate}>
+                <Table2 className="size-4 mr-2" /> Aplicar Modelo Próprio
+              </Button>
+            </div>
+          </div>
         </motion.div>
       ) : (
         <motion.div
@@ -257,7 +353,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
 
           <div className="overflow-x-auto rounded-sm border-2 border-border/80 bg-white shadow-sm">
             <table className="w-full min-w-[1500px] border-collapse text-[13px]">
-              <thead className="bg-lavender-soft text-[10px] font-bold uppercase tracking-[0.15em] text-plum border-b-2 border-border/80">
+              <thead className="bg-lavender-soft/40 text-[10px] font-bold uppercase tracking-[0.15em] text-plum border-b-2 border-border/80">
                 <tr>
                   <Th w="w-8">#</Th>
                   <Th w="min-w-[180px]">Nome</Th>

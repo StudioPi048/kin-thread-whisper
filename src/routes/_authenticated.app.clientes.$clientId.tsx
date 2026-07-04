@@ -15,6 +15,7 @@ import {
   Activity,
   History,
   FileText,
+  Camera,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -55,6 +56,17 @@ function ClientDossierPage() {
   const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setAvatarPreview(event.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const { data: client, isLoading } = useQuery({
     queryKey: ["client", clientId],
@@ -140,9 +152,24 @@ function ClientDossierPage() {
             <div className="flex items-start gap-5">
               <motion.div
                 layoutId={`avatar-${client.id}`}
-                className="flex size-20 shrink-0 items-center justify-center rounded-md bg-lavender font-serif text-3xl font-bold text-white shadow-lg"
+                className="relative flex size-24 shrink-0 items-center justify-center rounded-md bg-lavender font-serif text-3xl font-bold text-white shadow-lg overflow-hidden group cursor-pointer"
               >
-                {initials}
+                {avatarPreview ? (
+                  <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <span>{initials}</span>
+                )}
+                
+                <label className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center cursor-pointer">
+                  <Camera className="size-5 text-white mb-1" />
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-white">Trocar</span>
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    className="hidden" 
+                    onChange={handleAvatarUpload}
+                  />
+                </label>
               </motion.div>
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-[0.35em] text-lavender-mid">

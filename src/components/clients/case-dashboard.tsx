@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 
 interface Props {
   clientId: string;
@@ -48,25 +49,67 @@ export function CaseDashboard({ clientId }: Props) {
   const { persons, relationships, patterns, sessions } = data;
   const female = persons.filter((p) => p.gender === "female").length;
   const male = persons.filter((p) => p.gender === "male").length;
+  const unknown = persons.length - (female + male);
+  
   const deceased = persons.filter((p) => p.is_deceased).length;
   const withDisease = persons.filter((p) => (p.health_conditions ?? []).length > 0).length;
   const withCause = persons.filter((p) => p.cause_of_death && p.cause_of_death.trim()).length;
 
+  const pieData = [
+    { name: "Mulheres", value: female, color: "oklch(0.65 0.20 295)" }, // Lavender
+    { name: "Homens", value: male, color: "oklch(0.25 0.10 295)" }, // Plum mid
+  ];
+  if (unknown > 0) pieData.push({ name: "Outros/S/N", value: unknown, color: "oklch(0.95 0.03 295)" });
+
   return (
-    <div className="rounded-lg border border-border bg-card">
-      <div className="border-b border-border px-4 py-3">
-        <h3 className="font-serif text-sm text-primary">Dashboard sistêmico</h3>
+    <div className="rounded-sm border border-border bg-white shadow-sm accent-bar-lavender overflow-hidden">
+      <div className="border-b border-border/50 px-4 py-3 flex items-center justify-between">
+        <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Estatísticas do Clã</h3>
       </div>
-      <div className="grid grid-cols-2 gap-2 p-4">
+      
+      {persons.length > 0 && (
+        <div className="p-4 border-b border-border/40">
+          <p className="text-[11px] font-semibold text-muted-foreground mb-4 uppercase tracking-[0.1em]">Composição de Gênero</p>
+          <div className="h-[140px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={30}
+                  outerRadius={60}
+                  paddingAngle={2}
+                  dataKey="value"
+                  stroke="none"
+                >
+                  {pieData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  contentStyle={{ 
+                    borderRadius: '2px', 
+                    border: '1px solid var(--color-border)',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+                    fontSize: '12px',
+                    fontFamily: 'var(--font-sans)',
+                    fontWeight: 500
+                  }} 
+                  itemStyle={{ color: 'var(--color-plum)' }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-px bg-border/40">
         <Stat label="Pessoas no clã" value={persons.length} />
         <Stat label="Vínculos" value={relationships} />
-        <Stat label="Padrões detectados" value={patterns} />
-        <Stat label="Sessões gravadas" value={sessions} />
+        <Stat label="Padrões" value={patterns} />
         <Stat label="Falecidos" value={deceased} />
-        <Stat label="Causa de morte" value={withCause} />
-        <Stat label="Femininos" value={female} />
-        <Stat label="Masculinos" value={male} />
-        <Stat label="Com doença registrada" value={withDisease} full />
+        <Stat label="Doenças" value={withDisease} full />
       </div>
     </div>
   );
@@ -74,11 +117,9 @@ export function CaseDashboard({ clientId }: Props) {
 
 function Stat({ label, value, full }: { label: string; value: number; full?: boolean }) {
   return (
-    <div
-      className={`rounded-md border border-border bg-background/60 p-3 ${full ? "col-span-2" : ""}`}
-    >
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-1 font-serif text-2xl text-primary">{value}</p>
+    <div className={`bg-white p-3 ${full ? "col-span-2" : ""}`}>
+      <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-[0.05em]">{label}</p>
+      <p className="mt-1 font-serif text-2xl font-bold text-primary">{value}</p>
     </div>
   );
 }
