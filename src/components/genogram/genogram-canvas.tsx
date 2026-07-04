@@ -565,8 +565,8 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
           id: `direct_${e.id}`,
           source: e.target, 
           target: e.source, 
-          sourceHandle: "top",
-          targetHandle: "bottom",
+          sourceHandle: "bottom",
+          targetHandle: "top",
           type: "straightStep",
           style: { stroke: "var(--color-plum)", strokeWidth: 2 },
         });
