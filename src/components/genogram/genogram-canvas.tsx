@@ -4,6 +4,7 @@ import {
   Background,
   BackgroundVariant,
   Controls,
+  Panel,
   ReactFlow,
   ReactFlowProvider,
   addEdge,
@@ -66,6 +67,26 @@ function GenerationBandNode({ data }: NodeProps) {
 }
 
 const nodeTypes = { person: PersonNode, generationBand: GenerationBandNode };
+
+function GenerationRuler() {
+  return (
+    <div className="w-[178px] overflow-hidden rounded-sm border border-border/70 bg-background/95 shadow-md backdrop-blur-sm">
+      {[
+        ["Cliente", "ponto de partida"],
+        ["Geração 1", "pais, irmãos e tios"],
+        ["Geração 2", "avós e tios-avós"],
+        ["Geração 3", "bisavós e colaterais"],
+      ].map(([label, subtitle]) => (
+        <div key={label} className="border-b border-border/50 px-3 py-3 last:border-b-0">
+          <p className="font-serif text-[18px] font-bold leading-tight text-primary">{label}</p>
+          <p className="mt-1 text-[10px] font-bold uppercase leading-snug tracking-[0.12em] text-muted-foreground">
+            {subtitle}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 interface CanvasProps {
   clientId: string;
@@ -558,23 +579,6 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
 
       {/* ── CANVAS ──────────────────────────────────────────── */}
       <div className="relative" style={{ height: "80vh" }}>
-        {!query.isLoading && persons.length > 0 && (
-          <div className="pointer-events-none absolute left-3 top-3 z-10 hidden w-[170px] flex-col overflow-hidden rounded-sm border border-border/70 bg-background/92 shadow-md backdrop-blur-sm md:flex">
-            {[
-              ["Cliente", "ponto de partida"],
-              ["Geração 1", "pais, irmãos e tios"],
-              ["Geração 2", "avós e tios-avós"],
-              ["Geração 3", "bisavós e colaterais"],
-            ].map(([label, subtitle]) => (
-              <div key={label} className="border-b border-border/50 px-3 py-3 last:border-b-0">
-                <p className="font-serif text-[18px] font-bold leading-tight text-primary">{label}</p>
-                <p className="mt-1 text-[10px] font-bold uppercase leading-snug tracking-[0.12em] text-muted-foreground">
-                  {subtitle}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
         {query.isLoading ? (
           <div className="flex h-full flex-col items-center justify-center gap-3">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-lavender border-t-transparent" />
@@ -604,6 +608,9 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
             snapToGrid
             snapGrid={[20, 20]}
           >
+            <Panel position="top-left" className="hidden md:block">
+              <GenerationRuler />
+            </Panel>
             <Background
               variant={BackgroundVariant.Dots}
               gap={24}
