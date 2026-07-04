@@ -775,6 +775,7 @@ function CellInput(props: {
   type?: string;
   placeholder?: string;
   list?: string;
+  className?: string;
 }) {
   return (
     <input
@@ -783,7 +784,7 @@ function CellInput(props: {
       onChange={(e) => props.onChange(e.target.value)}
       placeholder={props.placeholder}
       list={props.list}
-      className="w-full h-8 rounded-sm border-0 bg-transparent px-2 text-[13px] font-medium text-foreground outline-none ring-1 ring-transparent transition-all focus:bg-lavender-soft/30 focus:ring-lavender placeholder:text-muted-foreground/40"
+      className={`w-full h-8 rounded-sm border-0 bg-transparent px-2 text-[13px] font-medium text-foreground outline-none ring-1 ring-transparent transition-all focus:bg-lavender-soft/30 focus:ring-lavender placeholder:text-muted-foreground/40 ${props.className ?? ""}`}
     />
   );
 }

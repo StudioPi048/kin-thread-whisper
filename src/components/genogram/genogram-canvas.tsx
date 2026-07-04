@@ -30,6 +30,7 @@ import { RelationshipFormDialog } from "./relationship-form-dialog";
 import { relationshipLabel } from "@/lib/genogram";
 import { computeStructuralEdges } from "@/lib/structural-tree";
 import { getGeneration, smartNormalizeRelationship } from "@/lib/relationship-normalizer";
+import { ensureProband } from "@/lib/ensure-proband";
 import type { Database } from "@/integrations/supabase/types";
 
 type PersonRow = Database["public"]["Tables"]["genogram_persons"]["Row"];
@@ -286,6 +287,21 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
   const rfInstance = useReactFlow();
 
   useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      const result = await ensureProband(clientId);
+      if (!cancelled && result) {
+        qc.invalidateQueries({ queryKey: ["genogram", clientId] });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [clientId, qc]);
+
+  useEffect(() => {
     if (!query.data) return;
     
     // ── Filtro de qualidade: entra no mapa quem tem nome OU parentesco ──
@@ -335,14 +351,14 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
     setNodes(layoutedNodes);
     setEdges(layoutedEdges);
 
-      // Aguardar o próximo frame para o ReactFlow renderizar antes de calcular fitView
+    // Aguardar o próximo frame para o ReactFlow renderizar antes de calcular fitView
     setTimeout(() => {
-        rfInstance.fitView({
-          padding: 0.16,
-          duration: 800,
-          minZoom: 0.25,
-          maxZoom: 0.72,
-        });
+      rfInstance.fitView({
+        padding: 0.16,
+        duration: 800,
+        minZoom: 0.25,
+        maxZoom: 0.72,
+      });
     }, 50);
   }, [query.data, setNodes, setEdges, rfInstance]);
 
