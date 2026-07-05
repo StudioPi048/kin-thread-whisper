@@ -237,9 +237,8 @@ function PedigreeEdge({
   data,
 }: EdgeProps) {
   const edgeData = data as Record<string, unknown> | undefined;
-  if (!edgeData) return null;
-  const childIds = (edgeData.childIds as string[] | undefined) ?? [];
-  const parentIds = (edgeData.parentIds as string[] | undefined) ?? [];
+  const childIds = (edgeData?.childIds as string[] | undefined) ?? [];
+  const parentIds = (edgeData?.parentIds as string[] | undefined) ?? [];
   const live = useStore((store) => {
     const children = childIds
       .map((id) => store.nodeLookup.get(id)?.internals.userNode as Node | undefined)
@@ -249,6 +248,8 @@ function PedigreeEdge({
       .filter((node): node is Node => Boolean(node));
     return { children, parents };
   });
+
+  if (!edgeData) return null;
 
   const childPoints = live.children.length
     ? live.children.map((node) => ({ x: nodeCenterX(node), y: nodeBottomY(node) }))
