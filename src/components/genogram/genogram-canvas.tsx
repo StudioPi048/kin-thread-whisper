@@ -561,19 +561,9 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
       unionCenter = topNodes.indexOf(wife) * HORIZONTAL_STEP + NODE_W / 2;
     }
 
-    // Center the biological parent (child) of the proband inside the sibling fratria.
-    // Half of the tios go to the left, half to the right; if odd, the extra goes to
-    // the outer side (left for husband side, right for wife side).
-    const halfLeft = isHusbandSide
-      ? Math.ceil(childSiblings.length / 2)
-      : Math.floor(childSiblings.length / 2);
-    const leftSibs = childSiblings.slice(0, halfLeft);
-    const rightSibs = childSiblings.slice(halfLeft);
-    const bottomNodes = [
-      ...leftSibs,
-      ...(child ? [child] : []),
-      ...rightSibs,
-    ];
+    const bottomNodes = isHusbandSide
+      ? [...childSiblings, ...(child ? [child] : [])]
+      : [...(child ? [child] : []), ...childSiblings];
 
     if (child) {
       childSiblings.forEach((s) => siblingToChildTarget.set(s.id, child.id));
@@ -662,16 +652,9 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     else if (rightBlock.childTarget) unionCenter = wCenter;
     else unionCenter = (leftBlock.width + rightOffsetX + rightBlock.width) / 2;
 
-    const halfLeftM = isHusbandSide
-      ? Math.ceil(childSiblings.length / 2)
-      : Math.floor(childSiblings.length / 2);
-    const leftSibsM = childSiblings.slice(0, halfLeftM);
-    const rightSibsM = childSiblings.slice(halfLeftM);
-    const bottomNodes = [
-      ...leftSibsM,
-      ...(childTarget ? [childTarget] : []),
-      ...rightSibsM,
-    ];
+    const bottomNodes = isHusbandSide
+      ? [...childSiblings, ...(childTarget ? [childTarget] : [])]
+      : [...(childTarget ? [childTarget] : []), ...childSiblings];
 
     if (childTarget) {
       childSiblings.forEach((s) => siblingToChildTarget.set(s.id, childTarget.id));
@@ -836,17 +819,16 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
       const sourceGen = (sourceNode?.data as { generation?: number } | undefined)?.generation ?? 0;
       const targetGen = (targetNode?.data as { generation?: number } | undefined)?.generation ?? 0;
 
-      // Only treat as parent-child when the two nodes are exactly one generation apart.
-      // Same-generation plum edges are sibling connectors, not filiation, and would
-      // otherwise pool unrelated families into a single "pair-key" and drag the
-      // sibling-bar center off-screen.
-      if (Math.abs(sourceGen - targetGen) !== 1) {
-        otherEdges.push({ ...edge });
-        return;
-      }
+      let childId = edge.source;
+      let parentId = edge.target;
 
-      const childId = sourceGen > targetGen ? edge.source : edge.target;
-      const parentId = sourceGen > targetGen ? edge.target : edge.source;
+      if (sourceGen > targetGen) {
+        childId = edge.target;
+        parentId = edge.source;
+      } else if (sourceGen === targetGen && !(edge.data as { isStructural?: boolean } | undefined)?.isStructural) {
+        childId = edge.target;
+        parentId = edge.source;
+      }
 
       parentLinksByChild.set(childId, [
         ...(parentLinksByChild.get(childId) || []),
@@ -934,26 +916,9 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
       const bNode = layoutedNodes.find((n) => n.id === b);
       return (aNode?.position.x ?? 0) - (bNode?.position.x ?? 0);
     });
-    // Clamp the trunk position to sit between the leftmost and rightmost sibling,
-    // AND between the visible parents. Without the clamp, a parent placed far away
-    // (e.g. an extra spouse or off-side ancestor) can drag the center out of the
-    // sibling range and render the trunk off-screen as a large empty rectangle.
-    const childXs = orderedChildrenIds
-      .map((id) => layoutedNodes.find((n) => n.id === id))
-      .filter(Boolean)
-      .map((n) => (n as Node).position.x + NODE_W / 2);
-    const parentXs = visibleParents.map((p) => p.position.x + NODE_W / 2);
-    const rawParentCenter = parentXs.reduce((s, x) => s + x, 0) / parentXs.length;
-    const siblingMin = Math.min(...childXs);
-    const siblingMax = Math.max(...childXs);
-    const parentMin = Math.min(...parentXs);
-    const parentMax = Math.max(...parentXs);
-    const allowedMin = Math.max(siblingMin, parentMin);
-    const allowedMax = Math.min(siblingMax, parentMax);
     const familyCenterX =
-      allowedMin <= allowedMax
-        ? Math.min(Math.max(rawParentCenter, allowedMin), allowedMax)
-        : (siblingMin + siblingMax) / 2;
+      visibleParents.reduce((sum, parent) => sum + parent.position.x + NODE_W / 2, 0) /
+      visibleParents.length;
     const primaryParentId = parentLinks[0]?.parentId;
     const firstChildNode = layoutedNodes.find((n) => n.id === orderedChildrenIds[0]);
     const firstParentNode = visibleParents[0];
