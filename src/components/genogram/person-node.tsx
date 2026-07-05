@@ -100,8 +100,8 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
         ) : (
           <div
             className={cn(
-              "size-full bg-card transition-all",
-              "border-[3.5px]",
+              "size-full bg-[#FAF8F5] transition-all",
+              "border-2",
               borderColor,
               isMale && "rounded-2xl",
               isFemale && "rounded-full",
@@ -122,24 +122,22 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
             ✕
           </span>
         )}
-        
-        {/* Handles fixados NA FORMA (ignorando o texto) e com 12px de respiro (stub) */}
-        <Handle id="top" type="target" position={Position.Top} style={{ top: -12 }} className="opacity-0 pointer-events-none" />
-        <Handle id="top" type="source" position={Position.Top} style={{ top: -12 }} className="opacity-0 pointer-events-none" />
-        <Handle id="top-target" type="target" position={Position.Top} style={{ top: -12 }} className="opacity-0 pointer-events-none" />
-        <Handle id="bottom" type="source" position={Position.Bottom} style={{ bottom: -12 }} className="opacity-0 pointer-events-none" />
-        <Handle id="bottom-target" type="target" position={Position.Bottom} style={{ bottom: -12 }} className="opacity-0 pointer-events-none" />
-        <Handle id="left" type="target" position={Position.Left} style={{ left: -12 }} className="opacity-0 pointer-events-none" />
-        <Handle id="left" type="source" position={Position.Left} style={{ left: -12 }} className="opacity-0 pointer-events-none" />
-        <Handle id="right" type="source" position={Position.Right} style={{ right: -12 }} className="opacity-0 pointer-events-none" />
-        <Handle id="right" type="target" position={Position.Right} style={{ right: -12 }} className="opacity-0 pointer-events-none" />
+        {/* Handles fixados NA FORMA com 6px de respiro (stub) */}
+        <Handle id="top" type="target" position={Position.Top} style={{ top: -6 }} className="opacity-0 pointer-events-none" />
+        <Handle id="top" type="source" position={Position.Top} style={{ top: -6 }} className="opacity-0 pointer-events-none" />
+        <Handle id="top-target" type="target" position={Position.Top} style={{ top: -6 }} className="opacity-0 pointer-events-none" />
+        <Handle id="bottom" type="source" position={Position.Bottom} style={{ bottom: -6 }} className="opacity-0 pointer-events-none" />
+        <Handle id="bottom-target" type="target" position={Position.Bottom} style={{ bottom: -6 }} className="opacity-0 pointer-events-none" />
+        <Handle id="left" type="target" position={Position.Left} style={{ left: -6 }} className="opacity-0 pointer-events-none" />
+        <Handle id="left" type="source" position={Position.Left} style={{ left: -6 }} className="opacity-0 pointer-events-none" />
+        <Handle id="right" type="source" position={Position.Right} style={{ right: -6 }} className="opacity-0 pointer-events-none" />
+        <Handle id="right" type="target" position={Position.Right} style={{ right: -6 }} className="opacity-0 pointer-events-none" />
       </div>
 
-      {/* ── LABEL — Nome + datas com fundo SÓLIDO para legibilidade ── */}
+      {/* ── LABEL — Nome + datas com fundo TRANSPARENTE ── */}
       <div
         className={cn(
-          "mt-2.5 w-full rounded-md px-1 py-1 text-center",
-          d.is_proband ? "bg-white/50 backdrop-blur-sm border border-plum/20" : "",
+          "mt-2.5 w-full rounded-md px-1 py-1 text-center bg-transparent",
         )}
       >
         <p

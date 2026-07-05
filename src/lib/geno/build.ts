@@ -27,8 +27,8 @@ export const NODE_H = 210;
 export const PERSON_SHAPE = 76;
 export const PROBAND_SHAPE = 84;
 export const GEN_GAP = 250;
-export const COUPLE_GAP = 220; // distância centro-a-centro dentro de um casal
-export const SIBLING_GAP = 230; // distância centro-a-centro entre irmãos
+export const COUPLE_GAP = 64; // distância centro-a-centro dentro de um casal
+export const SIBLING_GAP = 28; // distância centro-a-centro entre irmãos diretos
 export const BRANCH_GAP = 140; // folga entre subárvores ancestrais irmãs
 export const BRANCH_SEPARATION = 260; // folga extra paterno vs materno
 
@@ -505,19 +505,20 @@ export function layoutGraph(g: LogicalGraph): Placement {
           if (side === "paternal") direction = -1;
           
           if (side !== "root") {
+            // Cada irmão ocupa o espaço dele mesmo + SIBLING_GAP
             const farthestSib = siblings.length * (NODE_W + SIBLING_GAP);
             if (direction === -1) {
-              left = Math.min(left, -farthestSib - NODE_W / 2);
+              left = Math.min(left, -farthestSib - NODE_W / 2 - BRANCH_GAP);
             } else {
-              right = Math.max(right, farthestSib + NODE_W / 2);
+              right = Math.max(right, farthestSib + NODE_W / 2 + BRANCH_GAP);
             }
           } else {
             // Irmãos do root se alternam
             const sibCount = siblings.length;
             const leftCount = Math.ceil(sibCount / 2);
             const rightCount = Math.floor(sibCount / 2);
-            left = Math.min(left, -leftCount * (NODE_W + SIBLING_GAP) - NODE_W / 2);
-            right = Math.max(right, rightCount * (NODE_W + SIBLING_GAP) + NODE_W / 2);
+            left = Math.min(left, -leftCount * (NODE_W + SIBLING_GAP) - NODE_W / 2 - BRANCH_GAP);
+            right = Math.max(right, rightCount * (NODE_W + SIBLING_GAP) + NODE_W / 2 + BRANCH_GAP);
           }
         }
       }

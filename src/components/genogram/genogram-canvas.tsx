@@ -41,7 +41,7 @@ import type { Database } from "@/integrations/supabase/types";
 type PersonRow = Database["public"]["Tables"]["genogram_persons"]["Row"];
 type RelRow = Database["public"]["Tables"]["genogram_relationships"]["Row"];
 
-const BUILD_TAG = "2026-07-05-fix-uniao-avos";
+const BUILD_TAG = "2026-07-05-spacing-and-styles";
 
 /**
  * UnionNode — cidadão de primeira classe do grafo.

@@ -58,7 +58,7 @@ export function checkLayoutInvariants(g: LogicalGraph, placement: Placement): Vi
       const [id1, p1] = nodes[i];
       const [id2, p2] = nodes[j];
       const w = 160;
-      const h = 90;
+      const h = 180; // Full card height including text
 
       if (
         Math.abs(p1.x - p2.x) < w - EPS &&
