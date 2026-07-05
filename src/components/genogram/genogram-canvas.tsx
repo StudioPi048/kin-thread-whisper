@@ -819,16 +819,17 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
       const sourceGen = (sourceNode?.data as { generation?: number } | undefined)?.generation ?? 0;
       const targetGen = (targetNode?.data as { generation?: number } | undefined)?.generation ?? 0;
 
-      let childId = edge.source;
-      let parentId = edge.target;
-
-      if (sourceGen > targetGen) {
-        childId = edge.target;
-        parentId = edge.source;
-      } else if (sourceGen === targetGen && !(edge.data as { isStructural?: boolean } | undefined)?.isStructural) {
-        childId = edge.target;
-        parentId = edge.source;
+      // Only treat as parent-child when the two nodes are exactly one generation apart.
+      // Same-generation plum edges are sibling connectors, not filiation, and would
+      // otherwise pool unrelated families into a single "pair-key" and drag the
+      // sibling-bar center off-screen.
+      if (Math.abs(sourceGen - targetGen) !== 1) {
+        otherEdges.push({ ...edge });
+        return;
       }
+
+      const childId = sourceGen > targetGen ? edge.source : edge.target;
+      const parentId = sourceGen > targetGen ? edge.target : edge.source;
 
       parentLinksByChild.set(childId, [
         ...(parentLinksByChild.get(childId) || []),
