@@ -1292,6 +1292,17 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
           Criar vínculo
         </Button>
 
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => saveLayout.mutate()}
+          disabled={saveLayout.isPending || !layoutDirty}
+          className="h-9 gap-2 border-white/25 text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[13px] disabled:opacity-45"
+        >
+          <Save className="size-4" />
+          {saveLayout.isPending ? "Salvando" : "Salvar layout"}
+        </Button>
+
         <div className="hidden items-center gap-4 md:flex ml-3">
           <span className="flex items-center gap-1.5 text-[13px] text-white/55">
             <Users className="size-3.5 text-lavender" />
@@ -1307,6 +1318,11 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
             <Link2 className="size-3.5 text-gold" />
             <strong className="text-white">{relCount}</strong> vínculos
           </span>
+          {(layoutDirty || lastSavedAt) && (
+            <span className="text-[12px] font-semibold text-white/50">
+              {layoutDirty ? "Alterações não salvas" : `Salvo ${lastSavedAt}`}
+            </span>
+          )}
         </div>
 
         <div className="ml-auto flex items-center gap-1">
@@ -1418,7 +1434,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
             onConnect={onConnect}
             onNodeDoubleClick={onNodeDoubleClick}
             onEdgeDoubleClick={onEdgeDoubleClick}
-            nodesDraggable={false}
+            nodesDraggable
             nodesConnectable={false}
             panOnDrag={false}
             panActivationKeyCode="Space"
