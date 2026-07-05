@@ -837,7 +837,7 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
   nodes.forEach((n) => {
     if (!mappedIds.has(n.id)) {
       const gen = generationForData(n.data);
-      const nextX = (rightEdgeByGeneration.get(gen) ?? blockRoot.width) + HORIZONTAL_STEP;
+      const nextX = (rightEdgeByGeneration.get(gen) ?? blockRoot.maxX) + HORIZONTAL_STEP;
       rightEdgeByGeneration.set(gen, nextX);
       blockRoot.nodes.push({ node: n, x: nextX, y: gen * GENERATION_GAP, gen });
     }
