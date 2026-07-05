@@ -561,9 +561,19 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
       unionCenter = topNodes.indexOf(wife) * HORIZONTAL_STEP + NODE_W / 2;
     }
 
-    const bottomNodes = isHusbandSide
-      ? [...childSiblings, ...(child ? [child] : [])]
-      : [...(child ? [child] : []), ...childSiblings];
+    // Center the biological parent (child) of the proband inside the sibling fratria.
+    // Half of the tios go to the left, half to the right; if odd, the extra goes to
+    // the outer side (left for husband side, right for wife side).
+    const halfLeft = isHusbandSide
+      ? Math.ceil(childSiblings.length / 2)
+      : Math.floor(childSiblings.length / 2);
+    const leftSibs = childSiblings.slice(0, halfLeft);
+    const rightSibs = childSiblings.slice(halfLeft);
+    const bottomNodes = [
+      ...leftSibs,
+      ...(child ? [child] : []),
+      ...rightSibs,
+    ];
 
     if (child) {
       childSiblings.forEach((s) => siblingToChildTarget.set(s.id, child.id));
