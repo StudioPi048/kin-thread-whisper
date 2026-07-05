@@ -797,11 +797,12 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     : 0;
 
   blockRoot.nodes.forEach((ln) => {
-    const savedX = ln.node.position?.x;
-    const hasSavedX = typeof savedX === "number" && Math.abs(savedX) > 0.1;
+    // A árvore automática precisa prevalecer quando posições antigas salvas
+    // ficaram incompatíveis com a inferência atual; caso contrário surgem barras
+    // enormes e a leitura clínica fica pior do que sem layout salvo.
     layoutedNodes.push({
       ...ln.node,
-      position: { x: hasSavedX ? savedX : ln.x + dx, y: ln.y },
+      position: { x: ln.x + dx, y: ln.y },
       data: { ...ln.node.data, generation: ln.gen },
     });
   });
