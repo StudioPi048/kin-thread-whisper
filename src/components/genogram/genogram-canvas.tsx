@@ -807,18 +807,33 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
   // The marriage line (gold) will simply connect the spouses, while the descendant
   // lines will fork directly to the parents' top handles, matching the requested pedigree look.
 
-  const parentEdgesByChild = new Map<string, Edge[]>();
+  type ParentLink = { edge: Edge; childId: string; parentId: string };
+  const parentLinksByChild = new Map<string, ParentLink[]>();
   const otherEdges: Edge[] = [];
   const finalEdges: Edge[] = [];
 
   edges.forEach((edge) => {
-    const target = edge.target;
-    const source = edge.source;
-
-    // We already identified parent edges earlier in relToEdge or query mapping.
-    // In our DB, parent relationships mean from_person_id (source) = PARENT, to_person_id (target) = CHILD.
     if (edge.style?.stroke === "var(--color-plum)") {
-      parentEdgesByChild.set(target, [...(parentEdgesByChild.get(target) || []), edge]);
+      const sourceNode = layoutedNodes.find((n) => n.id === edge.source);
+      const targetNode = layoutedNodes.find((n) => n.id === edge.target);
+      const sourceGen = (sourceNode?.data as { generation?: number } | undefined)?.generation ?? 0;
+      const targetGen = (targetNode?.data as { generation?: number } | undefined)?.generation ?? 0;
+
+      let childId = edge.source;
+      let parentId = edge.target;
+
+      if (sourceGen > targetGen) {
+        childId = edge.target;
+        parentId = edge.source;
+      } else if (sourceGen === targetGen && !(edge.data as { isStructural?: boolean } | undefined)?.isStructural) {
+        childId = edge.target;
+        parentId = edge.source;
+      }
+
+      parentLinksByChild.set(childId, [
+        ...(parentLinksByChild.get(childId) || []),
+        { edge, childId, parentId },
+      ]);
     } else {
       let finalSourceHandle = edge.sourceHandle;
       let finalTargetHandle = edge.targetHandle;
@@ -847,83 +862,91 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     }
   });
 
-  // Build a complete map of children to their parent edges, including siblings
-  const allParentEdgesByChild = new Map<string, Edge[]>();
+  // Build a complete map of children to their parent links, including siblings/tios.
+  const allParentLinksByChild = new Map<string, ParentLink[]>();
 
-  parentEdgesByChild.forEach((pEdges, childId) => {
-    allParentEdgesByChild.set(childId, pEdges);
+  parentLinksByChild.forEach((pLinks, childId) => {
+    allParentLinksByChild.set(childId, pLinks);
   });
 
   siblingToChildTarget.forEach((targetId, siblingId) => {
-    const pEdges = parentEdgesByChild.get(targetId);
-    if (pEdges) {
-      // Create clone edges for the sibling so we can route them properly
-      const siblingEdges = pEdges.map((e) => ({
-        ...e,
-        id: `descendant_${e.id}_${siblingId}`,
-        source: e.source, // Keep parent as source
-        target: siblingId, // Sibling is target
-      }));
-      allParentEdgesByChild.set(siblingId, siblingEdges);
+    const pLinks = parentLinksByChild.get(targetId);
+    if (pLinks) {
+      allParentLinksByChild.set(
+        siblingId,
+        pLinks.map((link) => ({
+          ...link,
+          edge: { ...link.edge, id: `descendant_${link.edge.id}_${siblingId}` },
+          childId: siblingId,
+        })),
+      );
     }
   });
 
-  // Group children by their shared parent pairs to orchestrate drawing
+  // Group children by shared parent pairs to draw one clean pedigree bus per family.
   const childrenByParentPair = new Map<string, string[]>();
-  const parentPairToEdges = new Map<string, Edge[]>();
+  const parentPairToLinks = new Map<string, ParentLink[]>();
 
-  allParentEdgesByChild.forEach((pEdges, childId) => {
-    // pEdges[].source holds the Parent ID
-    const parentIds = pEdges.map((e) => e.source).sort();
+  allParentLinksByChild.forEach((pLinks, childId) => {
+    const parentIds = Array.from(new Set(pLinks.map((link) => link.parentId))).sort();
     const pairKey = parentIds.join("|");
 
     if (!childrenByParentPair.has(pairKey)) {
       childrenByParentPair.set(pairKey, []);
-      parentPairToEdges.set(pairKey, pEdges); // Store one set of parent edges as reference
+      parentPairToLinks.set(pairKey, pLinks);
     }
     childrenByParentPair.get(pairKey)!.push(childId);
   });
 
   childrenByParentPair.forEach((childrenIds, pairKey) => {
-    const refEdges = parentPairToEdges.get(pairKey)!;
-    const parents = refEdges.map((e) => layoutedNodes.find((n) => n.id === e.source));
+    const refLinks = parentPairToLinks.get(pairKey)!;
+    const parentLinks = Array.from(
+      new Map(refLinks.map((link) => [link.parentId, link])).values(),
+    ).sort((a, b) => {
+      const aNode = layoutedNodes.find((n) => n.id === a.parentId);
+      const bNode = layoutedNodes.find((n) => n.id === b.parentId);
+      return (aNode?.position.x ?? 0) - (bNode?.position.x ?? 0);
+    });
+    const parents = parentLinks.map((link) => layoutedNodes.find((n) => n.id === link.parentId));
+    const visibleParents = parents.filter(Boolean) as Node[];
+    if (visibleParents.length === 0) return;
 
-    let unionX: number | undefined = undefined;
-    if (parents.length >= 2 && parents[0] && parents[1]) {
-      unionX = (parents[0].position.x + parents[1].position.x) / 2 + 70; // Center is +70
-    } else if (parents.length === 1 && parents[0]) {
-      unionX = parents[0].position.x + 70;
-    }
+    const orderedChildrenIds = [...childrenIds].sort((a, b) => {
+      const aNode = layoutedNodes.find((n) => n.id === a);
+      const bNode = layoutedNodes.find((n) => n.id === b);
+      return (aNode?.position.x ?? 0) - (bNode?.position.x ?? 0);
+    });
+    const familyCenterX =
+      visibleParents.reduce((sum, parent) => sum + parent.position.x + NODE_W / 2, 0) /
+      visibleParents.length;
+    const primaryParentId = parentLinks[0]?.parentId;
+    const firstChildNode = layoutedNodes.find((n) => n.id === orderedChildrenIds[0]);
+    const firstParentNode = visibleParents[0];
+    const childBottomY = (firstChildNode?.position.y ?? 0) + NODE_H - 40;
+    const parentTopY = firstParentNode.position.y;
+    const siblingBarY = Math.min(parentTopY - 72, childBottomY + 18);
+    const parentBranchY = parentTopY - 34;
 
-    // Sort parents so the primary parent is always consistent (e.g. first in array)
-    const primaryParentId = parents[0]?.id;
-
-    // Calculate a consistent Y coordinate for the horizontal routing bars
-    const childGen =
-      (layoutedNodes.find((n) => n.id === childrenIds[0])?.data?.generation as number) || 0;
-    const parentGen = (parents[0]?.data?.generation as number) || 0;
-    // Base Y is the generation Y
-    const childGenY = childGen * 250;
-    const parentGenY = parentGen * 250;
-    const consistentMidY = parentGenY + (childGenY - parentGenY) / 2;
-    const consistentTrunkY = childGenY + 125; // Approximate consistent bottom of child + padding
-
-    childrenIds.forEach((childId, childIdx) => {
-      const isFirstSibling = childIdx === 0;
-
-      refEdges.forEach((e) => {
-        const isPrimaryParent = e.source === primaryParentId;
+    orderedChildrenIds.forEach((childId, childIdx) => {
+      parentLinks.forEach((link) => {
+        const isPrimaryParent = link.parentId === primaryParentId;
 
         finalEdges.push({
-          ...e,
-          id: `pedigree_${e.id}_${childId}`,
-          source: e.source, // Parent
-          target: childId, // Child
-          sourceHandle: "top",
-          targetHandle: "bottom-target",
-          type: "straightStep",
+          ...link.edge,
+          id: `pedigree_${link.edge.id}_${childId}_${link.parentId}`,
+          source: childId,
+          target: link.parentId,
+          sourceHandle: "bottom",
+          targetHandle: "top-target",
+          type: "pedigree",
           style: { stroke: "var(--color-plum)", strokeWidth: 2 },
-          data: { unionX, isPrimaryParent, isFirstSibling, consistentMidY, consistentTrunkY },
+          data: {
+            familyCenterX,
+            siblingBarY,
+            parentBranchY,
+            isPrimaryParent,
+            drawParentBranch: childIdx === 0,
+          },
         });
       });
     });
