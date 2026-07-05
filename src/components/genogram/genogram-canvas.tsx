@@ -906,6 +906,7 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
   const parentLinksByChild = new Map<string, ParentLink[]>();
   const otherEdges: Edge[] = [];
   const finalEdges: Edge[] = [];
+  const visibleUnionPairs = new Set<string>();
 
   edges.forEach((edge) => {
     if (isParentEdge(edge)) {
@@ -934,6 +935,7 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
       let finalTargetHandle = edge.targetHandle;
 
       if (isUnionEdge(edge)) {
+        visibleUnionPairs.add([edge.source, edge.target].sort().join("|"));
         const sourceNode = layoutedNodes.find((n) => n.id === edge.source);
         const targetNode = layoutedNodes.find((n) => n.id === edge.target);
 
@@ -985,6 +987,31 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     const parents = parentLinks.map((link) => layoutedNodes.find((n) => n.id === link.parentId));
     const visibleParents = parents.filter(Boolean) as Node[];
     if (visibleParents.length === 0) return;
+
+    if (visibleParents.length > 1 && !visibleUnionPairs.has(pairKey)) {
+      const sortedParents = [...visibleParents].sort((a, b) => a.position.x - b.position.x);
+      visibleUnionPairs.add(pairKey);
+      finalEdges.push({
+        id: `inferred_union_${pairKey}`,
+        source: sortedParents[0].id,
+        target: sortedParents[1].id,
+        sourceHandle: "right",
+        targetHandle: "left",
+        type: "straightStep",
+        label: "União (casal)",
+        labelStyle: {
+          fontSize: 12,
+          fontWeight: 600,
+          fill: "var(--color-plum)",
+          fontFamily: "var(--font-sans)",
+        },
+        labelBgStyle: { fill: "var(--color-card)", fillOpacity: 0.98, rx: 3, ry: 3 },
+        labelBgPadding: [4, 6] as [number, number],
+        style: { stroke: "var(--color-foreground)", strokeWidth: 2 },
+        data: { relationshipType: "union", inferredFromChildren: true },
+        zIndex: 3,
+      });
+    }
 
     const orderedChildrenIds = [...childrenIds].sort((a, b) => {
       const aNode = layoutedNodes.find((n) => n.id === a);
