@@ -458,13 +458,28 @@ export function layoutGraph(g: LogicalGraph): Placement {
     const gen = u.generation;
     // Casal
     const partners = u.partners.map((pid) => g.persons.get(pid)).filter(Boolean) as PersonEntity[];
-    // ordena: paterno/homem à esquerda, materno/feminino à direita
+    // Ordem confiável: o grafo lógico já monta partners como [pai/paterno, mãe/materno].
+    // Como fallback: usa o tag de parentesco (pai/avô à esquerda; mãe/avó à direita)
+    // e só cai no gender field quando tudo mais falha.
     partners.sort((a, b) => {
+      const relA = (a.row.relationship_to_proband || "").toLowerCase();
+      const relB = (b.row.relationship_to_proband || "").toLowerCase();
+      const isMaleTag = (r: string) =>
+        r.includes("pai") || r.includes("avô") || r.includes("bisavô") || r.startsWith("tio");
+      const isFemaleTag = (r: string) =>
+        r.includes("mãe") || r.includes("mae") || r.includes("avó") || r.includes("bisavó") || r.startsWith("tia");
+      let scoreA = 0;
+      let scoreB = 0;
+      if (isMaleTag(relA)) scoreA = -1;
+      else if (isFemaleTag(relA)) scoreA = 1;
+      if (isMaleTag(relB)) scoreB = -1;
+      else if (isFemaleTag(relB)) scoreB = 1;
+      if (scoreA !== scoreB) return scoreA - scoreB;
       const genderA = (a.row.gender || "").toLowerCase();
       const genderB = (b.row.gender || "").toLowerCase();
-      const scoreA = genderA.includes("masc") || genderA === "m" ? -1 : 1;
-      const scoreB = genderB.includes("masc") || genderB === "m" ? -1 : 1;
-      return scoreA - scoreB;
+      const gA = genderA.includes("masc") || genderA === "m" ? -1 : 1;
+      const gB = genderB.includes("masc") || genderB === "m" ? -1 : 1;
+      return gA - gB;
     });
 
     let leftCx: number;
