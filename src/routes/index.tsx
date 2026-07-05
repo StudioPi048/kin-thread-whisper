@@ -13,6 +13,9 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { LizLogo, LizLogoLockup } from "@/components/liz-logo";
+import hero1 from "@/assets/hero-1.jpg";
+import hero2 from "@/assets/hero-2.jpg";
+import hero3 from "@/assets/hero-3.jpg";
 
 export const Route = createFileRoute("/")({
   component: LandingPage,
@@ -188,7 +191,7 @@ export default function LandingPage() {
               {/* Fallback color and image */}
               <div className="absolute inset-0 bg-plum/50" />
               <img 
-                src="/hero-1.png" 
+                src={hero1} 
                 alt="Psicogenealogista utilizando a plataforma" 
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 onError={(e) => {
@@ -308,7 +311,7 @@ export default function LandingPage() {
           >
             <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl relative">
               <img 
-                src="/hero-2.png" 
+                src={hero2} 
                 alt="Conexão com o paciente" 
                 className="absolute inset-0 w-full h-full object-cover"
                 onError={(e) => {
@@ -352,7 +355,7 @@ export default function LandingPage() {
           >
             <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl relative">
               <img 
-                src="/hero-3.png" 
+                src={hero3} 
                 alt="A vida simplificada" 
                 className="absolute inset-0 w-full h-full object-cover"
                 onError={(e) => {
