@@ -917,9 +917,26 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
       const bNode = layoutedNodes.find((n) => n.id === b);
       return (aNode?.position.x ?? 0) - (bNode?.position.x ?? 0);
     });
+    // Clamp the trunk position to sit between the leftmost and rightmost sibling,
+    // AND between the visible parents. Without the clamp, a parent placed far away
+    // (e.g. an extra spouse or off-side ancestor) can drag the center out of the
+    // sibling range and render the trunk off-screen as a large empty rectangle.
+    const childXs = orderedChildrenIds
+      .map((id) => layoutedNodes.find((n) => n.id === id))
+      .filter(Boolean)
+      .map((n) => (n as Node).position.x + NODE_W / 2);
+    const parentXs = visibleParents.map((p) => p.position.x + NODE_W / 2);
+    const rawParentCenter = parentXs.reduce((s, x) => s + x, 0) / parentXs.length;
+    const siblingMin = Math.min(...childXs);
+    const siblingMax = Math.max(...childXs);
+    const parentMin = Math.min(...parentXs);
+    const parentMax = Math.max(...parentXs);
+    const allowedMin = Math.max(siblingMin, parentMin);
+    const allowedMax = Math.min(siblingMax, parentMax);
     const familyCenterX =
-      visibleParents.reduce((sum, parent) => sum + parent.position.x + NODE_W / 2, 0) /
-      visibleParents.length;
+      allowedMin <= allowedMax
+        ? Math.min(Math.max(rawParentCenter, allowedMin), allowedMax)
+        : (siblingMin + siblingMax) / 2;
     const primaryParentId = parentLinks[0]?.parentId;
     const firstChildNode = layoutedNodes.find((n) => n.id === orderedChildrenIds[0]);
     const firstParentNode = visibleParents[0];
