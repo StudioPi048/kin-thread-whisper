@@ -506,19 +506,19 @@ export function layoutGraph(g: LogicalGraph): Placement {
           
           if (side !== "root") {
             // Cada irmão ocupa o espaço dele mesmo + SIBLING_GAP
-            const farthestSib = siblings.length * (NODE_W + SIBLING_GAP);
+            const siblingsWidth = siblings.length * (NODE_W + SIBLING_GAP);
             if (direction === -1) {
-              left = Math.min(left, -farthestSib - NODE_W / 2 - BRANCH_GAP);
+              left = left - siblingsWidth - BRANCH_GAP;
             } else {
-              right = Math.max(right, farthestSib + NODE_W / 2 + BRANCH_GAP);
+              right = right + siblingsWidth + BRANCH_GAP;
             }
           } else {
             // Irmãos do root se alternam
             const sibCount = siblings.length;
             const leftCount = Math.ceil(sibCount / 2);
             const rightCount = Math.floor(sibCount / 2);
-            left = Math.min(left, -leftCount * (NODE_W + SIBLING_GAP) - NODE_W / 2 - BRANCH_GAP);
-            right = Math.max(right, rightCount * (NODE_W + SIBLING_GAP) + NODE_W / 2 + BRANCH_GAP);
+            left = left - leftCount * (NODE_W + SIBLING_GAP) - BRANCH_GAP;
+            right = right + rightCount * (NODE_W + SIBLING_GAP) + BRANCH_GAP;
           }
         }
       }
@@ -568,26 +568,51 @@ export function layoutGraph(g: LogicalGraph): Placement {
       assignPosition(partners[0].id, cx, parentGen, pSide);
     }
     
-    // Satélites (irmãos) pendurados do lado correto
+    // Satélites (irmãos) pendurados do lado correto, fora da bounding box dos pais
     const siblings = pu.children.filter((cid) => cid !== personId);
     if (siblings.length > 0) {
+      let parentsLeft = -NODE_W / 2;
+      let parentsRight = NODE_W / 2;
+      
+      if (partners.length === 2) {
+        const pExt = personExtents.get(partners[0].id) || { left: -NODE_W / 2, right: NODE_W / 2 };
+        const mExt = personExtents.get(partners[1].id) || { left: -NODE_W / 2, right: NODE_W / 2 };
+        const D = unionD.get(parentUnionId) ?? (COUPLE_GAP / 2);
+        parentsLeft = -D + pExt.left;
+        parentsRight = D + mExt.right;
+      } else if (partners.length === 1) {
+        const gender = partners[0].row.gender?.toLowerCase() || "";
+        const pSide = gender.startsWith("m") ? "paternal" : "maternal";
+        const ext = personExtents.get(partners[0].id) || { left: -NODE_W / 2, right: NODE_W / 2 };
+        if (pSide === "paternal") {
+          parentsLeft = ext.left;
+        } else {
+          parentsRight = ext.right;
+        }
+      }
+
       if (side === "root") {
-        let leftIdx = 1;
-        let rightIdx = 1;
+        let leftIdx = 0;
+        let rightIdx = 0;
         siblings.forEach((sibId, i) => {
           if (i % 2 === 0) {
-            placePerson(sibId, cx - leftIdx * (NODE_W + SIBLING_GAP), gen);
+            placePerson(sibId, cx + parentsLeft - BRANCH_GAP - NODE_W / 2 - leftIdx * (NODE_W + SIBLING_GAP), gen);
             leftIdx++;
           } else {
-            placePerson(sibId, cx + rightIdx * (NODE_W + SIBLING_GAP), gen);
+            placePerson(sibId, cx + parentsRight + BRANCH_GAP + NODE_W / 2 + rightIdx * (NODE_W + SIBLING_GAP), gen);
             rightIdx++;
           }
         });
       } else {
-        const direction = side === "maternal" ? 1 : -1;
-        siblings.forEach((sibId, i) => {
-          placePerson(sibId, cx + direction * (i + 1) * (NODE_W + SIBLING_GAP), gen);
-        });
+        if (side === "maternal") {
+          siblings.forEach((sibId, i) => {
+            placePerson(sibId, cx + parentsRight + BRANCH_GAP + NODE_W / 2 + i * (NODE_W + SIBLING_GAP), gen);
+          });
+        } else {
+          siblings.forEach((sibId, i) => {
+            placePerson(sibId, cx + parentsLeft - BRANCH_GAP - NODE_W / 2 - i * (NODE_W + SIBLING_GAP), gen);
+          });
+        }
       }
     }
   };

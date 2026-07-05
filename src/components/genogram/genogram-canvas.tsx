@@ -975,7 +975,8 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
               type: "step",
               style: { strokeWidth: 2, stroke: "var(--color-plum)" },
             }}
-            
+            fitView
+            fitViewOptions={{ padding: 0.2 }}
           >
             <Background
               color="#cbd5e1"
