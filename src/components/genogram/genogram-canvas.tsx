@@ -899,9 +899,8 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     });
   });
 
-  // Remove invisible union nodes; we no longer anchor descendant lines to marriages.
-  // The marriage line (gold) will simply connect the spouses, while the descendant
-  // lines will fork directly to the parents' top handles, matching the requested pedigree look.
+  // Filiação é desenhada como barramento pedigree: irmãos no mesmo barramento
+  // e tronco sempre convergindo no centro geométrico dos pais/união.
 
   type ParentLink = { edge: Edge; childId: string; parentId: string };
   const parentLinksByChild = new Map<string, ParentLink[]>();
@@ -954,6 +953,7 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
         sourceHandle: finalSourceHandle,
         targetHandle: finalTargetHandle,
         type: isUnionEdge(edge) ? "straightStep" : edge.type,
+        zIndex: isUnionEdge(edge) ? 3 : edge.zIndex,
       });
     }
   });
@@ -1026,7 +1026,10 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
       targetHandle: "top-target",
       type: "pedigree",
       style: { stroke: "var(--color-plum)", strokeWidth: 2 },
+      zIndex: 2,
       data: {
+        childIds: orderedChildrenIds,
+        parentIds: parentLinks.map((link) => link.parentId),
         childPoints,
         familyCenterX,
         siblingBarY,
