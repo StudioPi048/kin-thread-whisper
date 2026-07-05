@@ -1072,7 +1072,7 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     layoutedNodes.unshift({
       id: `gen_bg_${g}`,
       type: "band",
-      position: { x: -7500, y: -g * GENERATION_GAP - 20 },
+      position: { x: -7500, y: g * GENERATION_GAP - 20 },
       data: { generation: g },
       draggable: false,
       selectable: false,
