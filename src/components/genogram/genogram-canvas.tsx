@@ -34,7 +34,6 @@ import { PersonNode, type PersonNodeData } from "./person-node";
 import { PersonFormDialog } from "./person-form-dialog";
 import { RelationshipFormDialog } from "./relationship-form-dialog";
 import { relationshipLabel } from "@/lib/genogram";
-import { computeStructuralEdges } from "@/lib/structural-tree";
 import { smartNormalizeRelationship } from "@/lib/relationship-normalizer";
 import { ensureProband } from "@/lib/ensure-proband";
 import type { Database } from "@/integrations/supabase/types";
