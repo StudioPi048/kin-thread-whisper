@@ -619,13 +619,27 @@ type Block = {
 
 function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
   // ── 1. Índice por tag canônica ────────────────────────────────
+  // Indexamos tanto pela tag normalizada QUANTO pela tag crua (lowercase) para
+  // evitar falsos positivos do normalizador (ex.: "Tio(a) materno(a)" caindo em
+  // fallback "Tio(a) paterno(a)" via keyword genérica "tio").
   const byCanonical = new Map<string, Node[]>();
+  const pushKey = (k: string, n: Node) => {
+    if (!k) return;
+    if (!byCanonical.has(k)) byCanonical.set(k, []);
+    const arr = byCanonical.get(k)!;
+    if (!arr.includes(n)) arr.push(n);
+  };
   nodes.forEach((n) => {
     const d = n.data as PersonNodeData;
-    const raw = n.id === probandId ? "consulente" : d.relationship_to_proband || "";
-    const canonical = smartNormalizeRelationship(raw).toLowerCase();
-    if (!byCanonical.has(canonical)) byCanonical.set(canonical, []);
-    byCanonical.get(canonical)!.push(n);
+    if (n.id === probandId) {
+      pushKey("consulente", n);
+      return;
+    }
+    const raw = d.relationship_to_proband || "";
+    const rawKey = raw.trim().toLowerCase();
+    const normKey = smartNormalizeRelationship(raw).toLowerCase();
+    pushKey(rawKey, n);
+    pushKey(normKey, n);
   });
   const getNodes = (c: string) => byCanonical.get(c.toLowerCase()) || [];
   const getFirst = (c: string) => getNodes(c)[0];
