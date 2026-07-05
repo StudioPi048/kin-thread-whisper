@@ -637,9 +637,10 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     }
     const raw = d.relationship_to_proband || "";
     const rawKey = raw.trim().toLowerCase();
-    const normKey = smartNormalizeRelationship(raw).toLowerCase();
-    pushKey(rawKey, n);
-    pushKey(normKey, n);
+    // Preferimos a tag CRUA para evitar falsos matches do normalizador.
+    // Só caímos no normalizador se o texto não tiver correspondência clara.
+    if (rawKey) pushKey(rawKey, n);
+    else pushKey(smartNormalizeRelationship(raw).toLowerCase(), n);
   });
   const getNodes = (c: string) => byCanonical.get(c.toLowerCase()) || [];
   const getFirst = (c: string) => getNodes(c)[0];
