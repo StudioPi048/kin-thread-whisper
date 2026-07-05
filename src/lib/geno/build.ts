@@ -553,9 +553,10 @@ export function layoutGraph(g: LogicalGraph): Placement {
       for (const sc of siblingCoords) placePerson(sc.id, sc.cx, gen);
 
       // Ancestrais desta união
-      const ancestorCenter =
-        siblingCoords.reduce((s, c) => s + c.cx, 0) / siblingCoords.length;
-      // usa idx do casal ancestral para posicionar seu centro acima do meio da fratria
+      // REGRA DO EIXO DE ANCESTRALIDADE: Em vez da média da fratria, o casal 
+      // ancestral deve estar ESTRITAMENTE alinhado acima do descendente direto 
+      // (o parceiro que liga as duas gerações). Isso cria colunas imutáveis de sangue.
+      const ancestorCenter = cx;
       const ancBox = layoutUnionAncestors(parentUnionId, ancestorCenter);
       boxMin = Math.min(boxMin, ancBox.minX, ...siblingCoords.map((c) => c.cx - NODE_W / 2));
       boxMax = Math.max(boxMax, ancBox.maxX, ...siblingCoords.map((c) => c.cx + NODE_W / 2));
