@@ -1104,8 +1104,10 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
       const treeW = Math.max(1, Math.max(...xs) - Math.min(...xs) + NODE_W);
       const treeH = Math.max(1, Math.max(...ys) - Math.min(...ys) + NODE_H);
 
-      // Usar mais tela: 96% da largura e altura disponíveis.
-      const zoomX = (canvasW * 0.96) / treeW;
+      // Usar mais tela: o enquadramento inicial prioriza a leitura do núcleo.
+      // Colaterais longos continuam acessíveis com pan/zoom, mas não encolhem toda a árvore.
+      const focusW = Math.min(treeW, 1800);
+      const zoomX = (canvasW * 0.96) / focusW;
       const zoomY = (canvasH * 0.96) / treeH;
       const zoom = Math.min(1.4, Math.max(0.48, Math.min(zoomX, zoomY)));
 
@@ -1433,8 +1435,6 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
             nodesConnectable={false}
             panOnDrag={false}
             panActivationKeyCode="Space"
-            fitView
-            fitViewOptions={{ padding: 0.2, minZoom: 0.3, maxZoom: 1.2 }}
             minZoom={0.15}
             maxZoom={2.5}
             proOptions={{ hideAttribution: true }}

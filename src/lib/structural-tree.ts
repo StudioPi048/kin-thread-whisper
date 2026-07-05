@@ -60,6 +60,7 @@ export function computeStructuralEdges(persons: PersonRow[], rels: RelRow[] = []
   // Nesses casos NÃO inferimos parentesco automaticamente para não sobrescrever a intenção.
   const manualParentOf = new Set<string>();
   const manualUnionPairs = new Set<string>();
+  const emittedUnionPairs = new Set<string>();
   for (const r of rels) {
     if (r.relationship_type === "parent" && r.to_person_id) {
       manualParentOf.add(r.to_person_id);
@@ -70,7 +71,9 @@ export function computeStructuralEdges(persons: PersonRow[], rels: RelRow[] = []
   }
 
   const linkUnion = (a: PersonRow, b: PersonRow, edgeId: string) => {
-    if (manualUnionPairs.has([a.id, b.id].sort().join("|"))) return;
+    const pairKey = [a.id, b.id].sort().join("|");
+    if (manualUnionPairs.has(pairKey) || emittedUnionPairs.has(pairKey)) return;
+    emittedUnionPairs.add(pairKey);
     edges.push(createEdge(edgeId, a.id, b.id, "union"));
   };
 
