@@ -662,9 +662,16 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     else if (rightBlock.childTarget) unionCenter = wCenter;
     else unionCenter = (leftBlock.width + rightOffsetX + rightBlock.width) / 2;
 
-    const bottomNodes = isHusbandSide
-      ? [...childSiblings, ...(childTarget ? [childTarget] : [])]
-      : [...(childTarget ? [childTarget] : []), ...childSiblings];
+    const halfLeftM = isHusbandSide
+      ? Math.ceil(childSiblings.length / 2)
+      : Math.floor(childSiblings.length / 2);
+    const leftSibsM = childSiblings.slice(0, halfLeftM);
+    const rightSibsM = childSiblings.slice(halfLeftM);
+    const bottomNodes = [
+      ...leftSibsM,
+      ...(childTarget ? [childTarget] : []),
+      ...rightSibsM,
+    ];
 
     if (childTarget) {
       childSiblings.forEach((s) => siblingToChildTarget.set(s.id, childTarget.id));
