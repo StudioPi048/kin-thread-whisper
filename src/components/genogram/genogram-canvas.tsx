@@ -1068,7 +1068,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
     }));
 
     const manualEdges: Edge[] = query.data.rels.map(relToEdge);
-    const structuralEdges: Edge[] = computeStructuralEdges(qualifiedPersons);
+    const structuralEdges: Edge[] = computeStructuralEdges(qualifiedPersons, query.data.rels);
     // Descartamos arestas "order" — não são visuais, eram dicas ao Dagre.
     const initialEdges = [...structuralEdges, ...manualEdges].filter((e) => e.type !== "order");
 
