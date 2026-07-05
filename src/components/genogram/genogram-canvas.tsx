@@ -175,10 +175,6 @@ function StraightStepEdge({
 }
 
 function PedigreeEdge({
-  sourceX,
-  sourceY,
-  targetX,
-  targetY,
   style,
   markerEnd,
   markerStart,
@@ -186,24 +182,28 @@ function PedigreeEdge({
   data,
 }: EdgeProps) {
   const edgeData = data as Record<string, unknown> | undefined;
-  const familyCenterX = (edgeData?.familyCenterX as number | undefined) ?? sourceX;
-  const siblingBarY = (edgeData?.siblingBarY as number | undefined) ?? sourceY + (targetY - sourceY) * 0.42;
-  const parentBranchY = (edgeData?.parentBranchY as number | undefined) ?? targetY - 36;
-  const isPrimaryParent = Boolean(edgeData?.isPrimaryParent);
-  const drawParentBranch = Boolean(edgeData?.drawParentBranch);
+  if (!edgeData) return null;
+  const childPoints = (edgeData.childPoints as { x: number; y: number }[] | undefined) ?? [];
+  const familyCenterX = edgeData.familyCenterX as number | undefined;
+  const siblingBarY = edgeData.siblingBarY as number | undefined;
+  const marriageY = edgeData.marriageY as number | undefined;
+  if (childPoints.length === 0 || familyCenterX === undefined || siblingBarY === undefined || marriageY === undefined) {
+    return null;
+  }
+
+  const xs = childPoints.map((p) => p.x);
+  const barLeft = Math.min(...xs, familyCenterX);
+  const barRight = Math.max(...xs, familyCenterX);
 
   let path = "";
-
-  if (isPrimaryParent) {
-    path += `M ${sourceX} ${sourceY} L ${sourceX} ${siblingBarY} L ${familyCenterX} ${siblingBarY} `;
+  // Sibling bar spanning children (and trunk anchor)
+  path += `M ${barLeft} ${siblingBarY} L ${barRight} ${siblingBarY} `;
+  // Vertical stub from each child down to the sibling bar
+  for (const p of childPoints) {
+    path += `M ${p.x} ${p.y} L ${p.x} ${siblingBarY} `;
   }
-
-  if (drawParentBranch) {
-    path += `M ${familyCenterX} ${siblingBarY} L ${familyCenterX} ${parentBranchY} `;
-    path += `M ${familyCenterX} ${parentBranchY} L ${targetX} ${parentBranchY} L ${targetX} ${targetY}`;
-  }
-
-  if (!path.trim()) return null;
+  // Trunk from sibling bar to marriage line midpoint (between the parents)
+  path += `M ${familyCenterX} ${siblingBarY} L ${familyCenterX} ${marriageY}`;
 
   return (
     <BaseEdge
@@ -916,39 +916,42 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
       const bNode = layoutedNodes.find((n) => n.id === b);
       return (aNode?.position.x ?? 0) - (bNode?.position.x ?? 0);
     });
+    // Geometric midpoint between the two parents (or single parent center)
     const familyCenterX =
       visibleParents.reduce((sum, parent) => sum + parent.position.x + NODE_W / 2, 0) /
       visibleParents.length;
-    const primaryParentId = parentLinks[0]?.parentId;
-    const firstChildNode = layoutedNodes.find((n) => n.id === orderedChildrenIds[0]);
-    const firstParentNode = visibleParents[0];
-    const childBottomY = (firstChildNode?.position.y ?? 0) + NODE_H - 40;
-    const parentTopY = firstParentNode.position.y;
-    const siblingBarY = Math.min(parentTopY - 72, childBottomY + 18);
-    const parentBranchY = parentTopY - 34;
 
-    orderedChildrenIds.forEach((childId, childIdx) => {
-      parentLinks.forEach((link) => {
-        const isPrimaryParent = link.parentId === primaryParentId;
+    const childPoints = orderedChildrenIds
+      .map((cid) => {
+        const n = layoutedNodes.find((nn) => nn.id === cid);
+        if (!n) return null;
+        return { x: n.position.x + NODE_W / 2, y: n.position.y + NODE_H - 40 };
+      })
+      .filter((p): p is { x: number; y: number } => p !== null);
 
-        finalEdges.push({
-          ...link.edge,
-          id: `pedigree_${link.edge.id}_${childId}_${link.parentId}`,
-          source: childId,
-          target: link.parentId,
-          sourceHandle: "bottom",
-          targetHandle: "top-target",
-          type: "pedigree",
-          style: { stroke: "var(--color-plum)", strokeWidth: 2 },
-          data: {
-            familyCenterX,
-            siblingBarY,
-            parentBranchY,
-            isPrimaryParent,
-            drawParentBranch: childIdx === 0,
-          },
-        });
-      });
+    if (childPoints.length === 0) return;
+
+    const parentTopY = visibleParents[0].position.y;
+    const maxChildBottom = Math.max(...childPoints.map((p) => p.y));
+    // Sibling bar sits between children (above) and parents (below).
+    const siblingBarY = Math.min(parentTopY - 60, maxChildBottom + 40);
+    // Trunk terminates at the marriage line (top edge of the parent row).
+    const marriageY = parentTopY;
+
+    finalEdges.push({
+      id: `pedigree_family_${pairKey}`,
+      source: orderedChildrenIds[0],
+      target: parentLinks[0].parentId,
+      sourceHandle: "bottom",
+      targetHandle: "top-target",
+      type: "pedigree",
+      style: { stroke: "var(--color-plum)", strokeWidth: 2 },
+      data: {
+        childPoints,
+        familyCenterX,
+        siblingBarY,
+        marriageY,
+      },
     });
   });
 
