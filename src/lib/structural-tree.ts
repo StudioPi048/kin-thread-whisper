@@ -53,8 +53,17 @@ function canonicalKey(rel: string | null | undefined): string {
  *   → Consulente → Pai/Mãe → Avós → Bisavós
  *   → Com TB, Source (filho) fica acima do Target (pai)
  */
-export function computeStructuralEdges(persons: PersonRow[]): Edge[] {
+export function computeStructuralEdges(persons: PersonRow[], rels: RelRow[] = []): Edge[] {
   const edges: Edge[] = [];
+
+  // Pessoas com pais definidos MANUALMENTE (via genogram_relationships type=parent).
+  // Nesses casos NÃO inferimos parentesco automaticamente para não sobrescrever a intenção.
+  const manualParentOf = new Set<string>();
+  for (const r of rels) {
+    if (r.relationship_type === "parent" && r.to_person_id) {
+      manualParentOf.add(r.to_person_id);
+    }
+  }
 
   // ── Indexar por chave canônica ─────────────────────────────
   const byKey = new Map<string, PersonRow[]>();
@@ -68,10 +77,17 @@ export function computeStructuralEdges(persons: PersonRow[]): Edge[] {
   const get = (tag: string): PersonRow[] => byKey.get(clean(tag)) ?? [];
   const first = (tag: string): PersonRow | undefined => get(tag)[0];
 
+  // Helper: liga filho→pai/mãe apenas se não houver override manual
+  const linkChild = (childId: string, parentId: string, edgeId: string) => {
+    if (manualParentOf.has(childId)) return;
+    edges.push(createEdge(edgeId, childId, parentId, "parent"));
+  };
+
   // ── PROBAND ───────────────────────────────────────────────
   const proband =
     first("Consulente") || first("Paciente") || persons.find((p) => p.is_proband) || persons[0];
   if (!proband) return [];
+
 
   const pai = first("Pai");
   const mae = first("Mãe");
