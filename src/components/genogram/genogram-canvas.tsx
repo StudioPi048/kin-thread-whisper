@@ -42,58 +42,54 @@ import type { Database } from "@/integrations/supabase/types";
 type PersonRow = Database["public"]["Tables"]["genogram_persons"]["Row"];
 type RelRow = Database["public"]["Tables"]["genogram_relationships"]["Row"];
 
-const UnionNodeComponent = () => (
-  <div style={{ width: 1, height: 1, position: "relative" }}>
-    <Handle
-      id="top"
-      type="source"
-      position={Position.Top}
-      className="opacity-0 pointer-events-none"
-    />
-    <Handle
-      id="bottom"
-      type="source"
-      position={Position.Bottom}
-      className="opacity-0 pointer-events-none"
-    />
-    <Handle
-      id="left"
-      type="source"
-      position={Position.Left}
-      className="opacity-0 pointer-events-none"
-    />
-    <Handle
-      id="right"
-      type="source"
-      position={Position.Right}
-      className="opacity-0 pointer-events-none"
-    />
-    <Handle
-      id="top-target"
-      type="target"
-      position={Position.Top}
-      className="opacity-0 pointer-events-none"
-    />
-    <Handle
-      id="bottom-target"
-      type="target"
-      position={Position.Bottom}
-      className="opacity-0 pointer-events-none"
-    />
-    <Handle
-      id="left-target"
-      type="target"
-      position={Position.Left}
-      className="opacity-0 pointer-events-none"
-    />
-    <Handle
-      id="right-target"
-      type="target"
-      position={Position.Right}
-      className="opacity-0 pointer-events-none"
-    />
-  </div>
-);
+/**
+ * UnionNode — cidadão de primeira classe do grafo.
+ * Renderiza um pequeno diamante ameixa no ponto exato da união entre os
+ * parceiros. A etiqueta pertence ao nó, nunca ao edge — evita colisões
+ * com a linha do casal.
+ */
+const UNION_SIZE = 12;
+const UnionNodeComponent = ({ data }: NodeProps) => {
+  const d = (data as { label?: string; kind?: string }) ?? {};
+  const isDivorce = d.kind === "divorcio";
+  return (
+    <div
+      style={{ width: UNION_SIZE, height: UNION_SIZE, position: "relative" }}
+      className="pointer-events-none"
+    >
+      {d.label && (
+        <div
+          className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-card/95 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-plum shadow-sm"
+          style={{ top: -22 }}
+        >
+          {d.label}
+        </div>
+      )}
+      <div
+        className="absolute rounded-sm bg-foreground"
+        style={{ width: 8, height: 8, left: 2, top: 2, transform: "rotate(45deg)" }}
+      />
+      {isDivorce && (
+        <svg
+          className="absolute pointer-events-none"
+          style={{ left: -12, top: -8, width: 36, height: 28 }}
+          viewBox="0 0 36 28"
+        >
+          <path d="M8 22 L16 4" stroke="var(--color-destructive)" strokeWidth={2.5} strokeLinecap="round" />
+          <path d="M20 22 L28 4" stroke="var(--color-destructive)" strokeWidth={2.5} strokeLinecap="round" />
+        </svg>
+      )}
+      <Handle id="top" type="source" position={Position.Top} className="opacity-0 pointer-events-none" />
+      <Handle id="bottom" type="source" position={Position.Bottom} className="opacity-0 pointer-events-none" />
+      <Handle id="left" type="source" position={Position.Left} className="opacity-0 pointer-events-none" />
+      <Handle id="right" type="source" position={Position.Right} className="opacity-0 pointer-events-none" />
+      <Handle id="top-target" type="target" position={Position.Top} className="opacity-0 pointer-events-none" />
+      <Handle id="bottom-target" type="target" position={Position.Bottom} className="opacity-0 pointer-events-none" />
+      <Handle id="left-target" type="target" position={Position.Left} className="opacity-0 pointer-events-none" />
+      <Handle id="right-target" type="target" position={Position.Right} className="opacity-0 pointer-events-none" />
+    </div>
+  );
+};
 
 function GenerationBandNode({ data }: NodeProps) {
   const isEven = (data.generation as number) % 2 === 0;
@@ -225,69 +221,49 @@ function nodeUnionY(node: Node | undefined): number {
   return node.position.y + nodeShapeSize(node) / 2;
 }
 
-function PedigreeEdge({
-  sourceX,
-  sourceY,
-  targetX,
-  targetY,
-  style,
-  markerEnd,
-  markerStart,
-  interactionWidth,
-  data,
-}: EdgeProps) {
-  const edgeData = data as Record<string, unknown> | undefined;
-  const childIds = (edgeData?.childIds as string[] | undefined) ?? [];
-  const parentIds = (edgeData?.parentIds as string[] | undefined) ?? [];
+/**
+ * PedigreeEdge — barra de irmãos que nasce de UM UnionNode.
+ * data.unionId aponta para o UnionNode (fonte lógica); data.childIds lista
+ * os filhos daquela união (fonte lógica). Nenhuma decisão vem de proximidade.
+ */
+function PedigreeEdge({ style, markerEnd, markerStart, interactionWidth, data }: EdgeProps) {
+  const edgeData = data as { unionId?: string; childIds?: string[] } | undefined;
+  const unionId = edgeData?.unionId;
+  const childIds = edgeData?.childIds ?? [];
   const live = useStore((store) => {
     const children = childIds
       .map((id) => store.nodeLookup.get(id) as unknown as Node | undefined)
-      .filter((node): node is Node => Boolean(node));
-    const parents = parentIds
-      .map((id) => store.nodeLookup.get(id) as unknown as Node | undefined)
-      .filter((node): node is Node => Boolean(node));
-    return { children, parents };
+      .filter((n): n is Node => Boolean(n));
+    const union = unionId
+      ? (store.nodeLookup.get(unionId) as unknown as Node | undefined)
+      : undefined;
+    return { children, union };
   });
 
-  if (!edgeData) return null;
+  if (!live.union || live.children.length === 0) return null;
 
-  const childPoints = live.children.length
-    ? live.children.map((node) => ({ x: nodeCenterX(node), y: nodeBottomY(node) }))
-    : ((edgeData.childPoints as { x: number; y: number }[] | undefined) ?? [
-        { x: sourceX, y: sourceY },
-      ]);
-  const parentPoints = live.parents.map((node) => ({
-    x: nodeCenterX(node),
-    topY: node.position.y,
-    unionY: nodeUnionY(node),
-  }));
-  const familyCenterX = parentPoints.length
-    ? parentPoints.reduce((sum, p) => sum + p.x, 0) / parentPoints.length
-    : ((edgeData.familyCenterX as number | undefined) ?? targetX);
-  const parentAnchorY = parentPoints.length > 1
-    ? parentPoints.reduce((sum, p) => sum + p.unionY, 0) / parentPoints.length
-    : (parentPoints[0]?.topY ?? targetY);
-
-  if (childPoints.length === 0 || familyCenterX === undefined || parentAnchorY === undefined) {
-    return null;
-  }
+  const unionX = live.union.position.x;
+  const unionY = live.union.position.y;
+  const childPoints = live.children.map((n) => ({ x: nodeCenterX(n), y: n.position.y }));
 
   const xs = childPoints.map((p) => p.x);
-  const barLeft = Math.min(...xs, familyCenterX);
-  const barRight = Math.max(...xs, familyCenterX);
+  const barLeft = Math.min(...xs, unionX);
+  const barRight = Math.max(...xs, unionX);
 
-  const maxChildBottom = Math.max(...childPoints.map((p) => p.y));
-  const siblingBarY = Math.min(parentAnchorY - 48, maxChildBottom + 34);
+  const minChildTop = Math.min(...childPoints.map((p) => p.y));
+  // Barra de irmãos posicionada entre a união (Y menor, ela vem de baixo em
+  // orientação invertida) e os filhos. Como paciente está no topo, filhos
+  // ficam ACIMA dos pais em Y → sibling bar entre eles.
+  const siblingBarY = unionY < minChildTop
+    ? Math.min(unionY + 40, minChildTop - 30)
+    : Math.max(unionY - 40, minChildTop + 30);
 
   let path = "";
-  // Sibling bar spanning children (and trunk anchor)
   path += `M ${barLeft} ${siblingBarY} L ${barRight} ${siblingBarY} `;
-  // Vertical stub from each child down to the sibling bar
   for (const p of childPoints) {
     path += `M ${p.x} ${p.y} L ${p.x} ${siblingBarY} `;
   }
-  // Trunk from sibling bar to the couple union line midpoint (or single known parent).
-  path += `M ${familyCenterX} ${siblingBarY} L ${familyCenterX} ${parentAnchorY}`;
+  path += `M ${unionX} ${siblingBarY} L ${unionX} ${unionY}`;
 
   return (
     <BaseEdge
@@ -300,7 +276,32 @@ function PedigreeEdge({
   );
 }
 
-const edgeTypes = { straightStep: StraightStepEdge, pedigree: PedigreeEdge };
+/**
+ * PartnerEdge — linha horizontal entre pessoa e UnionNode.
+ * Sempre reta horizontal na Y da união; nunca cruza outros nós porque as
+ * duas pessoas do casal estão em COUPLE_GAP da união por construção.
+ */
+function PartnerEdge({ style, interactionWidth, data }: EdgeProps) {
+  const edgeData = data as { personId?: string; unionId?: string } | undefined;
+  const live = useStore((store) => ({
+    person: edgeData?.personId
+      ? (store.nodeLookup.get(edgeData.personId) as unknown as Node | undefined)
+      : undefined,
+    union: edgeData?.unionId
+      ? (store.nodeLookup.get(edgeData.unionId) as unknown as Node | undefined)
+      : undefined,
+  }));
+  if (!live.person || !live.union) return null;
+  const px = nodeCenterX(live.person);
+  const py = nodeUnionY(live.person);
+  const ux = live.union.position.x;
+  const uy = live.union.position.y;
+  // Segmento horizontal do lado da pessoa até a união; puxa o Y para o Y da união
+  const path = `M ${px} ${uy} L ${ux} ${uy} M ${px} ${py} L ${px} ${uy}`;
+  return <BaseEdge path={path} style={style} interactionWidth={interactionWidth} />;
+}
+
+const edgeTypes = { straightStep: StraightStepEdge, pedigree: PedigreeEdge, partner: PartnerEdge };
 
 function isUnionEdge(edge: Edge): boolean {
   return (edge.data as { relationshipType?: string } | undefined)?.relationshipType === "union";
@@ -384,737 +385,42 @@ export function GenogramCanvas(props: CanvasProps) {
   );
 }
 
-// ── Tamanhos generosos, otimizados para leitura em 4K ────────
-const NODE_W = 160; // Largura do nó (shape + label)
-const NODE_H = 210; // Altura total do nó
-const PERSON_SHAPE_SIZE = 76;
-const PROBAND_SHAPE_SIZE = 84;
-const GENERATION_GAP = 250; // Distância vertical entre gerações
-const HORIZONTAL_STEP = NODE_W + 70; // Espaço horizontal entre nós de uma geração
-const DIRECT_PARENT_X = 450;
-const GRANDPARENT_PAIR_GAP = 400;
-const GREAT_GRANDPARENT_PAIR_GAP = 200;
-const COLLATERAL_GAP = 270;
+// ── Constantes visuais (delegadas ao engine) ─────────────────
+import {
+  NODE_W,
+  NODE_H,
+  PERSON_SHAPE as PERSON_SHAPE_SIZE,
+  PROBAND_SHAPE as PROBAND_SHAPE_SIZE,
+  GEN_GAP as GENERATION_GAP,
+  buildLogicalGraph,
+  layoutGraph,
+  validateGraph,
+} from "@/lib/geno/build";
+
 
 /**
- * Descobre a geração da pessoa (0 = cliente, 1 = pais, 2 = avós, 3 = bisavós).
- * Baseia-se na tag canônica após normalização.
+ * Constrói nós/edges React-Flow a partir do grafo lógico + layout.
+ * Nenhuma decisão de conexão parte de posição; tudo vem do grafo lógico.
  */
-function generationForData(data: unknown): number {
-  const d = data as PersonNodeData & { relationship_to_proband?: string | null };
-  if (d.is_proband) return 0;
-
-  const canonical = smartNormalizeRelationship(d.relationship_to_proband).toLowerCase();
-  if (!canonical) return 1;
-  if (canonical.includes("consulente") || canonical.includes("paciente")) return 0;
-  if (canonical.includes("bisav")) return 3;
-  if (canonical.includes("avô") || canonical.includes("avó") || canonical.startsWith("avo"))
-    return 2;
-  if (
-    canonical.includes("pai") ||
-    canonical.includes("mãe") ||
-    canonical.includes("mae") ||
-    canonical.startsWith("tio")
-  )
-    return 1;
-  if (canonical.includes("irmã") || canonical.includes("irma")) return 0;
-  if (canonical.includes("cônjuge") || canonical.includes("conjuge") || canonical.includes("filho"))
-    return 0;
-  return 1;
-}
-
-function alternatingCenter(anchor: number, orderIndex: number, gap = COLLATERAL_GAP): number {
-  const step = Math.floor(orderIndex / 2) + 1;
-  return anchor + (orderIndex % 2 === 0 ? -step : step) * gap;
-}
-
-function duplicateOffset(
-  base: number,
-  orderIndex: number,
-  side: "left" | "right",
-  gap = COLLATERAL_GAP,
-): number {
-  if (orderIndex === 0) return base;
-  return base + (side === "left" ? -1 : 1) * orderIndex * gap;
-}
-
-function directBloodCenter(
-  canonical: string,
-  orderIndex: number,
-  isProband: boolean,
-): number | null {
-  if (isProband) return 0;
-  const c = canonical.toLowerCase();
-
-  const fatherX = -DIRECT_PARENT_X;
-  const motherX = DIRECT_PARENT_X;
-  const paternalGrandfatherX = fatherX - GRANDPARENT_PAIR_GAP / 2;
-  const paternalGrandmotherX = fatherX + GRANDPARENT_PAIR_GAP / 2;
-  const maternalGrandfatherX = motherX - GRANDPARENT_PAIR_GAP / 2;
-  const maternalGrandmotherX = motherX + GRANDPARENT_PAIR_GAP / 2;
-
-  if (c === "pai") return duplicateOffset(fatherX, orderIndex, "left");
-  if (c === "mãe" || c === "mae") return duplicateOffset(motherX, orderIndex, "right");
-  if (c.startsWith("tio(a) paterno"))
-    return fatherX - GRANDPARENT_PAIR_GAP / 2 - (orderIndex + 1) * COLLATERAL_GAP;
-  if (c.startsWith("tio(a) materno"))
-    return motherX + GRANDPARENT_PAIR_GAP / 2 + (orderIndex + 1) * COLLATERAL_GAP;
-
-  if (c === "avô paterno") return duplicateOffset(paternalGrandfatherX, orderIndex, "left");
-  if (c === "avó paterna") return duplicateOffset(paternalGrandmotherX, orderIndex, "right");
-  if (c === "avô materno") return duplicateOffset(maternalGrandfatherX, orderIndex, "left");
-  if (c === "avó materna") return duplicateOffset(maternalGrandmotherX, orderIndex, "right");
-  if (c.includes("irmã(o) do avô paterno") || c.includes("irmã(o) da avó paterna")) {
-    return paternalGrandfatherX - GRANDPARENT_PAIR_GAP / 2 - (orderIndex + 1) * COLLATERAL_GAP;
+function buildRenderGraph(
+  persons: PersonRow[],
+  rels: RelRow[],
+  probandId: string | undefined,
+) {
+  const graph = buildLogicalGraph({ persons, rels, probandId });
+  const validation = validateGraph(graph);
+  if (!validation.ok) {
+    // Não bloqueia o render; loga para o console pra manter a UX suave.
+    // eslint-disable-next-line no-console
+    console.warn("[genograma] invariantes falharam:", validation.errors);
   }
-  if (c.includes("irmã(o) do avô materno") || c.includes("irmã(o) da avó materna")) {
-    return maternalGrandmotherX + GRANDPARENT_PAIR_GAP / 2 + (orderIndex + 1) * COLLATERAL_GAP;
-  }
+  const placement = layoutGraph(graph);
 
-  if (c.includes("bisavô paterno (pai do avô)"))
-    return duplicateOffset(
-      paternalGrandfatherX - GREAT_GRANDPARENT_PAIR_GAP / 2,
-      orderIndex,
-      "left",
-    );
-  if (c.includes("bisavó paterna (mãe do avô)"))
-    return duplicateOffset(
-      paternalGrandfatherX + GREAT_GRANDPARENT_PAIR_GAP / 2,
-      orderIndex,
-      "right",
-    );
-  if (c.includes("bisavô paterno (pai da avó)"))
-    return duplicateOffset(
-      paternalGrandmotherX - GREAT_GRANDPARENT_PAIR_GAP / 2,
-      orderIndex,
-      "left",
-    );
-  if (c.includes("bisavó paterna (mãe da avó)"))
-    return duplicateOffset(
-      paternalGrandmotherX + GREAT_GRANDPARENT_PAIR_GAP / 2,
-      orderIndex,
-      "right",
-    );
-  if (c.includes("bisavô materno (pai do avô)"))
-    return duplicateOffset(
-      maternalGrandfatherX - GREAT_GRANDPARENT_PAIR_GAP / 2,
-      orderIndex,
-      "left",
-    );
-  if (c.includes("bisavó materna (mãe do avô)"))
-    return duplicateOffset(
-      maternalGrandfatherX + GREAT_GRANDPARENT_PAIR_GAP / 2,
-      orderIndex,
-      "right",
-    );
-  if (c.includes("bisavô materno (pai da avó)"))
-    return duplicateOffset(
-      maternalGrandmotherX - GREAT_GRANDPARENT_PAIR_GAP / 2,
-      orderIndex,
-      "left",
-    );
-  if (c.includes("bisavó materna (mãe da avó)"))
-    return duplicateOffset(
-      maternalGrandmotherX + GREAT_GRANDPARENT_PAIR_GAP / 2,
-      orderIndex,
-      "right",
-    );
-  if (c.includes("irmã(o) do bisavô paterno"))
-    return paternalGrandfatherX - GRANDPARENT_PAIR_GAP / 2 - (orderIndex + 1) * COLLATERAL_GAP;
-  if (c.includes("irmã(o) do bisavô materno"))
-    return maternalGrandmotherX + GRANDPARENT_PAIR_GAP / 2 + (orderIndex + 1) * COLLATERAL_GAP;
+  const nodes: Node[] = [];
 
-  if (
-    (c.includes("irmã(o)") || c.startsWith("irmã") || c.startsWith("irma")) &&
-    !c.includes("av")
-  ) {
-    return alternatingCenter(0, orderIndex);
-  }
-
-  return null;
-}
-
-type EdgeWithPathOptions = Edge & { pathOptions?: { borderRadius?: number } };
-
-function forceRightAngle(edge: Edge): Edge {
-  const existing = (edge as EdgeWithPathOptions).pathOptions ?? {};
-  return {
-    ...edge,
-    type: "straightStep",
-    pathOptions: { ...existing, borderRadius: 0 },
-  } as Edge;
-}
-
-/**
- * Rank horizontal: número menor = mais à esquerda, maior = mais à direita.
- * Regra clínica: RAMO PATERNO à ESQUERDA · RAMO MATERNO à DIREITA.
- * O cliente é a referência (rank 0).
- */
-function rankFor(canonical: string, orderIndex: number): number {
-  const c = canonical.toLowerCase();
-
-  // ── Geração 1 ────────────────────────────────────────────
-  if (c === "pai") return -10;
-  if (c === "mãe" || c === "mae") return 10;
-  if (c.startsWith("tio(a) paterno")) return -100 - orderIndex;
-  if (c.startsWith("tio(a) materno")) return 100 + orderIndex;
-  // Irmãos do cliente: alternam próximos ao centro (não interferem em pai/mãe).
-  if (
-    (c.includes("irmã(o)") || c.startsWith("irmã") || c.startsWith("irma")) &&
-    !c.includes("av") &&
-    !c.includes("bisav")
-  ) {
-    // -1, +1, -2, +2, ...
-    const half = Math.floor(orderIndex / 2) + 1;
-    return orderIndex % 2 === 0 ? -half : half;
-  }
-
-  // ── Geração 2 ────────────────────────────────────────────
-  if (c === "avô paterno") return -30;
-  if (c === "avó paterna") return -20;
-  if (c === "avô materno") return 20;
-  if (c === "avó materna") return 30;
-  if (c.includes("irmã(o) do avô paterno")) return -200 - orderIndex;
-  if (c.includes("irmã(o) da avó paterna")) return -150 - orderIndex;
-  if (c.includes("irmã(o) do avô materno")) return 150 + orderIndex;
-  if (c.includes("irmã(o) da avó materna")) return 200 + orderIndex;
-
-  // ── Geração 3 ────────────────────────────────────────────
-  if (c.includes("bisavô paterno (pai do avô)")) return -40;
-  if (c.includes("bisavó paterna (mãe do avô)")) return -30;
-  if (c.includes("bisavô paterno (pai da avó)")) return -20;
-  if (c.includes("bisavó paterna (mãe da avó)")) return -10;
-  if (c.includes("bisavô materno (pai do avô)")) return 10;
-  if (c.includes("bisavó materna (mãe do avô)")) return 20;
-  if (c.includes("bisavô materno (pai da avó)")) return 30;
-  if (c.includes("bisavó materna (mãe da avó)")) return 40;
-  if (c.includes("irmã(o) do bisavô paterno")) return -300 - orderIndex;
-  if (c.includes("irmã(o) do bisavô materno")) return 300 + orderIndex;
-
-  return 0;
-}
-
-/**
- * Layout hierárquico determinístico para genograma.
- *
- * Algoritmo (bottom-up recursivo):
- *  1. Constrói modelo de famílias: cada família tem casal + filhos + eventualmente
- *     famílias ancestrais para cada cônjuge (avós, bisavós).
- *  2. Recursivamente posiciona cada sub-árvore ancestral, retornando bounds
- *     (minX/maxX) e anchorX (o filho que conecta para a próxima geração abaixo).
- *  3. Ao combinar os dois lados (paterno/materno), alinha os cônjuges lado a
- *     lado (HORIZONTAL_STEP) sem sobrepor as sub-árvores acima.
- *  4. Posiciona a linha dos filhos centralizada no meio do casal.
- *  5. Cada geração é forçada em Y = gen * GENERATION_GAP (linhas horizontais).
- *
- * Regras clínicas: pai/avô à esquerda, mãe/avó à direita. Cliente em y=0 no topo.
- */
-type LayoutNode = { node: Node; x: number; y: number; gen: number };
-type Block = {
-  nodes: LayoutNode[];
-  minX: number;
-  maxX: number;
-  anchorX: number; // centerX do filho de referência (para conectar à geração abaixo)
-};
-
-function cleanRelationshipKey(value: string | null | undefined): string {
-  if (!value) return "";
-  return value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\([oa]\)/g, "")
-    .replace(/[()]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-const SYSTEM_RELATIONSHIP_KEYS = new Set(
-  [
-    "Consulente",
-    "Paciente",
-    "Irmã(o)",
-    "Pai",
-    "Mãe",
-    "Tio(a) paterno(a)",
-    "Tio(a) materno(a)",
-    "Avô paterno",
-    "Avó paterna",
-    "Avô materno",
-    "Avó materna",
-    "Bisavô paterno (pai do avô)",
-    "Bisavó paterna (mãe do avô)",
-    "Bisavô paterno (pai da avó)",
-    "Bisavó paterna (mãe da avó)",
-    "Bisavô materno (pai do avô)",
-    "Bisavó materna (mãe do avô)",
-    "Bisavô materno (pai da avó)",
-    "Bisavó materna (mãe da avó)",
-    "Irmã(o) do avô paterno",
-    "Irmã(o) da avó paterna",
-    "Irmã(o) do avô materno",
-    "Irmã(o) da avó materna",
-    "Irmã(o) do bisavô paterno",
-    "Irmã(o) do bisavô materno",
-    "Cônjuge",
-    "Filho(a)",
-    "Aborto",
-  ].map(cleanRelationshipKey),
-);
-
-function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
-  // ── 1. Índice por tag canônica ────────────────────────────────
-  // Indexamos tanto pela tag normalizada QUANTO pela tag crua (lowercase) para
-  // evitar falsos positivos do normalizador (ex.: "Tio(a) materno(a)" caindo em
-  // fallback "Tio(a) paterno(a)" via keyword genérica "tio").
-  const byCanonical = new Map<string, Node[]>();
-  const pushKey = (k: string, n: Node) => {
-    if (!k) return;
-    if (!byCanonical.has(k)) byCanonical.set(k, []);
-    const arr = byCanonical.get(k)!;
-    if (!arr.includes(n)) arr.push(n);
-  };
-  nodes.forEach((n) => {
-    const d = n.data as PersonNodeData;
-    if (n.id === probandId) {
-      pushKey("consulente", n);
-      return;
-    }
-    const raw = d.relationship_to_proband || "";
-    const rawKey = cleanRelationshipKey(raw);
-    // Tags oficiais do sistema são usadas como fonte da verdade. Isso impede que
-    // "Tio(a) materno(a)" caia no fallback genérico de "tio" e vire paterno.
-    if (SYSTEM_RELATIONSHIP_KEYS.has(rawKey)) pushKey(rawKey, n);
-    else pushKey(cleanRelationshipKey(smartNormalizeRelationship(raw)), n);
-  });
-  const getNodes = (c: string) => byCanonical.get(cleanRelationshipKey(c)) || [];
-  const getFirst = (c: string) => getNodes(c)[0];
-
-  // ── 2. Modelo de famílias ─────────────────────────────────────
-  type Family = {
-    husband?: Node;
-    wife?: Node;
-    husbandParents?: Family;
-    wifeParents?: Family;
-    children: Node[];
-    anchorChildId?: string;
-  };
-
-  /**
-   * anchorSide: onde o filho-âncora deve ficar na linha de irmãos.
-   *  'right' = âncora no extremo direito (ramo esquerdo do descendente → irmãos à esquerda do âncora)
-   *  'left'  = âncora no extremo esquerdo (ramo direito do descendente → irmãos à direita do âncora)
-   *  'center' = âncora no meio (usado para o consulente)
-   */
-  const buildAncestryOf = (
-    child: Node | undefined,
-    father: Node | undefined,
-    mother: Node | undefined,
-    siblings: Node[],
-    anchorSide: "left" | "right" | "center",
-  ): Family | undefined => {
-    if (!child) return undefined;
-    const children =
-      anchorSide === "right" ? [...siblings, child] : [child, ...siblings];
-    return {
-      husband: father,
-      wife: mother,
-      children,
-      anchorChildId: child.id,
-    };
-  };
-
-  const avoPat = getFirst("avô paterno");
-  const avoPatF = getFirst("avó paterna");
-  const avoMat = getFirst("avô materno");
-  const avoMatF = getFirst("avó materna");
-  const pai = getFirst("pai");
-  const mae = getFirst("mãe");
-  const consulente = getFirst("consulente");
-
-  const tiosPat = getNodes("tio(a) paterno(a)");
-  const tiosMat = getNodes("tio(a) materno(a)");
-  const irmaos = getNodes("irmã(o)");
-
-  const paiFamily: Family | undefined = pai
-    ? {
-        husband: avoPat,
-        wife: avoPatF,
-        husbandParents: buildAncestryOf(
-          avoPat,
-          getFirst("bisavô paterno (pai do avô)"),
-          getFirst("bisavó paterna (mãe do avô)"),
-          getNodes("irmã(o) do avô paterno"),
-          "right",
-        ),
-        wifeParents: buildAncestryOf(
-          avoPatF,
-          getFirst("bisavô paterno (pai da avó)"),
-          getFirst("bisavó paterna (mãe da avó)"),
-          getNodes("irmã(o) da avó paterna"),
-          "left",
-        ),
-        // ramo esquerdo do consulente: pai fica na direita da linha de irmãos,
-        // tios paternos à esquerda dele.
-        children: [...tiosPat, pai],
-        anchorChildId: pai.id,
-      }
-    : undefined;
-
-  const maeFamily: Family | undefined = mae
-    ? {
-        husband: avoMat,
-        wife: avoMatF,
-        husbandParents: buildAncestryOf(
-          avoMat,
-          getFirst("bisavô materno (pai do avô)"),
-          getFirst("bisavó materna (mãe do avô)"),
-          getNodes("irmã(o) do avô materno"),
-          "right",
-        ),
-        wifeParents: buildAncestryOf(
-          avoMatF,
-          getFirst("bisavô materno (pai da avó)"),
-          getFirst("bisavó materna (mãe da avó)"),
-          getNodes("irmã(o) da avó materna"),
-          "left",
-        ),
-        // ramo direito do consulente: mãe fica na esquerda da linha de irmãos,
-        // tios maternos à direita dela.
-        children: [mae, ...tiosMat],
-        anchorChildId: mae.id,
-      }
-    : undefined;
-
-  const rootFamily: Family | undefined = consulente
-    ? {
-        husband: pai,
-        wife: mae,
-        husbandParents: paiFamily,
-        wifeParents: maeFamily,
-        // Consulente centralizado; irmãos distribuídos ao redor.
-        children: (() => {
-          const half = Math.floor(irmaos.length / 2);
-          return [...irmaos.slice(0, half), consulente, ...irmaos.slice(half)];
-        })(),
-        anchorChildId: consulente.id,
-      }
-    : undefined;
-
-
-  const FAMILY_GAP = 120; // espaço mínimo entre sub-árvores ancestrais irmãs
-
-  const shiftBlock = (b: Block, dx: number): Block => ({
-    nodes: b.nodes.map((n) => ({ ...n, x: n.x + dx })),
-    minX: b.minX + dx,
-    maxX: b.maxX + dx,
-    anchorX: b.anchorX + dx,
-  });
-
-  // Layout recursivo. `gen` é a geração DA LINHA DE FILHOS.
-  const layoutFamily = (f: Family, gen: number): Block => {
-    const parentGen = gen + 1;
-    // ORIENTAÇÃO FIXA (não alterar): paciente NO TOPO (y=0), ancestrais
-    // descendem em Y positivo. Esta é uma exigência explícita do usuário.
-    const parentY = parentGen * GENERATION_GAP;
-    const childY = gen * GENERATION_GAP;
-
-    let hBlock = f.husbandParents ? layoutFamily(f.husbandParents, parentGen) : null;
-    let wBlock = f.wifeParents ? layoutFamily(f.wifeParents, parentGen) : null;
-
-    let allNodes: LayoutNode[] = [];
-    let hCenterX: number | null = null;
-    let wCenterX: number | null = null;
-
-    if (hBlock && wBlock) {
-      // Alinha wife anchor à direita do husband anchor.
-      const desiredWAnchor = hBlock.anchorX + HORIZONTAL_STEP;
-      let dx = desiredWAnchor - wBlock.anchorX;
-      // Garante que sub-árvores não se sobreponham.
-      const noOverlapDx = hBlock.maxX + FAMILY_GAP - wBlock.minX;
-      if (noOverlapDx > dx) dx = noOverlapDx;
-      wBlock = shiftBlock(wBlock, dx);
-      hCenterX = hBlock.anchorX;
-      wCenterX = wBlock.anchorX;
-      allNodes.push(...hBlock.nodes, ...wBlock.nodes);
-    } else if (hBlock) {
-      hCenterX = hBlock.anchorX;
-      allNodes.push(...hBlock.nodes);
-      if (f.wife) {
-        wCenterX = hCenterX + HORIZONTAL_STEP;
-        allNodes.push({
-          node: f.wife,
-          x: wCenterX - NODE_W / 2,
-          y: parentY,
-          gen: parentGen,
-        });
-      }
-    } else if (wBlock) {
-      wCenterX = wBlock.anchorX;
-      allNodes.push(...wBlock.nodes);
-      if (f.husband) {
-        hCenterX = wCenterX - HORIZONTAL_STEP;
-        allNodes.push({
-          node: f.husband,
-          x: hCenterX - NODE_W / 2,
-          y: parentY,
-          gen: parentGen,
-        });
-      }
-    } else {
-      // Sem ancestrais: casal standalone
-      if (f.husband && f.wife) {
-        hCenterX = 0;
-        wCenterX = HORIZONTAL_STEP;
-        allNodes.push({ node: f.husband, x: hCenterX - NODE_W / 2, y: parentY, gen: parentGen });
-        allNodes.push({ node: f.wife, x: wCenterX - NODE_W / 2, y: parentY, gen: parentGen });
-      } else if (f.husband) {
-        hCenterX = 0;
-        allNodes.push({ node: f.husband, x: hCenterX - NODE_W / 2, y: parentY, gen: parentGen });
-      } else if (f.wife) {
-        wCenterX = 0;
-        allNodes.push({ node: f.wife, x: wCenterX - NODE_W / 2, y: parentY, gen: parentGen });
-      }
-    }
-
-    // União center: meio do casal, ou centro do único genitor conhecido.
-    let unionCenter: number;
-    if (hCenterX !== null && wCenterX !== null) unionCenter = (hCenterX + wCenterX) / 2;
-    else if (hCenterX !== null) unionCenter = hCenterX;
-    else if (wCenterX !== null) unionCenter = wCenterX;
-    else unionCenter = 0;
-
-    // Linha de filhos: centraliza o anchor (ou meio da linha) sob unionCenter.
-    const kids = f.children;
-    const anchorIdx = f.anchorChildId
-      ? Math.max(0, kids.findIndex((k) => k.id === f.anchorChildId))
-      : (kids.length - 1) / 2;
-
-    const kidNodes: LayoutNode[] = kids.map((k, i) => {
-      const cx = unionCenter + (i - anchorIdx) * HORIZONTAL_STEP;
-      return { node: k, x: cx - NODE_W / 2, y: childY, gen };
-    });
-
-    allNodes.push(...kidNodes);
-
-    // Bounds finais
-    const minX = Math.min(...allNodes.map((n) => n.x));
-    const maxX = Math.max(...allNodes.map((n) => n.x + NODE_W));
-    const anchorNode = f.anchorChildId ? kidNodes.find((k) => k.node.id === f.anchorChildId) : null;
-    const anchorX = anchorNode ? anchorNode.x + NODE_W / 2 : unionCenter;
-
-    return { nodes: allNodes, minX, maxX, anchorX };
-  };
-
-  const blockRoot: Block = rootFamily
-    ? layoutFamily(rootFamily, 0)
-    : { nodes: [], minX: 0, maxX: 0, anchorX: 0 };
-
-
-  const layoutedNodes: Node[] = [];
-
-  const mappedIds = new Set(blockRoot.nodes.map((n) => n.node.id));
-  const rightEdgeByGeneration = new Map<number, number>();
-  blockRoot.nodes.forEach((ln) => {
-    rightEdgeByGeneration.set(
-      ln.gen,
-      Math.max(rightEdgeByGeneration.get(ln.gen) ?? Number.NEGATIVE_INFINITY, ln.x),
-    );
-  });
-  nodes.forEach((n) => {
-    if (!mappedIds.has(n.id)) {
-      const gen = generationForData(n.data);
-      const nextX = (rightEdgeByGeneration.get(gen) ?? blockRoot.maxX) + HORIZONTAL_STEP;
-      rightEdgeByGeneration.set(gen, nextX);
-      blockRoot.nodes.push({ node: n, x: nextX, y: gen * GENERATION_GAP, gen });
-    }
-  });
-
-  const dx = consulente
-    ? -NODE_W / 2 - blockRoot.nodes.find((n) => n.node.id === consulente.id)!.x
-    : 0;
-
-  blockRoot.nodes.forEach((ln) => {
-    // A árvore automática precisa prevalecer quando posições antigas salvas
-    // ficaram incompatíveis com a inferência atual; caso contrário surgem barras
-    // enormes e a leitura clínica fica pior do que sem layout salvo.
-    layoutedNodes.push({
-      ...ln.node,
-      position: { x: ln.x + dx, y: ln.y },
-      data: { ...ln.node.data, generation: ln.gen },
-    });
-  });
-
-  // Filiação é desenhada como barramento pedigree: irmãos no mesmo barramento
-  // e tronco sempre convergindo no centro geométrico dos pais/união.
-
-  type ParentLink = { edge: Edge; childId: string; parentId: string };
-  const parentLinksByChild = new Map<string, ParentLink[]>();
-  const otherEdges: Edge[] = [];
-  const finalEdges: Edge[] = [];
-  const visibleUnionPairs = new Set<string>();
-
-  edges.forEach((edge) => {
-    if (isParentEdge(edge)) {
-      const sourceNode = layoutedNodes.find((n) => n.id === edge.source);
-      const targetNode = layoutedNodes.find((n) => n.id === edge.target);
-      const sourceGen = (sourceNode?.data as { generation?: number } | undefined)?.generation ?? 0;
-      const targetGen = (targetNode?.data as { generation?: number } | undefined)?.generation ?? 0;
-
-      let childId = edge.source;
-      let parentId = edge.target;
-
-      if (sourceGen > targetGen) {
-        childId = edge.target;
-        parentId = edge.source;
-      } else if (sourceGen === targetGen && !(edge.data as { isStructural?: boolean } | undefined)?.isStructural) {
-        childId = edge.target;
-        parentId = edge.source;
-      }
-
-      parentLinksByChild.set(childId, [
-        ...(parentLinksByChild.get(childId) || []),
-        { edge, childId, parentId },
-      ]);
-    } else {
-      let finalSourceHandle = edge.sourceHandle;
-      let finalTargetHandle = edge.targetHandle;
-
-      if (isUnionEdge(edge)) {
-        visibleUnionPairs.add([edge.source, edge.target].sort().join("|"));
-        const sourceNode = layoutedNodes.find((n) => n.id === edge.source);
-        const targetNode = layoutedNodes.find((n) => n.id === edge.target);
-
-        if (sourceNode && targetNode) {
-          if (sourceNode.position.x > targetNode.position.x) {
-            finalSourceHandle = "left";
-            finalTargetHandle = "right";
-          } else {
-            finalSourceHandle = "right";
-            finalTargetHandle = "left";
-          }
-        }
-      }
-
-      otherEdges.push({
-        ...edge,
-        sourceHandle: finalSourceHandle,
-        targetHandle: finalTargetHandle,
-        type: isUnionEdge(edge) ? "straightStep" : edge.type,
-        zIndex: isUnionEdge(edge) ? 3 : edge.zIndex,
-      });
-    }
-  });
-
-  // Group children by shared parent pairs to draw one clean pedigree bus per family.
-  const childrenByParentPair = new Map<string, string[]>();
-  const parentPairToLinks = new Map<string, ParentLink[]>();
-
-  parentLinksByChild.forEach((pLinks, childId) => {
-    const parentIds = Array.from(new Set(pLinks.map((link) => link.parentId))).sort();
-    const pairKey = parentIds.join("|");
-
-    if (!childrenByParentPair.has(pairKey)) {
-      childrenByParentPair.set(pairKey, []);
-      parentPairToLinks.set(pairKey, pLinks);
-    }
-    childrenByParentPair.get(pairKey)!.push(childId);
-  });
-
-  childrenByParentPair.forEach((childrenIds, pairKey) => {
-    const refLinks = parentPairToLinks.get(pairKey)!;
-    const parentLinks = Array.from(
-      new Map(refLinks.map((link) => [link.parentId, link])).values(),
-    ).sort((a, b) => {
-      const aNode = layoutedNodes.find((n) => n.id === a.parentId);
-      const bNode = layoutedNodes.find((n) => n.id === b.parentId);
-      return (aNode?.position.x ?? 0) - (bNode?.position.x ?? 0);
-    });
-    const parents = parentLinks.map((link) => layoutedNodes.find((n) => n.id === link.parentId));
-    const visibleParents = parents.filter(Boolean) as Node[];
-    if (visibleParents.length === 0) return;
-
-    if (visibleParents.length > 1 && !visibleUnionPairs.has(pairKey)) {
-      const sortedParents = [...visibleParents].sort((a, b) => a.position.x - b.position.x);
-      visibleUnionPairs.add(pairKey);
-      finalEdges.push({
-        id: `inferred_union_${pairKey}`,
-        source: sortedParents[0].id,
-        target: sortedParents[1].id,
-        sourceHandle: "right",
-        targetHandle: "left",
-        type: "straightStep",
-        label: "União (casal)",
-        labelStyle: {
-          fontSize: 12,
-          fontWeight: 600,
-          fill: "var(--color-plum)",
-          fontFamily: "var(--font-sans)",
-        },
-        labelBgStyle: { fill: "var(--color-card)", fillOpacity: 0.98, rx: 3, ry: 3 },
-        labelBgPadding: [4, 6] as [number, number],
-        style: { stroke: "var(--color-foreground)", strokeWidth: 2 },
-        data: { relationshipType: "union", inferredFromChildren: true },
-        zIndex: 3,
-      });
-    }
-
-    const orderedChildrenIds = [...childrenIds].sort((a, b) => {
-      const aNode = layoutedNodes.find((n) => n.id === a);
-      const bNode = layoutedNodes.find((n) => n.id === b);
-      return (aNode?.position.x ?? 0) - (bNode?.position.x ?? 0);
-    });
-    // Geometric midpoint between the two parents (or single parent center)
-    const familyCenterX =
-      visibleParents.reduce((sum, parent) => sum + parent.position.x + NODE_W / 2, 0) /
-      visibleParents.length;
-
-    const childPoints = orderedChildrenIds
-      .map((cid) => {
-        const n = layoutedNodes.find((nn) => nn.id === cid);
-        if (!n) return null;
-        return { x: n.position.x + NODE_W / 2, y: n.position.y + NODE_H - 40 };
-      })
-      .filter((p): p is { x: number; y: number } => p !== null);
-
-    if (childPoints.length === 0) return;
-
-    const parentMarriageY =
-      visibleParents.reduce((sum, parent) => {
-        const data = parent.data as PersonNodeData;
-        const shapeSize = data.is_proband ? PROBAND_SHAPE_SIZE : PERSON_SHAPE_SIZE;
-        return sum + parent.position.y + shapeSize / 2;
-      }, 0) / visibleParents.length;
-    const maxChildBottom = Math.max(...childPoints.map((p) => p.y));
-    // Sibling bar sits between children (above) and the parents' black union line (below).
-    const siblingBarY = Math.min(parentMarriageY - 55, maxChildBottom + 40);
-    // Trunk terminates exactly on the spouse/union line midpoint.
-    const marriageY = parentMarriageY;
-
-    finalEdges.push({
-      id: `pedigree_family_${pairKey}`,
-      source: orderedChildrenIds[0],
-      target: parentLinks[0].parentId,
-      sourceHandle: "bottom",
-      targetHandle: "top-target",
-      type: "pedigree",
-      style: { stroke: "var(--color-plum)", strokeWidth: 2 },
-      zIndex: 2,
-      data: {
-        childIds: orderedChildrenIds,
-        parentIds: parentLinks.map((link) => link.parentId),
-        childPoints,
-        familyCenterX,
-        siblingBarY,
-        marriageY,
-      },
-    });
-  });
-
-  // Create background bands
-
+  // Bandas de geração (background)
   for (let g = 0; g <= 3; g++) {
-    layoutedNodes.unshift({
+    nodes.push({
       id: `gen_bg_${g}`,
       type: "band",
       position: { x: -7500, y: g * GENERATION_GAP - 20 },
@@ -1125,8 +431,82 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     });
   }
 
-  return { nodes: layoutedNodes, edges: [...otherEdges, ...finalEdges] };
+  // Pessoas
+  for (const [pid, person] of graph.persons) {
+    const pos = placement.personPos.get(pid);
+    if (!pos) continue;
+    nodes.push({
+      id: pid,
+      type: "person",
+      position: pos,
+      data: {
+        full_name: person.row.full_name,
+        preferred_name: person.row.preferred_name,
+        gender: person.row.gender,
+        birth_date: person.row.birth_date,
+        death_date: person.row.death_date,
+        is_deceased: person.row.is_deceased,
+        is_proband: person.row.is_proband,
+        relationship_to_proband: person.row.relationship_to_proband,
+        notes: person.row.notes,
+        generation: person.generation,
+      },
+    });
+  }
+
+  // Uniões
+  for (const [uid, union] of graph.unions) {
+    const pos = placement.unionPos.get(uid);
+    if (!pos) continue;
+    nodes.push({
+      id: uid,
+      type: "union",
+      position: pos,
+      data: { label: union.label, kind: union.kind },
+      draggable: false,
+      selectable: false,
+      zIndex: 4,
+    });
+  }
+
+  // Edges: partner + child (nunca pessoa↔pessoa)
+  const edges: Edge[] = [];
+  const seenChildUnion = new Set<string>();
+  for (const e of graph.edges) {
+    if (e.kind === "partner") {
+      edges.push({
+        id: `partner_${e.personId}_${e.unionId}`,
+        source: e.personId,
+        target: e.unionId,
+        sourceHandle: "right",
+        targetHandle: "left-target",
+        type: "partner",
+        style: { stroke: "var(--color-foreground)", strokeWidth: 2 },
+        data: { personId: e.personId, unionId: e.unionId },
+        zIndex: 2,
+      });
+    }
+  }
+  for (const [uid, union] of graph.unions) {
+    if (seenChildUnion.has(uid) || union.children.length === 0) continue;
+    seenChildUnion.add(uid);
+    edges.push({
+      id: `pedigree_${uid}`,
+      source: uid,
+      target: union.children[0],
+      sourceHandle: "bottom",
+      targetHandle: "top-target",
+      type: "pedigree",
+      style: { stroke: "var(--color-plum)", strokeWidth: 2 },
+      data: { unionId: uid, childIds: union.children },
+      zIndex: 2,
+    });
+  }
+
+
+  return { nodes, edges };
 }
+
 
 function GenogramCanvasInner({ clientId }: CanvasProps) {
   const qc = useQueryClient();
@@ -1208,41 +588,33 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
       return hasName || hasRel;
     });
 
-    const initialNodes: Node[] = qualifiedPersons.map((p) => ({
-      id: p.id,
-      type: "person",
-      position: { x: p.position_x ?? 0, y: p.position_y ?? 0 },
-      data: {
-        full_name: p.full_name,
-        preferred_name: p.preferred_name,
-        gender: p.gender,
-        birth_date: p.birth_date,
-        death_date: p.death_date,
-        is_deceased: p.is_deceased,
-        is_proband: p.is_proband,
-        relationship_to_proband: p.relationship_to_proband,
-        onQuickAdd: (relType: string) => handleQuickAdd(p.id, relType),
-        notes: p.notes,
-      } satisfies PersonNodeData,
-    }));
-
-    const manualEdges: Edge[] = query.data.rels.map(relToEdge);
-    const structuralEdges: Edge[] = computeStructuralEdges(qualifiedPersons, query.data.rels);
-    // Descartamos arestas "order" — não são visuais, eram dicas ao Dagre.
-    const initialEdges = [...structuralEdges, ...manualEdges].filter((e) => e.type !== "order");
-
     const proband = qualifiedPersons.find((p) => p.is_proband) || qualifiedPersons[0];
     const probandId = proband?.id;
 
-    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
-      initialNodes,
-      initialEdges,
+    const { nodes: layoutedNodes, edges: layoutedEdges } = buildRenderGraph(
+      qualifiedPersons,
+      query.data.rels,
       probandId,
     );
 
-    setNodes(layoutedNodes);
+    // Injeta o callback de quick-add nos nós de pessoa (função depende de state
+    // do componente e por isso não vive dentro do engine puro).
+    const nodesWithHandlers: Node[] = layoutedNodes.map((n) => {
+      if (n.type !== "person") return n;
+      return {
+        ...n,
+        data: {
+          ...(n.data as PersonNodeData),
+          onQuickAdd: (relType: string) => handleQuickAdd(n.id, relType),
+        } satisfies PersonNodeData,
+      };
+    });
+
+    setNodes(nodesWithHandlers);
     setEdges(layoutedEdges);
     setLayoutDirty(false);
+
+
 
     const centerTimer = window.setTimeout(() => {
       if (cancelled) return;
@@ -1602,6 +974,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
               type: "step",
               style: { strokeWidth: 2, stroke: "var(--color-plum)" },
             }}
+            
           >
             <Background
               color="#d8d0ec"
