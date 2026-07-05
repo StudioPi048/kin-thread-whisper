@@ -3,6 +3,8 @@ import type { Database } from "@/integrations/supabase/types";
 import { smartNormalizeRelationship } from "@/lib/relationship-normalizer";
 
 type PersonRow = Database["public"]["Tables"]["genogram_persons"]["Row"];
+type RelRow = Database["public"]["Tables"]["genogram_relationships"]["Row"];
+
 
 /** Remove acentos e parênteses, normaliza lowercase */
 function clean(s: string | null | undefined): string {
