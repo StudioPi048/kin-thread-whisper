@@ -617,6 +617,51 @@ type Block = {
   anchorX: number; // centerX do filho de referência (para conectar à geração abaixo)
 };
 
+function cleanRelationshipKey(value: string | null | undefined): string {
+  if (!value) return "";
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\([oa]\)/g, "")
+    .replace(/[()]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+const SYSTEM_RELATIONSHIP_KEYS = new Set(
+  [
+    "Consulente",
+    "Paciente",
+    "Irmã(o)",
+    "Pai",
+    "Mãe",
+    "Tio(a) paterno(a)",
+    "Tio(a) materno(a)",
+    "Avô paterno",
+    "Avó paterna",
+    "Avô materno",
+    "Avó materna",
+    "Bisavô paterno (pai do avô)",
+    "Bisavó paterna (mãe do avô)",
+    "Bisavô paterno (pai da avó)",
+    "Bisavó paterna (mãe da avó)",
+    "Bisavô materno (pai do avô)",
+    "Bisavó materna (mãe do avô)",
+    "Bisavô materno (pai da avó)",
+    "Bisavó materna (mãe da avó)",
+    "Irmã(o) do avô paterno",
+    "Irmã(o) da avó paterna",
+    "Irmã(o) do avô materno",
+    "Irmã(o) da avó materna",
+    "Irmã(o) do bisavô paterno",
+    "Irmã(o) do bisavô materno",
+    "Cônjuge",
+    "Filho(a)",
+    "Aborto",
+  ].map(cleanRelationshipKey),
+);
+
 function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
   // ── 1. Índice por tag canônica ────────────────────────────────
   // Indexamos tanto pela tag normalizada QUANTO pela tag crua (lowercase) para
@@ -636,13 +681,13 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
       return;
     }
     const raw = d.relationship_to_proband || "";
-    const rawKey = raw.trim().toLowerCase();
-    // Preferimos a tag CRUA para evitar falsos matches do normalizador.
-    // Só caímos no normalizador se o texto não tiver correspondência clara.
-    if (rawKey) pushKey(rawKey, n);
-    else pushKey(smartNormalizeRelationship(raw).toLowerCase(), n);
+    const rawKey = cleanRelationshipKey(raw);
+    // Tags oficiais do sistema são usadas como fonte da verdade. Isso impede que
+    // "Tio(a) materno(a)" caia no fallback genérico de "tio" e vire paterno.
+    if (SYSTEM_RELATIONSHIP_KEYS.has(rawKey)) pushKey(rawKey, n);
+    else pushKey(cleanRelationshipKey(smartNormalizeRelationship(raw)), n);
   });
-  const getNodes = (c: string) => byCanonical.get(c.toLowerCase()) || [];
+  const getNodes = (c: string) => byCanonical.get(cleanRelationshipKey(c)) || [];
   const getFirst = (c: string) => getNodes(c)[0];
 
   // ── 2. Modelo de famílias ─────────────────────────────────────
