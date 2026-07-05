@@ -24,7 +24,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { UserPlus, Link2, Trash2, Printer, HelpCircle, Users, TreePine } from "lucide-react";
+import { UserPlus, Link2, Trash2, Printer, HelpCircle, Users, TreePine, Save } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -174,7 +174,49 @@ function StraightStepEdge({
   );
 }
 
-const edgeTypes = { straightStep: StraightStepEdge };
+function PedigreeEdge({
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  style,
+  markerEnd,
+  markerStart,
+  interactionWidth,
+  data,
+}: EdgeProps) {
+  const edgeData = data as Record<string, unknown> | undefined;
+  const familyCenterX = (edgeData?.familyCenterX as number | undefined) ?? sourceX;
+  const siblingBarY = (edgeData?.siblingBarY as number | undefined) ?? sourceY + (targetY - sourceY) * 0.42;
+  const parentBranchY = (edgeData?.parentBranchY as number | undefined) ?? targetY - 36;
+  const isPrimaryParent = Boolean(edgeData?.isPrimaryParent);
+  const drawParentBranch = Boolean(edgeData?.drawParentBranch);
+
+  let path = "";
+
+  if (isPrimaryParent) {
+    path += `M ${sourceX} ${sourceY} L ${sourceX} ${siblingBarY} L ${familyCenterX} ${siblingBarY} `;
+  }
+
+  if (drawParentBranch) {
+    path += `M ${familyCenterX} ${siblingBarY} L ${familyCenterX} ${parentBranchY} `;
+    path += `M ${familyCenterX} ${parentBranchY} L ${targetX} ${parentBranchY} L ${targetX} ${targetY}`;
+  }
+
+  if (!path.trim()) return null;
+
+  return (
+    <BaseEdge
+      path={path}
+      style={style}
+      markerEnd={markerEnd}
+      markerStart={markerStart}
+      interactionWidth={interactionWidth}
+    />
+  );
+}
+
+const edgeTypes = { straightStep: StraightStepEdge, pedigree: PedigreeEdge };
 
 function GenerationRuler() {
   return (
