@@ -10,6 +10,7 @@ import {
   useEdgesState,
   useNodesState,
   useReactFlow,
+  useStore,
   type Connection,
   type Edge,
   type EdgeProps,
@@ -128,6 +129,8 @@ function StraightStepEdge({
   const unionX = edgeData?.unionX as number | undefined;
   const isPrimaryParent = edgeData?.isPrimaryParent as boolean | undefined;
   const isFirstSibling = edgeData?.isFirstSibling as boolean | undefined;
+  const relationshipType = edgeData?.relationshipType as string | undefined;
+  const qualifier = edgeData?.qualifier as string | undefined;
 
   // Use consistent Ys to ensure horizontal bars align perfectly across children with different node heights
   const midY =
@@ -155,7 +158,16 @@ function StraightStepEdge({
   // If path is empty, we don't render this edge visually, it was already drawn by another sibling's edge!
   if (!path.trim()) return null;
 
+  const labelX = (sourceX + targetX) / 2;
+  const labelY = Math.abs(sourceY - targetY) < 1 ? sourceY - 10 : midY - 10;
+  const showUnionBreakMark =
+    relationshipType === "union" &&
+    (qualifier === "divorce" || qualifier === "separation" || qualifier === "rupture");
+  const breakMarkCount = qualifier === "divorce" || qualifier === "rupture" ? 2 : 1;
+  const breakY = Math.abs(sourceY - targetY) < 1 ? sourceY : midY;
+
   return (
+    <>
     <BaseEdge
       path={path}
       style={style}
@@ -168,13 +180,56 @@ function StraightStepEdge({
       labelBgPadding={labelBgPadding}
       labelBgBorderRadius={labelBgBorderRadius}
       interactionWidth={interactionWidth}
-      labelX={(sourceX + targetX) / 2}
-      labelY={Math.abs(sourceY - targetY) < 1 ? sourceY - 10 : midY - 10}
+      labelX={labelX}
+      labelY={labelY}
     />
+    {showUnionBreakMark &&
+      Array.from({ length: breakMarkCount }).map((_, i) => {
+        const offset = breakMarkCount === 2 ? (i === 0 ? -5 : 5) : 0;
+        const x = labelX + offset;
+        return (
+          <path
+            key={i}
+            d={`M ${x - 7} ${breakY + 12} L ${x + 7} ${breakY - 12}`}
+            fill="none"
+            stroke="var(--color-destructive)"
+            strokeWidth={2.5}
+            strokeLinecap="round"
+            pointerEvents="none"
+          />
+        );
+      })}
+    </>
   );
 }
 
+function nodeShapeSize(node: Node | undefined): number {
+  const data = node?.data as PersonNodeData | undefined;
+  return data?.is_proband ? PROBAND_SHAPE_SIZE : PERSON_SHAPE_SIZE;
+}
+
+function nodeCenterX(node: Node | undefined): number {
+  if (!node) return 0;
+  const measured = (node as Node & { measured?: { width?: number } }).measured?.width ?? node.width ?? NODE_W;
+  return node.position.x + measured / 2;
+}
+
+function nodeBottomY(node: Node | undefined): number {
+  if (!node) return 0;
+  const measured = (node as Node & { measured?: { height?: number } }).measured?.height ?? node.height ?? NODE_H;
+  return node.position.y + measured;
+}
+
+function nodeUnionY(node: Node | undefined): number {
+  if (!node) return 0;
+  return node.position.y + nodeShapeSize(node) / 2;
+}
+
 function PedigreeEdge({
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
   style,
   markerEnd,
   markerStart,
@@ -182,18 +237,47 @@ function PedigreeEdge({
   data,
 }: EdgeProps) {
   const edgeData = data as Record<string, unknown> | undefined;
+  const childIds = (edgeData?.childIds as string[] | undefined) ?? [];
+  const parentIds = (edgeData?.parentIds as string[] | undefined) ?? [];
+  const live = useStore((store) => {
+    const children = childIds
+      .map((id) => store.nodeLookup.get(id) as unknown as Node | undefined)
+      .filter((node): node is Node => Boolean(node));
+    const parents = parentIds
+      .map((id) => store.nodeLookup.get(id) as unknown as Node | undefined)
+      .filter((node): node is Node => Boolean(node));
+    return { children, parents };
+  });
+
   if (!edgeData) return null;
-  const childPoints = (edgeData.childPoints as { x: number; y: number }[] | undefined) ?? [];
-  const familyCenterX = edgeData.familyCenterX as number | undefined;
-  const siblingBarY = edgeData.siblingBarY as number | undefined;
-  const marriageY = edgeData.marriageY as number | undefined;
-  if (childPoints.length === 0 || familyCenterX === undefined || siblingBarY === undefined || marriageY === undefined) {
+
+  const childPoints = live.children.length
+    ? live.children.map((node) => ({ x: nodeCenterX(node), y: nodeBottomY(node) }))
+    : ((edgeData.childPoints as { x: number; y: number }[] | undefined) ?? [
+        { x: sourceX, y: sourceY },
+      ]);
+  const parentPoints = live.parents.map((node) => ({
+    x: nodeCenterX(node),
+    topY: node.position.y,
+    unionY: nodeUnionY(node),
+  }));
+  const familyCenterX = parentPoints.length
+    ? parentPoints.reduce((sum, p) => sum + p.x, 0) / parentPoints.length
+    : ((edgeData.familyCenterX as number | undefined) ?? targetX);
+  const parentAnchorY = parentPoints.length > 1
+    ? parentPoints.reduce((sum, p) => sum + p.unionY, 0) / parentPoints.length
+    : (parentPoints[0]?.topY ?? targetY);
+
+  if (childPoints.length === 0 || familyCenterX === undefined || parentAnchorY === undefined) {
     return null;
   }
 
   const xs = childPoints.map((p) => p.x);
   const barLeft = Math.min(...xs, familyCenterX);
   const barRight = Math.max(...xs, familyCenterX);
+
+  const maxChildBottom = Math.max(...childPoints.map((p) => p.y));
+  const siblingBarY = Math.min(parentAnchorY - 48, maxChildBottom + 34);
 
   let path = "";
   // Sibling bar spanning children (and trunk anchor)
@@ -202,8 +286,8 @@ function PedigreeEdge({
   for (const p of childPoints) {
     path += `M ${p.x} ${p.y} L ${p.x} ${siblingBarY} `;
   }
-  // Trunk from sibling bar to marriage line midpoint (between the parents)
-  path += `M ${familyCenterX} ${siblingBarY} L ${familyCenterX} ${marriageY}`;
+  // Trunk from sibling bar to the couple union line midpoint (or single known parent).
+  path += `M ${familyCenterX} ${siblingBarY} L ${familyCenterX} ${parentAnchorY}`;
 
   return (
     <BaseEdge
@@ -815,14 +899,14 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     });
   });
 
-  // Remove invisible union nodes; we no longer anchor descendant lines to marriages.
-  // The marriage line (gold) will simply connect the spouses, while the descendant
-  // lines will fork directly to the parents' top handles, matching the requested pedigree look.
+  // Filiação é desenhada como barramento pedigree: irmãos no mesmo barramento
+  // e tronco sempre convergindo no centro geométrico dos pais/união.
 
   type ParentLink = { edge: Edge; childId: string; parentId: string };
   const parentLinksByChild = new Map<string, ParentLink[]>();
   const otherEdges: Edge[] = [];
   const finalEdges: Edge[] = [];
+  const visibleUnionPairs = new Set<string>();
 
   edges.forEach((edge) => {
     if (isParentEdge(edge)) {
@@ -851,6 +935,7 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
       let finalTargetHandle = edge.targetHandle;
 
       if (isUnionEdge(edge)) {
+        visibleUnionPairs.add([edge.source, edge.target].sort().join("|"));
         const sourceNode = layoutedNodes.find((n) => n.id === edge.source);
         const targetNode = layoutedNodes.find((n) => n.id === edge.target);
 
@@ -870,6 +955,7 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
         sourceHandle: finalSourceHandle,
         targetHandle: finalTargetHandle,
         type: isUnionEdge(edge) ? "straightStep" : edge.type,
+        zIndex: isUnionEdge(edge) ? 3 : edge.zIndex,
       });
     }
   });
@@ -901,6 +987,31 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     const parents = parentLinks.map((link) => layoutedNodes.find((n) => n.id === link.parentId));
     const visibleParents = parents.filter(Boolean) as Node[];
     if (visibleParents.length === 0) return;
+
+    if (visibleParents.length > 1 && !visibleUnionPairs.has(pairKey)) {
+      const sortedParents = [...visibleParents].sort((a, b) => a.position.x - b.position.x);
+      visibleUnionPairs.add(pairKey);
+      finalEdges.push({
+        id: `inferred_union_${pairKey}`,
+        source: sortedParents[0].id,
+        target: sortedParents[1].id,
+        sourceHandle: "right",
+        targetHandle: "left",
+        type: "straightStep",
+        label: "União (casal)",
+        labelStyle: {
+          fontSize: 12,
+          fontWeight: 600,
+          fill: "var(--color-plum)",
+          fontFamily: "var(--font-sans)",
+        },
+        labelBgStyle: { fill: "var(--color-card)", fillOpacity: 0.98, rx: 3, ry: 3 },
+        labelBgPadding: [4, 6] as [number, number],
+        style: { stroke: "var(--color-foreground)", strokeWidth: 2 },
+        data: { relationshipType: "union", inferredFromChildren: true },
+        zIndex: 3,
+      });
+    }
 
     const orderedChildrenIds = [...childrenIds].sort((a, b) => {
       const aNode = layoutedNodes.find((n) => n.id === a);
@@ -942,7 +1053,10 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
       targetHandle: "top-target",
       type: "pedigree",
       style: { stroke: "var(--color-plum)", strokeWidth: 2 },
+      zIndex: 2,
       data: {
+        childIds: orderedChildrenIds,
+        parentIds: parentLinks.map((link) => link.parentId),
         childPoints,
         familyCenterX,
         siblingBarY,
@@ -1542,7 +1656,7 @@ function relToEdge(r: RelRow): Edge {
     labelBgStyle: { fill: "var(--color-card)", fillOpacity: 0.98, rx: 3, ry: 3 },
     labelBgPadding: [4, 6] as [number, number],
     animated: r.qualifier === "conflict",
-    data: { relationshipType: r.relationship_type },
+      data: { relationshipType: r.relationship_type, qualifier: r.qualifier, marriageOrder: order },
     style: {
       stroke,
       strokeWidth: (thick ? 3 : 2) + unionExtra,
