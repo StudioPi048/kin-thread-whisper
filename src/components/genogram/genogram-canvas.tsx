@@ -1629,7 +1629,7 @@ function relToEdge(r: RelRow): Edge {
     labelBgStyle: { fill: "var(--color-card)", fillOpacity: 0.98, rx: 3, ry: 3 },
     labelBgPadding: [4, 6] as [number, number],
     animated: r.qualifier === "conflict",
-    data: { relationshipType: r.relationship_type },
+      data: { relationshipType: r.relationship_type, qualifier: r.qualifier, marriageOrder: order },
     style: {
       stroke,
       strokeWidth: (thick ? 3 : 2) + unionExtra,
