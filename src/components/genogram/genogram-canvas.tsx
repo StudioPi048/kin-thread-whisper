@@ -1315,7 +1315,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
             onConnect={onConnect}
             onNodeDoubleClick={onNodeDoubleClick}
             onEdgeDoubleClick={onEdgeDoubleClick}
-            nodesDraggable={true}
+            nodesDraggable={false}
             nodesConnectable={false}
             panOnDrag={false}
             panActivationKeyCode="Space"
