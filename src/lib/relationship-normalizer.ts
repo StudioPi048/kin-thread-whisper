@@ -10,6 +10,7 @@ function clean(s: string): string {
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\([oa]\)/g, "") // remove marcadores de gênero de tags: Tio(a), Irmã(o)
     .replace(/[()]/g, " ") // mantém o contexto escrito entre parênteses
     .replace(/s$/g, "") // remove plural 's' at the end of words roughly (irmaos -> irmao)
     .replace(/oes$/g, "ao") // (irmaoes -> irmao)

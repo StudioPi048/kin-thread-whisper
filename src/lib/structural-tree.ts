@@ -18,6 +18,39 @@ function clean(s: string | null | undefined): string {
     .trim();
 }
 
+const SYSTEM_RELATIONSHIP_KEYS = new Set(
+  [
+    "Consulente",
+    "Paciente",
+    "Irmã(o)",
+    "Pai",
+    "Mãe",
+    "Tio(a) paterno(a)",
+    "Tio(a) materno(a)",
+    "Avô paterno",
+    "Avó paterna",
+    "Avô materno",
+    "Avó materna",
+    "Bisavô paterno (pai do avô)",
+    "Bisavó paterna (mãe do avô)",
+    "Bisavô paterno (pai da avó)",
+    "Bisavó paterna (mãe da avó)",
+    "Bisavô materno (pai do avô)",
+    "Bisavó materna (mãe do avô)",
+    "Bisavô materno (pai da avó)",
+    "Bisavó materna (mãe da avó)",
+    "Irmã(o) do avô paterno",
+    "Irmã(o) da avó paterna",
+    "Irmã(o) do avô materno",
+    "Irmã(o) da avó materna",
+    "Irmã(o) do bisavô paterno",
+    "Irmã(o) do bisavô materno",
+    "Cônjuge",
+    "Filho(a)",
+    "Aborto",
+  ].map(clean),
+);
+
 function createEdge(id: string, source: string, target: string, type: "union" | "parent"): Edge {
   const isUnion = type === "union";
   return {
@@ -40,8 +73,11 @@ function createEdge(id: string, source: string, target: string, type: "union" | 
  * Baseia-se no TAG do sistema (ex: "Avô paterno") e retorna uma key interna limpa.
  */
 function canonicalKey(rel: string | null | undefined): string {
+  const rawKey = clean(rel);
+  if (SYSTEM_RELATIONSHIP_KEYS.has(rawKey)) return rawKey;
+
   const normalized = smartNormalizeRelationship(rel);
-  return clean(normalized);
+  return clean(normalized) || rawKey;
 }
 
 /**
