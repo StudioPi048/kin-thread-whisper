@@ -210,13 +210,13 @@ function nodeShapeSize(node: Node | undefined): number {
 
 function nodeCenterX(node: Node | undefined): number {
   if (!node) return 0;
-  const measured = node.measured?.width ?? node.width ?? NODE_W;
+  const measured = (node as Node & { measured?: { width?: number } }).measured?.width ?? node.width ?? NODE_W;
   return node.position.x + measured / 2;
 }
 
 function nodeBottomY(node: Node | undefined): number {
   if (!node) return 0;
-  const measured = node.measured?.height ?? node.height ?? NODE_H;
+  const measured = (node as Node & { measured?: { height?: number } }).measured?.height ?? node.height ?? NODE_H;
   return node.position.y + measured;
 }
 
