@@ -794,9 +794,11 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     : 0;
 
   blockRoot.nodes.forEach((ln) => {
+    const savedX = ln.node.position?.x;
+    const hasSavedX = typeof savedX === "number" && Math.abs(savedX) > 0.1;
     layoutedNodes.push({
       ...ln.node,
-      position: { x: ln.x + dx, y: ln.y },
+      position: { x: hasSavedX ? savedX : ln.x + dx, y: ln.y },
       data: { ...ln.node.data, generation: ln.gen },
     });
   });
