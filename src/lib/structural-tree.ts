@@ -28,10 +28,10 @@ function createEdge(id: string, source: string, target: string, type: "union" | 
     targetHandle: isUnion ? "left" : undefined,
     type: "step",
     style: {
-      stroke: isUnion ? "var(--color-gold)" : "var(--color-plum)",
+      stroke: isUnion ? "var(--color-foreground)" : "var(--color-plum)",
       strokeWidth: 2,
     },
-    data: { isStructural: true },
+    data: { isStructural: true, relationshipType: type },
   };
 }
 

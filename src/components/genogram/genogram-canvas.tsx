@@ -218,6 +218,10 @@ function PedigreeEdge({
 
 const edgeTypes = { straightStep: StraightStepEdge, pedigree: PedigreeEdge };
 
+function isUnionEdge(edge: Edge): boolean {
+  return (edge.data as { relationshipType?: string } | undefined)?.relationshipType === "union";
+}
+
 function GenerationRuler() {
   return (
     <div className="w-[154px] overflow-hidden rounded-md border border-plum/25 bg-card/92 shadow-sm backdrop-blur">
@@ -838,7 +842,7 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
       let finalSourceHandle = edge.sourceHandle;
       let finalTargetHandle = edge.targetHandle;
 
-      if (edge.style?.stroke === "var(--color-gold)") {
+      if (isUnionEdge(edge)) {
         const sourceNode = layoutedNodes.find((n) => n.id === edge.source);
         const targetNode = layoutedNodes.find((n) => n.id === edge.target);
 
@@ -857,7 +861,7 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
         ...edge,
         sourceHandle: finalSourceHandle,
         targetHandle: finalTargetHandle,
-        type: edge.style?.stroke === "var(--color-gold)" ? "straightStep" : edge.type,
+        type: isUnionEdge(edge) ? "straightStep" : edge.type,
       });
     }
   });
@@ -1546,6 +1550,7 @@ function relToEdge(r: RelRow): Edge {
     labelBgStyle: { fill: "var(--color-card)", fillOpacity: 0.98, rx: 3, ry: 3 },
     labelBgPadding: [4, 6] as [number, number],
     animated: r.qualifier === "conflict",
+    data: { relationshipType: r.relationship_type },
     style: {
       stroke,
       strokeWidth: (thick ? 3 : 2) + unionExtra,
@@ -1557,7 +1562,7 @@ function relToEdge(r: RelRow): Edge {
 function colorFor(r: RelRow): string {
   if (r.relationship_type === "parent") return "var(--color-plum)";
   if (r.relationship_type === "sibling") return "var(--color-lavender)";
-  if (r.relationship_type === "union") return "var(--color-gold)";
+  if (r.relationship_type === "union") return "var(--color-foreground)";
   switch (r.qualifier) {
     case "conflict":
     case "rupture":
