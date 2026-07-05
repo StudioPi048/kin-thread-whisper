@@ -404,6 +404,8 @@ export function validateGraph(g: LogicalGraph): ValidationResult {
 }
 
 // ── Layout ───────────────────────────────────────────────────
+import { checkLayoutInvariants } from "./verify";
+
 export interface Placement {
   personPos: Map<string, { x: number; y: number }>;
   unionPos: Map<string, { x: number; y: number }>;
@@ -595,5 +597,12 @@ export function layoutGraph(g: LogicalGraph): Placement {
   // Atribui as posições definitivas travando o eixo primário
   assignPosition(proband.id, 0, 0, "root");
 
-  return { personPos, unionPos };
+  const placement = { personPos, unionPos };
+  const violations = checkLayoutInvariants(g, placement);
+  console.log(violations.length === 0 ? '✅ Layout OK' : `❌ ${violations.length} violação(ões)`);
+  if (violations.length > 0) {
+    console.table(violations);
+  }
+
+  return placement;
 }

@@ -41,6 +41,8 @@ import type { Database } from "@/integrations/supabase/types";
 type PersonRow = Database["public"]["Tables"]["genogram_persons"]["Row"];
 type RelRow = Database["public"]["Tables"]["genogram_relationships"]["Row"];
 
+const BUILD_TAG = "2026-07-05-fix-uniao-avos";
+
 /**
  * UnionNode — cidadão de primeira classe do grafo.
  * Renderiza um pequeno diamante ameixa no ponto exato da união entre os
@@ -848,9 +850,10 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
           </span>
           {(layoutDirty || lastSavedAt) && (
             <span className="text-[12px] font-semibold text-white/50">
-              {layoutDirty ? "Alterações não salvas" : `Salvo ${lastSavedAt}`}
+              {layoutDirty ? "Não salvo" : `Salvo às ${lastSavedAt}`}
             </span>
           )}
+          <span className="text-[10px] opacity-40 ml-4 text-white font-mono">{BUILD_TAG}</span>
         </div>
 
         <div className="ml-auto flex items-center gap-1">
