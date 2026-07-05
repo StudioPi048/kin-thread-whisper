@@ -769,11 +769,10 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
   // Layout recursivo. `gen` é a geração DA LINHA DE FILHOS.
   const layoutFamily = (f: Family, gen: number): Block => {
     const parentGen = gen + 1;
-    // Convenção internacional: ancestrais NO TOPO, descendentes EMBAIXO.
-    // Y cresce para BAIXO no ReactFlow, então gerações mais antigas (gen maior)
-    // ficam em Y menor (mais alto na tela).
-    const parentY = -parentGen * GENERATION_GAP;
-    const childY = -gen * GENERATION_GAP;
+    // ORIENTAÇÃO FIXA (não alterar): paciente NO TOPO (y=0), ancestrais
+    // descendem em Y positivo. Esta é uma exigência explícita do usuário.
+    const parentY = parentGen * GENERATION_GAP;
+    const childY = gen * GENERATION_GAP;
 
     let hBlock = f.husbandParents ? layoutFamily(f.husbandParents, parentGen) : null;
     let wBlock = f.wifeParents ? layoutFamily(f.wifeParents, parentGen) : null;
