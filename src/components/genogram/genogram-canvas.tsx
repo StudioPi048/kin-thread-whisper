@@ -595,275 +595,274 @@ function rankFor(canonical: string, orderIndex: number): number {
 }
 
 /**
- * Layout determinístico baseado em papéis familiares.
- * Não usa dagre para posicionamento: as regras clínicas do genossociograma
- * (pai à esquerda, mãe à direita) precisam de posicionamento controlado.
+ * Layout hierárquico determinístico para genograma.
  *
- * INVARIANTE: cliente SEMPRE em y=0 (topo). Gerações descem em +y.
+ * Algoritmo (bottom-up recursivo):
+ *  1. Constrói modelo de famílias: cada família tem casal + filhos + eventualmente
+ *     famílias ancestrais para cada cônjuge (avós, bisavós).
+ *  2. Recursivamente posiciona cada sub-árvore ancestral, retornando bounds
+ *     (minX/maxX) e anchorX (o filho que conecta para a próxima geração abaixo).
+ *  3. Ao combinar os dois lados (paterno/materno), alinha os cônjuges lado a
+ *     lado (HORIZONTAL_STEP) sem sobrepor as sub-árvores acima.
+ *  4. Posiciona a linha dos filhos centralizada no meio do casal.
+ *  5. Cada geração é forçada em Y = gen * GENERATION_GAP (linhas horizontais).
+ *
+ * Regras clínicas: pai/avô à esquerda, mãe/avó à direita. Cliente em y=0 no topo.
  */
 type LayoutNode = { node: Node; x: number; y: number; gen: number };
 type Block = {
   nodes: LayoutNode[];
-  width: number;
-  center: number;
-  childTarget?: Node;
-  childTargetX?: number;
+  minX: number;
+  maxX: number;
+  anchorX: number; // centerX do filho de referência (para conectar à geração abaixo)
 };
 
 function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
+  // ── 1. Índice por tag canônica ────────────────────────────────
+  // Indexamos tanto pela tag normalizada QUANTO pela tag crua (lowercase) para
+  // evitar falsos positivos do normalizador (ex.: "Tio(a) materno(a)" caindo em
+  // fallback "Tio(a) paterno(a)" via keyword genérica "tio").
   const byCanonical = new Map<string, Node[]>();
+  const pushKey = (k: string, n: Node) => {
+    if (!k) return;
+    if (!byCanonical.has(k)) byCanonical.set(k, []);
+    const arr = byCanonical.get(k)!;
+    if (!arr.includes(n)) arr.push(n);
+  };
   nodes.forEach((n) => {
     const d = n.data as PersonNodeData;
-    const raw = n.id === probandId ? "consulente" : d.relationship_to_proband || "";
-    const canonical = smartNormalizeRelationship(raw).toLowerCase();
-    if (!byCanonical.has(canonical)) byCanonical.set(canonical, []);
-    byCanonical.get(canonical)!.push(n);
+    if (n.id === probandId) {
+      pushKey("consulente", n);
+      return;
+    }
+    const raw = d.relationship_to_proband || "";
+    const rawKey = raw.trim().toLowerCase();
+    // Preferimos a tag CRUA para evitar falsos matches do normalizador.
+    // Só caímos no normalizador se o texto não tiver correspondência clara.
+    if (rawKey) pushKey(rawKey, n);
+    else pushKey(smartNormalizeRelationship(raw).toLowerCase(), n);
   });
-
   const getNodes = (c: string) => byCanonical.get(c.toLowerCase()) || [];
   const getFirst = (c: string) => getNodes(c)[0];
 
-  function createLeafBlock(
-    husband: Node | undefined,
-    wife: Node | undefined,
-    husbandSiblings: Node[],
-    wifeSiblings: Node[],
+  // ── 2. Modelo de famílias ─────────────────────────────────────
+  type Family = {
+    husband?: Node;
+    wife?: Node;
+    husbandParents?: Family;
+    wifeParents?: Family;
+    children: Node[];
+    anchorChildId?: string;
+  };
+
+  /**
+   * anchorSide: onde o filho-âncora deve ficar na linha de irmãos.
+   *  'right' = âncora no extremo direito (ramo esquerdo do descendente → irmãos à esquerda do âncora)
+   *  'left'  = âncora no extremo esquerdo (ramo direito do descendente → irmãos à direita do âncora)
+   *  'center' = âncora no meio (usado para o consulente)
+   */
+  const buildAncestryOf = (
     child: Node | undefined,
-    childSiblings: Node[],
-    isHusbandSide: boolean,
-    generation: number,
-  ): Block {
-    const topNodes = [
-      ...husbandSiblings,
-      ...(husband ? [husband] : []),
-      ...(wife ? [wife] : []),
-      ...wifeSiblings,
-    ];
-    const topWidth = topNodes.length * HORIZONTAL_STEP;
-
-    let unionCenter = topWidth > 0 ? topWidth / 2 : 0;
-    if (husband && wife) {
-      unionCenter =
-        (topNodes.indexOf(husband) * HORIZONTAL_STEP +
-          topNodes.indexOf(wife) * HORIZONTAL_STEP +
-          NODE_W) /
-        2;
-    } else if (husband) {
-      unionCenter = topNodes.indexOf(husband) * HORIZONTAL_STEP + NODE_W / 2;
-    } else if (wife) {
-      unionCenter = topNodes.indexOf(wife) * HORIZONTAL_STEP + NODE_W / 2;
-    }
-
-    const bottomNodes = isHusbandSide
-      ? [...childSiblings, ...(child ? [child] : [])]
-      : [...(child ? [child] : []), ...childSiblings];
-
-    const bottomWidth = bottomNodes.length * HORIZONTAL_STEP;
-
-    let childLocalCenter = bottomWidth > 0 ? bottomWidth / 2 : 0;
-    if (child) {
-      childLocalCenter = bottomNodes.indexOf(child) * HORIZONTAL_STEP + NODE_W / 2;
-    } else if (bottomNodes.length > 0) {
-      childLocalCenter = isHusbandSide ? bottomWidth - HORIZONTAL_STEP + NODE_W / 2 : NODE_W / 2;
-    }
-
-    let topOffset = 0,
-      bottomOffset = 0;
-    if (unionCenter > childLocalCenter) {
-      bottomOffset = unionCenter - childLocalCenter;
-    } else {
-      topOffset = childLocalCenter - unionCenter;
-    }
-
-    const resultNodes: LayoutNode[] = [];
-    topNodes.forEach((n, i) =>
-      resultNodes.push({
-        node: n,
-        x: topOffset + i * HORIZONTAL_STEP,
-        y: (generation + 1) * GENERATION_GAP,
-        gen: generation + 1,
-      }),
-    );
-    bottomNodes.forEach((n, i) =>
-      resultNodes.push({
-        node: n,
-        x: bottomOffset + i * HORIZONTAL_STEP,
-        y: generation * GENERATION_GAP,
-        gen: generation,
-      }),
-    );
-
+    father: Node | undefined,
+    mother: Node | undefined,
+    siblings: Node[],
+    anchorSide: "left" | "right" | "center",
+  ): Family | undefined => {
+    if (!child) return undefined;
+    const children =
+      anchorSide === "right" ? [...siblings, child] : [child, ...siblings];
     return {
-      nodes: resultNodes,
-      width: Math.max(topWidth + topOffset, bottomWidth + bottomOffset),
-      center: childLocalCenter + bottomOffset,
-      childTarget: child,
+      husband: father,
+      wife: mother,
+      children,
+      anchorChildId: child.id,
     };
-  }
+  };
 
-  function mergeBlocks(
-    leftBlock: Block,
-    rightBlock: Block,
-    childTarget: Node | undefined,
-    childSiblings: Node[],
-    isHusbandSide: boolean,
-    generation: number,
-  ): Block {
-    const FAMILY_GAP = 160;
-    let rightOffsetX =
-      leftBlock.width + (leftBlock.width > 0 && rightBlock.width > 0 ? FAMILY_GAP : 0);
-    // TIGHT LAYOUT FIX: If both blocks have a childTarget, we can pull them closer
-    // to prevent massive empty gaps, as long as it doesn't cause negative coordinates.
-    if (leftBlock.childTargetX !== undefined && rightBlock.childTargetX !== undefined) {
-      const desiredOffset =
-        leftBlock.childTargetX + HORIZONTAL_STEP + FAMILY_GAP - rightBlock.childTargetX;
-      // We use desiredOffset, but ensure we don't overlap the child targets themselves
-      rightOffsetX = Math.max(
-        desiredOffset,
-        leftBlock.childTargetX + HORIZONTAL_STEP - rightBlock.childTargetX,
-      );
-    }
-
-    const combinedNodes = [
-      ...leftBlock.nodes,
-      ...rightBlock.nodes.map((n) => ({ ...n, x: n.x + rightOffsetX })),
-    ];
-
-    const hCenter =
-      leftBlock.childTargetX !== undefined ? leftBlock.childTargetX : leftBlock.center;
-    const wCenter =
-      rightBlock.childTargetX !== undefined
-        ? rightBlock.childTargetX + rightOffsetX
-        : rightBlock.center + rightOffsetX;
-
-    let unionCenter = 0;
-    if (leftBlock.childTarget && rightBlock.childTarget) unionCenter = (hCenter + wCenter) / 2;
-    else if (leftBlock.childTarget) unionCenter = hCenter;
-    else if (rightBlock.childTarget) unionCenter = wCenter;
-    else unionCenter = (leftBlock.width + rightOffsetX + rightBlock.width) / 2;
-
-    const bottomNodes = isHusbandSide
-      ? [...childSiblings, ...(childTarget ? [childTarget] : [])]
-      : [...(childTarget ? [childTarget] : []), ...childSiblings];
-
-    const bottomWidth = bottomNodes.length * HORIZONTAL_STEP;
-    let childLocalCenter = bottomWidth > 0 ? bottomWidth / 2 : 0;
-    if (childTarget) {
-      childLocalCenter = bottomNodes.indexOf(childTarget) * HORIZONTAL_STEP + NODE_W / 2;
-    } else if (bottomNodes.length > 0) {
-      childLocalCenter = isHusbandSide ? bottomWidth - HORIZONTAL_STEP + NODE_W / 2 : NODE_W / 2;
-    }
-
-    let topOffset = 0,
-      bottomOffset = 0;
-    if (unionCenter > childLocalCenter) {
-      bottomOffset = unionCenter - childLocalCenter;
-    } else {
-      topOffset = childLocalCenter - unionCenter;
-    }
-
-    const finalNodes = combinedNodes.map((n) => ({ ...n, x: n.x + topOffset }));
-    bottomNodes.forEach((n, i) =>
-      finalNodes.push({
-        node: n,
-        x: bottomOffset + i * HORIZONTAL_STEP,
-        y: generation * GENERATION_GAP,
-        gen: generation,
-      }),
-    );
-
-    let cTargetX = undefined;
-    if (childTarget) {
-      cTargetX = bottomOffset + bottomNodes.indexOf(childTarget) * HORIZONTAL_STEP + NODE_W / 2;
-    }
-    return {
-      nodes: finalNodes,
-      width: Math.max(rightOffsetX + rightBlock.width + topOffset, bottomWidth + bottomOffset),
-      center: childLocalCenter + bottomOffset,
-      childTarget: childTarget,
-      childTargetX: cTargetX,
-    };
-  }
-
-  const bp1 = getFirst("bisavô paterno (pai do avô)");
-  const bm1 = getFirst("bisavó paterna (mãe do avô)");
-  const blockAvosPat = createLeafBlock(
-    bp1,
-    bm1,
-    getNodes("irmã(o) do bisavô paterno"),
-    [],
-    getFirst("avô paterno"),
-    getNodes("irmã(o) do avô paterno"),
-    true,
-    2,
-  );
-
-  const bp2 = getFirst("bisavô paterno (pai da avó)");
-  const bm2 = getFirst("bisavó paterna (mãe da avó)");
-  const blockAvosPatF = createLeafBlock(
-    bp2,
-    bm2,
-    getNodes("irmã(o) do bisavô paterno_alt"),
-    [],
-    getFirst("avó paterna"),
-    getNodes("irmã(o) da avó paterna"),
-    false,
-    2,
-  );
-
-  const bp3 = getFirst("bisavô materno (pai do avô)");
-  const bm3 = getFirst("bisavó materna (mãe do avô)");
-  const blockAvosMat = createLeafBlock(
-    bp3,
-    bm3,
-    getNodes("irmã(o) do bisavô materno"),
-    [],
-    getFirst("avô materno"),
-    getNodes("irmã(o) do avô materno"),
-    true,
-    2,
-  );
-
-  const bp4 = getFirst("bisavô materno (pai da avó)");
-  const bm4 = getFirst("bisavó materna (mãe da avó)");
-  const blockAvosMatF = createLeafBlock(
-    bp4,
-    bm4,
-    getNodes("irmã(o) do bisavô materno_alt"),
-    [],
-    getFirst("avó materna"),
-    getNodes("irmã(o) da avó materna"),
-    false,
-    2,
-  );
-
-  const blockPaisPat = mergeBlocks(
-    blockAvosPat,
-    blockAvosPatF,
-    getFirst("pai"),
-    getNodes("tio(a) paterno(a)"),
-    true,
-    1,
-  );
-
-  const blockPaisMat = mergeBlocks(
-    blockAvosMat,
-    blockAvosMatF,
-    getFirst("mãe"),
-    getNodes("tio(a) materno(a)"),
-    false,
-    1,
-  );
-
+  const avoPat = getFirst("avô paterno");
+  const avoPatF = getFirst("avó paterna");
+  const avoMat = getFirst("avô materno");
+  const avoMatF = getFirst("avó materna");
+  const pai = getFirst("pai");
+  const mae = getFirst("mãe");
   const consulente = getFirst("consulente");
-  const blockRoot = mergeBlocks(
-    blockPaisPat,
-    blockPaisMat,
-    consulente,
-    getNodes("irmã(o)"),
-    false,
-    0,
-  );
+
+  const tiosPat = getNodes("tio(a) paterno(a)");
+  const tiosMat = getNodes("tio(a) materno(a)");
+  const irmaos = getNodes("irmã(o)");
+
+  const paiFamily: Family | undefined = pai
+    ? {
+        husband: avoPat,
+        wife: avoPatF,
+        husbandParents: buildAncestryOf(
+          avoPat,
+          getFirst("bisavô paterno (pai do avô)"),
+          getFirst("bisavó paterna (mãe do avô)"),
+          getNodes("irmã(o) do avô paterno"),
+          "right",
+        ),
+        wifeParents: buildAncestryOf(
+          avoPatF,
+          getFirst("bisavô paterno (pai da avó)"),
+          getFirst("bisavó paterna (mãe da avó)"),
+          getNodes("irmã(o) da avó paterna"),
+          "left",
+        ),
+        // ramo esquerdo do consulente: pai fica na direita da linha de irmãos,
+        // tios paternos à esquerda dele.
+        children: [...tiosPat, pai],
+        anchorChildId: pai.id,
+      }
+    : undefined;
+
+  const maeFamily: Family | undefined = mae
+    ? {
+        husband: avoMat,
+        wife: avoMatF,
+        husbandParents: buildAncestryOf(
+          avoMat,
+          getFirst("bisavô materno (pai do avô)"),
+          getFirst("bisavó materna (mãe do avô)"),
+          getNodes("irmã(o) do avô materno"),
+          "right",
+        ),
+        wifeParents: buildAncestryOf(
+          avoMatF,
+          getFirst("bisavô materno (pai da avó)"),
+          getFirst("bisavó materna (mãe da avó)"),
+          getNodes("irmã(o) da avó materna"),
+          "left",
+        ),
+        // ramo direito do consulente: mãe fica na esquerda da linha de irmãos,
+        // tios maternos à direita dela.
+        children: [mae, ...tiosMat],
+        anchorChildId: mae.id,
+      }
+    : undefined;
+
+  const rootFamily: Family | undefined = consulente
+    ? {
+        husband: pai,
+        wife: mae,
+        husbandParents: paiFamily,
+        wifeParents: maeFamily,
+        // Consulente centralizado; irmãos distribuídos ao redor.
+        children: (() => {
+          const half = Math.floor(irmaos.length / 2);
+          return [...irmaos.slice(0, half), consulente, ...irmaos.slice(half)];
+        })(),
+        anchorChildId: consulente.id,
+      }
+    : undefined;
+
+
+  const FAMILY_GAP = 120; // espaço mínimo entre sub-árvores ancestrais irmãs
+
+  const shiftBlock = (b: Block, dx: number): Block => ({
+    nodes: b.nodes.map((n) => ({ ...n, x: n.x + dx })),
+    minX: b.minX + dx,
+    maxX: b.maxX + dx,
+    anchorX: b.anchorX + dx,
+  });
+
+  // Layout recursivo. `gen` é a geração DA LINHA DE FILHOS.
+  const layoutFamily = (f: Family, gen: number): Block => {
+    const parentGen = gen + 1;
+    const parentY = parentGen * GENERATION_GAP;
+    const childY = gen * GENERATION_GAP;
+
+    let hBlock = f.husbandParents ? layoutFamily(f.husbandParents, parentGen) : null;
+    let wBlock = f.wifeParents ? layoutFamily(f.wifeParents, parentGen) : null;
+
+    let allNodes: LayoutNode[] = [];
+    let hCenterX: number | null = null;
+    let wCenterX: number | null = null;
+
+    if (hBlock && wBlock) {
+      // Alinha wife anchor à direita do husband anchor.
+      const desiredWAnchor = hBlock.anchorX + HORIZONTAL_STEP;
+      let dx = desiredWAnchor - wBlock.anchorX;
+      // Garante que sub-árvores não se sobreponham.
+      const noOverlapDx = hBlock.maxX + FAMILY_GAP - wBlock.minX;
+      if (noOverlapDx > dx) dx = noOverlapDx;
+      wBlock = shiftBlock(wBlock, dx);
+      hCenterX = hBlock.anchorX;
+      wCenterX = wBlock.anchorX;
+      allNodes.push(...hBlock.nodes, ...wBlock.nodes);
+    } else if (hBlock) {
+      hCenterX = hBlock.anchorX;
+      allNodes.push(...hBlock.nodes);
+      if (f.wife) {
+        wCenterX = hCenterX + HORIZONTAL_STEP;
+        allNodes.push({
+          node: f.wife,
+          x: wCenterX - NODE_W / 2,
+          y: parentY,
+          gen: parentGen,
+        });
+      }
+    } else if (wBlock) {
+      wCenterX = wBlock.anchorX;
+      allNodes.push(...wBlock.nodes);
+      if (f.husband) {
+        hCenterX = wCenterX - HORIZONTAL_STEP;
+        allNodes.push({
+          node: f.husband,
+          x: hCenterX - NODE_W / 2,
+          y: parentY,
+          gen: parentGen,
+        });
+      }
+    } else {
+      // Sem ancestrais: casal standalone
+      if (f.husband && f.wife) {
+        hCenterX = 0;
+        wCenterX = HORIZONTAL_STEP;
+        allNodes.push({ node: f.husband, x: hCenterX - NODE_W / 2, y: parentY, gen: parentGen });
+        allNodes.push({ node: f.wife, x: wCenterX - NODE_W / 2, y: parentY, gen: parentGen });
+      } else if (f.husband) {
+        hCenterX = 0;
+        allNodes.push({ node: f.husband, x: hCenterX - NODE_W / 2, y: parentY, gen: parentGen });
+      } else if (f.wife) {
+        wCenterX = 0;
+        allNodes.push({ node: f.wife, x: wCenterX - NODE_W / 2, y: parentY, gen: parentGen });
+      }
+    }
+
+    // União center: meio do casal, ou centro do único genitor conhecido.
+    let unionCenter: number;
+    if (hCenterX !== null && wCenterX !== null) unionCenter = (hCenterX + wCenterX) / 2;
+    else if (hCenterX !== null) unionCenter = hCenterX;
+    else if (wCenterX !== null) unionCenter = wCenterX;
+    else unionCenter = 0;
+
+    // Linha de filhos: centraliza o anchor (ou meio da linha) sob unionCenter.
+    const kids = f.children;
+    const anchorIdx = f.anchorChildId
+      ? Math.max(0, kids.findIndex((k) => k.id === f.anchorChildId))
+      : (kids.length - 1) / 2;
+
+    const kidNodes: LayoutNode[] = kids.map((k, i) => {
+      const cx = unionCenter + (i - anchorIdx) * HORIZONTAL_STEP;
+      return { node: k, x: cx - NODE_W / 2, y: childY, gen };
+    });
+
+    allNodes.push(...kidNodes);
+
+    // Bounds finais
+    const minX = Math.min(...allNodes.map((n) => n.x));
+    const maxX = Math.max(...allNodes.map((n) => n.x + NODE_W));
+    const anchorNode = f.anchorChildId ? kidNodes.find((k) => k.node.id === f.anchorChildId) : null;
+    const anchorX = anchorNode ? anchorNode.x + NODE_W / 2 : unionCenter;
+
+    return { nodes: allNodes, minX, maxX, anchorX };
+  };
+
+  const blockRoot: Block = rootFamily
+    ? layoutFamily(rootFamily, 0)
+    : { nodes: [], minX: 0, maxX: 0, anchorX: 0 };
+
 
   const layoutedNodes: Node[] = [];
 
@@ -878,7 +877,7 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
   nodes.forEach((n) => {
     if (!mappedIds.has(n.id)) {
       const gen = generationForData(n.data);
-      const nextX = (rightEdgeByGeneration.get(gen) ?? blockRoot.width) + HORIZONTAL_STEP;
+      const nextX = (rightEdgeByGeneration.get(gen) ?? blockRoot.maxX) + HORIZONTAL_STEP;
       rightEdgeByGeneration.set(gen, nextX);
       blockRoot.nodes.push({ node: n, x: nextX, y: gen * GENERATION_GAP, gen });
     }
