@@ -42,7 +42,8 @@ export async function ensureProband(clientId: string): Promise<{ probandId: stri
     if ((!existingProband.gender || existingProband.gender === "unknown") && client.gender) {
       patch.gender = client.gender;
     }
-    if (!existingProband.notes && client.presenting_complaint) patch.notes = client.presenting_complaint;
+    if (!existingProband.notes && client.presenting_complaint)
+      patch.notes = client.presenting_complaint;
     if (Object.keys(patch).length > 0) {
       await supabase.from("genogram_persons").update(patch).eq("id", existingProband.id);
     }

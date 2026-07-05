@@ -1,7 +1,12 @@
 import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { Plus } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { personYears } from "@/lib/genogram";
 import { cn } from "@/lib/utils";
@@ -38,9 +43,19 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
   const rel = (d.relationship_to_proband || "").toLowerCase();
 
   let gender = "desconhecido";
-  if (rawGender.includes("masculino") || rawGender === "m" || rawGender === "homem" || rel.match(/pai|tio|avô|bisavô|filho|irmão|irmao/)) {
+  if (
+    rawGender.includes("masculino") ||
+    rawGender === "m" ||
+    rawGender === "homem" ||
+    rel.match(/pai|tio|avô|bisavô|filho|irmão|irmao/)
+  ) {
     gender = "masculino";
-  } else if (rawGender.includes("feminino") || rawGender === "f" || rawGender === "mulher" || rel.match(/mãe|mae|tia|avó|avo|bisavó|filha|irmã|irma/)) {
+  } else if (
+    rawGender.includes("feminino") ||
+    rawGender === "f" ||
+    rawGender === "mulher" ||
+    rel.match(/mãe|mae|tia|avó|avo|bisavó|filha|irmã|irma/)
+  ) {
     gender = "feminino";
   } else if (rawGender.includes("aborto")) {
     gender = "aborto";
@@ -53,11 +68,7 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
 
   const shapeSize = d.is_proband ? 84 : 76;
 
-  const borderColor = isMale
-    ? "border-plum"
-    : isFemale
-      ? "border-lavender"
-      : "border-gold";
+  const borderColor = isMale ? "border-plum" : isFemale ? "border-lavender" : "border-gold";
 
   const displayName = d.preferred_name || d.full_name || "—";
   // Nome em duas linhas se necessário, sem cortar — o container é largo.
@@ -65,10 +76,7 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
 
   return (
     <div
-      className={cn(
-        "relative flex flex-col items-center group",
-        d.is_proband && "z-20",
-      )}
+      className={cn("relative flex flex-col items-center group", d.is_proband && "z-20")}
       style={{ userSelect: "none", width: 160 }}
     >
       <Handle
@@ -84,7 +92,14 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
         style={{ width: shapeSize, height: shapeSize }}
       >
         {isAbortion ? (
-          <svg viewBox="0 0 100 100" className="size-full" fill="var(--color-card)" stroke="var(--color-foreground)" strokeWidth="6" strokeLinejoin="round">
+          <svg
+            viewBox="0 0 100 100"
+            className="size-full"
+            fill="var(--color-card)"
+            stroke="var(--color-foreground)"
+            strokeWidth="6"
+            strokeLinejoin="round"
+          >
             <polygon points="50,8 92,88 8,88" />
           </svg>
         ) : (
@@ -118,7 +133,7 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
       <div
         className={cn(
           "mt-2.5 w-full rounded-md px-1 py-1 text-center",
-          d.is_proband ? "bg-white/50 backdrop-blur-sm border border-plum/20" : ""
+          d.is_proband ? "bg-white/50 backdrop-blur-sm border border-plum/20" : "",
         )}
       >
         <p
@@ -189,8 +204,6 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
           <Plus className="w-4 h-4 text-white pointer-events-none" />
         </Handle>
       </div>
-
-
     </div>
   );
 }

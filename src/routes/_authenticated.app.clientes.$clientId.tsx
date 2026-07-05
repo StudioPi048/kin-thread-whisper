@@ -1,13 +1,27 @@
 import { useEffect, useState } from "react";
 
 import { lazy, Suspense } from "react";
-const ClientTimeline = lazy(() => import("@/components/clients/client-timeline").then(m => ({ default: m.ClientTimeline })));
-const CaseDashboard = lazy(() => import("@/components/clients/case-dashboard").then(m => ({ default: m.CaseDashboard })));
-const PatternsPanel = lazy(() => import("@/components/clients/patterns-panel").then(m => ({ default: m.PatternsPanel })));
-const GenogramCanvas = lazy(() => import("@/components/genogram/genogram-canvas").then(m => ({ default: m.GenogramCanvas })));
-const ClanSpreadsheet = lazy(() => import("@/components/genogram/clan-spreadsheet").then(m => ({ default: m.ClanSpreadsheet })));
-const IntakeForm = lazy(() => import("@/components/intake/intake-form").then(m => ({ default: m.IntakeForm })));
-const SessionsPanel = lazy(() => import("@/components/sessions/sessions-panel").then(m => ({ default: m.SessionsPanel })));
+const ClientTimeline = lazy(() =>
+  import("@/components/clients/client-timeline").then((m) => ({ default: m.ClientTimeline })),
+);
+const CaseDashboard = lazy(() =>
+  import("@/components/clients/case-dashboard").then((m) => ({ default: m.CaseDashboard })),
+);
+const PatternsPanel = lazy(() =>
+  import("@/components/clients/patterns-panel").then((m) => ({ default: m.PatternsPanel })),
+);
+const GenogramCanvas = lazy(() =>
+  import("@/components/genogram/genogram-canvas").then((m) => ({ default: m.GenogramCanvas })),
+);
+const ClanSpreadsheet = lazy(() =>
+  import("@/components/genogram/clan-spreadsheet").then((m) => ({ default: m.ClanSpreadsheet })),
+);
+const IntakeForm = lazy(() =>
+  import("@/components/intake/intake-form").then((m) => ({ default: m.IntakeForm })),
+);
+const SessionsPanel = lazy(() =>
+  import("@/components/sessions/sessions-panel").then((m) => ({ default: m.SessionsPanel })),
+);
 
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -16,7 +30,6 @@ import {
   Archive,
   ArchiveRestore,
   ChevronRight,
-
   Pencil,
   ShieldCheck,
   ShieldAlert,
@@ -46,18 +59,17 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { ClientFormDialog } from "@/components/clients/client-form-dialog";
 
-
-
-
-
-
-
 import { calcAge, formatBirthDate, genderOptions, initialsFrom } from "@/lib/clients";
-
 
 function TabSuspense({ children }: { children: React.ReactNode }) {
   return (
-    <Suspense fallback={<div className="flex h-64 items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-plum border-r-transparent"></div></div>}>
+    <Suspense
+      fallback={
+        <div className="flex h-64 items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-plum border-r-transparent"></div>
+        </div>
+      }
+    >
       {children}
     </Suspense>
   );
@@ -219,14 +231,16 @@ function ClientDossierPage() {
                 ) : (
                   <span>{initials}</span>
                 )}
-                
+
                 <label className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center cursor-pointer">
                   <Camera className="size-5 text-white mb-1" />
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-white">Trocar</span>
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    className="hidden" 
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-white">
+                    Trocar
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
                     onChange={handleAvatarUpload}
                   />
                 </label>
@@ -256,7 +270,11 @@ function ClientDossierPage() {
                       className="text-white hover:bg-white/10"
                       title={client.status === "active" ? "Arquivar" : "Reativar"}
                     >
-                      {client.status === "active" ? <Archive className="size-4" /> : <ArchiveRestore className="size-4" />}
+                      {client.status === "active" ? (
+                        <Archive className="size-4" />
+                      ) : (
+                        <ArchiveRestore className="size-4" />
+                      )}
                     </Button>
                     <Button
                       variant="ghost"
@@ -284,7 +302,6 @@ function ClientDossierPage() {
                 </div>
               </div>
             </div>
-
           </header>
         </div>
       </div>
@@ -376,7 +393,9 @@ function ClientDossierPage() {
                 </section>
 
                 <aside className="space-y-6">
-                  <TabSuspense><CaseDashboard clientId={client.id} /></TabSuspense>
+                  <TabSuspense>
+                    <CaseDashboard clientId={client.id} />
+                  </TabSuspense>
                   <Panel title="Identificação">
                     <InfoRow label="Nome completo" value={client.full_name} />
                     <InfoRow label="Gênero" value={genderLabel} />
@@ -419,30 +438,40 @@ function ClientDossierPage() {
             </TabsContent>
 
             <TabsContent value="genogram">
-              <TabSuspense><GenogramCanvas clientId={client.id} /></TabSuspense>
+              <TabSuspense>
+                <GenogramCanvas clientId={client.id} />
+              </TabSuspense>
             </TabsContent>
 
             <TabsContent value="timeline">
-              <TabSuspense><ClientTimeline clientId={client.id} /></TabSuspense>
+              <TabSuspense>
+                <ClientTimeline clientId={client.id} />
+              </TabSuspense>
             </TabsContent>
 
             <TabsContent value="patterns">
-              <TabSuspense><PatternsPanel clientId={client.id} /></TabSuspense>
+              <TabSuspense>
+                <PatternsPanel clientId={client.id} />
+              </TabSuspense>
             </TabsContent>
 
             <TabsContent value="intake">
-              <TabSuspense><IntakeForm clientId={client.id} professionalId={user.id} /></TabSuspense>
+              <TabSuspense>
+                <IntakeForm clientId={client.id} professionalId={user.id} />
+              </TabSuspense>
             </TabsContent>
 
             <TabsContent value="clan">
-              <TabSuspense><ClanSpreadsheet clientId={client.id} /></TabSuspense>
+              <TabSuspense>
+                <ClanSpreadsheet clientId={client.id} />
+              </TabSuspense>
             </TabsContent>
 
             <TabsContent value="sessions">
-              <TabSuspense><SessionsPanel clientId={client.id} /></TabSuspense>
+              <TabSuspense>
+                <SessionsPanel clientId={client.id} />
+              </TabSuspense>
             </TabsContent>
-
-
           </div>
         </Tabs>
       </div>
@@ -540,4 +569,3 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 function EmptyLine({ children }: { children: React.ReactNode }) {
   return <p className="text-[14px] italic text-muted-foreground">{children}</p>;
 }
-

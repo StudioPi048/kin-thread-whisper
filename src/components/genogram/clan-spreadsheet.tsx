@@ -1,13 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, Trash2, Download, Table2, Upload, Sparkles, AlertCircle } from "lucide-react";
+import {
+  Loader2,
+  Plus,
+  Trash2,
+  Download,
+  Table2,
+  Upload,
+  Sparkles,
+  AlertCircle,
+} from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables, TablesUpdate } from "@/integrations/supabase/types";
-import * as XLSX from "xlsx";
+
 import { smartNormalizeRelationship, genealogicalOrder } from "@/lib/relationship-normalizer";
 import { ensureProband } from "@/lib/ensure-proband";
 
@@ -119,11 +128,11 @@ export function ClanSpreadsheet({ clientId }: Props) {
   const removeEmptyPersons = useMutation({
     mutationFn: async () => {
       const emptyIds = (persons ?? [])
-        .filter(p => !p.is_proband && !p.full_name?.trim() && !p.birth_date?.trim())
-        .map(p => p.id);
-      
+        .filter((p) => !p.is_proband && !p.full_name?.trim() && !p.birth_date?.trim())
+        .map((p) => p.id);
+
       if (emptyIds.length === 0) return 0;
-      
+
       const { error } = await supabase.from("genogram_persons").delete().in("id", emptyIds);
       if (error) throw error;
       return emptyIds.length;
@@ -174,7 +183,9 @@ export function ClanSpreadsheet({ clientId }: Props) {
         qc.invalidateQueries({ queryKey: ["genogram", clientId] });
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [clientId, qc]);
 
   const rows = useMemo(() => {
@@ -215,19 +226,25 @@ export function ClanSpreadsheet({ clientId }: Props) {
 
         if (file.name.toLowerCase().endsWith(".xlsx")) {
           // Process Excel
+          const XLSX = await import("xlsx");
           const data = new Uint8Array(event.target?.result as ArrayBuffer);
           const workbook = XLSX.read(data, { type: "array", cellDates: true });
           const firstSheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[firstSheetName];
           // cellDates:true garante que células de data do Excel virem como Date objects
-          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: true }) as any[][];
-          
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, {
+            header: 1,
+            raw: true,
+          }) as unknown[][];
+
           if (jsonData.length < 2) throw new Error("Arquivo vazio ou sem cabeçalho.");
-          
+
           parsedRows = jsonData
             .slice(1)
-            .filter(row => row.some(cell => cell !== undefined && cell !== null && String(cell).trim() !== ""))
-            .map(row => 
+            .filter((row) =>
+              row.some((cell) => cell !== undefined && cell !== null && String(cell).trim() !== ""),
+            )
+            .map((row) =>
               Array.from({ length: 11 }).map((_, i) => {
                 const cell = row[i];
 
@@ -251,19 +268,19 @@ export function ClanSpreadsheet({ clientId }: Props) {
                 }
 
                 return cell !== undefined && cell !== null ? String(cell) : "";
-              })
+              }),
             );
         } else {
           // Process CSV
           const text = event.target?.result as string;
           if (!text) throw new Error("Erro ao ler o texto do arquivo.");
-          
-          const lines = text.split(/\r?\n/).filter(line => line.trim());
+
+          const lines = text.split(/\r?\n/).filter((line) => line.trim());
           if (lines.length < 2) throw new Error("Arquivo vazio ou sem cabeçalho.");
 
           const separator = lines[0].includes(";") ? ";" : ",";
-          parsedRows = lines.slice(1).map(line => {
-            const regex = new RegExp(`(?:^|${separator})(?:"([^"]*)"|([^${separator}]*))`, 'g');
+          parsedRows = lines.slice(1).map((line) => {
+            const regex = new RegExp(`(?:^|${separator})(?:"([^"]*)"|([^${separator}]*))`, "g");
             const row: string[] = [];
             let match;
             while ((match = regex.exec(line)) !== null) {
@@ -272,34 +289,55 @@ export function ClanSpreadsheet({ clientId }: Props) {
             return row;
           });
         }
-        
+
         // Pergunta se deseja substituir a planilha inteira
-        const shouldOverwrite = (persons && persons.length > 0) 
-          ? window.confirm(
-              "Deseja substituir a planilha atual pelos dados do arquivo?\n\n[OK] = Apagar tudo e usar apenas o arquivo\n[Cancelar] = Adicionar as novas linhas no final"
-            )
-          : false;
+        const shouldOverwrite =
+          persons && persons.length > 0
+            ? window.confirm(
+                "Deseja substituir a planilha atual pelos dados do arquivo?\n\n[OK] = Apagar tudo e usar apenas o arquivo\n[Cancelar] = Adicionar as novas linhas no final",
+              )
+            : false;
 
         let currentContext = "Consulente";
 
         // Normalizar e filtrar: skip linhas sem nenhum dado útil
         const inserts = parsedRows
-          .filter(r => r.length > 1)
-          .map(row => {
-            const [nome, parentesco, nascimento, gestacao, morte, enfermidades, profissao, vicios, temperamento, ordem, obs] = row;
-            
+          .filter((r) => r.length > 1)
+          .map((row) => {
+            const [
+              nome,
+              parentesco,
+              nascimento,
+              gestacao,
+              morte,
+              enfermidades,
+              profissao,
+              vicios,
+              temperamento,
+              ordem,
+              obs,
+            ] = row;
+
             let rawRel = parentesco?.trim() || "";
             const lowerRel = rawRel.toLowerCase();
-            
+
             // Se for um ancestral direto, salva como contexto atual
             if (rawRel && !lowerRel.includes("irmã") && !lowerRel.includes("irmão")) {
-                currentContext = rawRel;
-            } 
+              currentContext = rawRel;
+            }
             // Se for SÓ "irmãos" genérico abaixo de um ancestral, injeta o contexto para o sistema entender
-            else if (lowerRel === "irmãos" || lowerRel === "irmãs" || lowerRel === "irmão" || lowerRel === "irmã" || lowerRel === "irmao" || lowerRel === "irma" || lowerRel === "irmaos") {
-                if (currentContext !== "Consulente" && currentContext !== "Paciente") {
-                    rawRel = `Irmão(ã) do(a) ${currentContext}`;
-                }
+            else if (
+              lowerRel === "irmãos" ||
+              lowerRel === "irmãs" ||
+              lowerRel === "irmão" ||
+              lowerRel === "irmã" ||
+              lowerRel === "irmao" ||
+              lowerRel === "irma" ||
+              lowerRel === "irmaos"
+            ) {
+              if (currentContext !== "Consulente" && currentContext !== "Paciente") {
+                rawRel = `Irmão(ã) do(a) ${currentContext}`;
+              }
             }
 
             // Apenas para inferir o gênero corretamente no momento do import
@@ -314,20 +352,30 @@ export function ClanSpreadsheet({ clientId }: Props) {
               gestational_weeks: gestacao?.trim() || null,
               death_date: parseDateString(morte),
               is_deceased: !!morte?.trim(),
-              health_conditions: enfermidades ? enfermidades.split(',').map(s => s.trim()).filter(Boolean) : [],
+              health_conditions: enfermidades
+                ? enfermidades
+                    .split(",")
+                    .map((s) => s.trim())
+                    .filter(Boolean)
+                : [],
               occupation: profissao?.trim() || null,
               vices: vicios?.trim() || null,
               temperament: temperamento?.trim() || null,
               birth_order: ordem && !isNaN(parseInt(ordem)) ? parseInt(ordem) : null,
-              notes: obs?.trim() || null
+              notes: obs?.trim() || null,
             };
           })
           // Remove linhas vazias E a linha "Consulente" — o proband vem do cadastro do cliente
-          .filter(r => (!!(r.full_name) || !!(r.birth_date)) && r.relationship_to_proband !== "Consulente");
-        
+          .filter(
+            (r) => (!!r.full_name || !!r.birth_date) && r.relationship_to_proband !== "Consulente",
+          );
+
         if (inserts.length > 0) {
           if (shouldOverwrite) {
-            const { error: delError } = await supabase.from("genogram_persons").delete().eq("client_id", clientId);
+            const { error: delError } = await supabase
+              .from("genogram_persons")
+              .delete()
+              .eq("client_id", clientId);
             if (delError) throw delError;
           }
 
@@ -346,15 +394,15 @@ export function ClanSpreadsheet({ clientId }: Props) {
         } else {
           toast.info("Nenhum dado válido encontrado para importar.");
         }
-      } catch (error: any) {
+      } catch (error) {
         console.error("Import Error:", error);
-        toast.error(`Erro ao importar: ${error?.message || "Verifique o formato."}`);
+        toast.error(`Erro ao importar: ${(error as Error)?.message || "Verifique o formato."}`);
       } finally {
         setIsImporting(false);
         if (fileInputRef.current) fileInputRef.current.value = "";
       }
     };
-    
+
     if (file.name.toLowerCase().endsWith(".xlsx")) {
       reader.readAsArrayBuffer(file);
     } else {
@@ -427,12 +475,12 @@ export function ClanSpreadsheet({ clientId }: Props) {
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <input 
-            type="file" 
-            accept=".csv, .xlsx" 
-            className="hidden" 
-            ref={fileInputRef} 
-            onChange={importFile} 
+          <input
+            type="file"
+            accept=".csv, .xlsx"
+            className="hidden"
+            ref={fileInputRef}
+            onChange={importFile}
           />
           <Button
             variant="outline"
@@ -441,7 +489,11 @@ export function ClanSpreadsheet({ clientId }: Props) {
             disabled={isImporting}
             className="font-bold border-plum/20 text-plum hover:bg-plum/5"
           >
-            {isImporting ? <Loader2 className="size-4 mr-2 animate-spin" /> : <Upload className="size-4 mr-2" />}
+            {isImporting ? (
+              <Loader2 className="size-4 mr-2 animate-spin" />
+            ) : (
+              <Upload className="size-4 mr-2" />
+            )}
             Importar XLS/CSV
           </Button>
           <Button
@@ -452,14 +504,22 @@ export function ClanSpreadsheet({ clientId }: Props) {
             className="font-bold border-amber-500/20 text-amber-600 hover:bg-amber-500/5"
             title="Remove linhas sem nome e data"
           >
-            {removeEmptyPersons.isPending ? <Loader2 className="size-4 mr-2 animate-spin" /> : <Sparkles className="size-4 mr-2" />}
+            {removeEmptyPersons.isPending ? (
+              <Loader2 className="size-4 mr-2 animate-spin" />
+            ) : (
+              <Sparkles className="size-4 mr-2" />
+            )}
             Limpar vazios
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={() => {
-              if (window.confirm("ATENÇÃO: Deseja apagar TODAS as linhas da planilha deste cliente? Esta ação não pode ser desfeita.")) {
+              if (
+                window.confirm(
+                  "ATENÇÃO: Deseja apagar TODAS as linhas da planilha deste cliente? Esta ação não pode ser desfeita.",
+                )
+              ) {
                 deleteAllPersons.mutate();
               }
             }}
@@ -467,7 +527,11 @@ export function ClanSpreadsheet({ clientId }: Props) {
             className="font-bold border-destructive/20 text-destructive hover:bg-destructive/5"
             title="Apaga a planilha inteira"
           >
-            {deleteAllPersons.isPending ? <Loader2 className="size-4 mr-2 animate-spin" /> : <Trash2 className="size-4 mr-2" />}
+            {deleteAllPersons.isPending ? (
+              <Loader2 className="size-4 mr-2 animate-spin" />
+            ) : (
+              <Trash2 className="size-4 mr-2" />
+            )}
             Limpar Tudo
           </Button>
           <Button
@@ -492,16 +556,21 @@ export function ClanSpreadsheet({ clientId }: Props) {
           className="rounded-sm border-2 border-dashed border-border bg-white shadow-sm p-12 text-center relative overflow-hidden"
         >
           <div className="absolute top-0 right-0 opacity-10 pointer-events-none">
-             <img src="/data_import.png" alt="" className="w-[300px] h-[300px] object-cover" />
+            <img src="/data_import.png" alt="" className="w-[300px] h-[300px] object-cover" />
           </div>
           <div className="relative z-10 flex flex-col items-center">
             <Table2 className="mx-auto size-12 text-lavender opacity-80 mb-4" />
             <h3 className="font-serif text-3xl font-bold text-primary">Nenhum dado mapeado</h3>
             <p className="mx-auto mt-3 max-w-md text-[14px] text-muted-foreground leading-relaxed">
-              Você pode importar uma planilha CSV com os dados da família, aplicar o modelo de 4 gerações ou adicionar as pessoas uma a uma.
+              Você pode importar uma planilha CSV com os dados da família, aplicar o modelo de 4
+              gerações ou adicionar as pessoas uma a uma.
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-4">
-              <Button className="font-bold" variant="lavender" onClick={() => fileInputRef.current?.click()}>
+              <Button
+                className="font-bold"
+                variant="lavender"
+                onClick={() => fileInputRef.current?.click()}
+              >
                 <Upload className="size-4 mr-2" /> Importar CSV/XLSX
               </Button>
               <Button className="font-bold" variant="outline" onClick={scaffoldTemplate}>
@@ -562,10 +631,17 @@ export function ClanSpreadsheet({ clientId }: Props) {
                           list="relationship-suggestions"
                           value={r.relationship_to_proband ?? ""}
                           onChange={(v) => scheduleSave(r.id, { relationship_to_proband: v })}
-                          className={(!r.relationship_to_proband?.trim() && r.full_name?.trim()) ? "pr-8 border-red-300 bg-red-50/30" : ""}
+                          className={
+                            !r.relationship_to_proband?.trim() && r.full_name?.trim()
+                              ? "pr-8 border-red-300 bg-red-50/30"
+                              : ""
+                          }
                         />
-                        {(!r.relationship_to_proband?.trim() && r.full_name?.trim()) && (
-                          <div className="absolute right-2 text-red-500" title="Vínculo pendente! Esta pessoa não aparecerá conectada na árvore.">
+                        {!r.relationship_to_proband?.trim() && r.full_name?.trim() && (
+                          <div
+                            className="absolute right-2 text-red-500"
+                            title="Vínculo pendente! Esta pessoa não aparecerá conectada na árvore."
+                          >
                             <AlertCircle className="size-4" />
                           </div>
                         )}
@@ -688,10 +764,13 @@ function parseDateString(d?: string): string | null {
   }
 
   // Aceita separadores /, -, ., ou \ com espaços opcionais
-  const parts = val.split(/[\/\-.\\ \t]/).map((p) => p.trim()).filter(Boolean);
+  const parts = val
+    .split(/[/\\-. \t]/)
+    .map((p) => p.trim())
+    .filter(Boolean);
 
   if (parts.length === 3) {
-    if (!parts.every(p => /^\d+$/.test(p))) return null;
+    if (!parts.every((p) => /^\d+$/.test(p))) return null;
     const nums = parts.map(Number);
 
     let dd: string, mm: string, yy: string;
@@ -730,15 +809,18 @@ function parseDateString(d?: string): string | null {
   }
 
   // Apenas dia e mês (ex.: "01/03" ou "14\08") → assume o ano 2000 temporariamente para não perder o dado
-  if (parts.length === 2 && parts.every(p => /^\d+$/.test(p))) {
-    let [p1, p2] = parts;
-    let dd = p1, mm = p2;
+  if (parts.length === 2 && parts.every((p) => /^\d+$/.test(p))) {
+    const [p1, p2] = parts;
+    let dd = p1,
+      mm = p2;
     if (Number(p1) > 12) {
       // P1 não pode ser mês, então é DD/MM
-      dd = p1; mm = p2;
+      dd = p1;
+      mm = p2;
     } else if (Number(p2) > 12) {
       // P2 não pode ser mês, então é MM/DD
-      mm = p1; dd = p2;
+      mm = p1;
+      dd = p2;
     }
     const iso = `2000-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
     return isValidYMD(iso) ? iso : null;
@@ -754,13 +836,8 @@ function isValidYMD(iso: string): boolean {
   const [y, m, d] = iso.split("-").map(Number);
   if (m < 1 || m > 12 || d < 1 || d > 31) return false;
   const dt = new Date(Date.UTC(y, m - 1, d));
-  return (
-    dt.getUTCFullYear() === y &&
-    dt.getUTCMonth() === m - 1 &&
-    dt.getUTCDate() === d
-  );
+  return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
 }
-
 
 function Th({ children, w }: { children?: React.ReactNode; w?: string }) {
   return <th className={`px-3 py-3 text-left font-bold ${w ?? ""}`}>{children}</th>;

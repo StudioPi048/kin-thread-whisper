@@ -19,7 +19,7 @@ import {
   Handle,
   Position,
   ConnectionMode,
-  type NodeProps
+  type NodeProps,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -42,23 +42,63 @@ type RelRow = Database["public"]["Tables"]["genogram_relationships"]["Row"];
 
 const UnionNodeComponent = () => (
   <div style={{ width: 1, height: 1, position: "relative" }}>
-    <Handle id="top" type="source" position={Position.Top} className="opacity-0 pointer-events-none" />
-    <Handle id="bottom" type="source" position={Position.Bottom} className="opacity-0 pointer-events-none" />
-    <Handle id="left" type="source" position={Position.Left} className="opacity-0 pointer-events-none" />
-    <Handle id="right" type="source" position={Position.Right} className="opacity-0 pointer-events-none" />
-    <Handle id="top-target" type="target" position={Position.Top} className="opacity-0 pointer-events-none" />
-    <Handle id="bottom-target" type="target" position={Position.Bottom} className="opacity-0 pointer-events-none" />
-    <Handle id="left-target" type="target" position={Position.Left} className="opacity-0 pointer-events-none" />
-    <Handle id="right-target" type="target" position={Position.Right} className="opacity-0 pointer-events-none" />
+    <Handle
+      id="top"
+      type="source"
+      position={Position.Top}
+      className="opacity-0 pointer-events-none"
+    />
+    <Handle
+      id="bottom"
+      type="source"
+      position={Position.Bottom}
+      className="opacity-0 pointer-events-none"
+    />
+    <Handle
+      id="left"
+      type="source"
+      position={Position.Left}
+      className="opacity-0 pointer-events-none"
+    />
+    <Handle
+      id="right"
+      type="source"
+      position={Position.Right}
+      className="opacity-0 pointer-events-none"
+    />
+    <Handle
+      id="top-target"
+      type="target"
+      position={Position.Top}
+      className="opacity-0 pointer-events-none"
+    />
+    <Handle
+      id="bottom-target"
+      type="target"
+      position={Position.Bottom}
+      className="opacity-0 pointer-events-none"
+    />
+    <Handle
+      id="left-target"
+      type="target"
+      position={Position.Left}
+      className="opacity-0 pointer-events-none"
+    />
+    <Handle
+      id="right-target"
+      type="target"
+      position={Position.Right}
+      className="opacity-0 pointer-events-none"
+    />
   </div>
 );
 
 function GenerationBandNode({ data }: NodeProps) {
   const isEven = (data.generation as number) % 2 === 0;
   return (
-    <div 
-      style={{ width: 15000, height: GENERATION_GAP, pointerEvents: 'none' }}
-      className={`border-b border-dashed border-plum/20 ${isEven ? 'bg-plum/[0.02]' : 'bg-transparent'}`}
+    <div
+      style={{ width: 15000, height: GENERATION_GAP, pointerEvents: "none" }}
+      className={`border-b border-dashed border-plum/20 ${isEven ? "bg-plum/[0.02]" : "bg-transparent"}`}
     />
   );
 }
@@ -80,12 +120,35 @@ function StraightStepEdge({
   labelBgPadding,
   labelBgBorderRadius,
   interactionWidth,
+  data,
 }: EdgeProps) {
   const isStraight = Math.abs(sourceX - targetX) < 1 || Math.abs(sourceY - targetY) < 1;
   const midY = sourceY + (targetY - sourceY) / 2;
-  const path = isStraight
-    ? `M ${sourceX} ${sourceY} L ${targetX} ${targetY}`
-    : `M ${sourceX} ${sourceY} L ${sourceX} ${midY} L ${targetX} ${midY} L ${targetX} ${targetY}`;
+  const edgeData = data as Record<string, unknown> | undefined;
+  const unionX = edgeData?.unionX as number | undefined;
+  const isPrimaryParent = edgeData?.isPrimaryParent as boolean | undefined;
+  const isFirstSibling = edgeData?.isFirstSibling as boolean | undefined;
+
+  let path = "";
+
+  if (unionX !== undefined) {
+    if (isFirstSibling) {
+      path += `M ${sourceX} ${sourceY} L ${sourceX} ${midY} L ${unionX} ${midY} `;
+      if (isPrimaryParent) {
+        path += `M ${unionX} ${midY} L ${unionX} ${targetY + 15} `;
+      }
+    }
+    if (isPrimaryParent) {
+      path += `M ${unionX} ${targetY + 15} L ${targetX} ${targetY + 15} L ${targetX} ${targetY} `;
+    }
+  } else {
+    path = isStraight
+      ? `M ${sourceX} ${sourceY} L ${targetX} ${targetY}`
+      : `M ${sourceX} ${sourceY} L ${sourceX} ${midY} L ${targetX} ${midY} L ${targetX} ${targetY}`;
+  }
+
+  // If path is empty, we don't render this edge visually, it was already drawn by another sibling's edge!
+  if (!path.trim()) return null;
 
   return (
     <BaseEdge
@@ -128,6 +191,48 @@ function GenerationRuler() {
   );
 }
 
+function ShortcutsLegend() {
+  return (
+    <div className="w-[154px] overflow-hidden rounded-md border border-plum/25 bg-card/92 shadow-sm backdrop-blur">
+      <div className="bg-plum/5 px-2.5 py-1.5 border-b border-plum/20">
+        <p className="font-serif text-[13px] font-bold leading-tight text-plum">Atalhos</p>
+      </div>
+      <div className="px-2.5 py-2 flex flex-col gap-2">
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-1">
+            <kbd className="px-1 py-0.5 text-[9px] font-mono font-medium rounded border border-border bg-muted text-muted-foreground">
+              Espaço
+            </kbd>
+            <span className="text-[10px] text-muted-foreground leading-none">+</span>
+            <span className="text-[10px] font-bold text-foreground leading-none">Arrastar</span>
+          </div>
+          <p className="text-[9px] leading-tight text-muted-foreground mt-0.5">
+            Navegar pelo quadro
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] font-bold text-foreground leading-none">
+              Clique (Node)
+            </span>
+          </div>
+          <p className="text-[9px] leading-tight text-muted-foreground mt-0.5">
+            Selecionar e reposicionar
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] font-bold text-foreground leading-none">Clique Duplo</span>
+          </div>
+          <p className="text-[9px] leading-tight text-muted-foreground mt-0.5">Editar pessoa</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface CanvasProps {
   clientId: string;
 }
@@ -141,9 +246,9 @@ export function GenogramCanvas(props: CanvasProps) {
 }
 
 // ── Tamanhos generosos, otimizados para leitura em 4K ────────
-const NODE_W = 160;   // Largura do nó (shape + label)
-const NODE_H = 210;   // Altura total do nó
-const GENERATION_GAP = 250;   // Distância vertical entre gerações
+const NODE_W = 160; // Largura do nó (shape + label)
+const NODE_H = 210; // Altura total do nó
+const GENERATION_GAP = 250; // Distância vertical entre gerações
 const HORIZONTAL_STEP = NODE_W + 70; // Espaço horizontal entre nós de uma geração
 const DIRECT_PARENT_X = 450;
 const GRANDPARENT_PAIR_GAP = 400;
@@ -162,15 +267,18 @@ function generationForData(data: unknown): number {
   if (!canonical) return 1;
   if (canonical.includes("consulente") || canonical.includes("paciente")) return 0;
   if (canonical.includes("bisav")) return 3;
-  if (canonical.includes("avô") || canonical.includes("avó") || canonical.startsWith("avo")) return 2;
+  if (canonical.includes("avô") || canonical.includes("avó") || canonical.startsWith("avo"))
+    return 2;
   if (
     canonical.includes("pai") ||
     canonical.includes("mãe") ||
     canonical.includes("mae") ||
     canonical.startsWith("tio")
-  ) return 1;
+  )
+    return 1;
   if (canonical.includes("irmã") || canonical.includes("irma")) return 0;
-  if (canonical.includes("cônjuge") || canonical.includes("conjuge") || canonical.includes("filho")) return 0;
+  if (canonical.includes("cônjuge") || canonical.includes("conjuge") || canonical.includes("filho"))
+    return 0;
   return 1;
 }
 
@@ -179,12 +287,21 @@ function alternatingCenter(anchor: number, orderIndex: number, gap = COLLATERAL_
   return anchor + (orderIndex % 2 === 0 ? -step : step) * gap;
 }
 
-function duplicateOffset(base: number, orderIndex: number, side: "left" | "right", gap = COLLATERAL_GAP): number {
+function duplicateOffset(
+  base: number,
+  orderIndex: number,
+  side: "left" | "right",
+  gap = COLLATERAL_GAP,
+): number {
   if (orderIndex === 0) return base;
   return base + (side === "left" ? -1 : 1) * orderIndex * gap;
 }
 
-function directBloodCenter(canonical: string, orderIndex: number, isProband: boolean): number | null {
+function directBloodCenter(
+  canonical: string,
+  orderIndex: number,
+  isProband: boolean,
+): number | null {
   if (isProband) return 0;
   const c = canonical.toLowerCase();
 
@@ -197,8 +314,10 @@ function directBloodCenter(canonical: string, orderIndex: number, isProband: boo
 
   if (c === "pai") return duplicateOffset(fatherX, orderIndex, "left");
   if (c === "mãe" || c === "mae") return duplicateOffset(motherX, orderIndex, "right");
-  if (c.startsWith("tio(a) paterno")) return fatherX - GRANDPARENT_PAIR_GAP / 2 - (orderIndex + 1) * COLLATERAL_GAP;
-  if (c.startsWith("tio(a) materno")) return motherX + GRANDPARENT_PAIR_GAP / 2 + (orderIndex + 1) * COLLATERAL_GAP;
+  if (c.startsWith("tio(a) paterno"))
+    return fatherX - GRANDPARENT_PAIR_GAP / 2 - (orderIndex + 1) * COLLATERAL_GAP;
+  if (c.startsWith("tio(a) materno"))
+    return motherX + GRANDPARENT_PAIR_GAP / 2 + (orderIndex + 1) * COLLATERAL_GAP;
 
   if (c === "avô paterno") return duplicateOffset(paternalGrandfatherX, orderIndex, "left");
   if (c === "avó paterna") return duplicateOffset(paternalGrandmotherX, orderIndex, "right");
@@ -211,18 +330,63 @@ function directBloodCenter(canonical: string, orderIndex: number, isProband: boo
     return maternalGrandmotherX + GRANDPARENT_PAIR_GAP / 2 + (orderIndex + 1) * COLLATERAL_GAP;
   }
 
-  if (c.includes("bisavô paterno (pai do avô)")) return duplicateOffset(paternalGrandfatherX - GREAT_GRANDPARENT_PAIR_GAP / 2, orderIndex, "left");
-  if (c.includes("bisavó paterna (mãe do avô)")) return duplicateOffset(paternalGrandfatherX + GREAT_GRANDPARENT_PAIR_GAP / 2, orderIndex, "right");
-  if (c.includes("bisavô paterno (pai da avó)")) return duplicateOffset(paternalGrandmotherX - GREAT_GRANDPARENT_PAIR_GAP / 2, orderIndex, "left");
-  if (c.includes("bisavó paterna (mãe da avó)")) return duplicateOffset(paternalGrandmotherX + GREAT_GRANDPARENT_PAIR_GAP / 2, orderIndex, "right");
-  if (c.includes("bisavô materno (pai do avô)")) return duplicateOffset(maternalGrandfatherX - GREAT_GRANDPARENT_PAIR_GAP / 2, orderIndex, "left");
-  if (c.includes("bisavó materna (mãe do avô)")) return duplicateOffset(maternalGrandfatherX + GREAT_GRANDPARENT_PAIR_GAP / 2, orderIndex, "right");
-  if (c.includes("bisavô materno (pai da avó)")) return duplicateOffset(maternalGrandmotherX - GREAT_GRANDPARENT_PAIR_GAP / 2, orderIndex, "left");
-  if (c.includes("bisavó materna (mãe da avó)")) return duplicateOffset(maternalGrandmotherX + GREAT_GRANDPARENT_PAIR_GAP / 2, orderIndex, "right");
-  if (c.includes("irmã(o) do bisavô paterno")) return paternalGrandfatherX - GRANDPARENT_PAIR_GAP / 2 - (orderIndex + 1) * COLLATERAL_GAP;
-  if (c.includes("irmã(o) do bisavô materno")) return maternalGrandmotherX + GRANDPARENT_PAIR_GAP / 2 + (orderIndex + 1) * COLLATERAL_GAP;
+  if (c.includes("bisavô paterno (pai do avô)"))
+    return duplicateOffset(
+      paternalGrandfatherX - GREAT_GRANDPARENT_PAIR_GAP / 2,
+      orderIndex,
+      "left",
+    );
+  if (c.includes("bisavó paterna (mãe do avô)"))
+    return duplicateOffset(
+      paternalGrandfatherX + GREAT_GRANDPARENT_PAIR_GAP / 2,
+      orderIndex,
+      "right",
+    );
+  if (c.includes("bisavô paterno (pai da avó)"))
+    return duplicateOffset(
+      paternalGrandmotherX - GREAT_GRANDPARENT_PAIR_GAP / 2,
+      orderIndex,
+      "left",
+    );
+  if (c.includes("bisavó paterna (mãe da avó)"))
+    return duplicateOffset(
+      paternalGrandmotherX + GREAT_GRANDPARENT_PAIR_GAP / 2,
+      orderIndex,
+      "right",
+    );
+  if (c.includes("bisavô materno (pai do avô)"))
+    return duplicateOffset(
+      maternalGrandfatherX - GREAT_GRANDPARENT_PAIR_GAP / 2,
+      orderIndex,
+      "left",
+    );
+  if (c.includes("bisavó materna (mãe do avô)"))
+    return duplicateOffset(
+      maternalGrandfatherX + GREAT_GRANDPARENT_PAIR_GAP / 2,
+      orderIndex,
+      "right",
+    );
+  if (c.includes("bisavô materno (pai da avó)"))
+    return duplicateOffset(
+      maternalGrandmotherX - GREAT_GRANDPARENT_PAIR_GAP / 2,
+      orderIndex,
+      "left",
+    );
+  if (c.includes("bisavó materna (mãe da avó)"))
+    return duplicateOffset(
+      maternalGrandmotherX + GREAT_GRANDPARENT_PAIR_GAP / 2,
+      orderIndex,
+      "right",
+    );
+  if (c.includes("irmã(o) do bisavô paterno"))
+    return paternalGrandfatherX - GRANDPARENT_PAIR_GAP / 2 - (orderIndex + 1) * COLLATERAL_GAP;
+  if (c.includes("irmã(o) do bisavô materno"))
+    return maternalGrandmotherX + GRANDPARENT_PAIR_GAP / 2 + (orderIndex + 1) * COLLATERAL_GAP;
 
-  if ((c.includes("irmã(o)") || c.startsWith("irmã") || c.startsWith("irma")) && !c.includes("av")) {
+  if (
+    (c.includes("irmã(o)") || c.startsWith("irmã") || c.startsWith("irma")) &&
+    !c.includes("av")
+  ) {
     return alternatingCenter(0, orderIndex);
   }
 
@@ -254,8 +418,11 @@ function rankFor(canonical: string, orderIndex: number): number {
   if (c.startsWith("tio(a) paterno")) return -100 - orderIndex;
   if (c.startsWith("tio(a) materno")) return 100 + orderIndex;
   // Irmãos do cliente: alternam próximos ao centro (não interferem em pai/mãe).
-  if ((c.includes("irmã(o)") || c.startsWith("irmã") || c.startsWith("irma")) &&
-      !c.includes("av") && !c.includes("bisav")) {
+  if (
+    (c.includes("irmã(o)") || c.startsWith("irmã") || c.startsWith("irma")) &&
+    !c.includes("av") &&
+    !c.includes("bisav")
+  ) {
     // -1, +1, -2, +2, ...
     const half = Math.floor(orderIndex / 2) + 1;
     return orderIndex % 2 === 0 ? -half : half;
@@ -305,9 +472,9 @@ type Block = {
 function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
   const siblingToChildTarget = new Map<string, string>();
   const byCanonical = new Map<string, Node[]>();
-  nodes.forEach(n => {
-    const d = n.data as any;
-    const raw = n.id === probandId ? "consulente" : (d.relationship_to_proband || "");
+  nodes.forEach((n) => {
+    const d = n.data as PersonNodeData;
+    const raw = n.id === probandId ? "consulente" : d.relationship_to_proband || "";
     const canonical = smartNormalizeRelationship(raw).toLowerCase();
     if (!byCanonical.has(canonical)) byCanonical.set(canonical, []);
     byCanonical.get(canonical)!.push(n);
@@ -324,52 +491,76 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     child: Node | undefined,
     childSiblings: Node[],
     isHusbandSide: boolean,
-    generation: number
+    generation: number,
   ): Block {
-    const topNodes = [...husbandSiblings, ...(husband ? [husband] : []), ...(wife ? [wife] : []), ...wifeSiblings];
+    const topNodes = [
+      ...husbandSiblings,
+      ...(husband ? [husband] : []),
+      ...(wife ? [wife] : []),
+      ...wifeSiblings,
+    ];
     const topWidth = topNodes.length * HORIZONTAL_STEP;
-    
+
     let unionCenter = topWidth > 0 ? topWidth / 2 : 0;
     if (husband && wife) {
-      unionCenter = (topNodes.indexOf(husband) * HORIZONTAL_STEP + topNodes.indexOf(wife) * HORIZONTAL_STEP + NODE_W) / 2;
+      unionCenter =
+        (topNodes.indexOf(husband) * HORIZONTAL_STEP +
+          topNodes.indexOf(wife) * HORIZONTAL_STEP +
+          NODE_W) /
+        2;
     } else if (husband) {
       unionCenter = topNodes.indexOf(husband) * HORIZONTAL_STEP + NODE_W / 2;
     } else if (wife) {
       unionCenter = topNodes.indexOf(wife) * HORIZONTAL_STEP + NODE_W / 2;
     }
 
-    const bottomNodes = isHusbandSide 
+    const bottomNodes = isHusbandSide
       ? [...childSiblings, ...(child ? [child] : [])]
       : [...(child ? [child] : []), ...childSiblings];
-      
+
     if (child) {
-      childSiblings.forEach(s => siblingToChildTarget.set(s.id, child.id));
+      childSiblings.forEach((s) => siblingToChildTarget.set(s.id, child.id));
     }
     const bottomWidth = bottomNodes.length * HORIZONTAL_STEP;
-    
+
     let childLocalCenter = bottomWidth > 0 ? bottomWidth / 2 : 0;
     if (child) {
       childLocalCenter = bottomNodes.indexOf(child) * HORIZONTAL_STEP + NODE_W / 2;
     } else if (bottomNodes.length > 0) {
       childLocalCenter = isHusbandSide ? bottomWidth - HORIZONTAL_STEP + NODE_W / 2 : NODE_W / 2;
     }
-    
-    let topOffset = 0, bottomOffset = 0;
+
+    let topOffset = 0,
+      bottomOffset = 0;
     if (unionCenter > childLocalCenter) {
       bottomOffset = unionCenter - childLocalCenter;
     } else {
       topOffset = childLocalCenter - unionCenter;
     }
-    
+
     const resultNodes: LayoutNode[] = [];
-    topNodes.forEach((n, i) => resultNodes.push({ node: n, x: topOffset + i * HORIZONTAL_STEP, y: (generation + 1) * GENERATION_GAP, gen: generation + 1 }));
-    bottomNodes.forEach((n, i) => resultNodes.push({ node: n, x: bottomOffset + i * HORIZONTAL_STEP, y: generation * GENERATION_GAP, gen: generation }));
-    
+    topNodes.forEach((n, i) =>
+      resultNodes.push({
+        node: n,
+        x: topOffset + i * HORIZONTAL_STEP,
+        y: (generation + 1) * GENERATION_GAP,
+        gen: generation + 1,
+      }),
+    );
+    bottomNodes.forEach((n, i) =>
+      resultNodes.push({
+        node: n,
+        x: bottomOffset + i * HORIZONTAL_STEP,
+        y: generation * GENERATION_GAP,
+        gen: generation,
+      }),
+    );
+
     return {
       nodes: resultNodes,
       width: Math.max(topWidth + topOffset, bottomWidth + bottomOffset),
       center: childLocalCenter + bottomOffset,
-      childTarget: child
+      childTarget: child,
     };
   }
 
@@ -379,38 +570,47 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     childTarget: Node | undefined,
     childSiblings: Node[],
     isHusbandSide: boolean,
-    generation: number
+    generation: number,
   ): Block {
-    const FAMILY_GAP = 160; 
-    let rightOffsetX = leftBlock.width + (leftBlock.width > 0 && rightBlock.width > 0 ? FAMILY_GAP : 0);
-    // TIGHT LAYOUT FIX: If both blocks have a childTarget, we can pull them closer 
+    const FAMILY_GAP = 160;
+    let rightOffsetX =
+      leftBlock.width + (leftBlock.width > 0 && rightBlock.width > 0 ? FAMILY_GAP : 0);
+    // TIGHT LAYOUT FIX: If both blocks have a childTarget, we can pull them closer
     // to prevent massive empty gaps, as long as it doesn't cause negative coordinates.
     if (leftBlock.childTargetX !== undefined && rightBlock.childTargetX !== undefined) {
-      const desiredOffset = leftBlock.childTargetX + HORIZONTAL_STEP + FAMILY_GAP - rightBlock.childTargetX;
+      const desiredOffset =
+        leftBlock.childTargetX + HORIZONTAL_STEP + FAMILY_GAP - rightBlock.childTargetX;
       // We use desiredOffset, but ensure we don't overlap the child targets themselves
-      rightOffsetX = Math.max(desiredOffset, leftBlock.childTargetX + HORIZONTAL_STEP - rightBlock.childTargetX);
+      rightOffsetX = Math.max(
+        desiredOffset,
+        leftBlock.childTargetX + HORIZONTAL_STEP - rightBlock.childTargetX,
+      );
     }
-    
+
     const combinedNodes = [
       ...leftBlock.nodes,
-      ...rightBlock.nodes.map(n => ({ ...n, x: n.x + rightOffsetX }))
+      ...rightBlock.nodes.map((n) => ({ ...n, x: n.x + rightOffsetX })),
     ];
-    
-    const hCenter = leftBlock.childTargetX !== undefined ? leftBlock.childTargetX : leftBlock.center;
-    const wCenter = rightBlock.childTargetX !== undefined ? rightBlock.childTargetX + rightOffsetX : rightBlock.center + rightOffsetX;
-    
+
+    const hCenter =
+      leftBlock.childTargetX !== undefined ? leftBlock.childTargetX : leftBlock.center;
+    const wCenter =
+      rightBlock.childTargetX !== undefined
+        ? rightBlock.childTargetX + rightOffsetX
+        : rightBlock.center + rightOffsetX;
+
     let unionCenter = 0;
     if (leftBlock.childTarget && rightBlock.childTarget) unionCenter = (hCenter + wCenter) / 2;
     else if (leftBlock.childTarget) unionCenter = hCenter;
     else if (rightBlock.childTarget) unionCenter = wCenter;
     else unionCenter = (leftBlock.width + rightOffsetX + rightBlock.width) / 2;
 
-    const bottomNodes = isHusbandSide 
+    const bottomNodes = isHusbandSide
       ? [...childSiblings, ...(childTarget ? [childTarget] : [])]
       : [...(childTarget ? [childTarget] : []), ...childSiblings];
-      
+
     if (childTarget) {
-      childSiblings.forEach(s => siblingToChildTarget.set(s.id, childTarget.id));
+      childSiblings.forEach((s) => siblingToChildTarget.set(s.id, childTarget.id));
     }
     const bottomWidth = bottomNodes.length * HORIZONTAL_STEP;
     let childLocalCenter = bottomWidth > 0 ? bottomWidth / 2 : 0;
@@ -419,17 +619,25 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     } else if (bottomNodes.length > 0) {
       childLocalCenter = isHusbandSide ? bottomWidth - HORIZONTAL_STEP + NODE_W / 2 : NODE_W / 2;
     }
-    
-    let topOffset = 0, bottomOffset = 0;
+
+    let topOffset = 0,
+      bottomOffset = 0;
     if (unionCenter > childLocalCenter) {
       bottomOffset = unionCenter - childLocalCenter;
     } else {
       topOffset = childLocalCenter - unionCenter;
     }
-    
-    const finalNodes = combinedNodes.map(n => ({ ...n, x: n.x + topOffset }));
-    bottomNodes.forEach((n, i) => finalNodes.push({ node: n, x: bottomOffset + i * HORIZONTAL_STEP, y: generation * GENERATION_GAP, gen: generation }));
-    
+
+    const finalNodes = combinedNodes.map((n) => ({ ...n, x: n.x + topOffset }));
+    bottomNodes.forEach((n, i) =>
+      finalNodes.push({
+        node: n,
+        x: bottomOffset + i * HORIZONTAL_STEP,
+        y: generation * GENERATION_GAP,
+        gen: generation,
+      }),
+    );
+
     let cTargetX = undefined;
     if (childTarget) {
       cTargetX = bottomOffset + bottomNodes.indexOf(childTarget) * HORIZONTAL_STEP + NODE_W / 2;
@@ -439,87 +647,125 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
       width: Math.max(rightOffsetX + rightBlock.width + topOffset, bottomWidth + bottomOffset),
       center: childLocalCenter + bottomOffset,
       childTarget: childTarget,
-      childTargetX: cTargetX
+      childTargetX: cTargetX,
     };
   }
 
   const bp1 = getFirst("bisavô paterno (pai do avô)");
   const bm1 = getFirst("bisavó paterna (mãe do avô)");
   const blockAvosPat = createLeafBlock(
-    bp1, bm1, getNodes("irmã(o) do bisavô paterno"), [],
-    getFirst("avô paterno"), getNodes("irmã(o) do avô paterno"), true, 2
+    bp1,
+    bm1,
+    getNodes("irmã(o) do bisavô paterno"),
+    [],
+    getFirst("avô paterno"),
+    getNodes("irmã(o) do avô paterno"),
+    true,
+    2,
   );
 
   const bp2 = getFirst("bisavô paterno (pai da avó)");
   const bm2 = getFirst("bisavó paterna (mãe da avó)");
   const blockAvosPatF = createLeafBlock(
-    bp2, bm2, getNodes("irmã(o) do bisavô paterno_alt"), [], 
-    getFirst("avó paterna"), getNodes("irmã(o) da avó paterna"), false, 2
+    bp2,
+    bm2,
+    getNodes("irmã(o) do bisavô paterno_alt"),
+    [],
+    getFirst("avó paterna"),
+    getNodes("irmã(o) da avó paterna"),
+    false,
+    2,
   );
 
   const bp3 = getFirst("bisavô materno (pai do avô)");
   const bm3 = getFirst("bisavó materna (mãe do avô)");
   const blockAvosMat = createLeafBlock(
-    bp3, bm3, getNodes("irmã(o) do bisavô materno"), [],
-    getFirst("avô materno"), getNodes("irmã(o) do avô materno"), true, 2
+    bp3,
+    bm3,
+    getNodes("irmã(o) do bisavô materno"),
+    [],
+    getFirst("avô materno"),
+    getNodes("irmã(o) do avô materno"),
+    true,
+    2,
   );
 
   const bp4 = getFirst("bisavô materno (pai da avó)");
   const bm4 = getFirst("bisavó materna (mãe da avó)");
   const blockAvosMatF = createLeafBlock(
-    bp4, bm4, getNodes("irmã(o) do bisavô materno_alt"), [], 
-    getFirst("avó materna"), getNodes("irmã(o) da avó materna"), false, 2
+    bp4,
+    bm4,
+    getNodes("irmã(o) do bisavô materno_alt"),
+    [],
+    getFirst("avó materna"),
+    getNodes("irmã(o) da avó materna"),
+    false,
+    2,
   );
 
   const blockPaisPat = mergeBlocks(
-    blockAvosPat, blockAvosPatF,
-    getFirst("pai"), getNodes("tio(a) paterno(a)"), true, 1
+    blockAvosPat,
+    blockAvosPatF,
+    getFirst("pai"),
+    getNodes("tio(a) paterno(a)"),
+    true,
+    1,
   );
 
   const blockPaisMat = mergeBlocks(
-    blockAvosMat, blockAvosMatF,
-    getFirst("mãe"), getNodes("tio(a) materno(a)"), false, 1
+    blockAvosMat,
+    blockAvosMatF,
+    getFirst("mãe"),
+    getNodes("tio(a) materno(a)"),
+    false,
+    1,
   );
 
   const consulente = getFirst("consulente");
   const blockRoot = mergeBlocks(
-    blockPaisPat, blockPaisMat,
-    consulente, getNodes("irmã(o)"), false, 0
+    blockPaisPat,
+    blockPaisMat,
+    consulente,
+    getNodes("irmã(o)"),
+    false,
+    0,
   );
 
   const layoutedNodes: Node[] = [];
-  
-  const mappedIds = new Set(blockRoot.nodes.map(n => n.node.id));
+
+  const mappedIds = new Set(blockRoot.nodes.map((n) => n.node.id));
   let unmappedOffsetX = blockRoot.width + HORIZONTAL_STEP;
-  nodes.forEach(n => {
+  nodes.forEach((n) => {
     if (!mappedIds.has(n.id)) {
       blockRoot.nodes.push({ node: n, x: unmappedOffsetX, y: 0, gen: 0 });
       unmappedOffsetX += HORIZONTAL_STEP;
     }
   });
 
-  const dx = consulente ? (-NODE_W / 2 - blockRoot.nodes.find(n => n.node.id === consulente.id)!.x) : 0;
-  
-  blockRoot.nodes.forEach(ln => {
+  const dx = consulente
+    ? -NODE_W / 2 - blockRoot.nodes.find((n) => n.node.id === consulente.id)!.x
+    : 0;
+
+  blockRoot.nodes.forEach((ln) => {
     layoutedNodes.push({
       ...ln.node,
       position: { x: ln.x + dx, y: ln.y },
-      data: { ...ln.node.data, generation: ln.gen }
+      data: { ...ln.node.data, generation: ln.gen },
     });
   });
 
   // Remove invisible union nodes; we no longer anchor descendant lines to marriages.
-  // The marriage line (gold) will simply connect the spouses, while the descendant 
+  // The marriage line (gold) will simply connect the spouses, while the descendant
   // lines will fork directly to the parents' top handles, matching the requested pedigree look.
-  
+
   const parentEdgesByChild = new Map<string, Edge[]>();
   const otherEdges: Edge[] = [];
   const finalEdges: Edge[] = [];
 
   edges.forEach((edge) => {
-    let target = edge.target;
-    let source = edge.source;
-    
+    const target = edge.target;
+    const source = edge.source;
+
     // We already identified parent edges earlier in relToEdge or query mapping.
     // In our DB, "parent" relation means source=child, target=parent.
     if (edge.style?.stroke === "var(--color-plum)") {
@@ -527,11 +773,11 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     } else {
       let finalSourceHandle = edge.sourceHandle;
       let finalTargetHandle = edge.targetHandle;
-      
+
       if (edge.style?.stroke === "var(--color-gold)") {
         const sourceNode = layoutedNodes.find((n) => n.id === edge.source);
         const targetNode = layoutedNodes.find((n) => n.id === edge.target);
-        
+
         if (sourceNode && targetNode) {
           if (sourceNode.position.x > targetNode.position.x) {
             finalSourceHandle = "left";
@@ -552,38 +798,76 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     }
   });
 
+  // Build a complete map of children to their parent edges, including siblings
+  const allParentEdgesByChild = new Map<string, Edge[]>();
+
   parentEdgesByChild.forEach((pEdges, childId) => {
-    pEdges.forEach((e) => {
-      finalEdges.push({
-        ...e,
-        id: `direct_${e.id}`,
-        source: e.target, 
-        target: e.source, 
-        sourceHandle: "top",
-        targetHandle: "bottom-target",
-        type: "straightStep",
-        style: { stroke: "var(--color-plum)", strokeWidth: 2 },
-      });
-    });
+    allParentEdgesByChild.set(childId, pEdges);
   });
 
   siblingToChildTarget.forEach((targetId, siblingId) => {
     const pEdges = parentEdgesByChild.get(targetId);
     if (pEdges) {
-      // If a sibling shares parents with the target, they should also fork to those parents
-      pEdges.forEach((e) => {
+      // Create clone edges for the sibling so we can route them properly
+      const siblingEdges = pEdges.map((e) => ({
+        ...e,
+        id: `descendant_${e.id}_${siblingId}`,
+        source: e.target, // Keep parent as source
+        target: siblingId, // Sibling is target
+      }));
+      allParentEdgesByChild.set(siblingId, siblingEdges);
+    }
+  });
+
+  // Group children by their shared parent pairs to orchestrate drawing
+  const childrenByParentPair = new Map<string, string[]>();
+  const parentPairToEdges = new Map<string, Edge[]>();
+
+  allParentEdgesByChild.forEach((pEdges, childId) => {
+    // pEdges[].target holds the Parent ID (since we map from DB)
+    const parentIds = pEdges.map((e) => e.target).sort();
+    const pairKey = parentIds.join("|");
+
+    if (!childrenByParentPair.has(pairKey)) {
+      childrenByParentPair.set(pairKey, []);
+      parentPairToEdges.set(pairKey, pEdges); // Store one set of parent edges as reference
+    }
+    childrenByParentPair.get(pairKey)!.push(childId);
+  });
+
+  childrenByParentPair.forEach((childrenIds, pairKey) => {
+    const refEdges = parentPairToEdges.get(pairKey)!;
+    const parents = refEdges.map((e) => layoutedNodes.find((n) => n.id === e.target));
+
+    let unionX: number | undefined = undefined;
+    if (parents.length >= 2 && parents[0] && parents[1]) {
+      unionX = (parents[0].position.x + parents[1].position.x) / 2 + 70; // Center is +70
+    } else if (parents.length === 1 && parents[0]) {
+      unionX = parents[0].position.x + 70;
+    }
+
+    // Sort parents so the primary parent is always consistent (e.g. first in array)
+    const primaryParentId = parents[0]?.id;
+
+    childrenIds.forEach((childId, childIdx) => {
+      const isFirstSibling = childIdx === 0;
+
+      refEdges.forEach((e) => {
+        const isPrimaryParent = e.target === primaryParentId;
+
         finalEdges.push({
           ...e,
-          id: `descendant_${e.id}_${siblingId}`,
-          source: e.target, 
-          target: siblingId,
+          id: `pedigree_${e.id}_${childId}`,
+          source: e.target, // Parent
+          target: childId, // Child
           sourceHandle: "top",
           targetHandle: "bottom-target",
           type: "straightStep",
           style: { stroke: "var(--color-plum)", strokeWidth: 2 },
+          data: { unionX, isPrimaryParent, isFirstSibling },
         });
       });
-    }
+    });
   });
 
   // Create background bands
@@ -601,11 +885,7 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
   }
 
   return { nodes: layoutedNodes, edges: [...otherEdges, ...finalEdges] };
-
 }
-
-
-
 
 function GenogramCanvasInner({ clientId }: CanvasProps) {
   const qc = useQueryClient();
@@ -639,21 +919,27 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
   const [showGuide, setShowGuide] = useState(false);
   const rfInstance = useReactFlow();
 
-  function handleQuickAdd(personId: string, relativeType: string) {
-    const person = query.data?.persons.find((p) => p.id === personId);
-    if (!person) return;
-    
-    let newRel = relativeType;
-    if (!person.is_proband && person.relationship_to_proband) {
-      newRel = `${relativeType} do ${person.relationship_to_proband}`;
-      // Clean up string like "do mae" -> "da mae"
-      newRel = newRel.replace(/do mãe/gi, "da mãe").replace(/do tia/gi, "da tia").replace(/do avó/gi, "da avó").replace(/do bisavó/gi, "da bisavó");
-    }
-    
-    setDefaultRelationship(newRel);
-    setCreatingPerson(true);
-  }
+  const handleQuickAdd = useCallback(
+    (personId: string, relativeType: string) => {
+      const person = query.data?.persons.find((p) => p.id === personId);
+      if (!person) return;
 
+      let newRel = relativeType;
+      if (!person.is_proband && person.relationship_to_proband) {
+        newRel = `${relativeType} do ${person.relationship_to_proband}`;
+        // Clean up string like "do mae" -> "da mae"
+        newRel = newRel
+          .replace(/do mãe/gi, "da mãe")
+          .replace(/do tia/gi, "da tia")
+          .replace(/do avó/gi, "da avó")
+          .replace(/do bisavó/gi, "da bisavó");
+      }
+
+      setDefaultRelationship(newRel);
+      setCreatingPerson(true);
+    },
+    [query.data?.persons],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -700,9 +986,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
     const manualEdges: Edge[] = query.data.rels.map(relToEdge);
     const structuralEdges: Edge[] = computeStructuralEdges(qualifiedPersons);
     // Descartamos arestas "order" — não são visuais, eram dicas ao Dagre.
-    const initialEdges = [...structuralEdges, ...manualEdges].filter(
-      (e) => e.type !== "order",
-    );
+    const initialEdges = [...structuralEdges, ...manualEdges].filter((e) => e.type !== "order");
 
     const proband = qualifiedPersons.find((p) => p.is_proband) || qualifiedPersons[0];
     const probandId = proband?.id;
@@ -727,7 +1011,18 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
 
       const xs = layoutedNodes.map((n) => n.position.x);
       const treeW = Math.max(1, Math.max(...xs) - Math.min(...xs) + NODE_W);
-      const treeH = Math.max(1, (Math.max(3, ...Array.from({ length: layoutedNodes.length }, (_, i) => (layoutedNodes[i].data as { generation?: number }).generation ?? 0)) + 1) * GENERATION_GAP);
+      const treeH = Math.max(
+        1,
+        (Math.max(
+          3,
+          ...Array.from(
+            { length: layoutedNodes.length },
+            (_, i) => (layoutedNodes[i].data as { generation?: number }).generation ?? 0,
+          ),
+        ) +
+          1) *
+          GENERATION_GAP,
+      );
 
       const zoomX = (canvasW * 0.92) / treeW;
       const zoomY = (canvasH * 0.92) / treeH;
@@ -752,43 +1047,45 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
       cancelled = true;
       window.clearTimeout(centerTimer);
     };
+  }, [query.data, setNodes, setEdges, rfInstance, handleQuickAdd]);
 
-  }, [query.data, setNodes, setEdges, rfInstance]);
-
-  
   // Lock dragging strictly to X axis
-  const onNodesChangeCustom = useCallback((changes: any[]) => {
-    const nextChanges = changes.map(change => {
-      if (change.type === 'position' && change.position) {
-        const node = rfInstance.getNode(change.id);
-        if (node) {
-          return {
-            ...change,
-            position: { x: change.position.x, y: node.position.y },
-            positionAbsolute: change.positionAbsolute ? { x: change.positionAbsolute.x, y: node.position.y } : undefined
-          };
+  const onNodesChangeCustom = useCallback(
+    (changes: NodeChange[]) => {
+      const nextChanges = changes.map((change) => {
+        if (change.type === "position" && change.position) {
+          const node = rfInstance.getNode(change.id);
+          if (node) {
+            return {
+              ...change,
+              position: { x: change.position.x, y: node.position.y },
+              positionAbsolute: change.positionAbsolute
+                ? { x: change.positionAbsolute.x, y: node.position.y }
+                : undefined,
+            };
+          }
         }
-      }
-      return change;
-    });
-    onNodesChange(nextChanges);
-  }, [onNodesChange, rfInstance]);
+        return change;
+      });
+      onNodesChange(nextChanges);
+    },
+    [onNodesChange, rfInstance],
+  );
 
-  
   useEffect(() => {
     const handleEdgeDelete = async (e: Event) => {
       const customEvent = e as CustomEvent<string>;
       const relId = customEvent.detail;
       if (!relId) return;
-      
+
       const { error } = await supabase.from("genogram_relationships").delete().eq("id", relId);
       if (!error) {
         toast.success("Vínculo removido");
         query.refetch();
       }
     };
-    window.addEventListener('delete-edge', handleEdgeDelete);
-    return () => window.removeEventListener('delete-edge', handleEdgeDelete);
+    window.addEventListener("delete-edge", handleEdgeDelete);
+    return () => window.removeEventListener("delete-edge", handleEdgeDelete);
   }, [query]);
 
   const onConnect = useCallback(
@@ -943,7 +1240,9 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
 
       {/* ── LEGENDA — símbolos internacionais ────────────── */}
       <div className="flex flex-wrap items-center gap-5 border-b border-border/50 bg-background/80 px-4 py-2.5 text-[12px] font-semibold">
-        <span className="text-muted-foreground/60 mr-1 uppercase tracking-[0.15em] text-[10px]">Legenda:</span>
+        <span className="text-muted-foreground/60 mr-1 uppercase tracking-[0.15em] text-[10px]">
+          Legenda:
+        </span>
         <span className="flex items-center gap-2">
           <span className="inline-block size-4 border-[2.5px] border-plum bg-card" />
           <span className="text-foreground/80">Masculino</span>
@@ -957,7 +1256,13 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
           <span className="text-foreground/80">Não-binário / desconhecido</span>
         </span>
         <span className="flex items-center gap-2">
-          <svg viewBox="0 0 10 10" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <svg
+            viewBox="0 0 10 10"
+            className="size-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          >
             <polygon points="5,1 9,9 1,9" className="text-foreground/70" />
           </svg>
           <span className="text-foreground/80">Aborto</span>
@@ -1008,7 +1313,6 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
               type: "step",
               style: { strokeWidth: 2, stroke: "var(--color-plum)" },
             }}
-
           >
             <Background
               color="#d8d0ec"
@@ -1024,15 +1328,19 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
           </ReactFlow>
         )}
         {!query.isLoading && persons.length > 0 && (
-          <div className="pointer-events-none absolute bottom-4 right-4 z-50 hidden md:block">
+          <div className="pointer-events-none absolute bottom-4 right-4 z-50 hidden md:flex md:flex-col md:gap-4">
             <GenerationRuler />
+            <ShortcutsLegend />
           </div>
         )}
       </div>
 
       <PersonFormDialog
         open={creatingPerson}
-        onOpenChange={(open) => { setCreatingPerson(open); if (!open) setDefaultRelationship(""); }}
+        onOpenChange={(open) => {
+          setCreatingPerson(open);
+          if (!open) setDefaultRelationship("");
+        }}
         clientId={clientId}
         defaultPosition={{ x: 120 + persons.length * 200, y: 120 }}
       />
@@ -1070,6 +1378,8 @@ const MARRIAGE_MARK: Record<number, string> = {
 
 function unionLabel(r: RelRow): string {
   const base = relationshipLabel(r.relationship_type, r.qualifier);
+  if (base === "Parental" || base === "Parental · Biológico") return "";
+
   if (r.relationship_type !== "union") return base;
   const order = (r as RelRow & { marriage_order?: number | null }).marriage_order;
   if (!order || order < 1) return base;
@@ -1126,7 +1436,6 @@ function colorFor(r: RelRow): string {
       return "var(--color-muted-foreground)";
   }
 }
-
 
 function EmptyCanvas({ onCreate }: { onCreate: () => void }) {
   return (

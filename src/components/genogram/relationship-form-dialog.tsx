@@ -56,7 +56,6 @@ const empty: FormState = {
   notes: "",
 };
 
-
 export function RelationshipFormDialog({
   open,
   onOpenChange,
@@ -290,9 +289,7 @@ export function RelationshipFormDialog({
 
             {v.relationship_type === "union" && (
               <div className="space-y-2 pt-2">
-                <Label className="text-[13px] font-bold text-foreground">
-                  Ordem desta união
-                </Label>
+                <Label className="text-[13px] font-bold text-foreground">Ordem desta união</Label>
                 <Select
                   value={v.marriage_order || "none"}
                   onValueChange={(x) =>
@@ -312,11 +309,11 @@ export function RelationshipFormDialog({
                   </SelectContent>
                 </Select>
                 <p className="text-[11px] text-muted-foreground leading-snug">
-                  Use quando a pessoa teve mais de um casamento — aparece como ①/②/③ na linha do casal para diferenciar cônjuges.
+                  Use quando a pessoa teve mais de um casamento — aparece como ①/②/③ na linha do
+                  casal para diferenciar cônjuges.
                 </p>
               </div>
             )}
-
 
             <div className="space-y-2 pt-2">
               <Label className="text-[13px] font-bold text-foreground">Anotações sistêmicas</Label>

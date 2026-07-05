@@ -68,10 +68,7 @@ export function computeStructuralEdges(persons: PersonRow[]): Edge[] {
 
   // ── PROBAND ───────────────────────────────────────────────
   const proband =
-    first("Consulente") ||
-    first("Paciente") ||
-    persons.find((p) => p.is_proband) ||
-    persons[0];
+    first("Consulente") || first("Paciente") || persons.find((p) => p.is_proband) || persons[0];
   if (!proband) return [];
 
   const pai = first("Pai");
@@ -93,16 +90,23 @@ export function computeStructuralEdges(persons: PersonRow[]): Edge[] {
   if (pai && mae) {
     edges.push(createEdge("struct_union_pais", pai.id, mae.id, "union"));
     // Força pai à esquerda da mãe no layout
-    edges.push({ id: "order_pai_mae", source: pai.id, target: mae.id, type: "order", hidden: true } as Edge);
+    edges.push({
+      id: "order_pai_mae",
+      source: pai.id,
+      target: mae.id,
+      type: "order",
+      hidden: true,
+    } as Edge);
   }
 
   // ── RAMO PATERNO ──────────────────────────────────────────
-  const avoPat  = first("Avô paterno");
+  const avoPat = first("Avô paterno");
   const avoPatF = first("Avó paterna");
   if (pai && (avoPat || avoPatF)) {
     if (avoPat) edges.push(createEdge("struct_pai_to_avopat", pai.id, avoPat.id, "parent"));
     if (avoPatF) edges.push(createEdge("struct_pai_to_avopatf", pai.id, avoPatF.id, "parent"));
-    if (avoPat && avoPatF) edges.push(createEdge("struct_union_avos_pat", avoPat.id, avoPatF.id, "union"));
+    if (avoPat && avoPatF)
+      edges.push(createEdge("struct_union_avos_pat", avoPat.id, avoPatF.id, "union"));
 
     // Bisavós paternos
     const bp1 = first("Bisavô paterno (pai do avô)");
@@ -119,16 +123,16 @@ export function computeStructuralEdges(persons: PersonRow[]): Edge[] {
       if (bp4) edges.push(createEdge("struct_avopatf_to_bisavo4", avoPatF.id, bp4.id, "parent"));
       if (bp3 && bp4) edges.push(createEdge("struct_union_bisavos_pat2", bp3.id, bp4.id, "union"));
     }
-
   }
 
   // ── RAMO MATERNO ──────────────────────────────────────────
-  const avoMat  = first("Avô materno");
+  const avoMat = first("Avô materno");
   const avoMatF = first("Avó materna");
   if (mae && (avoMat || avoMatF)) {
     if (avoMat) edges.push(createEdge("struct_mae_to_avomat", mae.id, avoMat.id, "parent"));
     if (avoMatF) edges.push(createEdge("struct_mae_to_avomatf", mae.id, avoMatF.id, "parent"));
-    if (avoMat && avoMatF) edges.push(createEdge("struct_union_avos_mat", avoMat.id, avoMatF.id, "union"));
+    if (avoMat && avoMatF)
+      edges.push(createEdge("struct_union_avos_mat", avoMat.id, avoMatF.id, "union"));
 
     // Bisavós maternos
     const bm1 = first("Bisavô materno (pai do avô)");
@@ -145,7 +149,6 @@ export function computeStructuralEdges(persons: PersonRow[]): Edge[] {
       if (bm4) edges.push(createEdge("struct_avomatf_to_bisavo4", avoMatF.id, bm4.id, "parent"));
       if (bm3 && bm4) edges.push(createEdge("struct_union_bisavos_mat2", bm3.id, bm4.id, "union"));
     }
-
   }
 
   return edges;

@@ -260,6 +260,7 @@ function ClientCard({
           <Link
             to="/app/clientes/$clientId"
             params={{ clientId: client.id }}
+            preload="intent"
             className="block truncate font-serif text-xl font-bold text-primary hover:text-lavender transition-colors"
           >
             {display}
@@ -328,6 +329,7 @@ function ClientCard({
         <Link
           to="/app/clientes/$clientId"
           params={{ clientId: client.id }}
+          preload="intent"
           className="font-bold uppercase tracking-[0.08em] text-lavender hover:text-plum transition-colors"
         >
           Abrir dossiê →

@@ -147,6 +147,7 @@ function ModuleCard({
   return (
     <Link
       to={to}
+      preload="intent"
       className={
         "group flex flex-col glass-card rounded-[1rem] p-6 hover-lift " +
         (color === "lavender"

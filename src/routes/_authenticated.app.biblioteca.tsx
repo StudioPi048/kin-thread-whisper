@@ -146,17 +146,32 @@ const CLINICAL_TOOLS = [
   {
     title: "Entrevista Transgeracional",
     desc: "Protocolo de anamnese para coleta de dados sobre 3 gerações. Foco em: datas, nomes, causas de morte, profissões, segredos e crises.",
-    steps: ["Levantamento de nomes e datas", "Identificação de repetições", "Perguntas sobre segredos familiares", "Análise de padrões de doença"],
+    steps: [
+      "Levantamento de nomes e datas",
+      "Identificação de repetições",
+      "Perguntas sobre segredos familiares",
+      "Análise de padrões de doença",
+    ],
   },
   {
     title: "Síndrome de Aniversário: Checklist",
     desc: "Protocolo para verificar se sintomas do cliente coincidem com datas ou idades de ancestrais.",
-    steps: ["Idade atual do cliente", "Idades de morte dos avós", "Datas de eventos traumáticos no clã", "Coincidências com sintomas atuais"],
+    steps: [
+      "Idade atual do cliente",
+      "Idades de morte dos avós",
+      "Datas de eventos traumáticos no clã",
+      "Coincidências com sintomas atuais",
+    ],
   },
   {
     title: "Mapa de Segredos",
     desc: "Técnica para identificar os 'não ditos' do sistema. Segredos mais comuns: abortos, adoções, origens ilegítimas, crimes, falências e suicídios.",
-    steps: ["O que não é falado?", "Quem 'desapareceu' da história?", "Por que o cliente não sabe certas coisas?", "O que o corpo expressa que a boca cala?"],
+    steps: [
+      "O que não é falado?",
+      "Quem 'desapareceu' da história?",
+      "Por que o cliente não sabe certas coisas?",
+      "O que o corpo expressa que a boca cala?",
+    ],
   },
 ];
 
@@ -204,12 +219,20 @@ function BibliotecaPage() {
           </p>
           <h1 className="font-serif text-5xl font-bold text-primary">Biblioteca</h1>
           <p className="mt-4 text-[15px] max-w-2xl leading-relaxed text-muted-foreground">
-            A espinha dorsal teórica da psicogenealogia sistêmica. Autores fundadores, conceitos clínicos
-            essenciais, ferramentas práticas e as citações que moldam a abordagem.
+            A espinha dorsal teórica da psicogenealogia sistêmica. Autores fundadores, conceitos
+            clínicos essenciais, ferramentas práticas e as citações que moldam a abordagem.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
-            {["Psicogenealogia", "Constelação Familiar", "Epigenética", "Trauma Transgeracional"].map(t => (
-              <span key={t} className="rounded-full border border-lavender/30 bg-lavender-soft/50 px-3 py-1 text-[12px] font-semibold text-plum">
+            {[
+              "Psicogenealogia",
+              "Constelação Familiar",
+              "Epigenética",
+              "Trauma Transgeracional",
+            ].map((t) => (
+              <span
+                key={t}
+                className="rounded-full border border-lavender/30 bg-lavender-soft/50 px-3 py-1 text-[12px] font-semibold text-plum"
+              >
                 {t}
               </span>
             ))}
@@ -218,7 +241,6 @@ function BibliotecaPage() {
       </div>
 
       <div className="container-liz mt-14 space-y-20">
-
         {/* LEITURAS OBRIGATÓRIAS */}
         <section>
           <div className="flex items-center gap-3 mb-8">
@@ -262,7 +284,9 @@ function BibliotecaPage() {
               <Quote className="size-5 text-lavender" />
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-lavender">Sabedoria Clínica</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-lavender">
+                Sabedoria Clínica
+              </p>
               <h2 className="font-serif text-2xl font-bold text-primary">Citações dos Mestres</h2>
             </div>
           </div>
@@ -290,7 +314,9 @@ function BibliotecaPage() {
               <Bookmark className="size-5 text-gold" />
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gold">Definições</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gold">
+                Definições
+              </p>
               <h2 className="font-serif text-2xl font-bold text-primary">Glossário Clínico</h2>
             </div>
           </div>
@@ -304,9 +330,7 @@ function BibliotecaPage() {
                   <span className="text-xl">{concept.icon}</span>
                   <h4 className="font-bold text-primary text-[15px]">{concept.term}</h4>
                 </div>
-                <p className="text-[13px] text-muted-foreground leading-relaxed">
-                  {concept.desc}
-                </p>
+                <p className="text-[13px] text-muted-foreground leading-relaxed">{concept.desc}</p>
               </div>
             ))}
           </div>
@@ -319,7 +343,9 @@ function BibliotecaPage() {
               <Lightbulb className="size-5 text-plum" />
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-plum">Protocolos</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-plum">
+                Protocolos
+              </p>
               <h2 className="font-serif text-2xl font-bold text-primary">Ferramentas de Sessão</h2>
             </div>
           </div>
@@ -331,7 +357,9 @@ function BibliotecaPage() {
               >
                 <div>
                   <h3 className="font-serif text-lg font-bold text-primary">{tool.title}</h3>
-                  <p className="mt-1.5 text-[13px] text-muted-foreground leading-relaxed">{tool.desc}</p>
+                  <p className="mt-1.5 text-[13px] text-muted-foreground leading-relaxed">
+                    {tool.desc}
+                  </p>
                 </div>
                 <div className="mt-auto">
                   <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/60 mb-2">
@@ -361,7 +389,9 @@ function BibliotecaPage() {
                 <BookText className="size-5 text-plum" />
               </div>
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-plum">Base de Dados</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-plum">
+                  Base de Dados
+                </p>
                 <h2 className="font-serif text-2xl font-bold text-primary">Acervo e Verbetes</h2>
               </div>
             </div>
