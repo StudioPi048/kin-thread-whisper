@@ -640,18 +640,26 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     anchorChildId?: string;
   };
 
+  /**
+   * anchorSide: onde o filho-âncora deve ficar na linha de irmãos.
+   *  'right' = âncora no extremo direito (ramo esquerdo do descendente → irmãos à esquerda do âncora)
+   *  'left'  = âncora no extremo esquerdo (ramo direito do descendente → irmãos à direita do âncora)
+   *  'center' = âncora no meio (usado para o consulente)
+   */
   const buildAncestryOf = (
     child: Node | undefined,
     father: Node | undefined,
     mother: Node | undefined,
     siblings: Node[],
+    anchorSide: "left" | "right" | "center",
   ): Family | undefined => {
-    if (!child && !father && !mother && siblings.length === 0) return undefined;
     if (!child) return undefined;
+    const children =
+      anchorSide === "right" ? [...siblings, child] : [child, ...siblings];
     return {
       husband: father,
       wife: mother,
-      children: [child, ...siblings],
+      children,
       anchorChildId: child.id,
     };
   };
@@ -664,6 +672,10 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
   const mae = getFirst("mãe");
   const consulente = getFirst("consulente");
 
+  const tiosPat = getNodes("tio(a) paterno(a)");
+  const tiosMat = getNodes("tio(a) materno(a)");
+  const irmaos = getNodes("irmã(o)");
+
   const paiFamily: Family | undefined = pai
     ? {
         husband: avoPat,
@@ -673,14 +685,18 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
           getFirst("bisavô paterno (pai do avô)"),
           getFirst("bisavó paterna (mãe do avô)"),
           getNodes("irmã(o) do avô paterno"),
+          "right",
         ),
         wifeParents: buildAncestryOf(
           avoPatF,
           getFirst("bisavô paterno (pai da avó)"),
           getFirst("bisavó paterna (mãe da avó)"),
           getNodes("irmã(o) da avó paterna"),
+          "left",
         ),
-        children: [pai, ...getNodes("tio(a) paterno(a)")],
+        // ramo esquerdo do consulente: pai fica na direita da linha de irmãos,
+        // tios paternos à esquerda dele.
+        children: [...tiosPat, pai],
         anchorChildId: pai.id,
       }
     : undefined;
@@ -694,14 +710,18 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
           getFirst("bisavô materno (pai do avô)"),
           getFirst("bisavó materna (mãe do avô)"),
           getNodes("irmã(o) do avô materno"),
+          "right",
         ),
         wifeParents: buildAncestryOf(
           avoMatF,
           getFirst("bisavô materno (pai da avó)"),
           getFirst("bisavó materna (mãe da avó)"),
           getNodes("irmã(o) da avó materna"),
+          "left",
         ),
-        children: [mae, ...getNodes("tio(a) materno(a)")],
+        // ramo direito do consulente: mãe fica na esquerda da linha de irmãos,
+        // tios maternos à direita dela.
+        children: [mae, ...tiosMat],
         anchorChildId: mae.id,
       }
     : undefined;
@@ -712,10 +732,15 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
         wife: mae,
         husbandParents: paiFamily,
         wifeParents: maeFamily,
-        children: [consulente, ...getNodes("irmã(o)")],
+        // Consulente centralizado; irmãos distribuídos ao redor.
+        children: (() => {
+          const half = Math.floor(irmaos.length / 2);
+          return [...irmaos.slice(0, half), consulente, ...irmaos.slice(half)];
+        })(),
         anchorChildId: consulente.id,
       }
     : undefined;
+
 
   const FAMILY_GAP = 120; // espaço mínimo entre sub-árvores ancestrais irmãs
 
