@@ -999,6 +999,8 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
     editing?: RelRow | null;
   }>({ open: false });
   const [showGuide, setShowGuide] = useState(false);
+  const [layoutDirty, setLayoutDirty] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const rfInstance = useReactFlow();
 
   const handleQuickAdd = useCallback(
@@ -1050,7 +1052,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
     const initialNodes: Node[] = qualifiedPersons.map((p) => ({
       id: p.id,
       type: "person",
-      position: { x: 0, y: 0 },
+      position: { x: p.position_x ?? 0, y: p.position_y ?? 0 },
       data: {
         full_name: p.full_name,
         preferred_name: p.preferred_name,
@@ -1081,6 +1083,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
 
     setNodes(layoutedNodes);
     setEdges(layoutedEdges);
+    setLayoutDirty(false);
 
     const centerTimer = window.setTimeout(() => {
       if (cancelled) return;
@@ -1134,10 +1137,11 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
   // Lock dragging strictly to X axis
   const onNodesChangeCustom = useCallback(
     (changes: NodeChange[]) => {
+      const hasPositionChange = changes.some((change) => change.type === "position" && change.position);
       const nextChanges = changes.map((change) => {
         if (change.type === "position" && change.position) {
           const node = rfInstance.getNode(change.id);
-          if (node) {
+          if (node?.type === "person") {
             return {
               ...change,
               position: { x: change.position.x, y: node.position.y },
@@ -1149,6 +1153,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
         }
         return change;
       });
+      if (hasPositionChange) setLayoutDirty(true);
       onNodesChange(nextChanges);
     },
     [onNodesChange, rfInstance],
