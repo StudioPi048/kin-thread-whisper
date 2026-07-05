@@ -241,10 +241,10 @@ function PedigreeEdge({
   const parentIds = (edgeData?.parentIds as string[] | undefined) ?? [];
   const live = useStore((store) => {
     const children = childIds
-      .map((id) => store.nodeLookup.get(id)?.internals.userNode as Node | undefined)
+      .map((id) => store.nodeLookup.get(id) as unknown as Node | undefined)
       .filter((node): node is Node => Boolean(node));
     const parents = parentIds
-      .map((id) => store.nodeLookup.get(id)?.internals.userNode as Node | undefined)
+      .map((id) => store.nodeLookup.get(id) as unknown as Node | undefined)
       .filter((node): node is Node => Boolean(node));
     return { children, parents };
   });
