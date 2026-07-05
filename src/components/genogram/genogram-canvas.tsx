@@ -1223,6 +1223,37 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
 
+  const saveLayout = useMutation({
+    mutationFn: async () => {
+      const currentNodes = rfInstance.getNodes().filter((node) => node.type === "person");
+      const savedAt = new Date().toISOString();
+      const results = await Promise.all(
+        currentNodes.map((node) =>
+          supabase
+            .from("genogram_persons")
+            .update({
+              position_x: Math.round(node.position.x),
+              position_y: Math.round(node.position.y),
+              updated_at: savedAt,
+            })
+            .eq("id", node.id)
+            .eq("client_id", clientId),
+        ),
+      );
+      const failed = results.find((result) => result.error);
+      if (failed?.error) throw failed.error;
+      return savedAt;
+    },
+    onSuccess: (savedAt) => {
+      setLayoutDirty(false);
+      setLastSavedAt(
+        new Date(savedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+      );
+      toast.success("Layout do genossociograma salvo.");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao salvar layout"),
+  });
+
   const persons = query.data?.persons ?? [];
   const qualifiedCount = nodes.filter((node) => node.type === "person").length;
   const totalCount = persons.length;
