@@ -98,10 +98,10 @@ export function computeStructuralEdges(persons: PersonRow[], rels: RelRow[] = []
   // para evitar cruzamentos visuais e excesso de linhas no genossociograma.
   // Direção: Filho → Pai (para layout TB com consulente no topo)
   if (pai) {
-    edges.push(createEdge("struct_proband_to_pai", proband.id, pai.id, "parent"));
+    linkChild(proband.id, pai.id, "struct_proband_to_pai");
   }
   if (mae) {
-    edges.push(createEdge("struct_proband_to_mae", proband.id, mae.id, "parent"));
+    linkChild(proband.id, mae.id, "struct_proband_to_mae");
   }
 
   // União de pais (linha horizontal visual)
@@ -121,8 +121,8 @@ export function computeStructuralEdges(persons: PersonRow[], rels: RelRow[] = []
   const avoPat = first("Avô paterno");
   const avoPatF = first("Avó paterna");
   if (pai && (avoPat || avoPatF)) {
-    if (avoPat) edges.push(createEdge("struct_pai_to_avopat", pai.id, avoPat.id, "parent"));
-    if (avoPatF) edges.push(createEdge("struct_pai_to_avopatf", pai.id, avoPatF.id, "parent"));
+    if (avoPat) linkChild(pai.id, avoPat.id, "struct_pai_to_avopat");
+    if (avoPatF) linkChild(pai.id, avoPatF.id, "struct_pai_to_avopatf");
     if (avoPat && avoPatF)
       edges.push(createEdge("struct_union_avos_pat", avoPat.id, avoPatF.id, "union"));
 
@@ -130,15 +130,15 @@ export function computeStructuralEdges(persons: PersonRow[], rels: RelRow[] = []
     const bp1 = first("Bisavô paterno (pai do avô)");
     const bp2 = first("Bisavó paterna (mãe do avô)");
     if (avoPat && (bp1 || bp2)) {
-      if (bp1) edges.push(createEdge("struct_avopat_to_bisavo1", avoPat.id, bp1.id, "parent"));
-      if (bp2) edges.push(createEdge("struct_avopat_to_bisavo2", avoPat.id, bp2.id, "parent"));
+      if (bp1) linkChild(avoPat.id, bp1.id, "struct_avopat_to_bisavo1");
+      if (bp2) linkChild(avoPat.id, bp2.id, "struct_avopat_to_bisavo2");
       if (bp1 && bp2) edges.push(createEdge("struct_union_bisavos_pat1", bp1.id, bp2.id, "union"));
     }
     const bp3 = first("Bisavô paterno (pai da avó)");
     const bp4 = first("Bisavó paterna (mãe da avó)");
     if (avoPatF && (bp3 || bp4)) {
-      if (bp3) edges.push(createEdge("struct_avopatf_to_bisavo3", avoPatF.id, bp3.id, "parent"));
-      if (bp4) edges.push(createEdge("struct_avopatf_to_bisavo4", avoPatF.id, bp4.id, "parent"));
+      if (bp3) linkChild(avoPatF.id, bp3.id, "struct_avopatf_to_bisavo3");
+      if (bp4) linkChild(avoPatF.id, bp4.id, "struct_avopatf_to_bisavo4");
       if (bp3 && bp4) edges.push(createEdge("struct_union_bisavos_pat2", bp3.id, bp4.id, "union"));
     }
   }
@@ -147,8 +147,8 @@ export function computeStructuralEdges(persons: PersonRow[], rels: RelRow[] = []
   const avoMat = first("Avô materno");
   const avoMatF = first("Avó materna");
   if (mae && (avoMat || avoMatF)) {
-    if (avoMat) edges.push(createEdge("struct_mae_to_avomat", mae.id, avoMat.id, "parent"));
-    if (avoMatF) edges.push(createEdge("struct_mae_to_avomatf", mae.id, avoMatF.id, "parent"));
+    if (avoMat) linkChild(mae.id, avoMat.id, "struct_mae_to_avomat");
+    if (avoMatF) linkChild(mae.id, avoMatF.id, "struct_mae_to_avomatf");
     if (avoMat && avoMatF)
       edges.push(createEdge("struct_union_avos_mat", avoMat.id, avoMatF.id, "union"));
 
@@ -156,18 +156,77 @@ export function computeStructuralEdges(persons: PersonRow[], rels: RelRow[] = []
     const bm1 = first("Bisavô materno (pai do avô)");
     const bm2 = first("Bisavó materna (mãe do avô)");
     if (avoMat && (bm1 || bm2)) {
-      if (bm1) edges.push(createEdge("struct_avomat_to_bisavo1", avoMat.id, bm1.id, "parent"));
-      if (bm2) edges.push(createEdge("struct_avomat_to_bisavo2", avoMat.id, bm2.id, "parent"));
+      if (bm1) linkChild(avoMat.id, bm1.id, "struct_avomat_to_bisavo1");
+      if (bm2) linkChild(avoMat.id, bm2.id, "struct_avomat_to_bisavo2");
       if (bm1 && bm2) edges.push(createEdge("struct_union_bisavos_mat1", bm1.id, bm2.id, "union"));
     }
     const bm3 = first("Bisavô materno (pai da avó)");
     const bm4 = first("Bisavó materna (mãe da avó)");
     if (avoMatF && (bm3 || bm4)) {
-      if (bm3) edges.push(createEdge("struct_avomatf_to_bisavo3", avoMatF.id, bm3.id, "parent"));
-      if (bm4) edges.push(createEdge("struct_avomatf_to_bisavo4", avoMatF.id, bm4.id, "parent"));
+      if (bm3) linkChild(avoMatF.id, bm3.id, "struct_avomatf_to_bisavo3");
+      if (bm4) linkChild(avoMatF.id, bm4.id, "struct_avomatf_to_bisavo4");
       if (bm3 && bm4) edges.push(createEdge("struct_union_bisavos_mat2", bm3.id, bm4.id, "union"));
     }
   }
+
+  // ── INFERÊNCIA AUTOMÁTICA DE COLATERAIS ────────────────────
+  // Se o usuário marcou alguém como "Tio paterno", "Irmão do avô materno", "Irmão"
+  // etc., o vínculo com os pais correspondentes é ÓBVIO e deve ser feito
+  // automaticamente. Sempre respeitando overrides manuais (parent em rels).
+
+  // Irmãos do proband → filhos de Pai + Mãe
+  const siblings = get("Irmã(o)");
+  siblings.forEach((s, i) => {
+    if (pai) linkChild(s.id, pai.id, `auto_sib_${i}_pai`);
+    if (mae) linkChild(s.id, mae.id, `auto_sib_${i}_mae`);
+  });
+
+  // Tios paternos → filhos de Avô/Avó paternos
+  const tiosPat = get("Tio(a) paterno(a)");
+  tiosPat.forEach((t, i) => {
+    if (avoPat) linkChild(t.id, avoPat.id, `auto_tiopat_${i}_avopat`);
+    if (avoPatF) linkChild(t.id, avoPatF.id, `auto_tiopat_${i}_avopatf`);
+  });
+
+  // Tios maternos → filhos de Avô/Avó maternos
+  const tiosMat = get("Tio(a) materno(a)");
+  tiosMat.forEach((t, i) => {
+    if (avoMat) linkChild(t.id, avoMat.id, `auto_tiomat_${i}_avomat`);
+    if (avoMatF) linkChild(t.id, avoMatF.id, `auto_tiomat_${i}_avomatf`);
+  });
+
+  // Tios-avós paternos (irmãos do avô) → filhos dos bisavós paternos (pai/mãe do avô)
+  const bp1p = first("Bisavô paterno (pai do avô)");
+  const bp2p = first("Bisavó paterna (mãe do avô)");
+  get("Irmã(o) do avô paterno").forEach((t, i) => {
+    if (bp1p) linkChild(t.id, bp1p.id, `auto_tioavopat_${i}_bp1`);
+    if (bp2p) linkChild(t.id, bp2p.id, `auto_tioavopat_${i}_bp2`);
+  });
+
+  // Tios-avós paternos (irmãos da avó) → filhos dos bisavós paternos (pai/mãe da avó)
+  const bp3p = first("Bisavô paterno (pai da avó)");
+  const bp4p = first("Bisavó paterna (mãe da avó)");
+  get("Irmã(o) da avó paterna").forEach((t, i) => {
+    if (bp3p) linkChild(t.id, bp3p.id, `auto_tiaavopat_${i}_bp3`);
+    if (bp4p) linkChild(t.id, bp4p.id, `auto_tiaavopat_${i}_bp4`);
+  });
+
+  // Tios-avós maternos (irmãos do avô materno)
+  const bm1m = first("Bisavô materno (pai do avô)");
+  const bm2m = first("Bisavó materna (mãe do avô)");
+  get("Irmã(o) do avô materno").forEach((t, i) => {
+    if (bm1m) linkChild(t.id, bm1m.id, `auto_tioavomat_${i}_bm1`);
+    if (bm2m) linkChild(t.id, bm2m.id, `auto_tioavomat_${i}_bm2`);
+  });
+
+  // Tios-avós maternos (irmãos da avó materna)
+  const bm3m = first("Bisavô materno (pai da avó)");
+  const bm4m = first("Bisavó materna (mãe da avó)");
+  get("Irmã(o) da avó materna").forEach((t, i) => {
+    if (bm3m) linkChild(t.id, bm3m.id, `auto_tiaavomat_${i}_bm3`);
+    if (bm4m) linkChild(t.id, bm4m.id, `auto_tiaavomat_${i}_bm4`);
+  });
+
 
   return edges;
 }
