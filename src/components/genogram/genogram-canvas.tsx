@@ -222,6 +222,10 @@ function isUnionEdge(edge: Edge): boolean {
   return (edge.data as { relationshipType?: string } | undefined)?.relationshipType === "union";
 }
 
+function isParentEdge(edge: Edge): boolean {
+  return (edge.data as { relationshipType?: string } | undefined)?.relationshipType === "parent";
+}
+
 function GenerationRuler() {
   return (
     <div className="w-[154px] overflow-hidden rounded-md border border-plum/25 bg-card/92 shadow-sm backdrop-blur">
@@ -299,6 +303,8 @@ export function GenogramCanvas(props: CanvasProps) {
 // ── Tamanhos generosos, otimizados para leitura em 4K ────────
 const NODE_W = 160; // Largura do nó (shape + label)
 const NODE_H = 210; // Altura total do nó
+const PERSON_SHAPE_SIZE = 76;
+const PROBAND_SHAPE_SIZE = 84;
 const GENERATION_GAP = 250; // Distância vertical entre gerações
 const HORIZONTAL_STEP = NODE_W + 70; // Espaço horizontal entre nós de uma geração
 const DIRECT_PARENT_X = 450;
@@ -521,7 +527,6 @@ type Block = {
 };
 
 function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
-  const siblingToChildTarget = new Map<string, string>();
   const byCanonical = new Map<string, Node[]>();
   nodes.forEach((n) => {
     const d = n.data as PersonNodeData;
@@ -569,9 +574,6 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
       ? [...childSiblings, ...(child ? [child] : [])]
       : [...(child ? [child] : []), ...childSiblings];
 
-    if (child) {
-      childSiblings.forEach((s) => siblingToChildTarget.set(s.id, child.id));
-    }
     const bottomWidth = bottomNodes.length * HORIZONTAL_STEP;
 
     let childLocalCenter = bottomWidth > 0 ? bottomWidth / 2 : 0;
@@ -660,9 +662,6 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
       ? [...childSiblings, ...(childTarget ? [childTarget] : [])]
       : [...(childTarget ? [childTarget] : []), ...childSiblings];
 
-    if (childTarget) {
-      childSiblings.forEach((s) => siblingToChildTarget.set(s.id, childTarget.id));
-    }
     const bottomWidth = bottomNodes.length * HORIZONTAL_STEP;
     let childLocalCenter = bottomWidth > 0 ? bottomWidth / 2 : 0;
     if (childTarget) {
@@ -817,7 +816,7 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
   const finalEdges: Edge[] = [];
 
   edges.forEach((edge) => {
-    if (edge.style?.stroke === "var(--color-plum)") {
+    if (isParentEdge(edge)) {
       const sourceNode = layoutedNodes.find((n) => n.id === edge.source);
       const targetNode = layoutedNodes.find((n) => n.id === edge.target);
       const sourceGen = (sourceNode?.data as { generation?: number } | undefined)?.generation ?? 0;
@@ -866,32 +865,11 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     }
   });
 
-  // Build a complete map of children to their parent links, including siblings/tios.
-  const allParentLinksByChild = new Map<string, ParentLink[]>();
-
-  parentLinksByChild.forEach((pLinks, childId) => {
-    allParentLinksByChild.set(childId, pLinks);
-  });
-
-  siblingToChildTarget.forEach((targetId, siblingId) => {
-    const pLinks = parentLinksByChild.get(targetId);
-    if (pLinks) {
-      allParentLinksByChild.set(
-        siblingId,
-        pLinks.map((link) => ({
-          ...link,
-          edge: { ...link.edge, id: `descendant_${link.edge.id}_${siblingId}` },
-          childId: siblingId,
-        })),
-      );
-    }
-  });
-
   // Group children by shared parent pairs to draw one clean pedigree bus per family.
   const childrenByParentPair = new Map<string, string[]>();
   const parentPairToLinks = new Map<string, ParentLink[]>();
 
-  allParentLinksByChild.forEach((pLinks, childId) => {
+  parentLinksByChild.forEach((pLinks, childId) => {
     const parentIds = Array.from(new Set(pLinks.map((link) => link.parentId))).sort();
     const pairKey = parentIds.join("|");
 
@@ -935,12 +913,17 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
 
     if (childPoints.length === 0) return;
 
-    const parentTopY = visibleParents[0].position.y;
+    const parentMarriageY =
+      visibleParents.reduce((sum, parent) => {
+        const data = parent.data as PersonNodeData;
+        const shapeSize = data.is_proband ? PROBAND_SHAPE_SIZE : PERSON_SHAPE_SIZE;
+        return sum + parent.position.y + shapeSize / 2;
+      }, 0) / visibleParents.length;
     const maxChildBottom = Math.max(...childPoints.map((p) => p.y));
-    // Sibling bar sits between children (above) and parents (below).
-    const siblingBarY = Math.min(parentTopY - 60, maxChildBottom + 40);
-    // Trunk terminates at the marriage line (top edge of the parent row).
-    const marriageY = parentTopY;
+    // Sibling bar sits between children (above) and the parents' black union line (below).
+    const siblingBarY = Math.min(parentMarriageY - 55, maxChildBottom + 40);
+    // Trunk terminates exactly on the spouse/union line midpoint.
+    const marriageY = parentMarriageY;
 
     finalEdges.push({
       id: `pedigree_family_${pairKey}`,
