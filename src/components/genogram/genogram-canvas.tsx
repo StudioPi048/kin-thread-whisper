@@ -974,7 +974,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
               type: "step",
               style: { strokeWidth: 2, stroke: "var(--color-plum)" },
             }}
-            onError={(code, msg) => console.warn("[rf-error]", code, msg)}
+            
           >
             <Background
               color="#d8d0ec"
