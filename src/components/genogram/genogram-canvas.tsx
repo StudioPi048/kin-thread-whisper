@@ -504,7 +504,6 @@ function buildRenderGraph(
   }
 
 
-  console.log("[geno-debug] nodes=", nodes.length, "edges=", edges.length, "edgesFull=", JSON.stringify(edges.map(e=>({id:e.id,type:e.type,src:e.source,tgt:e.target}))));
   return { nodes, edges };
 }
 
