@@ -79,12 +79,7 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
       className={cn("relative flex flex-col items-center group", d.is_proband && "z-20")}
       style={{ userSelect: "none", width: 160 }}
     >
-      <Handle
-        id="top"
-        type="target"
-        position={Position.Top}
-        className="!size-2.5 !rounded-sm !border-2 !border-card !bg-lavender opacity-0"
-      />
+
 
       {/* ── SHAPE ─────────────────────────────────────────── */}
       <div
@@ -127,6 +122,17 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
             ✕
           </span>
         )}
+        
+        {/* Handles fixados NA FORMA (ignorando o texto) e com 12px de respiro (stub) */}
+        <Handle id="top" type="target" position={Position.Top} style={{ top: -12 }} className="opacity-0 pointer-events-none" />
+        <Handle id="top" type="source" position={Position.Top} style={{ top: -12 }} className="opacity-0 pointer-events-none" />
+        <Handle id="top-target" type="target" position={Position.Top} style={{ top: -12 }} className="opacity-0 pointer-events-none" />
+        <Handle id="bottom" type="source" position={Position.Bottom} style={{ bottom: -12 }} className="opacity-0 pointer-events-none" />
+        <Handle id="bottom-target" type="target" position={Position.Bottom} style={{ bottom: -12 }} className="opacity-0 pointer-events-none" />
+        <Handle id="left" type="target" position={Position.Left} style={{ left: -12 }} className="opacity-0 pointer-events-none" />
+        <Handle id="left" type="source" position={Position.Left} style={{ left: -12 }} className="opacity-0 pointer-events-none" />
+        <Handle id="right" type="source" position={Position.Right} style={{ right: -12 }} className="opacity-0 pointer-events-none" />
+        <Handle id="right" type="target" position={Position.Right} style={{ right: -12 }} className="opacity-0 pointer-events-none" />
       </div>
 
       {/* ── LABEL — Nome + datas com fundo SÓLIDO para legibilidade ── */}
@@ -155,58 +161,7 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
           </span>
         )}
       </div>
-      <Handle
-        id="top"
-        type="source"
-        position={Position.Top}
-        className="!size-2.5 !rounded-sm !border-2 !border-card !bg-lavender opacity-0"
-      />
-      <Handle
-        id="top-target"
-        type="target"
-        position={Position.Top}
-        className="opacity-0 pointer-events-none"
-      />
-      <Handle
-        id="bottom"
-        type="source"
-        position={Position.Bottom}
-        className="!size-2.5 !rounded-sm !border-2 !border-card !bg-lavender opacity-0"
-      />
-      <Handle
-        id="bottom-target"
-        type="target"
-        position={Position.Bottom}
-        className="opacity-0 pointer-events-none"
-      />
-      <Handle
-        type="target"
-        position={Position.Left}
-        id="left"
-        style={{ top: shapeSize / 2 }}
-        className="!size-2.5 !rounded-sm !border-2 !border-card !bg-lavender opacity-0"
-      />
-      <Handle
-        type="source"
-        position={Position.Left}
-        id="left"
-        style={{ top: shapeSize / 2 }}
-        className="!size-2.5 !rounded-sm !border-2 !border-card !bg-lavender opacity-0"
-      />
-      <Handle
-        type="source"
-        position={Position.Right}
-        id="right"
-        style={{ top: shapeSize / 2 }}
-        className="!size-2.5 !rounded-sm !border-2 !border-card !bg-lavender opacity-0"
-      />
-      <Handle
-        type="target"
-        position={Position.Right}
-        id="right"
-        style={{ top: shapeSize / 2 }}
-        className="!size-2.5 !rounded-sm !border-2 !border-card !bg-lavender opacity-0"
-      />
+
       {/* Visual drag handle to connect people */}
       <div className="absolute -bottom-7 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-50 flex items-center justify-center pointer-events-auto">
         <Handle
