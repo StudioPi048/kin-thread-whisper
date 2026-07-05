@@ -170,62 +170,43 @@ export function computeStructuralEdges(persons: PersonRow[], rels: RelRow[] = []
   }
 
   // ── INFERÊNCIA AUTOMÁTICA DE COLATERAIS ────────────────────
-  // Se o usuário marcou alguém como "Tio paterno", "Irmão do avô materno", "Irmão"
-  // etc., o vínculo com os pais correspondentes é ÓBVIO e deve ser feito
-  // automaticamente. Sempre respeitando overrides manuais (parent em rels).
+  // Regra visual: só inferimos parentesco quando existir um CASAL de pais
+  // completo (avô + avó / pai + mãe / bisavô + bisavó). Sem casal completo,
+  // ligar todos os irmãos ao único genitor visível vira uma teia confusa
+  // (parece que ele é "pai de todo mundo"). Nesse caso, deixamos o vínculo
+  // para o usuário criar manualmente com "Criar vínculo".
+  //
+  // Sempre respeitamos overrides manuais (rels tipo parent) via linkChild.
 
-  // Irmãos do proband → filhos de Pai + Mãe
-  const siblings = get("Irmã(o)");
-  siblings.forEach((s, i) => {
-    if (pai) linkChild(s.id, pai.id, `auto_sib_${i}_pai`);
-    if (mae) linkChild(s.id, mae.id, `auto_sib_${i}_mae`);
-  });
+  // Irmãos do proband → filhos do casal Pai+Mãe (só se ambos existem)
+  if (pai && mae) {
+    get("Irmã(o)").forEach((s, i) => {
+      linkChild(s.id, pai.id, `auto_sib_${i}_pai`);
+      linkChild(s.id, mae.id, `auto_sib_${i}_mae`);
+    });
+  }
 
-  // Tios paternos → filhos de Avô/Avó paternos
-  const tiosPat = get("Tio(a) paterno(a)");
-  tiosPat.forEach((t, i) => {
-    if (avoPat) linkChild(t.id, avoPat.id, `auto_tiopat_${i}_avopat`);
-    if (avoPatF) linkChild(t.id, avoPatF.id, `auto_tiopat_${i}_avopatf`);
-  });
+  // Tios paternos → filhos do casal Avô+Avó paternos (só se ambos existem)
+  if (avoPat && avoPatF) {
+    get("Tio(a) paterno(a)").forEach((t, i) => {
+      linkChild(t.id, avoPat.id, `auto_tiopat_${i}_avopat`);
+      linkChild(t.id, avoPatF.id, `auto_tiopat_${i}_avopatf`);
+    });
+  }
 
-  // Tios maternos → filhos de Avô/Avó maternos
-  const tiosMat = get("Tio(a) materno(a)");
-  tiosMat.forEach((t, i) => {
-    if (avoMat) linkChild(t.id, avoMat.id, `auto_tiomat_${i}_avomat`);
-    if (avoMatF) linkChild(t.id, avoMatF.id, `auto_tiomat_${i}_avomatf`);
-  });
+  // Tios maternos → filhos do casal Avô+Avó maternos (só se ambos existem)
+  if (avoMat && avoMatF) {
+    get("Tio(a) materno(a)").forEach((t, i) => {
+      linkChild(t.id, avoMat.id, `auto_tiomat_${i}_avomat`);
+      linkChild(t.id, avoMatF.id, `auto_tiomat_${i}_avomatf`);
+    });
+  }
 
-  // Tios-avós paternos (irmãos do avô) → filhos dos bisavós paternos (pai/mãe do avô)
-  const bp1p = first("Bisavô paterno (pai do avô)");
-  const bp2p = first("Bisavó paterna (mãe do avô)");
-  get("Irmã(o) do avô paterno").forEach((t, i) => {
-    if (bp1p) linkChild(t.id, bp1p.id, `auto_tioavopat_${i}_bp1`);
-    if (bp2p) linkChild(t.id, bp2p.id, `auto_tioavopat_${i}_bp2`);
-  });
+  // Tios-avós: inferência DESATIVADA por padrão.
+  // Quando o casal de bisavós está incompleto (comum: só 1 bisavô conhecido),
+  // ligar todos os irmãos do avô ao único bisavô cria a impressão errada de
+  // que ele é pai de todos. Preferimos silêncio + criação manual explícita.
 
-  // Tios-avós paternos (irmãos da avó) → filhos dos bisavós paternos (pai/mãe da avó)
-  const bp3p = first("Bisavô paterno (pai da avó)");
-  const bp4p = first("Bisavó paterna (mãe da avó)");
-  get("Irmã(o) da avó paterna").forEach((t, i) => {
-    if (bp3p) linkChild(t.id, bp3p.id, `auto_tiaavopat_${i}_bp3`);
-    if (bp4p) linkChild(t.id, bp4p.id, `auto_tiaavopat_${i}_bp4`);
-  });
-
-  // Tios-avós maternos (irmãos do avô materno)
-  const bm1m = first("Bisavô materno (pai do avô)");
-  const bm2m = first("Bisavó materna (mãe do avô)");
-  get("Irmã(o) do avô materno").forEach((t, i) => {
-    if (bm1m) linkChild(t.id, bm1m.id, `auto_tioavomat_${i}_bm1`);
-    if (bm2m) linkChild(t.id, bm2m.id, `auto_tioavomat_${i}_bm2`);
-  });
-
-  // Tios-avós maternos (irmãos da avó materna)
-  const bm3m = first("Bisavô materno (pai da avó)");
-  const bm4m = first("Bisavó materna (mãe da avó)");
-  get("Irmã(o) da avó materna").forEach((t, i) => {
-    if (bm3m) linkChild(t.id, bm3m.id, `auto_tiaavomat_${i}_bm3`);
-    if (bm4m) linkChild(t.id, bm4m.id, `auto_tiaavomat_${i}_bm4`);
-  });
 
 
   return edges;
