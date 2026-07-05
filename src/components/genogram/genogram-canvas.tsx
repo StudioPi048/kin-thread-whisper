@@ -291,7 +291,6 @@ function PartnerEdge({ style, interactionWidth, data }: EdgeProps) {
       ? (store.nodeLookup.get(edgeData.unionId) as unknown as Node | undefined)
       : undefined,
   }));
-  console.log("[partner-edge] rendering", { hasPerson: !!live.person, hasUnion: !!live.union, edgeData });
   if (!live.person || !live.union) return null;
   const px = nodeCenterX(live.person);
   const py = nodeUnionY(live.person);
