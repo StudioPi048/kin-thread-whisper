@@ -1087,46 +1087,42 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
 
     const centerTimer = window.setTimeout(() => {
       if (cancelled) return;
-      // Enquadramento: cliente próximo ao topo do canvas, gerações descendo.
-      // Escolhemos zoom de acordo com a largura da árvore para manter legível
-      // em 1080p e 4K sem exigir zoom manual.
+      // Enquadramento: cliente próximo ao topo, gerações descendo.
+      // IMPORTANTE: só contamos nós de pessoa para calcular a largura real.
+      // Os nós "band" (faixas de fundo por geração) têm 15000px e envenenam o cálculo.
       const container = document.querySelector(".react-flow") as HTMLElement | null;
       const canvasW = container?.clientWidth ?? 1200;
       const canvasH = container?.clientHeight ?? 800;
 
-      const xs = layoutedNodes.map((n) => n.position.x);
-      const treeW = Math.max(1, Math.max(...xs) - Math.min(...xs) + NODE_W);
-      const treeH = Math.max(
-        1,
-        (Math.max(
-          3,
-          ...Array.from(
-            { length: layoutedNodes.length },
-            (_, i) => (layoutedNodes[i].data as { generation?: number }).generation ?? 0,
-          ),
-        ) +
-          1) *
-          GENERATION_GAP,
-      );
+      const personNodes = layoutedNodes.filter((n) => n.type === "person");
+      if (personNodes.length === 0) {
+        rfInstance.fitView({ padding: 0.15, duration: 600, minZoom: 0.2, maxZoom: 1.4 });
+        return;
+      }
 
-      const zoomX = (canvasW * 0.92) / treeW;
-      const zoomY = (canvasH * 0.92) / treeH;
-      const zoom = Math.min(1.1, Math.max(0.28, Math.min(zoomX, zoomY)));
+      const xs = personNodes.map((n) => n.position.x);
+      const ys = personNodes.map((n) => n.position.y);
+      const treeW = Math.max(1, Math.max(...xs) - Math.min(...xs) + NODE_W);
+      const treeH = Math.max(1, Math.max(...ys) - Math.min(...ys) + NODE_H);
+
+      // Usar mais tela: 96% da largura e altura disponíveis.
+      const zoomX = (canvasW * 0.96) / treeW;
+      const zoomY = (canvasH * 0.96) / treeH;
+      const zoom = Math.min(1.4, Math.max(0.2, Math.min(zoomX, zoomY)));
 
       if (probandId) {
-        const probandNode = layoutedNodes.find((n) => n.id === probandId);
+        const probandNode = personNodes.find((n) => n.id === probandId);
         if (probandNode) {
+          // Centrar horizontalmente no proband; verticalmente centrar a árvore inteira.
           const cx = probandNode.position.x + NODE_W / 2;
-          // Desloca o centro para BAIXO para que o cliente apareça no TOPO do canvas.
-          // Offset ≈ metade da altura visível em coords do flow, menos margem.
-          const halfVisibleY = canvasH / (2 * zoom);
-          const cy = probandNode.position.y + halfVisibleY - NODE_H;
-          rfInstance.setCenter(cx, cy, { zoom, duration: 600 });
+          const midY = (Math.min(...ys) + Math.max(...ys) + NODE_H) / 2;
+          rfInstance.setCenter(cx, midY, { zoom, duration: 600 });
           return;
         }
       }
-      rfInstance.fitView({ padding: 0.12, duration: 600, minZoom: 0.28, maxZoom: 1.1 });
+      rfInstance.fitView({ padding: 0.08, duration: 600, minZoom: 0.2, maxZoom: 1.4 });
     }, 120);
+
 
     return () => {
       cancelled = true;
