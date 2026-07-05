@@ -77,7 +77,7 @@ function AuthenticatedLayout() {
     <div className="flex min-h-screen bg-background">
       {/* ── SIDEBAR ────────────────────────────────────── */}
       <aside
-        className={`hidden shrink-0 flex-col bg-sidebar text-sidebar-foreground transition-all duration-300 md:flex ${isCollapsed ? "w-[72px]" : "w-72"}`}
+        className={`hidden shrink-0 flex-col bg-plum text-white transition-all duration-300 md:flex ${isCollapsed ? "w-[72px]" : "w-72"}`}
       >
         {/* Logo — borda inferior dourada */}
         <div className="flex items-center justify-between border-b-2 border-gold/30 px-4 py-6 h-[90px]">
@@ -94,7 +94,7 @@ function AuthenticatedLayout() {
           )}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="shrink-0 rounded p-1.5 text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-gold transition-colors"
+            className="shrink-0 rounded p-1.5 text-white/50 hover:bg-white/10 hover:text-gold transition-colors"
             title={isCollapsed ? "Expandir menu" : "Recolher menu"}
           >
             {isCollapsed ? (
@@ -105,9 +105,8 @@ function AuthenticatedLayout() {
           </button>
         </div>
 
-        {/* Label de seção */}
         <div className={`px-6 pt-6 pb-2 ${isCollapsed ? "opacity-0 hidden" : "opacity-100"}`}>
-          <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-sidebar-foreground/30">
+          <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-white/40">
             Menu Principal
           </p>
         </div>
@@ -128,10 +127,10 @@ function AuthenticatedLayout() {
                 to={item.to as "/app"}
                 title={isCollapsed ? item.label : undefined}
                 className={
-                  `group relative flex items-center gap-4 py-4 text-[15px] font-semibold transition-all duration-150 overflow-hidden ${isCollapsed ? "px-0 justify-center" : "px-4"} ` +
+                  `group relative flex items-center gap-4 py-4 text-[15px] font-semibold transition-all duration-150 overflow-hidden rounded-md mx-2 ${isCollapsed ? "px-0 justify-center" : "px-4"} ` +
                   (active
-                    ? "text-sidebar-foreground bg-sidebar-accent before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:rounded-r-full before:bg-gold"
-                    : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50")
+                    ? "text-white bg-white/10 before:absolute before:-left-2 before:top-2 before:bottom-2 before:w-1 before:rounded-r-full before:bg-gold"
+                    : "text-white/60 hover:text-white hover:bg-white/5")
                 }
               >
                 <item.icon
@@ -139,7 +138,7 @@ function AuthenticatedLayout() {
                     "size-5 shrink-0 transition-colors " +
                     (active
                       ? "text-gold"
-                      : "text-sidebar-foreground/45 group-hover:text-sidebar-foreground/80")
+                      : "text-white/45 group-hover:text-white/80")
                   }
                 />
                 {!isCollapsed && <span>{item.label}</span>}

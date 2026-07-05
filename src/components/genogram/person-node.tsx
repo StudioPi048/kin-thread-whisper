@@ -103,9 +103,9 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
               "size-full bg-card transition-all",
               "border-[3.5px]",
               borderColor,
-              isMale && "rounded-sm",
+              isMale && "rounded-2xl",
               isFemale && "rounded-full",
-              isDiamond && "rotate-45 rounded-sm",
+              isDiamond && "rotate-45 rounded-2xl",
               d.is_proband && "shadow-[0_0_0_3px_var(--color-plum)] ring-1 ring-plum/30",
               selected && "ring-2 ring-lavender ring-offset-2 ring-offset-background",
             )}

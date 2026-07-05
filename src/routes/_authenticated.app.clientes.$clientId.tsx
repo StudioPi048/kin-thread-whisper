@@ -308,46 +308,46 @@ function ClientDossierPage() {
 
       <div className="container-liz -mt-6 relative z-20">
         <Tabs defaultValue="genogram" className="w-full">
-          <TabsList className="w-full justify-start h-auto p-1.5 glass-card rounded-[1rem] overflow-x-auto flex-nowrap">
+          <TabsList className="w-full justify-start h-auto p-1.5 bg-white shadow-sm rounded-full overflow-x-auto flex-nowrap gap-1">
             <TabsTrigger
               value="overview"
-              className="flex items-center gap-2 py-2.5 px-4 rounded-[0.75rem] data-[state=active]:bg-lavender-soft data-[state=active]:text-plum data-[state=active]:shadow-sm transition-all"
+              className="flex items-center gap-2 py-2 px-5 rounded-full text-muted-foreground font-medium data-[state=active]:bg-plum/10 data-[state=active]:text-plum data-[state=active]:font-bold transition-all"
             >
               <FileText className="size-4" /> Visão geral
             </TabsTrigger>
             <TabsTrigger
               value="genogram"
-              className="flex items-center gap-2 py-2.5 px-4 rounded-[0.75rem] data-[state=active]:bg-lavender-soft data-[state=active]:text-plum data-[state=active]:shadow-sm transition-all"
+              className="flex items-center gap-2 py-2 px-5 rounded-full text-muted-foreground font-medium data-[state=active]:bg-plum/10 data-[state=active]:text-plum data-[state=active]:font-bold transition-all"
             >
               <TreePine className="size-4" /> Genossociograma
             </TabsTrigger>
             <TabsTrigger
               value="timeline"
-              className="flex items-center gap-2 py-2.5 px-4 rounded-[0.75rem] data-[state=active]:bg-lavender-soft data-[state=active]:text-plum data-[state=active]:shadow-sm transition-all"
+              className="flex items-center gap-2 py-2 px-5 rounded-full text-muted-foreground font-medium data-[state=active]:bg-plum/10 data-[state=active]:text-plum data-[state=active]:font-bold transition-all"
             >
               <History className="size-4" /> Linha do tempo
             </TabsTrigger>
             <TabsTrigger
               value="patterns"
-              className="flex items-center gap-2 py-2.5 px-4 rounded-[0.75rem] data-[state=active]:bg-lavender-soft data-[state=active]:text-plum data-[state=active]:shadow-sm transition-all"
+              className="flex items-center gap-2 py-2 px-5 rounded-full text-muted-foreground font-medium data-[state=active]:bg-plum/10 data-[state=active]:text-plum data-[state=active]:font-bold transition-all"
             >
               <Activity className="size-4" /> Padrões
             </TabsTrigger>
             <TabsTrigger
               value="intake"
-              className="py-2.5 px-4 rounded-[0.75rem] data-[state=active]:bg-lavender-soft data-[state=active]:text-plum data-[state=active]:shadow-sm transition-all"
+              className="py-2 px-5 rounded-full text-muted-foreground font-medium data-[state=active]:bg-plum/10 data-[state=active]:text-plum data-[state=active]:font-bold transition-all"
             >
               Anamnese
             </TabsTrigger>
             <TabsTrigger
               value="sessions"
-              className="py-2.5 px-4 rounded-[0.75rem] data-[state=active]:bg-lavender-soft data-[state=active]:text-plum data-[state=active]:shadow-sm transition-all"
+              className="py-2 px-5 rounded-full text-muted-foreground font-medium data-[state=active]:bg-plum/10 data-[state=active]:text-plum data-[state=active]:font-bold transition-all"
             >
               Sessões
             </TabsTrigger>
             <TabsTrigger
               value="clan"
-              className="py-2.5 px-4 rounded-[0.75rem] data-[state=active]:bg-lavender-soft data-[state=active]:text-plum data-[state=active]:shadow-sm transition-all"
+              className="py-2 px-5 rounded-full text-muted-foreground font-medium data-[state=active]:bg-plum/10 data-[state=active]:text-plum data-[state=active]:font-bold transition-all"
             >
               Planilha
             </TabsTrigger>

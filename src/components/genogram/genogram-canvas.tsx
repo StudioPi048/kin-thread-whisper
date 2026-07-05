@@ -789,9 +789,9 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
   const relCount = query.data?.rels.length ?? 0;
 
   return (
-    <div className="relative flex flex-col overflow-hidden rounded-[1rem] border border-border glass-card shadow-md">
+    <div className="relative flex flex-col overflow-hidden rounded-[1.5rem] border border-border bg-slate-50/40 shadow-inner h-[800px] min-h-[calc(100vh-200px)]">
       {/* ── BARRA DE AÇÕES ─────────────────────────────────── */}
-      <div className="block-plum flex flex-wrap items-center gap-2 px-4 py-3">
+      <div className="absolute top-4 left-4 z-10 flex flex-wrap items-center gap-2 px-4 py-3 rounded-xl bg-plum shadow-xl border border-white/10">
         <div className="flex items-center gap-2 mr-3">
           <TreePine className="size-4 text-gold" />
           <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/60">
@@ -901,7 +901,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
       )}
 
       {/* ── LEGENDA — símbolos internacionais ────────────── */}
-      <div className="flex flex-wrap items-center gap-5 border-b border-border/50 bg-background/80 px-4 py-2.5 text-[12px] font-semibold">
+      <div className="absolute top-4 right-4 z-10 flex flex-wrap items-center gap-5 rounded-xl border border-border/50 bg-white/90 backdrop-blur-sm shadow-md px-4 py-2.5 text-[12px] font-semibold">
         <span className="text-muted-foreground/60 mr-1 uppercase tracking-[0.15em] text-[10px]">
           Legenda:
         </span>
@@ -938,10 +938,9 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
         </span>
       </div>
 
-      {/* ── CANVAS: altura adaptativa ao viewport ──────── */}
+      {/* ── CANVAS ──────── */}
       <div
-        className="relative bg-background"
-        style={{ height: "calc(100vh - 170px)", minHeight: 700 }}
+        className="absolute inset-0 z-0 bg-transparent"
       >
         {query.isLoading ? (
           <div className="flex h-full flex-col items-center justify-center gap-3">
@@ -976,14 +975,14 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
             
           >
             <Background
-              color="#d8d0ec"
+              color="#cbd5e1"
               variant={BackgroundVariant.Lines}
-              gap={40}
+              gap={24}
               size={1}
-              style={{ opacity: 0.25 }}
+              style={{ opacity: 0.5 }}
             />
             <Controls
-              className="bg-card border-none shadow-md overflow-hidden rounded-md [&>button]:border-b [&>button]:border-sidebar-border [&>button]:hover:bg-lavender-soft [&>button]:text-plum"
+              className="bg-white border-none shadow-xl overflow-hidden rounded-xl [&>button]:border-b [&>button]:border-slate-100 [&>button]:hover:bg-slate-50 [&>button]:text-plum"
               showInteractive={false}
             />
           </ReactFlow>
