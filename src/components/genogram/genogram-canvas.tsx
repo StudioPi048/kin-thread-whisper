@@ -784,11 +784,19 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
   const layoutedNodes: Node[] = [];
 
   const mappedIds = new Set(blockRoot.nodes.map((n) => n.node.id));
-  let unmappedOffsetX = blockRoot.width + HORIZONTAL_STEP;
+  const rightEdgeByGeneration = new Map<number, number>();
+  blockRoot.nodes.forEach((ln) => {
+    rightEdgeByGeneration.set(
+      ln.gen,
+      Math.max(rightEdgeByGeneration.get(ln.gen) ?? Number.NEGATIVE_INFINITY, ln.x),
+    );
+  });
   nodes.forEach((n) => {
     if (!mappedIds.has(n.id)) {
-      blockRoot.nodes.push({ node: n, x: unmappedOffsetX, y: 0, gen: 0 });
-      unmappedOffsetX += HORIZONTAL_STEP;
+      const gen = generationForData(n.data);
+      const nextX = (rightEdgeByGeneration.get(gen) ?? blockRoot.width) + HORIZONTAL_STEP;
+      rightEdgeByGeneration.set(gen, nextX);
+      blockRoot.nodes.push({ node: n, x: nextX, y: gen * GENERATION_GAP, gen });
     }
   });
 
@@ -1099,7 +1107,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
       // Usar mais tela: 96% da largura e altura disponíveis.
       const zoomX = (canvasW * 0.96) / treeW;
       const zoomY = (canvasH * 0.96) / treeH;
-      const zoom = Math.min(1.4, Math.max(0.2, Math.min(zoomX, zoomY)));
+      const zoom = Math.min(1.4, Math.max(0.48, Math.min(zoomX, zoomY)));
 
       if (probandId) {
         const probandNode = personNodes.find((n) => n.id === probandId);
