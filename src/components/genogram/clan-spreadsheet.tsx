@@ -765,7 +765,7 @@ function parseDateString(d?: string): string | null {
 
   // Aceita separadores /, -, ., ou \ com espaços opcionais
   const parts = val
-    .split(/[/\\-. \t]/)
+    .split(/[/\\\-. \t]/)
     .map((p) => p.trim())
     .filter(Boolean);
 
