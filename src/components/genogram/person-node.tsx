@@ -188,6 +188,20 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
       />
       <Handle
         type="source"
+        position={Position.Left}
+        id="left"
+        style={{ top: shapeSize / 2 }}
+        className="!size-2.5 !rounded-sm !border-2 !border-card !bg-lavender opacity-0"
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="right"
+        style={{ top: shapeSize / 2 }}
+        className="!size-2.5 !rounded-sm !border-2 !border-card !bg-lavender opacity-0"
+      />
+      <Handle
+        type="target"
         position={Position.Right}
         id="right"
         style={{ top: shapeSize / 2 }}
