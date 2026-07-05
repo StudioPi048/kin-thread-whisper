@@ -175,10 +175,6 @@ function StraightStepEdge({
 }
 
 function PedigreeEdge({
-  sourceX,
-  sourceY,
-  targetX,
-  targetY,
   style,
   markerEnd,
   markerStart,
@@ -186,24 +182,28 @@ function PedigreeEdge({
   data,
 }: EdgeProps) {
   const edgeData = data as Record<string, unknown> | undefined;
-  const familyCenterX = (edgeData?.familyCenterX as number | undefined) ?? sourceX;
-  const siblingBarY = (edgeData?.siblingBarY as number | undefined) ?? sourceY + (targetY - sourceY) * 0.42;
-  const parentBranchY = (edgeData?.parentBranchY as number | undefined) ?? targetY - 36;
-  const isPrimaryParent = Boolean(edgeData?.isPrimaryParent);
-  const drawParentBranch = Boolean(edgeData?.drawParentBranch);
+  if (!edgeData) return null;
+  const childPoints = (edgeData.childPoints as { x: number; y: number }[] | undefined) ?? [];
+  const familyCenterX = edgeData.familyCenterX as number | undefined;
+  const siblingBarY = edgeData.siblingBarY as number | undefined;
+  const marriageY = edgeData.marriageY as number | undefined;
+  if (childPoints.length === 0 || familyCenterX === undefined || siblingBarY === undefined || marriageY === undefined) {
+    return null;
+  }
+
+  const xs = childPoints.map((p) => p.x);
+  const barLeft = Math.min(...xs, familyCenterX);
+  const barRight = Math.max(...xs, familyCenterX);
 
   let path = "";
-
-  if (isPrimaryParent) {
-    path += `M ${sourceX} ${sourceY} L ${sourceX} ${siblingBarY} L ${familyCenterX} ${siblingBarY} `;
+  // Sibling bar spanning children (and trunk anchor)
+  path += `M ${barLeft} ${siblingBarY} L ${barRight} ${siblingBarY} `;
+  // Vertical stub from each child down to the sibling bar
+  for (const p of childPoints) {
+    path += `M ${p.x} ${p.y} L ${p.x} ${siblingBarY} `;
   }
-
-  if (drawParentBranch) {
-    path += `M ${familyCenterX} ${siblingBarY} L ${familyCenterX} ${parentBranchY} `;
-    path += `M ${familyCenterX} ${parentBranchY} L ${targetX} ${parentBranchY} L ${targetX} ${targetY}`;
-  }
-
-  if (!path.trim()) return null;
+  // Trunk from sibling bar to marriage line midpoint (between the parents)
+  path += `M ${familyCenterX} ${siblingBarY} L ${familyCenterX} ${marriageY}`;
 
   return (
     <BaseEdge
