@@ -180,8 +180,8 @@ export default function LandingPage() {
               </Button>
             </motion.div>
           </div>
-          
-          <motion.div 
+
+          <motion.div
             initial={{ opacity: 0, scale: 0.95, x: 20 }}
             animate={{ opacity: 1, scale: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
@@ -190,12 +190,13 @@ export default function LandingPage() {
             <div className="aspect-[4/3] lg:aspect-square rounded-2xl overflow-hidden border border-white/10 shadow-2xl relative group">
               {/* Fallback color and image */}
               <div className="absolute inset-0 bg-plum/50" />
-              <img 
-                src={hero1} 
-                alt="Psicogenealogista utilizando a plataforma" 
+              <img
+                src={hero1}
+                alt="Psicogenealogista utilizando a plataforma"
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&q=80&w=1000";
+                  (e.target as HTMLImageElement).src =
+                    "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&q=80&w=1000";
                 }}
               />
               <div className="absolute inset-0 bg-gradient-to-tr from-plum/80 via-plum/20 to-transparent mix-blend-multiply" />
@@ -302,7 +303,7 @@ export default function LandingPage() {
       {/* ── SEÇÃO VISUAL: A SESSÃO ───────────────────────────── */}
       <section className="bg-white py-24 md:py-32 overflow-hidden">
         <div className="container-liz flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: -20 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
@@ -310,12 +311,13 @@ export default function LandingPage() {
             className="flex-1 w-full"
           >
             <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl relative">
-              <img 
-                src={hero2} 
-                alt="Conexão com o paciente" 
+              <img
+                src={hero2}
+                alt="Conexão com o paciente"
                 className="absolute inset-0 w-full h-full object-cover"
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&q=80&w=1000";
+                  (e.target as HTMLImageElement).src =
+                    "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&q=80&w=1000";
                 }}
               />
             </div>
@@ -325,13 +327,14 @@ export default function LandingPage() {
               O fio invisível da <span className="text-gold italic">sessão.</span>
             </h2>
             <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
-              Mapeie em tempo real o histórico do seu paciente. Conecte gerações e descubra padrões transgeracionais profundos sem perder o foco visual na pessoa à sua frente.
+              Mapeie em tempo real o histórico do seu paciente. Conecte gerações e descubra padrões
+              transgeracionais profundos sem perder o foco visual na pessoa à sua frente.
             </p>
             <ul className="space-y-4">
               {[
                 "Genograma dinâmico gerado no clique.",
                 "Foco absoluto na fala do paciente.",
-                "Menos papel, mais insight estruturado."
+                "Menos papel, mais insight estruturado.",
               ].map((item, i) => (
                 <li key={i} className="flex items-center gap-3">
                   <div className="flex-shrink-0 size-1.5 rounded-full bg-lavender" />
@@ -346,7 +349,7 @@ export default function LandingPage() {
       {/* ── SEÇÃO VISUAL: A VIDA SIMPLIFICADA ───────────────── */}
       <section className="block-lavender py-24 md:py-32 overflow-hidden">
         <div className="container-liz flex flex-col lg:flex-row-reverse items-center gap-12 lg:gap-20">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: 20 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
@@ -354,26 +357,36 @@ export default function LandingPage() {
             className="flex-1 w-full"
           >
             <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl relative">
-              <img 
-                src={hero3} 
-                alt="A vida simplificada" 
+              <img
+                src={hero3}
+                alt="A vida simplificada"
                 className="absolute inset-0 w-full h-full object-cover"
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&q=80&w=1000";
+                  (e.target as HTMLImageElement).src =
+                    "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&q=80&w=1000";
                 }}
               />
             </div>
           </motion.div>
           <div className="flex-1">
             <h2 className="font-serif text-3xl font-bold text-primary md:text-5xl mb-6 leading-tight">
-              A <span className="text-lavender italic">leveza</span> de uma <br/>gestão impecável.
+              A <span className="text-lavender italic">leveza</span> de uma <br />
+              gestão impecável.
             </h2>
             <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
-              O Dossiê Inteligente cuida da organização dos seus casos, permitindo que você retorne à sua essência terapêutica. Relaxe sabendo que o sistema operacional faz o trabalho pesado.
+              O Dossiê Inteligente cuida da organização dos seus casos, permitindo que você retorne
+              à sua essência terapêutica. Relaxe sabendo que o sistema operacional faz o trabalho
+              pesado.
             </p>
             <div className="flex gap-4 items-center mt-10">
-              <Button asChild size="lg" className="bg-primary hover:bg-primary/90 text-white rounded-md">
-                <Link to="/auth" search={{ mode: "signup" }}>Começar agora</Link>
+              <Button
+                asChild
+                size="lg"
+                className="bg-primary hover:bg-primary/90 text-white rounded-md"
+              >
+                <Link to="/auth" search={{ mode: "signup" }}>
+                  Começar agora
+                </Link>
               </Button>
             </div>
           </div>

@@ -124,11 +124,15 @@ function StraightStepEdge({
   data,
 }: EdgeProps) {
   const isStraight = Math.abs(sourceX - targetX) < 1 || Math.abs(sourceY - targetY) < 1;
-  const midY = sourceY + (targetY - sourceY) / 2;
   const edgeData = data as Record<string, unknown> | undefined;
   const unionX = edgeData?.unionX as number | undefined;
   const isPrimaryParent = edgeData?.isPrimaryParent as boolean | undefined;
   const isFirstSibling = edgeData?.isFirstSibling as boolean | undefined;
+
+  // Use consistent Ys to ensure horizontal bars align perfectly across children with different node heights
+  const midY =
+    (edgeData?.consistentMidY as number | undefined) ?? sourceY + (targetY - sourceY) / 2;
+  const trunkY = (edgeData?.consistentTrunkY as number | undefined) ?? targetY + 15;
 
   let path = "";
 
@@ -136,11 +140,11 @@ function StraightStepEdge({
     if (isFirstSibling) {
       path += `M ${sourceX} ${sourceY} L ${sourceX} ${midY} L ${unionX} ${midY} `;
       if (isPrimaryParent) {
-        path += `M ${unionX} ${midY} L ${unionX} ${targetY + 15} `;
+        path += `M ${unionX} ${midY} L ${unionX} ${trunkY} `;
       }
     }
     if (isPrimaryParent) {
-      path += `M ${unionX} ${targetY + 15} L ${targetX} ${targetY + 15} L ${targetX} ${targetY} `;
+      path += `M ${unionX} ${trunkY} L ${targetX} ${trunkY} L ${targetX} ${targetY} `;
     }
   } else {
     path = isStraight
@@ -768,9 +772,9 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     const source = edge.source;
 
     // We already identified parent edges earlier in relToEdge or query mapping.
-    // In our DB, "parent" relation means source=child, target=parent.
+    // In our DB, parent relationships mean from_person_id (source) = PARENT, to_person_id (target) = CHILD.
     if (edge.style?.stroke === "var(--color-plum)") {
-      parentEdgesByChild.set(source, [...(parentEdgesByChild.get(source) || []), edge]);
+      parentEdgesByChild.set(target, [...(parentEdgesByChild.get(target) || []), edge]);
     } else {
       let finalSourceHandle = edge.sourceHandle;
       let finalTargetHandle = edge.targetHandle;
@@ -813,7 +817,7 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
       const siblingEdges = pEdges.map((e) => ({
         ...e,
         id: `descendant_${e.id}_${siblingId}`,
-        source: e.target, // Keep parent as source
+        source: e.source, // Keep parent as source
         target: siblingId, // Sibling is target
       }));
       allParentEdgesByChild.set(siblingId, siblingEdges);
@@ -825,8 +829,8 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
   const parentPairToEdges = new Map<string, Edge[]>();
 
   allParentEdgesByChild.forEach((pEdges, childId) => {
-    // pEdges[].target holds the Parent ID (since we map from DB)
-    const parentIds = pEdges.map((e) => e.target).sort();
+    // pEdges[].source holds the Parent ID
+    const parentIds = pEdges.map((e) => e.source).sort();
     const pairKey = parentIds.join("|");
 
     if (!childrenByParentPair.has(pairKey)) {
@@ -838,7 +842,7 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
 
   childrenByParentPair.forEach((childrenIds, pairKey) => {
     const refEdges = parentPairToEdges.get(pairKey)!;
-    const parents = refEdges.map((e) => layoutedNodes.find((n) => n.id === e.target));
+    const parents = refEdges.map((e) => layoutedNodes.find((n) => n.id === e.source));
 
     let unionX: number | undefined = undefined;
     if (parents.length >= 2 && parents[0] && parents[1]) {
@@ -850,22 +854,32 @@ function getLayoutedElements(nodes: Node[], edges: Edge[], probandId?: string) {
     // Sort parents so the primary parent is always consistent (e.g. first in array)
     const primaryParentId = parents[0]?.id;
 
+    // Calculate a consistent Y coordinate for the horizontal routing bars
+    const childGen =
+      (layoutedNodes.find((n) => n.id === childrenIds[0])?.data?.generation as number) || 0;
+    const parentGen = (parents[0]?.data?.generation as number) || 0;
+    // Base Y is the generation Y
+    const childGenY = childGen * 250;
+    const parentGenY = parentGen * 250;
+    const consistentMidY = parentGenY + (childGenY - parentGenY) / 2;
+    const consistentTrunkY = childGenY + 125; // Approximate consistent bottom of child + padding
+
     childrenIds.forEach((childId, childIdx) => {
       const isFirstSibling = childIdx === 0;
 
       refEdges.forEach((e) => {
-        const isPrimaryParent = e.target === primaryParentId;
+        const isPrimaryParent = e.source === primaryParentId;
 
         finalEdges.push({
           ...e,
           id: `pedigree_${e.id}_${childId}`,
-          source: e.target, // Parent
+          source: e.source, // Parent
           target: childId, // Child
           sourceHandle: "top",
           targetHandle: "bottom-target",
           type: "straightStep",
           style: { stroke: "var(--color-plum)", strokeWidth: 2 },
-          data: { unionX, isPrimaryParent, isFirstSibling },
+          data: { unionX, isPrimaryParent, isFirstSibling, consistentMidY, consistentTrunkY },
         });
       });
     });
