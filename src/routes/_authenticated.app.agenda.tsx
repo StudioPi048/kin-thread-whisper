@@ -705,14 +705,14 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
 
       {/* Mini árvore preview + próximas */}
       <div className="grid md:grid-cols-2 gap-4">
-        <MiniTreePreview session={session} />
+        <MiniTreePreview session={session} genogram={genogramQuery.data} isLoading={genogramQuery.isLoading} />
         <UpcomingList currentId={session.id} sessions={sessions} />
       </div>
     </main>
   );
 }
 
-function MiniTreePreview({ session }: { session: Session }) {
+function MiniTreePreview({ session, genogram, isLoading }: { session: Session; genogram: ClientGenogramDTO | undefined; isLoading: boolean }) {
   return (
     <div className="rounded-2xl bg-white/80 backdrop-blur border border-border/50 shadow-sm p-5">
       <div className="flex items-center justify-between mb-4">
