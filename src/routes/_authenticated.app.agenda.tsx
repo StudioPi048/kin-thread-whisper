@@ -197,7 +197,7 @@ function AgendaPage() {
       </div>
 
       {/* Three-column workspace */}
-      <div className="container-liz py-6 grid gap-5 xl:grid-cols-[280px_minmax(0,1fr)_340px] lg:grid-cols-[260px_minmax(0,1fr)] grid-cols-1">
+      <div className="container-liz py-6 grid gap-5 2xl:grid-cols-[260px_minmax(0,1fr)_320px] lg:grid-cols-[240px_minmax(0,1fr)] grid-cols-1">
         {/* LEFT — Timeline */}
         <TimelineColumn selectedId={selectedId} onSelect={setSelectedId} />
 
@@ -205,7 +205,10 @@ function AgendaPage() {
         <FeaturedSession session={selected} />
 
         {/* RIGHT — IA + Painel */}
-        <RightPanel session={selected} />
+        <div className="lg:col-span-2 2xl:col-span-1">
+          <RightPanel session={selected} />
+        </div>
+
       </div>
     </div>
   );
@@ -648,7 +651,7 @@ function UpcomingList({ currentId }: { currentId: string }) {
 
 function RightPanel({ session }: { session: Session }) {
   return (
-    <aside className="space-y-4">
+    <aside className="grid gap-4 md:grid-cols-2 2xl:grid-cols-1">
       {/* IA Clínica briefing */}
       <div className="rounded-2xl bg-gradient-to-br from-plum via-plum to-plum/90 text-white p-5 shadow-lg relative overflow-hidden">
         <div
