@@ -79,7 +79,7 @@ type Session = {
   accent: "plum" | "lavender" | "gold";
 };
 
-const SESSIONS: Session[] = [
+const FALLBACK_SESSIONS: Session[] = [
   {
     id: "s1",
     start: "09:00",
