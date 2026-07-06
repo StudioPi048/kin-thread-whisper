@@ -41,10 +41,94 @@ import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
+import leticiaAsset from "@/assets/leticia-baccin.png.asset.json";
 
 export const Route = createFileRoute("/_authenticated/app/biblioteca")({
   component: BibliotecaPage,
 });
+
+// ─────────────────────────────────────────────────────────────
+// BIBLIOTECA AUTORAL — LETÍCIA KUCHOCKOWOLEC BACCIN
+// ─────────────────────────────────────────────────────────────
+
+const LETICIA = {
+  name: "Letícia Kuchockowolec Baccin",
+  role: "Fundadora do Instituto Liz · Psicogenealogista clínica",
+  bio: "Autora, pesquisadora e formadora em Psicogenealogia. Fundadora da Academia Liz Indica, criadora de metodologias autorais e referência em transmissão clínica no Brasil.",
+  photo: leticiaAsset.url,
+};
+
+const LETICIA_WORKS: Array<{
+  title: string;
+  subtitle: string;
+  kind: "Livro" | "Manual" | "Almanaque" | "Curso" | "Protocolo";
+  badge: "Novo" | "Mais estudado" | "Exclusivo" | "Clássico";
+  concepts: number;
+  protocols: number;
+  citations: number;
+  accent: "plum" | "lavender" | "gold" | "cream";
+}> = [
+  {
+    title: "O Código Sagrado dos Dentes",
+    subtitle: "Simbologia oral e memória transgeracional",
+    kind: "Livro",
+    badge: "Novo",
+    concepts: 120,
+    protocols: 48,
+    citations: 312,
+    accent: "plum",
+  },
+  {
+    title: "Manual da Psicogenealogia",
+    subtitle: "Método clínico Instituto Liz",
+    kind: "Manual",
+    badge: "Mais estudado",
+    concepts: 86,
+    protocols: 34,
+    citations: 210,
+    accent: "gold",
+  },
+  {
+    title: "Raízes do Nome",
+    subtitle: "Onomástica e projeto sentido",
+    kind: "Livro",
+    badge: "Exclusivo",
+    concepts: 54,
+    protocols: 21,
+    citations: 143,
+    accent: "lavender",
+  },
+  {
+    title: "Fé com Lê, Lê com Fé",
+    subtitle: "Espiritualidade e clínica sistêmica",
+    kind: "Livro",
+    badge: "Clássico",
+    concepts: 62,
+    protocols: 18,
+    citations: 168,
+    accent: "cream",
+  },
+  {
+    title: "Almanaque Liz",
+    subtitle: "Compêndio de casos e verbetes",
+    kind: "Almanaque",
+    badge: "Exclusivo",
+    concepts: 240,
+    protocols: 72,
+    citations: 480,
+    accent: "plum",
+  },
+  {
+    title: "Protocolo do Clã",
+    subtitle: "Ferramenta de mapeamento em 4 gerações",
+    kind: "Protocolo",
+    badge: "Mais estudado",
+    concepts: 32,
+    protocols: 12,
+    citations: 96,
+    accent: "lavender",
+  },
+];
 
 type Entry = {
   id: string;
@@ -103,17 +187,110 @@ const AUTHORS: Array<{
   works: number;
   concepts: number;
   initials: string;
+  photo?: string;
+  years?: string;
+  nationality?: string;
 }> = [
-  { name: "Anne Ancelin Schützenberger", field: "Psicogenealogia", works: 12, concepts: 48, initials: "AS" },
-  { name: "Françoise Dolto", field: "Psicanálise da infância", works: 22, concepts: 61, initials: "FD" },
-  { name: "Alejandro Jodorowsky", field: "Metagenealogia · Psicomagia", works: 18, concepts: 40, initials: "AJ" },
-  { name: "Ivan Boszormenyi-Nagy", field: "Terapia contextual", works: 8, concepts: 22, initials: "IB" },
-  { name: "Bert Hellinger", field: "Constelação familiar", works: 30, concepts: 55, initials: "BH" },
-  { name: "Nicolas Abraham", field: "Cripta e Fantasma", works: 6, concepts: 18, initials: "NA" },
-  { name: "Maria Torok", field: "Cripta e Fantasma", works: 5, concepts: 15, initials: "MT" },
-  { name: "Didier Dumas", field: "Não-dito familiar", works: 9, concepts: 20, initials: "DD" },
-  { name: "Patrick Estrade", field: "Clínica transgeracional", works: 14, concepts: 26, initials: "PE" },
-  { name: "Boris Cyrulnik", field: "Resiliência sistêmica", works: 20, concepts: 34, initials: "BC" },
+  {
+    name: "Anne Ancelin Schützenberger",
+    field: "Psicogenealogia",
+    works: 12,
+    concepts: 48,
+    initials: "AS",
+    photo:
+      "https://commons.wikimedia.org/wiki/Special:FilePath/Anne_Ancelin_Sch%C3%BCtzenberger.jpg?width=400",
+    years: "1919–2018",
+    nationality: "França",
+  },
+  {
+    name: "Françoise Dolto",
+    field: "Psicanálise da infância",
+    works: 22,
+    concepts: 61,
+    initials: "FD",
+    photo:
+      "https://commons.wikimedia.org/wiki/Special:FilePath/Fran%C3%A7oise_Dolto_1980.jpg?width=400",
+    years: "1908–1988",
+    nationality: "França",
+  },
+  {
+    name: "Alejandro Jodorowsky",
+    field: "Metagenealogia · Psicomagia",
+    works: 18,
+    concepts: 40,
+    initials: "AJ",
+    photo:
+      "https://commons.wikimedia.org/wiki/Special:FilePath/Alejandro_Jodorowsky_2022.jpg?width=400",
+    years: "1929–",
+    nationality: "Chile · França",
+  },
+  {
+    name: "Ivan Boszormenyi-Nagy",
+    field: "Terapia contextual",
+    works: 8,
+    concepts: 22,
+    initials: "IB",
+    years: "1920–2007",
+    nationality: "Hungria · EUA",
+  },
+  {
+    name: "Bert Hellinger",
+    field: "Constelação familiar",
+    works: 30,
+    concepts: 55,
+    initials: "BH",
+    photo:
+      "https://commons.wikimedia.org/wiki/Special:FilePath/Bert_Hellinger.jpg?width=400",
+    years: "1925–2019",
+    nationality: "Alemanha",
+  },
+  {
+    name: "Nicolas Abraham",
+    field: "Cripta e Fantasma",
+    works: 6,
+    concepts: 18,
+    initials: "NA",
+    years: "1919–1975",
+    nationality: "Hungria · França",
+  },
+  {
+    name: "Maria Torok",
+    field: "Cripta e Fantasma",
+    works: 5,
+    concepts: 15,
+    initials: "MT",
+    years: "1925–1998",
+    nationality: "Hungria · França",
+  },
+  {
+    name: "Didier Dumas",
+    field: "Não-dito familiar",
+    works: 9,
+    concepts: 20,
+    initials: "DD",
+    years: "1943–2010",
+    nationality: "França",
+  },
+  {
+    name: "Patrick Estrade",
+    field: "Clínica transgeracional",
+    works: 14,
+    concepts: 26,
+    initials: "PE",
+    years: "1949–",
+    nationality: "França",
+  },
+  {
+    name: "Boris Cyrulnik",
+    field: "Resiliência sistêmica",
+    works: 20,
+    concepts: 34,
+    initials: "BC",
+    photo:
+      "https://commons.wikimedia.org/wiki/Special:FilePath/Boris_Cyrulnik_-_Comedie_du_Livre_2011_-_Montpellier_-_P1150907.jpg?width=400",
+    years: "1937–",
+    nationality: "França",
+  },
 ];
 
 const THEMES: Array<{ name: string; count: number; icon: typeof Feather; accent: string }> = [
@@ -132,7 +309,19 @@ const THEMES: Array<{ name: string; count: number; icon: typeof Feather; accent:
   { name: "Ordens do Amor", count: 17, icon: Scale, accent: "bg-white text-plum border border-plum/10" },
 ];
 
-const ESSENTIAL_BOOKS = [
+const ESSENTIAL_BOOKS: Array<{
+  title: string;
+  subtitle: string;
+  author: string;
+  year: number;
+  level: string;
+  concepts: string[];
+  citations: number;
+  protocols: number;
+  cases: number;
+  spine: string;
+  cover?: string;
+}> = [
   {
     title: "Meus Antepassados",
     subtitle: "A síndrome de aniversário e o romance familiar",
@@ -144,6 +333,7 @@ const ESSENTIAL_BOOKS = [
     protocols: 8,
     cases: 12,
     spine: "bg-plum text-white",
+    cover: "https://covers.openlibrary.org/b/isbn/8532303617-L.jpg?default=false",
   },
   {
     title: "Metagenealogia",
@@ -156,6 +346,7 @@ const ESSENTIAL_BOOKS = [
     protocols: 5,
     cases: 9,
     spine: "bg-lavender text-white",
+    cover: "https://covers.openlibrary.org/b/isbn/9782226221315-L.jpg?default=false",
   },
   {
     title: "A Casca e o Núcleo",
@@ -168,6 +359,7 @@ const ESSENTIAL_BOOKS = [
     protocols: 3,
     cases: 7,
     spine: "bg-plum/80 text-white",
+    cover: "https://covers.openlibrary.org/b/isbn/9782081218918-L.jpg?default=false",
   },
   {
     title: "Ordens do Amor",
@@ -180,6 +372,7 @@ const ESSENTIAL_BOOKS = [
     protocols: 12,
     cases: 18,
     spine: "bg-gold text-plum",
+    cover: "https://covers.openlibrary.org/b/isbn/8531608872-L.jpg?default=false",
   },
   {
     title: "Minhas Ancestrais Feridas",
@@ -194,8 +387,8 @@ const ESSENTIAL_BOOKS = [
     spine: "bg-plum text-white",
   },
   {
-    title: "O Dom dos Traumatismos",
-    subtitle: "Resiliência como fenômeno sistêmico",
+    title: "O Murmúrio dos Fantasmas",
+    subtitle: "Como sair do passado transgeracional",
     author: "Boris Cyrulnik",
     year: 2004,
     level: "Resiliência",
@@ -204,6 +397,7 @@ const ESSENTIAL_BOOKS = [
     protocols: 4,
     cases: 8,
     spine: "bg-lavender/80 text-white",
+    cover: "https://covers.openlibrary.org/b/isbn/9782738113610-L.jpg?default=false",
   },
 ];
 
@@ -475,9 +669,13 @@ function BibliotecaPage() {
             </div>
           </section>
 
+          {/* ── BIBLIOTECA AUTORAL — LETÍCIA (PROTAGONISTA) ── */}
+          <LeticiaAutoralSection />
+
           {/* ── HOJE NA BIBLIOTECA (BENTO) ─────────────────── */}
           <section className="space-y-6">
-            <SectionHeader number="02" eyebrow="Descoberta diária" title="Hoje na Biblioteca" />
+            <SectionHeader number="03" eyebrow="Descoberta diária" title="Hoje na Biblioteca" />
+
 
             <div className="grid grid-cols-4 gap-4 auto-rows-[minmax(180px,auto)]">
               {/* Concept of day — big */}
@@ -562,53 +760,23 @@ function BibliotecaPage() {
           {/* ── EXPLORAR POR AUTOR ─────────────────────────── */}
           <section className="space-y-6">
             <SectionHeader
-              number="03"
+              number="04"
               eyebrow="Explorar por autor"
               title="Vozes fundadoras"
               action={{ label: `Ver todos (${AUTHORS.length})`, onClick: () => {} }}
             />
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-6">
               {AUTHORS.map((a, i) => (
-                <button
-                  key={a.name}
-                  className="group text-left space-y-3"
-                >
-                  <div className="relative aspect-square rounded-full overflow-hidden bg-gradient-to-br from-lavender-soft to-cream border border-plum/10 shadow-sm group-hover:shadow-xl group-hover:shadow-lavender/20 transition-all duration-500">
-                    <div className="absolute inset-0 flex items-center justify-center font-serif text-4xl font-bold italic text-plum/30 group-hover:scale-110 transition-transform duration-500">
-                      {a.initials}
-                    </div>
-                    <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-plum/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <div className="absolute inset-0 flex items-end justify-center pb-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-white">
-                        Ver perfil
-                      </span>
-                    </div>
-                    {i === 0 && (
-                      <span className="absolute top-2 right-2 rounded-full bg-gold px-1.5 py-0.5 text-[8px] font-black uppercase text-plum">
-                        Semana
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-center">
-                    <h4 className="font-serif text-[15px] font-bold text-plum leading-tight">
-                      {a.name}
-                    </h4>
-                    <p className="mt-0.5 text-[10px] uppercase tracking-wider text-muted-foreground/70 font-semibold">
-                      {a.field}
-                    </p>
-                    <p className="mt-1 text-[10px] text-muted-foreground/60">
-                      {a.works} obras · {a.concepts} conceitos
-                    </p>
-                  </div>
-                </button>
+                <AuthorPortraitCard key={a.name} author={a} featured={i === 0} />
               ))}
             </div>
           </section>
 
+
           {/* ── EXPLORAR POR TEMA ──────────────────────────── */}
           <section className="space-y-6">
-            <SectionHeader number="04" eyebrow="Explorar por tema" title="Territórios clínicos" />
+            <SectionHeader number="05" eyebrow="Explorar por tema" title="Territórios clínicos" />
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               {THEMES.map((t) => {
@@ -633,7 +801,7 @@ function BibliotecaPage() {
           {/* ── LEITURAS FUNDAMENTAIS ──────────────────────── */}
           <section className="space-y-6">
             <SectionHeader
-              number="05"
+              number="06"
               eyebrow="Cânone"
               title="Leituras fundamentais"
               action={{ label: "Ver acervo completo", onClick: () => {} }}
@@ -645,25 +813,9 @@ function BibliotecaPage() {
                   key={b.title}
                   className="group relative flex gap-5 rounded-[1.25rem] bg-white border border-plum/10 p-5 shadow-sm hover:shadow-2xl hover:shadow-plum/10 transition-all duration-500 hover:-translate-y-1"
                 >
-                  {/* 3D book spine */}
-                  <div className="relative w-28 shrink-0 perspective-[800px]">
-                    <div
-                      className={`relative h-40 rounded-r-md rounded-l-sm shadow-[6px_6px_20px_-6px_oklch(0.25_0.10_295/0.4)] transition-transform duration-500 group-hover:-rotate-y-6 origin-left ${b.spine}`}
-                      style={{ transformStyle: "preserve-3d" }}
-                    >
-                      <div className="absolute inset-0 flex flex-col justify-between p-3">
-                        <span className="text-[8px] font-bold uppercase tracking-widest opacity-60">
-                          {b.year}
-                        </span>
-                        <div>
-                          <p className="font-serif text-[13px] font-bold italic leading-tight">
-                            {b.title}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="absolute inset-y-0 left-0 w-1 bg-black/20 rounded-l-sm" />
-                    </div>
-                  </div>
+                  {/* Real cover with typographic fallback */}
+                  <BookCoverArt book={b} />
+
 
                   {/* Meta */}
                   <div className="flex-1 min-w-0 flex flex-col">
@@ -719,7 +871,7 @@ function BibliotecaPage() {
 
           {/* ── CITAÇÕES (MASONRY) ─────────────────────────── */}
           <section className="space-y-6">
-            <SectionHeader number="06" eyebrow="Sabedoria clínica" title="Citações dos mestres" />
+            <SectionHeader number="07" eyebrow="Sabedoria clínica" title="Citações dos mestres" />
 
             <div className="columns-1 md:columns-2 xl:columns-3 gap-5 [column-fill:_balance]">
               {QUOTES.map((q, i) => {
@@ -772,7 +924,7 @@ function BibliotecaPage() {
           {/* ── GLOSSÁRIO COMPACTO ─────────────────────────── */}
           <section className="space-y-6">
             <SectionHeader
-              number="07"
+              number="08"
               eyebrow="Definições"
               title="Glossário clínico"
               action={{ label: "Ver glossário completo", onClick: () => {} }}
@@ -796,7 +948,7 @@ function BibliotecaPage() {
 
           {/* ── PROTOCOLOS ─────────────────────────────────── */}
           <section className="space-y-6">
-            <SectionHeader number="08" eyebrow="Ferramentas" title="Protocolos de sessão" />
+            <SectionHeader number="09" eyebrow="Ferramentas" title="Protocolos de sessão" />
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               {PROTOCOLS.map((p) => (
@@ -860,7 +1012,7 @@ function BibliotecaPage() {
           {entries.length > 0 && (
             <section className="space-y-6">
               <SectionHeader
-                number="09"
+                number="10"
                 eyebrow="Acervo inteligente"
                 title={q ? `Resultados para "${q}"` : "Verbetes recentes do acervo"}
               />
@@ -1273,5 +1425,318 @@ function AiList({ label, items }: { label: string; items: string[] }) {
         ))}
       </div>
     </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// PORTRAIT & COVER PRIMITIVES (real image with elegant fallback)
+// ─────────────────────────────────────────────────────────────
+
+function SmartImage({
+  src,
+  alt,
+  className,
+  filter,
+  fallback,
+}: {
+  src?: string;
+  alt: string;
+  className?: string;
+  filter?: string;
+  fallback: React.ReactNode;
+}) {
+  const [ok, setOk] = useState(Boolean(src));
+  if (!src || !ok) return <>{fallback}</>;
+  return (
+    <img
+      src={src}
+      alt={alt}
+      loading="lazy"
+      onError={() => setOk(false)}
+      className={className}
+      style={filter ? { filter } : undefined}
+    />
+  );
+}
+
+function AuthorPortraitCard({
+  author,
+  featured,
+}: {
+  author: (typeof AUTHORS)[number];
+  featured: boolean;
+}) {
+  return (
+    <button className="group text-left space-y-3">
+      <div className="relative aspect-[4/5] overflow-hidden rounded-[1.1rem] border border-plum/10 shadow-[0_10px_30px_-15px_oklch(0.25_0.10_295/0.35)] bg-gradient-to-br from-[#e8dfd0] via-[#d8ccb6] to-[#b89e7f] group-hover:shadow-[0_20px_50px_-15px_oklch(0.25_0.10_295/0.5)] transition-all duration-500">
+        {/* Museum paper grain */}
+        <div
+          aria-hidden
+          className="absolute inset-0 opacity-[0.18] mix-blend-multiply pointer-events-none"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 30% 20%, rgba(0,0,0,0.15) 0.5px, transparent 1px), radial-gradient(circle at 70% 60%, rgba(0,0,0,0.1) 0.5px, transparent 1px)",
+            backgroundSize: "3px 3px, 5px 5px",
+          }}
+        />
+        <SmartImage
+          src={author.photo}
+          alt={author.name}
+          className="absolute inset-0 h-full w-full object-cover object-top transition-transform duration-[900ms] group-hover:scale-[1.04]"
+          filter="grayscale(1) sepia(0.35) contrast(1.05) brightness(0.98)"
+          fallback={
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span
+                className="font-serif text-[68px] font-black italic text-plum/25 select-none"
+                style={{ letterSpacing: "-0.04em" }}
+              >
+                {author.initials}
+              </span>
+            </div>
+          }
+        />
+        {/* Editorial vignette */}
+        <div className="absolute inset-0 bg-gradient-to-t from-plum/70 via-plum/10 to-transparent" />
+        {/* Bottom caption strip */}
+        <div className="absolute inset-x-0 bottom-0 p-3">
+          {author.years && (
+            <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-gold/90">
+              {author.years}
+            </p>
+          )}
+          <p className="mt-0.5 text-[10px] text-white/70">{author.nationality ?? ""}</p>
+        </div>
+        {featured && (
+          <span className="absolute top-2.5 right-2.5 rounded-full bg-gold px-2 py-0.5 text-[8px] font-black uppercase tracking-widest text-plum shadow-md">
+            Semana
+          </span>
+        )}
+      </div>
+      <div>
+        <h4 className="font-serif text-[15px] font-bold text-plum leading-tight">
+          {author.name}
+        </h4>
+        <p className="mt-0.5 text-[10px] uppercase tracking-wider text-lavender font-semibold">
+          {author.field}
+        </p>
+        <p className="mt-1 text-[10px] text-muted-foreground/60">
+          {author.works} obras · {author.concepts} conceitos
+        </p>
+      </div>
+    </button>
+  );
+}
+
+function BookCoverArt({ book }: { book: (typeof ESSENTIAL_BOOKS)[number] }) {
+  return (
+    <div className="relative w-28 shrink-0 perspective-[900px]">
+      <div
+        className="relative h-40 w-full rounded-r-md rounded-l-sm shadow-[6px_10px_25px_-8px_oklch(0.25_0.10_295/0.45)] transition-transform duration-500 group-hover:-rotate-y-6 origin-left overflow-hidden"
+        style={{ transformStyle: "preserve-3d" }}
+      >
+        <SmartImage
+          src={book.cover}
+          alt={book.title}
+          className="absolute inset-0 h-full w-full object-cover"
+          fallback={
+            <div className={`absolute inset-0 flex flex-col justify-between p-3 ${book.spine}`}>
+              <span className="text-[8px] font-bold uppercase tracking-widest opacity-60">
+                {book.year}
+              </span>
+              <div>
+                <p className="font-serif text-[13px] font-bold italic leading-tight">
+                  {book.title}
+                </p>
+                <div className="mt-1.5 h-px w-6 bg-current opacity-40" />
+              </div>
+            </div>
+          }
+        />
+        {/* Spine shadow */}
+        <div className="absolute inset-y-0 left-0 w-1 bg-black/25 rounded-l-sm" />
+        {/* Subtle sheen */}
+        <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-black/10 pointer-events-none" />
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// BIBLIOTECA AUTORAL — SEÇÃO PROTAGONISTA (LETÍCIA)
+// ─────────────────────────────────────────────────────────────
+
+function LeticiaAutoralSection() {
+  const accentMap = {
+    plum: "bg-plum text-white",
+    lavender: "bg-lavender text-white",
+    gold: "bg-gold text-plum",
+    cream: "bg-cream text-plum border border-plum/10",
+  } as const;
+
+  return (
+    <section className="relative space-y-8">
+      {/* Ambient glow */}
+      <div
+        aria-hidden
+        className="absolute -inset-x-8 -top-8 -bottom-8 -z-10 rounded-[2rem] bg-gradient-to-br from-plum/[0.03] via-gold/[0.05] to-lavender/[0.06] blur-2xl"
+      />
+
+      <SectionHeader
+        number="02"
+        eyebrow="Biblioteca Autoral"
+        title="Acervo de Letícia Kuchockowolec Baccin"
+      />
+
+      {/* Author hero */}
+      <div className="relative grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-8 items-stretch">
+        {/* Portrait */}
+        <div className="relative">
+          <div className="relative aspect-[4/5] overflow-hidden rounded-[1.5rem] shadow-[0_30px_80px_-30px_oklch(0.25_0.10_295/0.55)] ring-1 ring-plum/10">
+            <img
+              src={LETICIA.photo}
+              alt={LETICIA.name}
+              className="absolute inset-0 h-full w-full object-cover object-center"
+            />
+            {/* Museum paper grain */}
+            <div
+              aria-hidden
+              className="absolute inset-0 opacity-[0.10] mix-blend-multiply pointer-events-none"
+              style={{
+                backgroundImage:
+                  "radial-gradient(circle at 30% 20%, rgba(0,0,0,0.2) 0.5px, transparent 1px), radial-gradient(circle at 70% 60%, rgba(0,0,0,0.15) 0.5px, transparent 1px)",
+                backgroundSize: "3px 3px, 5px 5px",
+              }}
+            />
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-plum via-plum/70 to-transparent p-6">
+              <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-gold">
+                Fundadora · Instituto Liz
+              </p>
+              <h3 className="mt-2 font-serif text-[22px] font-bold italic text-white leading-tight">
+                Letícia Kuchockowolec Baccin
+              </h3>
+            </div>
+            <span className="absolute top-4 left-4 inline-flex items-center gap-1.5 rounded-full bg-white/90 backdrop-blur px-3 py-1 text-[9px] font-black uppercase tracking-widest text-plum shadow-md">
+              <Sparkles className="size-3 text-gold" /> Coleção autoral
+            </span>
+          </div>
+        </div>
+
+        {/* Bio + counters */}
+        <div className="flex flex-col justify-between rounded-[1.5rem] bg-white/70 backdrop-blur-sm border border-plum/10 p-8 shadow-sm">
+          <div className="space-y-5">
+            <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-lavender">
+              Biblioteca Autoral
+            </p>
+            <h3 className="font-serif text-3xl md:text-4xl font-bold text-plum leading-[1.05]">
+              Toda a produção científica, clínica e didática da{" "}
+              <span className="italic text-lavender">fundadora</span> da Academia.
+            </h3>
+            <p className="text-[15px] leading-relaxed text-foreground/75 max-w-xl">
+              {LETICIA.bio}
+            </p>
+          </div>
+          <div className="mt-8 grid grid-cols-3 gap-4 border-t border-plum/10 pt-6">
+            {[
+              { n: LETICIA_WORKS.length, l: "Obras" },
+              {
+                n: LETICIA_WORKS.reduce((s, w) => s + w.protocols, 0),
+                l: "Protocolos",
+              },
+              {
+                n: LETICIA_WORKS.reduce((s, w) => s + w.citations, 0),
+                l: "Citações",
+              },
+            ].map((s) => (
+              <div key={s.l}>
+                <p className="font-serif text-3xl font-bold text-plum">{s.n}</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-lavender/80 mt-0.5">
+                  {s.l}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Works grid — Apple Books / Netflix aesthetic */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {LETICIA_WORKS.map((w) => (
+          <article
+            key={w.title}
+            className="group relative overflow-hidden rounded-[1.25rem] bg-white border border-plum/10 shadow-sm hover:shadow-2xl hover:shadow-plum/10 hover:-translate-y-1 transition-all duration-500"
+          >
+            {/* Cover panel */}
+            <div
+              className={`relative h-44 flex items-center justify-center overflow-hidden ${accentMap[w.accent]}`}
+            >
+              {/* Letícia portrait medallion */}
+              <div className="absolute -bottom-6 -right-6 size-32 rounded-full overflow-hidden border-4 border-white/20 opacity-30 group-hover:opacity-60 transition-opacity">
+                <img
+                  src={LETICIA.photo}
+                  alt=""
+                  aria-hidden
+                  className="h-full w-full object-cover"
+                  style={{ filter: "grayscale(1) contrast(1.1)" }}
+                />
+              </div>
+              {/* Paper grain */}
+              <div
+                aria-hidden
+                className="absolute inset-0 opacity-[0.15] mix-blend-overlay pointer-events-none"
+                style={{
+                  backgroundImage:
+                    "radial-gradient(circle at 30% 20%, rgba(0,0,0,0.3) 0.5px, transparent 1px)",
+                  backgroundSize: "4px 4px",
+                }}
+              />
+              <div className="relative z-10 text-center px-6">
+                <p className="text-[9px] font-bold uppercase tracking-[0.3em] opacity-70">
+                  {w.kind}
+                </p>
+                <h4 className="mt-2 font-serif text-xl font-bold italic leading-tight">
+                  {w.title}
+                </h4>
+                <div className="mt-2 h-px w-8 mx-auto bg-current opacity-40" />
+              </div>
+              {/* Badge */}
+              <span
+                className={`absolute top-3 left-3 rounded-full px-2 py-0.5 text-[8px] font-black uppercase tracking-widest shadow ${
+                  w.badge === "Novo"
+                    ? "bg-gold text-plum"
+                    : w.badge === "Exclusivo"
+                      ? "bg-plum text-gold border border-gold/40"
+                      : w.badge === "Mais estudado"
+                        ? "bg-white text-plum"
+                        : "bg-lavender text-white"
+                }`}
+              >
+                {w.badge}
+              </span>
+            </div>
+
+            {/* Meta */}
+            <div className="p-4 space-y-3">
+              <p className="text-[12px] italic text-muted-foreground leading-snug">
+                {w.subtitle}
+              </p>
+              <div className="flex items-center justify-between text-[11px] text-muted-foreground border-t border-border/40 pt-3">
+                <span>
+                  <strong className="text-plum">{w.concepts}</strong> conceitos
+                </span>
+                <span>
+                  <strong className="text-plum">{w.protocols}</strong> protocolos
+                </span>
+                <span>
+                  <strong className="text-plum">{w.citations}</strong> citações
+                </span>
+              </div>
+              <button className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-plum py-2 text-[11px] font-bold uppercase tracking-wider text-white hover:bg-lavender transition-colors">
+                <Play className="size-3 fill-current" /> Explorar
+              </button>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
   );
 }
