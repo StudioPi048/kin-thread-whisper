@@ -760,7 +760,7 @@ function BibliotecaPage() {
           {/* ── EXPLORAR POR AUTOR ─────────────────────────── */}
           <section className="space-y-6">
             <SectionHeader
-              number="03"
+              number="04"
               eyebrow="Explorar por autor"
               title="Vozes fundadoras"
               action={{ label: `Ver todos (${AUTHORS.length})`, onClick: () => {} }}
@@ -806,7 +806,7 @@ function BibliotecaPage() {
 
           {/* ── EXPLORAR POR TEMA ──────────────────────────── */}
           <section className="space-y-6">
-            <SectionHeader number="04" eyebrow="Explorar por tema" title="Territórios clínicos" />
+            <SectionHeader number="05" eyebrow="Explorar por tema" title="Territórios clínicos" />
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               {THEMES.map((t) => {
@@ -831,7 +831,7 @@ function BibliotecaPage() {
           {/* ── LEITURAS FUNDAMENTAIS ──────────────────────── */}
           <section className="space-y-6">
             <SectionHeader
-              number="05"
+              number="06"
               eyebrow="Cânone"
               title="Leituras fundamentais"
               action={{ label: "Ver acervo completo", onClick: () => {} }}
@@ -917,7 +917,7 @@ function BibliotecaPage() {
 
           {/* ── CITAÇÕES (MASONRY) ─────────────────────────── */}
           <section className="space-y-6">
-            <SectionHeader number="06" eyebrow="Sabedoria clínica" title="Citações dos mestres" />
+            <SectionHeader number="07" eyebrow="Sabedoria clínica" title="Citações dos mestres" />
 
             <div className="columns-1 md:columns-2 xl:columns-3 gap-5 [column-fill:_balance]">
               {QUOTES.map((q, i) => {
@@ -970,7 +970,7 @@ function BibliotecaPage() {
           {/* ── GLOSSÁRIO COMPACTO ─────────────────────────── */}
           <section className="space-y-6">
             <SectionHeader
-              number="07"
+              number="08"
               eyebrow="Definições"
               title="Glossário clínico"
               action={{ label: "Ver glossário completo", onClick: () => {} }}
@@ -994,7 +994,7 @@ function BibliotecaPage() {
 
           {/* ── PROTOCOLOS ─────────────────────────────────── */}
           <section className="space-y-6">
-            <SectionHeader number="08" eyebrow="Ferramentas" title="Protocolos de sessão" />
+            <SectionHeader number="09" eyebrow="Ferramentas" title="Protocolos de sessão" />
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               {PROTOCOLS.map((p) => (
@@ -1058,7 +1058,7 @@ function BibliotecaPage() {
           {entries.length > 0 && (
             <section className="space-y-6">
               <SectionHeader
-                number="09"
+                number="10"
                 eyebrow="Acervo inteligente"
                 title={q ? `Resultados para "${q}"` : "Verbetes recentes do acervo"}
               />
