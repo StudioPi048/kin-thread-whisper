@@ -134,16 +134,48 @@ const FALLBACK_SESSIONS: Session[] = [
   },
 ];
 
-const TIMELINE = [
-  { time: "08:30", label: "Preparação do dia", kind: "ritual" as const, icon: Sunrise },
-  { time: "09:00", label: "Pietro Vinicius Baccin", kind: "session" as const, sessionId: "s1" },
-  { time: "10:15", label: "Espaço para evolução", kind: "gap" as const, icon: FileText },
-  { time: "11:30", label: "Leticia Baccin", kind: "session" as const, sessionId: "s2" },
-  { time: "13:00", label: "Almoço", kind: "gap" as const, icon: Coffee },
-  { time: "15:00", label: "Anapaula Farhat", kind: "session" as const, sessionId: "s3" },
-  { time: "16:30", label: "Responder mensagens", kind: "gap" as const, icon: MessageSquare },
-  { time: "17:00", label: "Finalizar evoluções", kind: "gap" as const, icon: CheckCircle2 },
-];
+type TimelineItem =
+  | { time: string; label: string; kind: "session"; sessionId: string }
+  | { time: string; label: string; kind: "ritual" | "gap"; icon: typeof CircleDot };
+
+function buildTimeline(sessions: Session[]): TimelineItem[] {
+  const items: TimelineItem[] = [];
+  const first = sessions[0]?.start ?? "09:00";
+  const preTime = shiftTime(first, -30);
+  items.push({ time: preTime, label: "Preparação do dia", kind: "ritual", icon: Sunrise });
+  sessions.forEach((s, i) => {
+    items.push({ time: s.start, label: s.patient, kind: "session", sessionId: s.id });
+    const next = sessions[i + 1];
+    if (next) {
+      const gapMin = minutesBetween(s.end, next.start);
+      if (gapMin >= 45) {
+        items.push({
+          time: s.end,
+          label: gapMin >= 90 ? "Almoço / pausa" : "Espaço para evolução",
+          kind: "gap",
+          icon: gapMin >= 90 ? Coffee : FileText,
+        });
+      }
+    }
+  });
+  const last = sessions[sessions.length - 1];
+  if (last) {
+    items.push({ time: shiftTime(last.end, 30), label: "Finalizar evoluções", kind: "gap", icon: CheckCircle2 });
+  }
+  return items;
+}
+
+function shiftTime(hm: string, minutes: number): string {
+  const [h, m] = hm.split(":").map(Number);
+  const d = new Date(2000, 0, 1, h, m + minutes);
+  return `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
+}
+function minutesBetween(a: string, b: string): number {
+  const [ah, am] = a.split(":").map(Number);
+  const [bh, bm] = b.split(":").map(Number);
+  return bh * 60 + bm - (ah * 60 + am);
+}
+
 
 const QUICK_ACTIONS = [
   { label: "Nova sessão", icon: Plus },
