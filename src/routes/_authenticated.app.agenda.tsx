@@ -713,44 +713,40 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
 }
 
 function MiniTreePreview({ session, genogram, isLoading }: { session: Session; genogram: ClientGenogramDTO | undefined; isLoading: boolean }) {
+  const hasData = !!genogram && genogram.hasGenogram;
+  const totalPersons = genogram?.totalPersons ?? 0;
+
   return (
     <div className="rounded-2xl bg-white/80 backdrop-blur border border-border/50 shadow-sm p-5">
       <div className="flex items-center justify-between mb-4">
         <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground flex items-center gap-2">
           <GitBranch className="size-3.5" /> Genossociograma
         </p>
-        <span className="text-[10px] text-muted-foreground">3 gerações</span>
+        <span className="text-[10px] text-muted-foreground">
+          {hasData ? `${totalPersons} pessoas` : isLoading ? "carregando…" : "sem dados"}
+        </span>
       </div>
 
-      <svg viewBox="0 0 300 160" className="w-full h-32">
-        {/* Grandparents */}
-        <g>
-          <rect x="20" y="10" width="40" height="30" rx="4" className="fill-plum/10 stroke-plum/40" strokeWidth="1.5" />
-          <circle cx="100" cy="25" r="15" className="fill-lavender/20 stroke-lavender/60" strokeWidth="1.5" />
-          <rect x="180" y="10" width="40" height="30" rx="4" className="fill-plum/10 stroke-plum/40" strokeWidth="1.5" />
-          <circle cx="260" cy="25" r="15" className="fill-lavender/20 stroke-lavender/60" strokeWidth="1.5" />
-          {/* alert on paternal grandpa */}
-          <circle cx="55" cy="15" r="4" className="fill-gold stroke-white" strokeWidth="1.5" />
-        </g>
-        {/* Parents */}
-        <line x1="40" y1="40" x2="70" y2="70" className="stroke-border" strokeWidth="1" />
-        <line x1="100" y1="40" x2="80" y2="70" className="stroke-border" strokeWidth="1" />
-        <line x1="200" y1="40" x2="220" y2="70" className="stroke-border" strokeWidth="1" />
-        <line x1="260" y1="40" x2="230" y2="70" className="stroke-border" strokeWidth="1" />
-        <rect x="60" y="70" width="40" height="30" rx="4" className="fill-plum/15 stroke-plum/50" strokeWidth="1.5" />
-        <circle cx="220" cy="85" r="15" className="fill-lavender/25 stroke-lavender/60" strokeWidth="1.5" />
-        <line x1="100" y1="85" x2="205" y2="85" className="stroke-border" strokeWidth="1" strokeDasharray="2 2" />
-        {/* Proband */}
-        <line x1="150" y1="90" x2="150" y2="125" className="stroke-border" strokeWidth="1" />
-        <rect x="130" y="125" width="40" height="30" rx="4" className="fill-gold/25 stroke-gold" strokeWidth="2" />
-        <text x="150" y="145" textAnchor="middle" className="fill-primary font-bold" fontSize="10">
-          {session.initials}
-        </text>
-      </svg>
+      {isLoading && !genogram ? (
+        <div className="h-32 flex items-center justify-center text-muted-foreground/60">
+          <Loader2 className="size-5 animate-spin" />
+        </div>
+      ) : hasData ? (
+        <RealMiniTree genogram={genogram!} session={session} />
+      ) : (
+        <div className="h-32 flex flex-col items-center justify-center text-center px-4">
+          <GitBranch className="size-6 text-muted-foreground/40 mb-2" />
+          <p className="text-[11.5px] text-muted-foreground italic leading-snug">
+            {session.clientId
+              ? "Genossociograma ainda não iniciado para este cliente."
+              : "Sem cliente vinculado à sessão."}
+          </p>
+        </div>
+      )}
 
       <div className="mt-3 flex items-center justify-between text-[11px]">
         <div className="flex items-center gap-3 text-muted-foreground">
-          <span className="flex items-center gap-1"><Circle className="size-2 fill-gold text-gold" /> Alerta</span>
+          <span className="flex items-center gap-1"><Circle className="size-2 fill-gold text-gold" /> Paciente</span>
           <span className="flex items-center gap-1"><Circle className="size-2 fill-plum text-plum" /> Masc.</span>
           <span className="flex items-center gap-1"><Circle className="size-2 fill-lavender text-lavender" /> Fem.</span>
         </div>
@@ -762,6 +758,89 @@ function MiniTreePreview({ session, genogram, isLoading }: { session: Session; g
         </Link>
       </div>
     </div>
+  );
+}
+
+function RealMiniTree({ genogram, session }: { genogram: ClientGenogramDTO; session: Session }) {
+  const { proband, parents, grandparents } = genogram.generations;
+  const father = parents.find((p) => p.role === "father");
+  const mother = parents.find((p) => p.role === "mother");
+  const patGf = grandparents.find((p) => p.role === "grandfather");
+  const patGm = grandparents.find((p) => p.role === "grandmother");
+  const matGf = grandparents.filter((p) => p.role === "grandfather")[1] ?? null;
+  const matGm = grandparents.filter((p) => p.role === "grandmother")[1] ?? null;
+
+  const Node = ({
+    person,
+    x,
+    y,
+    highlight,
+  }: {
+    person: GenogramPersonDTO | null | undefined;
+    x: number;
+    y: number;
+    highlight?: boolean;
+  }) => {
+    if (!person) {
+      return (
+        <circle cx={x} cy={y} r="10" className="fill-cream stroke-border" strokeWidth="1" strokeDasharray="2 2" />
+      );
+    }
+    const isMasc = person.gender?.toLowerCase().startsWith("m") ?? person.role === "father" || person.role === "grandfather";
+    const isFem = person.gender?.toLowerCase().startsWith("f") ?? person.role === "mother" || person.role === "grandmother";
+    const stroke = highlight ? "stroke-gold" : isMasc ? "stroke-plum/60" : isFem ? "stroke-lavender/70" : "stroke-border";
+    const fill = highlight ? "fill-gold/25" : isMasc ? "fill-plum/12" : isFem ? "fill-lavender/20" : "fill-cream";
+    const sw = highlight ? 2 : 1.5;
+    const commonProps = { className: `${fill} ${stroke}`, strokeWidth: sw } as const;
+    return isFem && !isMasc ? (
+      <>
+        <circle cx={x} cy={y} r="11" {...commonProps} />
+        {person.isDeceased && (
+          <line x1={x - 10} y1={y - 10} x2={x + 10} y2={y + 10} className="stroke-slate-500" strokeWidth="1.2" />
+        )}
+      </>
+    ) : (
+      <>
+        <rect x={x - 11} y={y - 11} width="22" height="22" rx="3" {...commonProps} />
+        {person.isDeceased && (
+          <line x1={x - 11} y1={y - 11} x2={x + 11} y2={y + 11} className="stroke-slate-500" strokeWidth="1.2" />
+        )}
+      </>
+    );
+  };
+
+  return (
+    <svg viewBox="0 0 300 160" className="w-full h-32">
+      {/* Generation lines */}
+      <line x1="20" y1="55" x2="280" y2="55" className="stroke-border/40" strokeDasharray="2 3" />
+      <line x1="60" y1="105" x2="240" y2="105" className="stroke-border/40" strokeDasharray="2 3" />
+
+      {/* Grandparents row */}
+      <Node person={patGf} x={35} y={25} />
+      <Node person={patGm} x={95} y={25} />
+      <Node person={matGf} x={205} y={25} />
+      <Node person={matGm} x={265} y={25} />
+      {/* couple links */}
+      <line x1="46" y1="25" x2="84" y2="25" className="stroke-border" />
+      <line x1="216" y1="25" x2="254" y2="25" className="stroke-border" />
+      {/* to parents */}
+      <line x1="65" y1="36" x2="90" y2="75" className="stroke-border" />
+      <line x1="235" y1="36" x2="210" y2="75" className="stroke-border" />
+
+      {/* Parents row */}
+      <Node person={father} x={90} y={85} />
+      <Node person={mother} x={210} y={85} />
+      <line x1="101" y1="85" x2="199" y2="85" className="stroke-border" />
+
+      {/* to proband */}
+      <line x1="150" y1="85" x2="150" y2="120" className="stroke-border" />
+
+      {/* Proband */}
+      <Node person={proband ?? { ...({} as GenogramPersonDTO), id: "p", fullName: session.patient, preferredName: null, gender: null, isProband: true, isDeceased: false, hasBirthDate: false, hasDeathDate: false, relationshipTo: null, role: "proband" }} x={150} y={135} highlight />
+      <text x={150} y={155} textAnchor="middle" className="fill-primary font-bold" fontSize="9">
+        {session.initials}
+      </text>
+    </svg>
   );
 }
 
