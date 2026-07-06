@@ -237,7 +237,7 @@ function AgendaPage() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-64px)] bg-[radial-gradient(circle_at_20%_0%,oklch(0.97_0.02_295)_0%,transparent_45%),radial-gradient(circle_at_100%_100%,oklch(0.96_0.03_60/0.4)_0%,transparent_50%),var(--color-cream)]">
+    <div className="min-h-[calc(100vh-64px)] bg-transparent">
       {/* Breadcrumb */}
       <div className="border-b border-border/60 bg-white/60 backdrop-blur-sm px-6 py-3 flex items-center justify-between gap-3">
         <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-muted-foreground">
@@ -340,17 +340,17 @@ function ContextualHeader({ stats }: { stats: { total: number; primeira: number;
         <div className="container-liz relative">
           <div className="flex flex-wrap items-start justify-between gap-6">
             <div className="max-w-2xl">
-              <div className="flex items-center gap-2 text-forest-mid">
+              <div className="flex items-center gap-2 text-gold">
                 <Sunrise className="size-4" />
                 <p className="text-[11px] font-bold uppercase tracking-[0.35em]">
                   Segunda-feira · 6 de julho
                 </p>
               </div>
-              <h1 className="mt-3 font-serif text-4xl md:text-5xl font-bold text-white leading-tight">
+              <h1 className="mt-3 font-serif text-4xl md:text-5xl font-bold text-archive leading-tight">
                 Bom dia, <span className="text-gold">Letícia</span>.
               </h1>
-              <p className="mt-3 text-[15px] text-white/70 leading-relaxed">
-                Hoje você acompanhará <strong className="text-white">3 histórias familiares</strong>.
+              <p className="mt-3 text-[15px] text-archive/70 leading-relaxed">
+                Hoje você acompanhará <strong className="text-archive">3 histórias familiares</strong>.
                 Um dos pacientes está em <strong className="text-gold">data ativa de Síndrome de Aniversário</strong> —
                 preparei hipóteses, protocolos e leituras para você.
               </p>
@@ -385,17 +385,17 @@ function ContextualHeader({ stats }: { stats: { total: number; primeira: number;
 
 function HeaderStat({ icon: Icon, label, value, accent }: { icon: typeof Clock; label: string; value: string; accent: "forest" | "gold" | "rose" }) {
   const accentClass = {
-    forest: "text-forest-mid",
+    forest: "text-archive/70",
     gold: "text-gold",
     rose: "text-rose-300",
   }[accent];
   return (
-    <div className="rounded-xl bg-white/[0.06] backdrop-blur-sm border border-white/10 px-3 py-2.5">
+    <div className="rounded-xl bg-white/[0.06] backdrop-blur-sm border border-white/10 px-4 py-3 shadow-inner">
       <div className={`flex items-center gap-1.5 ${accentClass}`}>
-        <Icon className="size-3" />
-        <p className="text-[9px] font-bold uppercase tracking-[0.15em]">{label}</p>
+        <Icon className="size-3.5" />
+        <p className="text-[10px] font-bold uppercase tracking-[0.15em]">{label}</p>
       </div>
-      <p className="mt-1 font-serif text-xl font-bold text-white">{value}</p>
+      <p className="mt-2 font-serif text-2xl font-bold text-archive">{value}</p>
     </div>
   );
 }

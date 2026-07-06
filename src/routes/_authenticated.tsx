@@ -129,10 +129,22 @@ function AuthenticatedLayout() {
     <div className="flex min-h-screen bg-background">
       {/* ── SIDEBAR ────────────────────────────────────── */}
       <aside
-        className={`hidden shrink-0 flex-col bg-mahogany text-white transition-all duration-300 md:flex ${isCollapsed ? "w-[72px]" : "w-72"}`}
+        className={`relative hidden shrink-0 flex-col bg-mahogany text-white transition-all duration-300 md:flex overflow-hidden ${isCollapsed ? "w-[72px]" : "w-72"}`}
       >
+        {/* Vetor Dinâmico: Árvore subindo na sidebar */}
+        <div className="pointer-events-none absolute bottom-0 left-0 w-full h-[60%] opacity-[0.04] z-0 flex items-end">
+          <svg viewBox="0 0 100 200" preserveAspectRatio="none" className="w-full h-full stroke-archive fill-none" strokeWidth="0.5">
+            <path d="M50,200 C50,150 20,120 20,80 C20,50 40,30 40,10" />
+            <path d="M50,200 C50,160 80,140 80,90 C80,60 60,40 60,20" />
+            <path d="M50,180 C40,140 30,110 50,70" />
+            <path d="M50,170 C60,130 70,100 50,60" />
+            <path d="M40,120 C30,100 10,90 10,70" />
+            <path d="M60,130 C75,110 90,100 90,80" />
+          </svg>
+        </div>
+
         {/* Logo — borda inferior dourada */}
-        <div className="flex items-center justify-between border-b-2 border-gold/30 px-4 py-6 h-[90px] shrink-0">
+        <div className="relative z-10 flex items-center justify-between border-b-2 border-gold/30 px-4 py-6 h-[90px] shrink-0">
           <Link
             to="/app"
             className={`flex items-center gap-3 overflow-hidden ${isCollapsed ? "opacity-0 w-0 hidden" : "opacity-100"}`}
@@ -158,7 +170,7 @@ function AuthenticatedLayout() {
         </div>
 
         {/* Busca Rápida */}
-        <div className={`px-6 pt-6 pb-2 ${isCollapsed ? "opacity-0 hidden" : "opacity-100"}`}>
+        <div className={`relative z-10 px-6 pt-6 pb-2 ${isCollapsed ? "opacity-0 hidden" : "opacity-100"}`}>
           <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-sidebar-foreground/40 mb-3">
             Menu Principal
           </p>
@@ -177,7 +189,7 @@ function AuthenticatedLayout() {
         </div>
 
         {isCollapsed && (
-          <div className="pt-6 flex justify-center">
+          <div className="relative z-10 pt-6 flex justify-center">
             <button
               onClick={() => setIsSearchOpen(true)}
               className="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition-colors mb-2 cursor-pointer"
@@ -189,7 +201,7 @@ function AuthenticatedLayout() {
         )}
 
         {/* Navegação — barra vertical dourada no item ativo */}
-        <nav className="flex-1 px-4 space-y-0.5 overflow-y-auto">
+        <nav className="relative z-10 flex-1 px-4 space-y-0.5 overflow-y-auto">
           {nav.map((item) => {
             const active =
               "exact" in item && item.exact
@@ -220,7 +232,7 @@ function AuthenticatedLayout() {
         </nav>
 
         {/* Usuário */}
-        <div className="border-t-2 border-sidebar-border p-4 shrink-0">
+        <div className="relative z-10 border-t-2 border-sidebar-border p-4 shrink-0">
           <div
             className={`flex items-center gap-3 rounded-md bg-sidebar-accent/60 ${isCollapsed ? "justify-center p-2" : "p-3"}`}
           >
@@ -256,9 +268,26 @@ function AuthenticatedLayout() {
       </aside>
 
       {/* ── CONTEÚDO ───────────────────────────────────── */}
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-archive">
+        
+        {/* Vetor Dinâmico Global: Formas orgânicas / Topografia de papel */}
+        <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden opacity-[0.03]">
+          <svg viewBox="0 0 800 800" className="w-[150%] h-[150%] max-w-none -ml-[20%] -mt-[10%] stroke-mahogany fill-none" strokeWidth="0.5">
+            <path d="M-200,400 Q100,200 400,400 T1000,400" />
+            <path d="M-200,450 Q100,250 400,450 T1000,450" />
+            <path d="M-200,500 Q100,300 400,500 T1000,500" />
+            <path d="M-200,550 Q100,350 400,550 T1000,550" />
+            <path d="M-200,600 Q100,400 400,600 T1000,600" />
+            
+            {/* Folha / Galho sutil no canto inferior direito */}
+            <path d="M600,800 Q700,600 800,500" strokeWidth="1" />
+            <path d="M650,700 Q700,650 750,680" strokeWidth="0.5" />
+            <path d="M700,600 Q750,550 800,580" strokeWidth="0.5" />
+          </svg>
+        </div>
+
         {/* Mobile header */}
-        <header className="flex h-16 items-center justify-between border-b-2 border-border bg-sidebar px-4 md:hidden">
+        <header className="relative z-10 flex h-16 items-center justify-between border-b-2 border-border bg-sidebar px-4 md:hidden">
           <Link to="/app" className="flex items-center gap-2">
             <LizLogoLockup variant="light" />
           </Link>
@@ -270,7 +299,7 @@ function AuthenticatedLayout() {
           </button>
         </header>
 
-        <main className="flex-1 overflow-y-auto pb-16 md:pb-0 relative z-0">
+        <main className="relative z-10 flex-1 overflow-y-auto pb-16 md:pb-0">
           <Outlet />
         </main>
 
