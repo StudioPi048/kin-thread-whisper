@@ -396,9 +396,10 @@ export default function LandingPage() {
           </p>
           
           <div className="mt-8 relative inline-block">
-            {/* Efeito de papel cortado/fita para a citação */}
-            <div className="absolute -top-4 -left-4 w-12 h-6 bg-white/40 rotate-[-8deg] shadow-sm" />
-            <div className="absolute -bottom-4 -right-4 w-12 h-6 bg-white/40 rotate-[5deg] shadow-sm" />
+            {/* Fita adesiva decorativa dourada */}
+            <div aria-hidden className="absolute -top-4 left-8 w-16 h-5 bg-gold/60 rotate-[-6deg] shadow-sm rounded-[1px]" />
+            <div aria-hidden className="absolute -bottom-4 right-8 w-16 h-5 bg-gold/60 rotate-[4deg] shadow-sm rounded-[1px]" />
+            
             
             <motion.blockquote
               initial={{ opacity: 0, y: 16 }}
