@@ -215,7 +215,7 @@ function ClientDossierPage() {
           {initials}
         </span>
 
-        <div className="container-liz relative z-10 space-y-6">
+        <div className="container-liz relative z-10 space-y-3">
           <nav className="flex items-center gap-1 text-[12px] uppercase tracking-[0.1em] font-bold text-white/50">
             <Link
               to="/app/clientes"
