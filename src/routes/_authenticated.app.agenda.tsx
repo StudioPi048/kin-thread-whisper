@@ -37,6 +37,7 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getAgendaData, type AgendaSessionDTO, type OrphanClientDTO } from "@/lib/agenda.functions";
+import { getClientGenogram, type ClientGenogramDTO, type GenogramPersonDTO } from "@/lib/genogram.functions";
 
 
 export const Route = createFileRoute("/_authenticated/app/agenda")({
