@@ -107,23 +107,14 @@ export const getAgendaData = createServerFn({ method: "GET" })
       const durMin = Math.max(30, Math.round((r.duration_seconds ?? 3600) / 60));
       const end = addMinutes(start, durMin);
       const hist = client?.id ? historyByClient.get(client.id) : undefined;
-      const seq =
-        hist && hist.firstDate
-          ? [...(hist ? [hist] : [])].length // placeholder — replaced below
-          : 1;
-      // Compute this session's ordinal within client's history
-      let sessionNumber = 1;
-      if (client?.id) {
-        // Count how many sessions the client has up to and including this date
-        const clientAll = (weekRows ?? []).filter(() => false); // unused
-        // Fallback to hist.count if we can't compute chronologically
-        sessionNumber = hist?.count ?? 1;
-      }
+      const sessionNumber = hist?.count ?? 1;
       const isFirst = sessionNumber === 1;
       const daysSinceFirst =
         hist?.firstDate && !isFirst
           ? Math.max(0, Math.floor((now.getTime() - hist.firstDate.getTime()) / 86_400_000))
           : null;
+      void idx;
+
 
       const type: AgendaSessionDTO["type"] = isFirst
         ? "Primeira Consulta"
