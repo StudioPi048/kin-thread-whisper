@@ -898,3 +898,41 @@ function PendingRow({ label, count, tone }: { label: string; count: number; tone
     </li>
   );
 }
+
+/* ---------------------------- DTO → UI Mapping ---------------------------- */
+
+function mapDtosToSessions(dtos: AgendaSessionDTO[]): Session[] {
+  const accents: Session["accent"][] = ["plum", "lavender", "gold"];
+  const now = Date.now();
+  return dtos.map((d, i) => {
+    const seals: Seal[] = [];
+    if (d.isFirst) seals.push("primeira");
+    else seals.push("retorno");
+    if (d.status === "processing" || d.status === "failed") seals.push("prioridade");
+
+    const startTs = new Date(d.startISO).getTime();
+    const isNext = startTs >= now && dtos.slice(0, i).every((p) => new Date(p.startISO).getTime() < now);
+
+    const protocols: string[] = d.isFirst
+      ? ["Anamnese Sistêmica", "Coleta de 3 Gerações", "Mapa Inicial"]
+      : ["Entrevista Transgeracional", "Linha do Tempo", "Mapa de Segredos"];
+
+    return {
+      id: d.id,
+      start: d.start,
+      end: d.end,
+      patient: d.patient,
+      initials: d.initials || "?",
+      type: d.type,
+      sessionNumber: d.isFirst ? undefined : `Sessão ${d.sessionNumber}`,
+      daysSinceFirst: d.daysSinceFirst ?? undefined,
+      lastEvolution: d.lastEvolution ?? undefined,
+      seals,
+      aiAlerts: [], // populated in Commit 4 (real IA)
+      protocols,
+      status: isNext ? "next" : "later",
+      accent: accents[i % accents.length],
+    };
+  });
+}
+
