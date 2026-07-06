@@ -669,9 +669,13 @@ function BibliotecaPage() {
             </div>
           </section>
 
+          {/* ── BIBLIOTECA AUTORAL — LETÍCIA (PROTAGONISTA) ── */}
+          <LeticiaAutoralSection />
+
           {/* ── HOJE NA BIBLIOTECA (BENTO) ─────────────────── */}
           <section className="space-y-6">
-            <SectionHeader number="02" eyebrow="Descoberta diária" title="Hoje na Biblioteca" />
+            <SectionHeader number="03" eyebrow="Descoberta diária" title="Hoje na Biblioteca" />
+
 
             <div className="grid grid-cols-4 gap-4 auto-rows-[minmax(180px,auto)]">
               {/* Concept of day — big */}
