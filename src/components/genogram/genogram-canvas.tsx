@@ -53,15 +53,22 @@ import { RelationshipFormDialog } from "./relationship-form-dialog";
 import { relationshipLabel } from "@/lib/genogram";
 import { smartNormalizeRelationship } from "@/lib/relationship-normalizer";
 import { ensureProband } from "@/lib/ensure-proband";
-import { buildLogicalGraph, validateGraph, layoutGraph } from "@/lib/geno/build";
+import {
+  buildLogicalGraph,
+  validateGraph,
+  layoutGraph,
+  NODE_W,
+  NODE_H,
+  PERSON_SHAPE as PERSON_SHAPE_SIZE,
+  PROBAND_SHAPE as PROBAND_SHAPE_SIZE,
+  GEN_GAP as GENERATION_GAP,
+} from "@/lib/geno/build";
 import type { Database } from "@/integrations/supabase/types";
 
 type PersonRow = Database["public"]["Tables"]["genogram_persons"]["Row"];
 type RelRow = Database["public"]["Tables"]["genogram_relationships"]["Row"];
 
 const BUILD_TAG = "2026-07-06-canvas-pro-max";
-const GENERATION_GAP = 180;
-const NODE_W = 140;
 
 const UNION_SIZE = 12;
 const UnionNodeComponent = ({ data }: NodeProps) => {
@@ -176,43 +183,221 @@ const nodeTypes = {
   band: GenerationBandNode,
 };
 
-const CustomStepEdge = ({
-  id,
+function StraightStepEdge({
   sourceX,
   sourceY,
   targetX,
   targetY,
-  label,
   style,
   markerEnd,
-}: EdgeProps) => {
-  const midX = (sourceX + targetX) / 2;
-  const path = `M ${sourceX} ${sourceY} L ${midX} ${sourceY} L ${midX} ${targetY} L ${targetX} ${targetY}`;
+  markerStart,
+  label,
+  labelStyle,
+  labelShowBg,
+  labelBgStyle,
+  labelBgPadding,
+  labelBgBorderRadius,
+  interactionWidth,
+  data,
+}: EdgeProps) {
+  const isStraight = Math.abs(sourceX - targetX) < 1 || Math.abs(sourceY - targetY) < 1;
+  const edgeData = data as Record<string, unknown> | undefined;
+  const unionX = edgeData?.unionX as number | undefined;
+  const isPrimaryParent = edgeData?.isPrimaryParent as boolean | undefined;
+  const isFirstSibling = edgeData?.isFirstSibling as boolean | undefined;
+  const relationshipType = edgeData?.relationshipType as string | undefined;
+  const qualifier = edgeData?.qualifier as string | undefined;
+
+  // Use consistent Ys to ensure horizontal bars align perfectly across children with different node heights
+  const midY =
+    (edgeData?.consistentMidY as number | undefined) ?? sourceY + (targetY - sourceY) / 2;
+  const trunkY = (edgeData?.consistentTrunkY as number | undefined) ?? targetY + 15;
+
+  let path = "";
+
+  if (unionX !== undefined) {
+    if (isFirstSibling) {
+      path += `M ${sourceX} ${sourceY} L ${sourceX} ${midY} L ${unionX} ${midY} `;
+      if (isPrimaryParent) {
+        path += `M ${unionX} ${midY} L ${unionX} ${trunkY} `;
+      }
+    }
+    if (isPrimaryParent) {
+      path += `M ${unionX} ${trunkY} L ${targetX} ${trunkY} L ${targetX} ${targetY} `;
+    }
+  } else {
+    path = isStraight
+      ? `M ${sourceX} ${sourceY} L ${targetX} ${targetY}`
+      : `M ${sourceX} ${sourceY} L ${sourceX} ${midY} L ${targetX} ${midY} L ${targetX} ${targetY}`;
+  }
+
+  // If path is empty, we don't render this edge visually, it was already drawn by another sibling's edge!
+  if (!path.trim()) return null;
+
+  const labelX = (sourceX + targetX) / 2;
+  const labelY = Math.abs(sourceY - targetY) < 1 ? sourceY - 10 : midY - 10;
+  const showUnionBreakMark =
+    relationshipType === "union" &&
+    (qualifier === "divorce" || qualifier === "separation" || qualifier === "rupture");
+  const breakMarkCount = qualifier === "divorce" || qualifier === "rupture" ? 2 : 1;
+  const breakY = Math.abs(sourceY - targetY) < 1 ? sourceY : midY;
 
   return (
     <>
-      <BaseEdge path={path} style={style} markerEnd={markerEnd} />
-      {label && (
-        <foreignObject
-          width={80}
-          height={20}
-          x={midX - 40}
-          y={(sourceY + targetY) / 2 - 10}
-          className="overflow-visible"
-        >
-          <div className="flex h-full w-full items-center justify-center">
-            <span className="rounded bg-card/90 px-1 py-0.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground shadow-sm">
-              {label}
-            </span>
-          </div>
-        </foreignObject>
-      )}
+      <BaseEdge
+        path={path}
+        style={style}
+        markerEnd={markerEnd}
+        markerStart={markerStart}
+        label={label}
+        labelStyle={labelStyle}
+        labelShowBg={labelShowBg}
+        labelBgStyle={labelBgStyle}
+        labelBgPadding={labelBgPadding}
+        labelBgBorderRadius={labelBgBorderRadius}
+        interactionWidth={interactionWidth}
+        labelX={labelX}
+        labelY={labelY}
+      />
+      {showUnionBreakMark &&
+        Array.from({ length: breakMarkCount }).map((_, i) => {
+          const offset = breakMarkCount === 2 ? (i === 0 ? -5 : 5) : 0;
+          const x = labelX + offset;
+          return (
+            <path
+              key={i}
+              d={`M ${x - 7} ${breakY + 12} L ${x + 7} ${breakY - 12}`}
+              fill="none"
+              stroke="var(--color-destructive)"
+              strokeWidth={2.5}
+              strokeLinecap="round"
+              pointerEvents="none"
+            />
+          );
+        })}
     </>
   );
-};
+}
+
+function nodeShapeSize(node: Node | undefined): number {
+  const data = node?.data as PersonNodeData | undefined;
+  return data?.is_proband ? PROBAND_SHAPE_SIZE : PERSON_SHAPE_SIZE;
+}
+
+function nodeCenterX(node: Node | undefined): number {
+  if (!node) return 0;
+  const measured = (node as Node & { measured?: { width?: number } }).measured?.width ?? node.width ?? NODE_W;
+  return node.position.x + measured / 2;
+}
+
+function nodeBottomY(node: Node | undefined): number {
+  if (!node) return 0;
+  const measured = (node as Node & { measured?: { height?: number } }).measured?.height ?? node.height ?? NODE_H;
+  return node.position.y + measured;
+}
+
+function nodeUnionY(node: Node | undefined): number {
+  if (!node) return 0;
+  return node.position.y + nodeShapeSize(node) / 2;
+}
+
+function PedigreeEdge({ style, markerEnd, markerStart, interactionWidth, data }: EdgeProps) {
+  const edgeData = data as { unionId?: string; childIds?: string[] } | undefined;
+  const unionId = edgeData?.unionId;
+  const childIds = edgeData?.childIds ?? [];
+  const live = useStore((store) => {
+    const children = childIds
+      .map((id) => store.nodeLookup.get(id) as unknown as Node | undefined)
+      .filter((n): n is Node => Boolean(n));
+    const union = unionId
+      ? (store.nodeLookup.get(unionId) as unknown as Node | undefined)
+      : undefined;
+    return { children, union };
+  });
+
+  if (!live.union || live.children.length === 0) return null;
+
+  const unionX = live.union.position.x;
+  const unionY = live.union.position.y;
+  const childPoints = live.children.map((n) => ({ x: nodeCenterX(n), y: n.position.y, node: n }));
+
+  const xs = childPoints.map((p) => p.x);
+  const barLeft = Math.min(...xs, unionX);
+  const barRight = Math.max(...xs, unionX);
+
+  const minChildTop = Math.min(...childPoints.map((p) => p.y));
+  const siblingBarY = unionY < minChildTop
+    ? minChildTop - 30
+    : minChildTop + PERSON_SHAPE_SIZE + 12 + 72 + 24;
+
+  let path = "";
+  path += `M ${barLeft} ${siblingBarY} L ${barRight} ${siblingBarY} `;
+  for (const p of childPoints) {
+    const childShapeSize = nodeShapeSize(p.node);
+    const safeGap = 20;
+    
+    const childConnY = p.y < siblingBarY
+      ? p.y + childShapeSize + safeGap
+      : p.y - safeGap;
+      
+    path += `M ${p.x} ${childConnY} L ${p.x} ${siblingBarY} `;
+  }
+  
+  const safeGap = 20;
+  const unionHalfSize = 6;
+  const unionConnY = unionY < siblingBarY
+    ? unionY + unionHalfSize + safeGap
+    : unionY - unionHalfSize - safeGap;
+    
+  path += `M ${unionX} ${siblingBarY} L ${unionX} ${unionConnY}`;
+
+  return (
+    <BaseEdge
+      path={path}
+      style={style}
+      markerEnd={markerEnd}
+      markerStart={markerStart}
+      interactionWidth={interactionWidth}
+    />
+  );
+}
+
+function PartnerEdge({ style, interactionWidth, data }: EdgeProps) {
+  const edgeData = data as { personId?: string; unionId?: string } | undefined;
+  const live = useStore((store) => ({
+    person: edgeData?.personId
+      ? (store.nodeLookup.get(edgeData.personId) as unknown as Node | undefined)
+      : undefined,
+    union: edgeData?.unionId
+      ? (store.nodeLookup.get(edgeData.unionId) as unknown as Node | undefined)
+      : undefined,
+  }));
+  if (!live.person || !live.union) return null;
+  const px = nodeCenterX(live.person);
+  const py = nodeUnionY(live.person);
+  const ux = live.union.position.x;
+  const uy = live.union.position.y;
+  
+  const shapeSize = nodeShapeSize(live.person);
+  const R = shapeSize / 2;
+  const safeGap = 20;
+  
+  let path = "";
+  if (Math.abs(py - uy) < 1) {
+    const startX = px < ux ? px + R + safeGap : px - R - safeGap;
+    path = `M ${startX} ${uy} L ${ux} ${uy}`;
+  } else {
+    const startY = py < uy ? py + R + safeGap : py - R - safeGap;
+    path = `M ${px} ${startY} L ${px} ${uy} L ${ux} ${uy}`;
+  }
+  
+  return <BaseEdge path={path} style={style} interactionWidth={interactionWidth} />;
+}
 
 const edgeTypes = {
-  step: CustomStepEdge,
+  straightStep: StraightStepEdge,
+  pedigree: PedigreeEdge,
+  partner: PartnerEdge,
 };
 
 // HELPER LOCAL LAYOUT GENERATION
@@ -366,6 +551,27 @@ function GenogramCanvasInner({ clientId }: { clientId: string }) {
     },
   });
 
+  const handleQuickAdd = useCallback(
+    (personId: string, relativeType: string) => {
+      const person = query.data?.persons.find((p) => p.id === personId);
+      if (!person) return;
+
+      let newRel = relativeType;
+      if (!person.is_proband && person.relationship_to_proband) {
+        newRel = `${relativeType} do ${person.relationship_to_proband}`;
+        newRel = newRel
+          .replace(/do mãe/gi, "da mãe")
+          .replace(/do tia/gi, "da tia")
+          .replace(/do avó/gi, "da avó")
+          .replace(/do bisavó/gi, "da bisavó");
+      }
+
+      setDefaultRelationship(newRel);
+      setCreatingPerson(true);
+    },
+    [query.data?.persons],
+  );
+
   // Re-build render graph when data or highlight filter changes
   useEffect(() => {
     if (!query.data) return;
@@ -420,9 +626,24 @@ function GenogramCanvasInner({ clientId }: { clientId: string }) {
         }
       }
 
+      if (node.type === "person") {
+        return {
+          ...node,
+          zIndex: 5,
+          style: {
+            ...node.style,
+            opacity,
+            boxShadow: shadow,
+          },
+          data: {
+            ...(node.data as PersonNodeData),
+            onQuickAdd: (relType: string) => handleQuickAdd(node.id, relType),
+          } satisfies PersonNodeData,
+        };
+      }
+
       return {
         ...node,
-        zIndex: 5,
         style: {
           ...node.style,
           opacity,
@@ -433,7 +654,7 @@ function GenogramCanvasInner({ clientId }: { clientId: string }) {
 
     setNodes(styledNodes);
     setEdges(rawEdges);
-  }, [query.data, highlightFilter, setNodes, setEdges]);
+  }, [query.data, highlightFilter, setNodes, setEdges, handleQuickAdd]);
 
   // Center on proband node on load
   useEffect(() => {
@@ -457,9 +678,10 @@ function GenogramCanvasInner({ clientId }: { clientId: string }) {
         if (change.type === "position" && change.position) {
           hasPositionChange = true;
           const node = rfInstance.getNode(change.id);
-          if (node) {
+          if (node?.type === "person") {
             return {
               ...change,
+              position: { x: change.position.x, y: node.position.y },
               positionAbsolute: change.positionAbsolute
                 ? { x: change.positionAbsolute.x, y: node.position.y }
                 : undefined,
