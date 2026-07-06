@@ -439,8 +439,9 @@ function buildRenderGraph(
   persons: PersonRow[],
   rels: RelRow[],
   probandId: string | undefined,
+  positions?: NodePositionRow[],
 ) {
-  const graph = buildLogicalGraph({ persons, rels, probandId });
+  const graph = buildLogicalGraph({ persons, rels, probandId, positions });
   const validation = validateGraph(graph);
   if (!validation.ok) {
     // Não bloqueia o render; loga para o console pra manter a UX suave.
