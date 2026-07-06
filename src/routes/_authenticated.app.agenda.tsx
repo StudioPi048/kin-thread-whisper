@@ -205,7 +205,10 @@ function AgendaPage() {
         <FeaturedSession session={selected} />
 
         {/* RIGHT — IA + Painel */}
-        <RightPanel session={selected} />
+        <div className="lg:col-span-2 2xl:col-span-1">
+          <RightPanel session={selected} />
+        </div>
+
       </div>
     </div>
   );
