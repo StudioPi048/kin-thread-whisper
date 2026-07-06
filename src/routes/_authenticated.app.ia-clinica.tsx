@@ -14,7 +14,7 @@ function IaClinicaPage() {
   const [messages, setMessages] = useState<Array<{ sender: "ai" | "user"; text: string }>>([
     {
       sender: "ai",
-      text: "Olá Letícia! Sou a IA Clínica Liz, seu segundo cérebro para psicogenealogia. Posso analisar repetições transgeracionais, sugerir hipóteses para casos ou pesquisar conceitos teóricos. Em qual caso ou padrão estamos trabalhando hoje?",
+      text: "Olá! Sou a IA Clínica Liz, seu segundo cérebro para psicogenealogia. Posso analisar repetições transgeracionais, sugerir hipóteses para casos ou pesquisar conceitos teóricos. Em qual caso ou padrão estamos trabalhando hoje?",
     },
   ]);
 
@@ -30,9 +30,9 @@ function IaClinicaPage() {
         "Compreendo a dinâmica. Do ponto de vista transgeracional, isso sugere que o paciente pode estar carregando um mandato invisível. Recomendo mapear as profissões e causas de falecimento nas três gerações anteriores.";
 
       const lower = userMsg.toLowerCase();
-      if (lower.includes("pietro") || lower.includes("baccin")) {
+      if (lower.includes("exemplo") || lower.includes("caso demonstrativo")) {
         aiText =
-          "No caso de Pietro Vinicius Baccin, detectamos uma síndrome de aniversário em relação à data de casamento da mãe e o falecimento do avô materno. Além disso, há repetição de queixas de abandono. Seria produtivo perguntar a ele como se sente em datas festivas da família.";
+          "Em um caso demonstrativo, podemos detectar uma síndrome de aniversário em relação a datas familiares importantes (casamentos, nascimentos, falecimentos). Investigue coincidências de datas nas três gerações anteriores e observe repetições de queixas de abandono ou exclusão.";
       } else if (lower.includes("síndrome de aniversário") || lower.includes("aniversario")) {
         aiText =
           "A síndrome de aniversário (estudada por Anne Ancelin Schützenberger) aponta que eventos de vida importantes (doenças, acidentes, casamentos, mortes) tendem a se repetir na mesma data ou na mesma idade em gerações sucessivas. Recomendo investigar datas exatas dos avós e tios.";
@@ -93,7 +93,7 @@ function IaClinicaPage() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
-              placeholder="Pergunte à IA Clínica (ex: 'Quais os padrões do Pietro?' ou 'O que é Síndrome de Aniversário?')..."
+              placeholder="Pergunte à IA Clínica (ex: 'Quais padrões investigar?' ou 'O que é Síndrome de Aniversário?')..."
               className="flex-1 h-12 text-[14px] bg-white border-border/60"
             />
             <Button
@@ -134,11 +134,11 @@ function IaClinicaPage() {
             </h4>
             <div className="space-y-2 text-[13px]">
               <div className="flex justify-between items-center py-1">
-                <span className="font-semibold text-primary">Pietro Vinicius Baccin</span>
+                <span className="font-semibold text-primary">Paciente Exemplo A</span>
                 <Badge className="bg-plum/5 text-plum border-plum/10 text-[10px]">Ativo</Badge>
               </div>
               <div className="flex justify-between items-center py-1">
-                <span className="font-semibold text-primary">Leticia Baccin</span>
+                <span className="font-semibold text-primary">Paciente Exemplo B</span>
                 <Badge className="bg-slate-100 text-muted-foreground text-[10px]">Ativo</Badge>
               </div>
             </div>
