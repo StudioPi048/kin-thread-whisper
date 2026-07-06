@@ -88,6 +88,7 @@ type Session = {
 const FALLBACK_SESSIONS: Session[] = [
   {
     id: "s1",
+    clientId: null,
     start: "09:00",
     end: "10:00",
     patient: "Pietro Vinicius Baccin",
@@ -108,6 +109,7 @@ const FALLBACK_SESSIONS: Session[] = [
   },
   {
     id: "s2",
+    clientId: null,
     start: "11:30",
     end: "12:30",
     patient: "Leticia Baccin",
@@ -124,6 +126,7 @@ const FALLBACK_SESSIONS: Session[] = [
   },
   {
     id: "s3",
+    clientId: null,
     start: "15:00",
     end: "16:00",
     patient: "Anapaula Farhat Kuchockowolec",
@@ -928,6 +931,7 @@ function mapDtosToSessions(dtos: AgendaSessionDTO[]): Session[] {
 
     return {
       id: d.id,
+      clientId: d.clientId || null,
       start: d.start,
       end: d.end,
       patient: d.patient,
