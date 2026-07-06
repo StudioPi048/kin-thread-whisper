@@ -824,93 +824,134 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
 
   return (
     <div className="relative flex flex-col overflow-hidden rounded-[1.5rem] border border-border bg-slate-50/40 shadow-inner h-[800px] min-h-[calc(100vh-200px)]">
-      {/* ── BARRA DE AÇÕES ─────────────────────────────────── */}
-      <div className="absolute top-4 left-4 z-10 flex flex-wrap items-center gap-2 px-4 py-3 rounded-xl bg-plum shadow-xl border border-white/10">
-        <div className="flex items-center gap-2 mr-3">
-          <TreePine className="size-4 text-gold" />
-          <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/60">
-            Genossociograma
-          </span>
-        </div>
+      {/* ── CONTÊINER SUPERIOR (BARRA DE AÇÕES + LEGENDA) ── */}
+      <div className="absolute top-4 left-4 z-10 flex flex-col gap-2.5 pointer-events-none max-w-[calc(100%-32px)]">
+        {/* BARRA DE AÇÕES */}
+        <div className="pointer-events-auto flex flex-wrap items-center gap-2 px-4 py-3 rounded-xl bg-plum shadow-xl border border-white/10">
+          <div className="flex items-center gap-2 mr-3">
+            <TreePine className="size-4 text-gold" />
+            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/60">
+              Genossociograma
+            </span>
+          </div>
 
-        <Button
-          size="sm"
-          variant="lavender"
-          onClick={() => setCreatingPerson(true)}
-          className="h-9 gap-2"
-        >
-          <UserPlus className="size-4" />
-          Adicionar pessoa
-        </Button>
+          <Button
+            size="sm"
+            variant="lavender"
+            onClick={() => setCreatingPerson(true)}
+            className="h-9 gap-2"
+          >
+            <UserPlus className="size-4" />
+            Adicionar pessoa
+          </Button>
 
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => setRelDialog({ open: true })}
-          disabled={persons.length < 2}
-          className="h-9 gap-2 border-white/25 text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[13px]"
-        >
-          <Link2 className="size-4" />
-          Criar vínculo
-        </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setRelDialog({ open: true })}
+            disabled={persons.length < 2}
+            className="h-9 gap-2 border-white/25 text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[13px]"
+          >
+            <Link2 className="size-4" />
+            Criar vínculo
+          </Button>
 
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => saveLayout.mutate()}
-          disabled={saveLayout.isPending || !layoutDirty}
-          className="h-9 gap-2 border-white/25 text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[13px] disabled:opacity-45"
-        >
-          <Save className="size-4" />
-          {saveLayout.isPending ? "Salvando" : "Salvar layout"}
-        </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => saveLayout.mutate()}
+            disabled={saveLayout.isPending || !layoutDirty}
+            className="h-9 gap-2 border-white/25 text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[13px] disabled:opacity-45"
+          >
+            <Save className="size-4" />
+            {saveLayout.isPending ? "Salvando" : "Salvar layout"}
+          </Button>
 
-        <div className="hidden items-center gap-4 md:flex ml-3">
-          <span className="flex items-center gap-1.5 text-[13px] text-white/55">
-            <Users className="size-3.5 text-lavender" />
-            <strong className="text-white">{qualifiedCount}</strong>
-            <span>no mapa</span>
-            {incompleteCount > 0 && (
-              <span className="ml-1 rounded-full bg-amber-500/25 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">
-                {incompleteCount} incompletos
+          <div className="hidden items-center gap-4 md:flex ml-3">
+            <span className="flex items-center gap-1.5 text-[13px] text-white/55">
+              <Users className="size-3.5 text-lavender" />
+              <strong className="text-white">{qualifiedCount}</strong>
+              <span>no mapa</span>
+              {incompleteCount > 0 && (
+                <span className="ml-1 rounded-full bg-amber-500/25 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">
+                  {incompleteCount} incompletos
+                </span>
+              )}
+            </span>
+            <span className="flex items-center gap-1.5 text-[13px] text-white/55">
+              <Link2 className="size-3.5 text-gold" />
+              <strong className="text-white">{relCount}</strong> vínculos
+            </span>
+            {(layoutDirty || lastSavedAt) && (
+              <span className="text-[12px] font-semibold text-white/50">
+                {layoutDirty ? "Não salvo" : `Salvo às ${lastSavedAt}`}
               </span>
             )}
-          </span>
-          <span className="flex items-center gap-1.5 text-[13px] text-white/55">
-            <Link2 className="size-3.5 text-gold" />
-            <strong className="text-white">{relCount}</strong> vínculos
-          </span>
-          {(layoutDirty || lastSavedAt) && (
-            <span className="text-[12px] font-semibold text-white/50">
-              {layoutDirty ? "Não salvo" : `Salvo às ${lastSavedAt}`}
-            </span>
-          )}
-          <span className="text-[10px] opacity-40 ml-4 text-white font-mono">{BUILD_TAG}</span>
+            <span className="text-[10px] opacity-40 ml-4 text-white font-mono">{BUILD_TAG}</span>
+          </div>
+
+          <div className="ml-auto flex items-center gap-1">
+            <button
+              onClick={() => setShowGuide(!showGuide)}
+              className="flex items-center gap-1.5 rounded px-3 py-2 text-[12px] font-bold uppercase tracking-[0.1em] text-white/55 transition-colors hover:bg-white/10 hover:text-white"
+            >
+              <HelpCircle className="size-4" />
+              <span className="hidden sm:inline">Guia</span>
+            </button>
+            <button
+              onClick={() => window.print()}
+              className="flex items-center gap-1.5 rounded px-3 py-2 text-[12px] font-bold uppercase tracking-[0.1em] text-white/55 transition-colors hover:bg-white/10 hover:text-white"
+            >
+              <Printer className="size-4" />
+              <span className="hidden sm:inline">A3</span>
+            </button>
+            <button
+              onClick={() => deleteSelected.mutate()}
+              disabled={deleteSelected.isPending}
+              className="flex items-center gap-1.5 rounded px-3 py-2 text-[12px] font-bold uppercase tracking-[0.1em] text-destructive/70 transition-colors hover:bg-destructive/20 hover:text-destructive"
+            >
+              <Trash2 className="size-4" />
+              <span className="hidden sm:inline">Remover</span>
+            </button>
+          </div>
         </div>
 
-        <div className="ml-auto flex items-center gap-1">
-          <button
-            onClick={() => setShowGuide(!showGuide)}
-            className="flex items-center gap-1.5 rounded px-3 py-2 text-[12px] font-bold uppercase tracking-[0.1em] text-white/55 transition-colors hover:bg-white/10 hover:text-white"
-          >
-            <HelpCircle className="size-4" />
-            <span className="hidden sm:inline">Guia</span>
-          </button>
-          <button
-            onClick={() => window.print()}
-            className="flex items-center gap-1.5 rounded px-3 py-2 text-[12px] font-bold uppercase tracking-[0.1em] text-white/55 transition-colors hover:bg-white/10 hover:text-white"
-          >
-            <Printer className="size-4" />
-            <span className="hidden sm:inline">A3</span>
-          </button>
-          <button
-            onClick={() => deleteSelected.mutate()}
-            disabled={deleteSelected.isPending}
-            className="flex items-center gap-1.5 rounded px-3 py-2 text-[12px] font-bold uppercase tracking-[0.1em] text-destructive/70 transition-colors hover:bg-destructive/20 hover:text-destructive"
-          >
-            <Trash2 className="size-4" />
-            <span className="hidden sm:inline">Remover</span>
-          </button>
+        {/* ── LEGENDA — símbolos internacionais ────────────── */}
+        <div className="pointer-events-auto flex flex-wrap items-center gap-5 rounded-xl border border-border/50 bg-white/90 backdrop-blur-sm shadow-md px-4 py-2.5 text-[12px] font-semibold w-fit">
+          <span className="text-muted-foreground/60 mr-1 uppercase tracking-[0.15em] text-[10px]">
+            Legenda:
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="inline-block size-4 border-[2.5px] border-plum bg-card" />
+            <span className="text-foreground/80">Masculino</span>
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="inline-block size-4 rounded-full border-[2.5px] border-lavender bg-card" />
+            <span className="text-foreground/80">Feminino</span>
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="inline-block size-4 rotate-45 border-[2.5px] border-gold bg-card" />
+            <span className="text-foreground/80">Não-binário / desconhecido</span>
+          </span>
+          <span className="flex items-center gap-2">
+            <svg
+              viewBox="0 0 10 10"
+              className="size-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            >
+              <polygon points="5,1 9,9 1,9" className="text-foreground/70" />
+            </svg>
+            <span className="text-foreground/80">Aborto</span>
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="text-red-500 text-lg leading-none">✕</span>
+            <span className="text-foreground/80">Falecido</span>
+          </span>
+          <span className="ml-auto text-plum font-bold uppercase tracking-[0.1em] text-[11px]">
+            Paciente destacado em ameixa
+          </span>
         </div>
       </div>
 

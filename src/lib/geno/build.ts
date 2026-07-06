@@ -22,7 +22,7 @@ type PersonRow = Database["public"]["Tables"]["genogram_persons"]["Row"];
 type RelRow = Database["public"]["Tables"]["genogram_relationships"]["Row"];
 
 // ── Constantes de layout ──────────────────────────────────────
-export const NODE_W = 120;
+export const NODE_W = 140;
 export const NODE_H = 180;
 export const PERSON_SHAPE = 76;
 export const PROBAND_SHAPE = 84;

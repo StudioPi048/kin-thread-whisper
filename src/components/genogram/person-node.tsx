@@ -77,7 +77,7 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
   return (
     <div
       className={cn("relative flex flex-col items-center group", d.is_proband && "z-20")}
-      style={{ userSelect: "none", width: 120 }}
+      style={{ userSelect: "none", width: 140 }}
     >
 
 
@@ -137,14 +137,14 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
       {/* ── CARD DE INFORMAÇÃO — Independente e flutuante ── */}
       <div
         className={cn(
-          "mt-3 w-[120px] h-[72px] bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-sm px-2 py-1.5 flex flex-col justify-center items-center text-center select-none z-10 transition-all",
+          "mt-3 w-[140px] min-h-[72px] h-auto bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-sm px-2 py-1.5 flex flex-col justify-center items-center text-center select-none z-10 transition-all pb-2",
           d.is_proband && "border-plum bg-white dark:bg-zinc-900 shadow-[0_0_0_1px_rgba(110,20,60,0.15)]",
           selected && "ring-1 ring-lavender border-lavender",
         )}
       >
         <p
           className={cn(
-            "font-sans font-bold text-foreground leading-[1.2] break-words line-clamp-2",
+            "font-sans font-bold text-foreground leading-[1.2] break-words",
             d.is_proband ? "text-[12px]" : "text-[11px]",
           )}
         >
