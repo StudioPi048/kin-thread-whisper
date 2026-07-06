@@ -651,7 +651,7 @@ function UpcomingList({ currentId }: { currentId: string }) {
 
 function RightPanel({ session }: { session: Session }) {
   return (
-    <aside className="space-y-4">
+    <aside className="grid gap-4 md:grid-cols-2 2xl:grid-cols-1">
       {/* IA Clínica briefing */}
       <div className="rounded-2xl bg-gradient-to-br from-plum via-plum to-plum/90 text-white p-5 shadow-lg relative overflow-hidden">
         <div
