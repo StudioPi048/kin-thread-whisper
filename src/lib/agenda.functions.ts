@@ -141,8 +141,8 @@ export const getAgendaData = createServerFn({ method: "GET" })
       };
     });
 
-    // Silence unused var warning
-    void seq_noop;
+
+
 
     // Week counts
     const weekMap = new Map<string, number>();
