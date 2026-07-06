@@ -134,11 +134,11 @@ function IaClinicaPage() {
             </h4>
             <div className="space-y-2 text-[13px]">
               <div className="flex justify-between items-center py-1">
-                <span className="font-semibold text-primary">Pietro Vinicius Baccin</span>
+                <span className="font-semibold text-primary">Paciente Exemplo A</span>
                 <Badge className="bg-plum/5 text-plum border-plum/10 text-[10px]">Ativo</Badge>
               </div>
               <div className="flex justify-between items-center py-1">
-                <span className="font-semibold text-primary">Leticia Baccin</span>
+                <span className="font-semibold text-primary">Paciente Exemplo B</span>
                 <Badge className="bg-slate-100 text-muted-foreground text-[10px]">Ativo</Badge>
               </div>
             </div>
