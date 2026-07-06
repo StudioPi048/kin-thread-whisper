@@ -56,6 +56,9 @@
   --color-gold:          var(--gold);
   --color-gold-soft:     var(--gold-soft);
   --color-cream:         var(--cream);
+  --color-archive:       var(--archive);
+  --color-archive-old:   var(--archive-old);
+  --color-archive-doc:   var(--archive-doc);
   --color-ink:           var(--ink);
 
   /* Sidebar */
@@ -86,8 +89,13 @@
   --gold:      oklch(0.73 0.14 78);
   --gold-soft: oklch(0.95 0.04 78);
 
-  /* ─── FUNDO — creme quente ───────────────────── */
-  --background: oklch(0.985 0.005 80);
+  /* ─── PAPÉIS HISTÓRICOS (O ARQUIVO VIVO) ─────── */
+  --archive:     #F8F4EE; /* Fundo global */
+  --archive-old: #F2ECE2; /* Painéis fundos */
+  --archive-doc: #FCF9F4; /* Documentos sobre a mesa */
+
+  /* ─── FUNDO — arquivo vivo ───────────────────── */
+  --background: var(--archive);
   --cream:      oklch(0.965 0.010 80);
   --foreground: oklch(0.14 0.06 295);
   --ink:        oklch(0.10 0.04 295);
@@ -128,7 +136,12 @@
 }
 
 .dark {
-  --background: oklch(0.11 0.05 295);
+  /* ─── PAPÉIS HISTÓRICOS DARK ─────────────────── */
+  --archive:     oklch(0.12 0.02 295); 
+  --archive-old: oklch(0.10 0.02 295); 
+  --archive-doc: oklch(0.15 0.02 295); 
+
+  --background: var(--archive);
   --cream:      oklch(0.15 0.06 295);
   --foreground: oklch(0.94 0.03 295);
   --ink:        oklch(0.97 0.02 295);
@@ -187,17 +200,14 @@
     scroll-behavior: smooth;
   }
   body {
-    background-color: var(--color-background);
-    color: var(--color-foreground);
+    background-color: var(--archive);
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
+    color: var(--ink);
     -webkit-font-smoothing: antialiased;
-    
-    /* Claude Cookbook: Distilled Aesthetics Background (Mesh + Noise) */
-    background-image: 
-      url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E"),
-      radial-gradient(1200px 800px at 100% 0%, color-mix(in oklab, var(--lavender) 8%, transparent), transparent 60%),
-      radial-gradient(1000px 1000px at 0% 100%, color-mix(in oklab, var(--plum) 4%, transparent), transparent 70%);
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
     background-attachment: fixed;
-    background-size: 200px 200px, 100% 100%, 100% 100%;
+    background-size: 200px 200px;
   }
   
   /* Orquestração de entrada global */
