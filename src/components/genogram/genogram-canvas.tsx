@@ -469,6 +469,7 @@ function buildRenderGraph(
       id: pid,
       type: "person",
       position: pos,
+      zIndex: 5,
       data: {
         full_name: person.row.full_name,
         preferred_name: person.row.preferred_name,
@@ -676,10 +677,12 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
       if (probandId) {
         const probandNode = personNodes.find((n) => n.id === probandId);
         if (probandNode) {
-          // Centrar horizontalmente no proband; verticalmente centrar a árvore inteira.
+          // Centrar horizontalmente no proband; verticalmente posicionar o proband
+          // 180px abaixo do topo do canvas para dar respiro sob a barra de ações e legenda.
           const cx = probandNode.position.x + NODE_W / 2;
-          const midY = (Math.min(...ys) + Math.max(...ys) + NODE_H) / 2;
-          rfInstance.setCenter(cx, midY, { zoom, duration: 600 });
+          const targetTopOffset = 180;
+          const cy = probandNode.position.y + (canvasH / 2 - targetTopOffset) / zoom;
+          rfInstance.setCenter(cx, cy, { zoom, duration: 600 });
           return;
         }
       }
