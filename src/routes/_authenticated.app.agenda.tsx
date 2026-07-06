@@ -864,20 +864,39 @@ function UpcomingList({ currentId, sessions }: { currentId: string; sessions: Se
         <Clock className="size-3.5" /> Próximas hoje
       </p>
       <ul className="space-y-3">
-        {others.map((s) => (
-          <li key={s.id} className="flex items-center gap-3 pb-3 last:pb-0 border-b border-border/30 last:border-0">
-            <div className="size-10 rounded-xl bg-cream border border-border/40 flex items-center justify-center font-serif font-bold text-primary text-sm shrink-0">
-              {s.initials}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-bold text-primary text-[13px] truncate">{s.patient}</p>
-              <p className="text-[11px] text-muted-foreground">
-                {s.start} · {s.type}
-              </p>
-            </div>
-            <ChevronRight className="size-4 text-muted-foreground/50" />
-          </li>
-        ))}
+        {others.map((s) => {
+          const inner = (
+            <>
+              <div className="size-10 rounded-xl bg-cream border border-border/40 flex items-center justify-center font-serif font-bold text-primary text-sm shrink-0">
+                {s.initials}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-primary text-[13px] truncate">{s.patient}</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {s.start} · {s.type}
+                </p>
+              </div>
+              <ChevronRight className="size-4 text-muted-foreground/50" />
+            </>
+          );
+          return (
+            <li key={s.id} className="border-b border-border/30 last:border-0">
+              {s.clientId ? (
+                <Link
+                  to="/app/paciente/$id"
+                  params={{ id: s.clientId }}
+                  className="flex items-center gap-3 py-2 rounded-lg hover:bg-lavender-soft/40 transition-colors -mx-1 px-1"
+                >
+                  {inner}
+                </Link>
+              ) : (
+                <div className="flex items-center gap-3 py-2 opacity-70 cursor-not-allowed" title="Sessão sem cliente vinculado">
+                  {inner}
+                </div>
+              )}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
