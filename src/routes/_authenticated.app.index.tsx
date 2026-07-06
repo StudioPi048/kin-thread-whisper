@@ -103,7 +103,7 @@ function AppHome() {
               </div>
               
               <h2 className="text-3xl font-serif font-bold text-white">
-                {lastActiveClient?.preferred_name || lastActiveClient?.full_name || "Pietro Vinicius"}
+                {lastActiveClient?.preferred_name || lastActiveClient?.full_name || "Paciente Exemplo"}
               </h2>
               
               <div className="bg-slate-800/80 rounded-2xl p-5 border border-slate-700/50 text-sm md:text-base text-slate-200 font-medium leading-relaxed">
@@ -263,9 +263,9 @@ function AppHome() {
                     <div className="absolute left-0 top-1/2 w-full h-px bg-slate-100 z-0"></div>
                   </div>
                   <div className="space-y-5 pl-2 border-l-2 border-slate-100 ml-2">
-                    <FeedItem time="09:10" action="Você adicionou" target="Pedro Vinicius" icon={<Users className="size-4" />} />
-                    <FeedItem time="10:45" action="Sessão concluída com" target="Letícia Baccin" icon={<CheckCircle2 className="size-4" />} />
-                    <FeedItem time="11:00" action="Resumo atualizado via IA para" target="Letícia Baccin" icon={<Sparkles className="size-4" />} />
+                    <FeedItem time="09:10" action="Você adicionou" target="Paciente A" icon={<Users className="size-4" />} />
+                    <FeedItem time="10:45" action="Sessão concluída com" target="Paciente B" icon={<CheckCircle2 className="size-4" />} />
+                    <FeedItem time="11:00" action="Resumo atualizado via IA para" target="Paciente B" icon={<Sparkles className="size-4" />} />
                   </div>
                   
                   {/* Ontem */}
@@ -274,8 +274,8 @@ function AppHome() {
                     <div className="absolute left-0 top-1/2 w-full h-px bg-slate-100 z-0 pt-4"></div>
                   </div>
                   <div className="space-y-5 pl-2 border-l-2 border-slate-100 ml-2">
-                    <FeedItem time="18:42" action="Gerou hipótese de Lealdade para" target="Geovanna Nazário" icon={<BrainCircuit className="size-4" />} />
-                    <FeedItem time="15:30" action="Criou vínculo de conflito para" target="Ana Paula" icon={<ArrowRight className="size-4" />} />
+                    <FeedItem time="18:42" action="Gerou hipótese de Lealdade para" target="Paciente C" icon={<BrainCircuit className="size-4" />} />
+                    <FeedItem time="15:30" action="Criou vínculo de conflito para" target="Paciente D" icon={<ArrowRight className="size-4" />} />
                   </div>
                 </div>
               </div>
@@ -289,11 +289,11 @@ function AppHome() {
             <section className="space-y-4">
               <SectionHeader title="Atenção Necessária" icon={<AlertCircle className="size-5 text-rose-500" />} />
               <div className="bg-white rounded-3xl border border-slate-200/60 shadow-sm p-6 space-y-3">
-                <ActionItem color="yellow" label="Genograma incompleto" patient="Pedro" />
-                <ActionItem color="red" label="Prontuário pendente" patient="Letícia" />
-                <ActionItem color="purple" label="Árvore sem avós" patient="Geovanna" />
-                <ActionItem color="orange" label="Linha do Tempo vazia" patient="Ana Paula" />
-                <ActionItem color="black" label="Sessão sem evolução" patient="Pietro" />
+                <ActionItem color="yellow" label="Genograma incompleto" patient="Paciente A" />
+                <ActionItem color="red" label="Prontuário pendente" patient="Paciente B" />
+                <ActionItem color="purple" label="Árvore sem avós" patient="Paciente C" />
+                <ActionItem color="orange" label="Linha do Tempo vazia" patient="Paciente D" />
+                <ActionItem color="black" label="Sessão sem evolução" patient="Paciente E" />
               </div>
             </section>
 
@@ -302,9 +302,9 @@ function AppHome() {
               <SectionHeader title="Agenda Visual" icon={<Calendar className="size-5 text-slate-400" />} />
               <div className="bg-white rounded-3xl border border-slate-200/60 shadow-sm p-6 overflow-x-hidden">
                 <div className="space-y-6 relative before:absolute before:inset-0 before:ml-[1.2rem] before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-200 before:to-transparent">
-                   <AgendaVisualItem time="09:00" name="Pietro V." state="past" initials="PV" />
-                   <AgendaVisualItem time="11:30" name="Letícia B." state="current" initials="LB" />
-                   <AgendaVisualItem time="15:00" name="Ana Paula" state="future" initials="AP" />
+                   <AgendaVisualItem time="09:00" name="Paciente E" state="past" initials="PE" />
+                   <AgendaVisualItem time="11:30" name="Paciente B" state="current" initials="PB" />
+                   <AgendaVisualItem time="15:00" name="Paciente D" state="future" initials="PD" />
                 </div>
               </div>
             </section>
