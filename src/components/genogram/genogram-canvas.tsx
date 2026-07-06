@@ -25,24 +25,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  UserPlus,
-  Link2,
-  Trash2,
-  Printer,
-  HelpCircle,
-  Users,
-  TreePine,
-  Save,
-  Undo,
-  Redo,
-  Workflow,
-  Sparkles,
-  Layers,
-  ChevronRight,
-  Eye,
-  Grid3X3,
-} from "lucide-react";
+import { UserPlus, Link2, Trash2, Printer, HelpCircle, Users, TreePine, Save } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -53,23 +36,19 @@ import { RelationshipFormDialog } from "./relationship-form-dialog";
 import { relationshipLabel } from "@/lib/genogram";
 import { smartNormalizeRelationship } from "@/lib/relationship-normalizer";
 import { ensureProband } from "@/lib/ensure-proband";
-import {
-  buildLogicalGraph,
-  validateGraph,
-  layoutGraph,
-  NODE_W,
-  NODE_H,
-  PERSON_SHAPE as PERSON_SHAPE_SIZE,
-  PROBAND_SHAPE as PROBAND_SHAPE_SIZE,
-  GEN_GAP as GENERATION_GAP,
-} from "@/lib/geno/build";
 import type { Database } from "@/integrations/supabase/types";
 
 type PersonRow = Database["public"]["Tables"]["genogram_persons"]["Row"];
 type RelRow = Database["public"]["Tables"]["genogram_relationships"]["Row"];
 
-const BUILD_TAG = "2026-07-06-canvas-pro-max";
+const BUILD_TAG = "2026-07-05-spacing-and-styles";
 
+/**
+ * UnionNode — cidadão de primeira classe do grafo.
+ * Renderiza um pequeno diamante ameixa no ponto exato da união entre os
+ * parceiros. A etiqueta pertence ao nó, nunca ao edge — evita colisões
+ * com a linha do casal.
+ */
 const UNION_SIZE = 12;
 const UnionNodeComponent = ({ data }: NodeProps) => {
   const d = (data as { label?: string; kind?: string }) ?? {};
@@ -97,91 +76,33 @@ const UnionNodeComponent = ({ data }: NodeProps) => {
           style={{ left: -12, top: -8, width: 36, height: 28 }}
           viewBox="0 0 36 28"
         >
-          <path
-            d="M8 22 L16 4"
-            stroke="var(--color-destructive)"
-            strokeWidth={2.5}
-            strokeLinecap="round"
-          />
-          <path
-            d="M20 22 L28 4"
-            stroke="var(--color-destructive)"
-            strokeWidth={2.5}
-            strokeLinecap="round"
-          />
+          <path d="M8 22 L16 4" stroke="var(--color-destructive)" strokeWidth={2.5} strokeLinecap="round" />
+          <path d="M20 22 L28 4" stroke="var(--color-destructive)" strokeWidth={2.5} strokeLinecap="round" />
         </svg>
       )}
-      <Handle
-        id="top"
-        type="source"
-        position={Position.Top}
-        className="opacity-0 pointer-events-none"
-      />
-      <Handle
-        id="bottom"
-        type="source"
-        position={Position.Bottom}
-        className="opacity-0 pointer-events-none"
-      />
-      <Handle
-        id="left"
-        type="source"
-        position={Position.Left}
-        className="opacity-0 pointer-events-none"
-      />
-      <Handle
-        id="right"
-        type="source"
-        position={Position.Right}
-        className="opacity-0 pointer-events-none"
-      />
-      <Handle
-        id="top-target"
-        type="target"
-        position={Position.Top}
-        className="opacity-0 pointer-events-none"
-      />
-      <Handle
-        id="bottom-target"
-        type="target"
-        position={Position.Bottom}
-        className="opacity-0 pointer-events-none"
-      />
-      <Handle
-        id="left-target"
-        type="target"
-        position={Position.Left}
-        className="opacity-0 pointer-events-none"
-      />
-      <Handle
-        id="right-target"
-        type="target"
-        position={Position.Right}
-        className="opacity-0 pointer-events-none"
-      />
+      <Handle id="top" type="source" position={Position.Top} className="opacity-0 pointer-events-none" />
+      <Handle id="bottom" type="source" position={Position.Bottom} className="opacity-0 pointer-events-none" />
+      <Handle id="left" type="source" position={Position.Left} className="opacity-0 pointer-events-none" />
+      <Handle id="right" type="source" position={Position.Right} className="opacity-0 pointer-events-none" />
+      <Handle id="top-target" type="target" position={Position.Top} className="opacity-0 pointer-events-none" />
+      <Handle id="bottom-target" type="target" position={Position.Bottom} className="opacity-0 pointer-events-none" />
+      <Handle id="left-target" type="target" position={Position.Left} className="opacity-0 pointer-events-none" />
+      <Handle id="right-target" type="target" position={Position.Right} className="opacity-0 pointer-events-none" />
     </div>
   );
 };
 
 function GenerationBandNode({ data }: NodeProps) {
-  const isEven = ((data as { generation?: number }).generation as number) % 2 === 0;
+  const isEven = (data.generation as number) % 2 === 0;
   return (
     <div
       style={{ width: 15000, height: GENERATION_GAP, pointerEvents: "none" }}
       className={`border-b border-dashed border-plum/20 ${isEven ? "bg-plum/[0.02]" : "bg-transparent"}`}
-    >
-      <div className="absolute left-6 top-3 text-[10px] font-black uppercase tracking-[0.25em] text-plum/35">
-        Geração {(data as { generation?: number }).generation}
-      </div>
-    </div>
+    />
   );
 }
 
-const nodeTypes = {
-  person: PersonNode,
-  union: UnionNodeComponent,
-  band: GenerationBandNode,
-};
+const nodeTypes = { person: PersonNode, union: UnionNodeComponent, band: GenerationBandNode };
 
 function StraightStepEdge({
   sourceX,
@@ -244,37 +165,37 @@ function StraightStepEdge({
 
   return (
     <>
-      <BaseEdge
-        path={path}
-        style={style}
-        markerEnd={markerEnd}
-        markerStart={markerStart}
-        label={label}
-        labelStyle={labelStyle}
-        labelShowBg={labelShowBg}
-        labelBgStyle={labelBgStyle}
-        labelBgPadding={labelBgPadding}
-        labelBgBorderRadius={labelBgBorderRadius}
-        interactionWidth={interactionWidth}
-        labelX={labelX}
-        labelY={labelY}
-      />
-      {showUnionBreakMark &&
-        Array.from({ length: breakMarkCount }).map((_, i) => {
-          const offset = breakMarkCount === 2 ? (i === 0 ? -5 : 5) : 0;
-          const x = labelX + offset;
-          return (
-            <path
-              key={i}
-              d={`M ${x - 7} ${breakY + 12} L ${x + 7} ${breakY - 12}`}
-              fill="none"
-              stroke="var(--color-destructive)"
-              strokeWidth={2.5}
-              strokeLinecap="round"
-              pointerEvents="none"
-            />
-          );
-        })}
+    <BaseEdge
+      path={path}
+      style={style}
+      markerEnd={markerEnd}
+      markerStart={markerStart}
+      label={label}
+      labelStyle={labelStyle}
+      labelShowBg={labelShowBg}
+      labelBgStyle={labelBgStyle}
+      labelBgPadding={labelBgPadding}
+      labelBgBorderRadius={labelBgBorderRadius}
+      interactionWidth={interactionWidth}
+      labelX={labelX}
+      labelY={labelY}
+    />
+    {showUnionBreakMark &&
+      Array.from({ length: breakMarkCount }).map((_, i) => {
+        const offset = breakMarkCount === 2 ? (i === 0 ? -5 : 5) : 0;
+        const x = labelX + offset;
+        return (
+          <path
+            key={i}
+            d={`M ${x - 7} ${breakY + 12} L ${x + 7} ${breakY - 12}`}
+            fill="none"
+            stroke="var(--color-destructive)"
+            strokeWidth={2.5}
+            strokeLinecap="round"
+            pointerEvents="none"
+          />
+        );
+      })}
     </>
   );
 }
@@ -301,6 +222,11 @@ function nodeUnionY(node: Node | undefined): number {
   return node.position.y + nodeShapeSize(node) / 2;
 }
 
+/**
+ * PedigreeEdge — barra de irmãos que nasce de UM UnionNode.
+ * data.unionId aponta para o UnionNode (fonte lógica); data.childIds lista
+ * os filhos daquela união (fonte lógica). Nenhuma decisão vem de proximidade.
+ */
 function PedigreeEdge({ style, markerEnd, markerStart, interactionWidth, data }: EdgeProps) {
   const edgeData = data as { unionId?: string; childIds?: string[] } | undefined;
   const unionId = edgeData?.unionId;
@@ -326,9 +252,13 @@ function PedigreeEdge({ style, markerEnd, markerStart, interactionWidth, data }:
   const barRight = Math.max(...xs, unionX);
 
   const minChildTop = Math.min(...childPoints.map((p) => p.y));
+  // Barra de irmãos posicionada de forma limpa abaixo dos cards dos filhos:
+  // minChildTop + shapeSize (76) + 12px (gap) + 72px (card) + 24px (gap to line)
+  const shapeSize = 76;
+  const cardHeight = 72;
   const siblingBarY = unionY < minChildTop
     ? minChildTop - 30
-    : minChildTop + PERSON_SHAPE_SIZE + 12 + 72 + 24;
+    : minChildTop + shapeSize + 12 + cardHeight + 24;
 
   let path = "";
   path += `M ${barLeft} ${siblingBarY} L ${barRight} ${siblingBarY} `;
@@ -336,6 +266,7 @@ function PedigreeEdge({ style, markerEnd, markerStart, interactionWidth, data }:
     const childShapeSize = nodeShapeSize(p.node);
     const safeGap = 20;
     
+    // Conecta na base/topo do símbolo do filho respeitando os 20px de respiro
     const childConnY = p.y < siblingBarY
       ? p.y + childShapeSize + safeGap
       : p.y - safeGap;
@@ -343,8 +274,9 @@ function PedigreeEdge({ style, markerEnd, markerStart, interactionWidth, data }:
     path += `M ${p.x} ${childConnY} L ${p.x} ${siblingBarY} `;
   }
   
+  // Conecta na união parental respeitando os 20px de respiro do símbolo
   const safeGap = 20;
-  const unionHalfSize = 6;
+  const unionHalfSize = 6; // UNION_SIZE / 2
   const unionConnY = unionY < siblingBarY
     ? unionY + unionHalfSize + safeGap
     : unionY - unionHalfSize - safeGap;
@@ -362,6 +294,11 @@ function PedigreeEdge({ style, markerEnd, markerStart, interactionWidth, data }:
   );
 }
 
+/**
+ * PartnerEdge — linha horizontal entre pessoa e UnionNode.
+ * Sempre reta horizontal na Y da união; nunca cruza outros nós porque as
+ * duas pessoas do casal estão em COUPLE_GAP da união por construção.
+ */
 function PartnerEdge({ style, interactionWidth, data }: EdgeProps) {
   const edgeData = data as { personId?: string; unionId?: string } | undefined;
   const live = useStore((store) => ({
@@ -394,17 +331,117 @@ function PartnerEdge({ style, interactionWidth, data }: EdgeProps) {
   return <BaseEdge path={path} style={style} interactionWidth={interactionWidth} />;
 }
 
-const edgeTypes = {
-  straightStep: StraightStepEdge,
-  pedigree: PedigreeEdge,
-  partner: PartnerEdge,
-};
+const edgeTypes = { straightStep: StraightStepEdge, pedigree: PedigreeEdge, partner: PartnerEdge };
 
-// HELPER LOCAL LAYOUT GENERATION
-function buildRenderGraph(persons: PersonRow[], rels: RelRow[], probandId: string | undefined) {
+function isUnionEdge(edge: Edge): boolean {
+  return (edge.data as { relationshipType?: string } | undefined)?.relationshipType === "union";
+}
+
+function isParentEdge(edge: Edge): boolean {
+  return (edge.data as { relationshipType?: string } | undefined)?.relationshipType === "parent";
+}
+
+function GenerationRuler() {
+  return (
+    <div className="w-[154px] overflow-hidden rounded-md border border-plum/25 bg-card/92 shadow-sm backdrop-blur">
+      {[
+        ["Paciente", "ponto de partida"],
+        ["Geração 1", "pais e tios"],
+        ["Geração 2", "avós e tios-avós"],
+        ["Geração 3", "bisavós"],
+      ].map(([label, subtitle]) => (
+        <div key={label} className="border-b border-border/60 px-2.5 py-2 last:border-b-0">
+          <p className="font-serif text-[14px] font-bold leading-tight text-plum">{label}</p>
+          <p className="mt-0.5 text-[9px] font-bold uppercase leading-snug tracking-[0.08em] text-muted-foreground">
+            {subtitle}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ShortcutsLegend() {
+  return (
+    <div className="w-[154px] overflow-hidden rounded-md border border-plum/25 bg-card/92 shadow-sm backdrop-blur">
+      <div className="bg-plum/5 px-2.5 py-1.5 border-b border-plum/20">
+        <p className="font-serif text-[13px] font-bold leading-tight text-plum">Atalhos</p>
+      </div>
+      <div className="px-2.5 py-2 flex flex-col gap-2">
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-1">
+            <kbd className="px-1 py-0.5 text-[9px] font-mono font-medium rounded border border-border bg-muted text-muted-foreground">
+              Espaço
+            </kbd>
+            <span className="text-[10px] text-muted-foreground leading-none">+</span>
+            <span className="text-[10px] font-bold text-foreground leading-none">Arrastar</span>
+          </div>
+          <p className="text-[9px] leading-tight text-muted-foreground mt-0.5">
+            Navegar pelo quadro
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] font-bold text-foreground leading-none">
+              Clique (Node)
+            </span>
+          </div>
+          <p className="text-[9px] leading-tight text-muted-foreground mt-0.5">
+            Selecionar e reposicionar
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] font-bold text-foreground leading-none">Clique Duplo</span>
+          </div>
+          <p className="text-[9px] leading-tight text-muted-foreground mt-0.5">Editar pessoa</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface CanvasProps {
+  clientId: string;
+}
+
+export function GenogramCanvas(props: CanvasProps) {
+  return (
+    <ReactFlowProvider>
+      <GenogramCanvasInner {...props} />
+    </ReactFlowProvider>
+  );
+}
+
+// ── Constantes visuais (delegadas ao engine) ─────────────────
+import {
+  NODE_W,
+  NODE_H,
+  PERSON_SHAPE as PERSON_SHAPE_SIZE,
+  PROBAND_SHAPE as PROBAND_SHAPE_SIZE,
+  GEN_GAP as GENERATION_GAP,
+  buildLogicalGraph,
+  layoutGraph,
+  validateGraph,
+} from "@/lib/geno/build";
+
+
+/**
+ * Constrói nós/edges React-Flow a partir do grafo lógico + layout.
+ * Nenhuma decisão de conexão parte de posição; tudo vem do grafo lógico.
+ */
+function buildRenderGraph(
+  persons: PersonRow[],
+  rels: RelRow[],
+  probandId: string | undefined,
+) {
   const graph = buildLogicalGraph({ persons, rels, probandId });
   const validation = validateGraph(graph);
   if (!validation.ok) {
+    // Não bloqueia o render; loga para o console pra manter a UX suave.
+    // eslint-disable-next-line no-console
     console.warn("[genograma] invariantes falharam:", validation.errors);
   }
   const placement = layoutGraph(graph);
@@ -463,7 +500,7 @@ function buildRenderGraph(persons: PersonRow[], rels: RelRow[], probandId: strin
     });
   }
 
-  // Edges: partner + child
+  // Edges: partner + child (nunca pessoa↔pessoa)
   const edges: Edge[] = [];
   const seenChildUnion = new Set<string>();
   for (const e of graph.edges) {
@@ -497,59 +534,44 @@ function buildRenderGraph(persons: PersonRow[], rels: RelRow[], probandId: strin
     });
   }
 
+
   return { nodes, edges };
 }
 
-export function GenogramCanvas({ clientId }: { clientId: string }) {
-  return (
-    <ReactFlowProvider>
-      <GenogramCanvasInner clientId={clientId} />
-    </ReactFlowProvider>
-  );
-}
 
-function GenogramCanvasInner({ clientId }: { clientId: string }) {
+function GenogramCanvasInner({ clientId }: CanvasProps) {
   const qc = useQueryClient();
-  const rfInstance = useReactFlow();
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
-  const [creatingPerson, setCreatingPerson] = useState(false);
-  const [defaultRelationship, setDefaultRelationship] = useState("");
-  const [editingPerson, setEditingPerson] = useState<PersonRow | null>(null);
-  const [selectedPerson, setSelectedPerson] = useState<PersonRow | null>(null);
-  const [highlightFilter, setHighlightFilter] = useState<string>("none");
-  const [layoutDirty, setLayoutDirty] = useState(false);
-  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
-  const [showGuide, setShowGuide] = useState(false);
-  const [relDialog, setRelDialog] = useState<{
-    open: boolean;
-    seed?: { from?: string; to?: string };
-    editing: RelRow | null;
-  }>({ open: false, editing: null });
 
   const query = useQuery({
     queryKey: ["genogram", clientId],
     queryFn: async () => {
-      // 1. Ensure proband exists in database
-      await ensureProband(clientId);
-
-      // 2. Fetch updated persons
-      const { data: persons, error: pe } = await supabase
-        .from("genogram_persons")
-        .select("*")
-        .eq("client_id", clientId);
-      if (pe) throw pe;
-
-      // 3. Fetch relationships
-      const { data: rels, error: re } = await supabase
-        .from("genogram_relationships")
-        .select("*")
-        .eq("client_id", clientId);
-      if (re) throw re;
-
-      return { persons: (persons as PersonRow[]) ?? [], rels: (rels as RelRow[]) ?? [] };
+      const [persons, rels] = await Promise.all([
+        supabase.from("genogram_persons").select("*").eq("client_id", clientId),
+        supabase.from("genogram_relationships").select("*").eq("client_id", clientId),
+      ]);
+      if (persons.error) throw persons.error;
+      if (rels.error) throw rels.error;
+      return {
+        persons: (persons.data ?? []) as PersonRow[],
+        rels: (rels.data ?? []) as RelRow[],
+      };
     },
   });
+
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+  const [creatingPerson, setCreatingPerson] = useState(false);
+  const [editingPerson, setEditingPerson] = useState<PersonRow | null>(null);
+  const [defaultRelationship, setDefaultRelationship] = useState<string>("");
+  const [relDialog, setRelDialog] = useState<{
+    open: boolean;
+    seed?: { from?: string; to?: string };
+    editing?: RelRow | null;
+  }>({ open: false });
+  const [showGuide, setShowGuide] = useState(false);
+  const [layoutDirty, setLayoutDirty] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const rfInstance = useReactFlow();
 
   const handleQuickAdd = useCallback(
     (personId: string, relativeType: string) => {
@@ -559,6 +581,7 @@ function GenogramCanvasInner({ clientId }: { clientId: string }) {
       let newRel = relativeType;
       if (!person.is_proband && person.relationship_to_proband) {
         newRel = `${relativeType} do ${person.relationship_to_proband}`;
+        // Clean up string like "do mae" -> "da mae"
         newRel = newRel
           .replace(/do mãe/gi, "da mãe")
           .replace(/do tia/gi, "da tia")
@@ -572,111 +595,113 @@ function GenogramCanvasInner({ clientId }: { clientId: string }) {
     [query.data?.persons],
   );
 
-  // Re-build render graph when data or highlight filter changes
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const result = await ensureProband(clientId);
+      if (!cancelled && result) {
+        qc.invalidateQueries({ queryKey: ["genogram", clientId] });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [clientId, qc]);
+
   useEffect(() => {
     if (!query.data) return;
+    let cancelled = false;
 
-    const qualifiedPersons = query.data.persons.filter((p: PersonRow) => {
+    const qualifiedPersons = query.data.persons.filter((p) => {
       if (p.is_proband) return true;
       const hasName = !!p.full_name?.trim();
       const hasRel = !!p.relationship_to_proband?.trim();
       return hasName || hasRel;
     });
 
-    const proband = qualifiedPersons.find((p: PersonRow) => p.is_proband) || qualifiedPersons[0];
+    const proband = qualifiedPersons.find((p) => p.is_proband) || qualifiedPersons[0];
     const probandId = proband?.id;
 
-    const { nodes: rawNodes, edges: rawEdges } = buildRenderGraph(
+    const { nodes: layoutedNodes, edges: layoutedEdges } = buildRenderGraph(
       qualifiedPersons,
       query.data.rels,
       probandId,
     );
 
-    const styledNodes = rawNodes.map((node) => {
-      const person = query.data.persons.find((p: PersonRow) => p.id === node.id);
-      let opacity = 1;
-      let shadow = undefined;
-
-      if (highlightFilter !== "none" && person) {
-        let matches = false;
-        if (highlightFilter === "deceased") {
-          matches = !!person.is_deceased;
-        } else if (highlightFilter === "professions") {
-          matches = !!person.occupation;
-        } else if (highlightFilter === "traumas") {
-          matches = !!(
-            person.notes?.toLowerCase().includes("trauma") ||
-            person.notes?.toLowerCase().includes("segredo") ||
-            person.notes?.toLowerCase().includes("abuso") ||
-            person.notes?.toLowerCase().includes("morte")
-          );
-        } else if (highlightFilter === "diseases") {
-          matches = !!(
-            person.notes?.toLowerCase().includes("doença") ||
-            person.notes?.toLowerCase().includes("câncer") ||
-            person.notes?.toLowerCase().includes("sintoma") ||
-            person.notes?.toLowerCase().includes("infarto")
-          );
-        }
-
-        if (!matches) {
-          opacity = 0.25;
-        } else {
-          shadow = "0 0 0 4px var(--color-gold)";
-        }
-      }
-
-      if (node.type === "person") {
-        return {
-          ...node,
-          zIndex: 5,
-          style: {
-            ...node.style,
-            opacity,
-            boxShadow: shadow,
-          },
-          data: {
-            ...(node.data as PersonNodeData),
-            onQuickAdd: (relType: string) => handleQuickAdd(node.id, relType),
-          } satisfies PersonNodeData,
-        };
-      }
-
+    // Injeta o callback de quick-add nos nós de pessoa (função depende de state
+    // do componente e por isso não vive dentro do engine puro).
+    const nodesWithHandlers: Node[] = layoutedNodes.map((n) => {
+      if (n.type !== "person") return n;
       return {
-        ...node,
-        style: {
-          ...node.style,
-          opacity,
-          boxShadow: shadow,
-        },
+        ...n,
+        data: {
+          ...(n.data as PersonNodeData),
+          onQuickAdd: (relType: string) => handleQuickAdd(n.id, relType),
+        } satisfies PersonNodeData,
       };
     });
 
-    setNodes(styledNodes);
-    setEdges(rawEdges);
-  }, [query.data, highlightFilter, setNodes, setEdges, handleQuickAdd]);
+    setNodes(nodesWithHandlers);
+    setEdges(layoutedEdges);
+    setLayoutDirty(false);
 
-  // Center on proband node on load
-  useEffect(() => {
-    if (!query.isLoading && nodes.length > 0) {
-      const proband = nodes.find((n) => (n.data as PersonNodeData)?.isProband);
-      if (proband) {
-        setTimeout(() => {
-          rfInstance.setCenter(proband.position.x + NODE_W / 2, proband.position.y + 180, {
-            zoom: 0.95,
-            duration: 800,
-          });
-        }, 150);
+
+
+    const centerTimer = window.setTimeout(() => {
+      if (cancelled) return;
+      // Enquadramento: cliente próximo ao topo, gerações descendo.
+      // IMPORTANTE: só contamos nós de pessoa para calcular a largura real.
+      // Os nós "band" (faixas de fundo por geração) têm 15000px e envenenam o cálculo.
+      const container = document.querySelector(".react-flow") as HTMLElement | null;
+      const canvasW = container?.clientWidth ?? 1200;
+      const canvasH = container?.clientHeight ?? 800;
+
+      const personNodes = layoutedNodes.filter((n) => n.type === "person");
+      if (personNodes.length === 0) {
+        rfInstance.fitView({ padding: 0.15, duration: 600, minZoom: 0.2, maxZoom: 1.4 });
+        return;
       }
-    }
-  }, [query.isLoading, rfInstance]);
 
+      const xs = personNodes.map((n) => n.position.x);
+      const ys = personNodes.map((n) => n.position.y);
+      const treeW = Math.max(1, Math.max(...xs) - Math.min(...xs) + NODE_W);
+      const treeH = Math.max(1, Math.max(...ys) - Math.min(...ys) + NODE_H);
+
+      // Usar mais tela: o enquadramento inicial prioriza a leitura do núcleo.
+      // Colaterais longos continuam acessíveis com pan/zoom, mas não encolhem toda a árvore.
+      const focusW = Math.min(treeW, 1800);
+      const zoomX = (canvasW * 0.96) / focusW;
+      const zoomY = (canvasH * 0.96) / treeH;
+      const zoom = Math.min(1.4, Math.max(0.48, Math.min(zoomX, zoomY)));
+
+      if (probandId) {
+        const probandNode = personNodes.find((n) => n.id === probandId);
+        if (probandNode) {
+          // Centrar horizontalmente no proband; verticalmente posicionar o proband
+          // 180px abaixo do topo do canvas para dar respiro sob a barra de ações e legenda.
+          const cx = probandNode.position.x + NODE_W / 2;
+          const targetTopOffset = 180;
+          const cy = probandNode.position.y + (canvasH / 2 - targetTopOffset) / zoom;
+          rfInstance.setCenter(cx, cy, { zoom, duration: 600 });
+          return;
+        }
+      }
+      rfInstance.fitView({ padding: 0.08, duration: 600, minZoom: 0.2, maxZoom: 1.4 });
+    }, 120);
+
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(centerTimer);
+    };
+  }, [query.data, setNodes, setEdges, rfInstance, handleQuickAdd]);
+
+  // Lock dragging strictly to X axis
   const onNodesChangeCustom = useCallback(
     (changes: NodeChange[]) => {
-      let hasPositionChange = false;
+      const hasPositionChange = changes.some((change) => change.type === "position" && change.position);
       const nextChanges = changes.map((change) => {
         if (change.type === "position" && change.position) {
-          hasPositionChange = true;
           const node = rfInstance.getNode(change.id);
           if (node?.type === "person") {
             return {
@@ -696,28 +721,39 @@ function GenogramCanvasInner({ clientId }: { clientId: string }) {
     [onNodesChange, rfInstance],
   );
 
-  const onSelectionChange = useCallback(
-    ({ nodes: selectedNodes }: { nodes: Node[] }) => {
-      const selectedNode = selectedNodes.find((n) => n.selected);
-      const person = query.data?.persons.find((p) => p.id === selectedNode?.id);
-      if (person) {
-        setSelectedPerson(person);
-      } else {
-        setSelectedPerson(null);
+  useEffect(() => {
+    const handleEdgeDelete = async (e: Event) => {
+      const customEvent = e as CustomEvent<string>;
+      const relId = customEvent.detail;
+      if (!relId) return;
+
+      const { error } = await supabase.from("genogram_relationships").delete().eq("id", relId);
+      if (!error) {
+        toast.success("Vínculo removido");
+        query.refetch();
       }
+    };
+    window.addEventListener("delete-edge", handleEdgeDelete);
+    return () => window.removeEventListener("delete-edge", handleEdgeDelete);
+  }, [query]);
+
+  const onConnect = useCallback(
+    (conn: Connection) => {
+      setEdges((eds) => addEdge({ ...conn, style: { stroke: "var(--color-lavender)" } }, eds));
+      setRelDialog({
+        open: true,
+        seed: { from: conn.source ?? undefined, to: conn.target ?? undefined },
+      });
     },
-    [query.data],
+    [setEdges],
   );
 
   const onNodeDoubleClick = useCallback<NodeMouseHandler>(
     (_, node) => {
       const person = query.data?.persons.find((p) => p.id === node.id);
-      if (person) {
-        setSelectedPerson(person);
-        setNodes((nds) => nds.map((n) => ({ ...n, selected: n.id === node.id })));
-      }
+      if (person) setEditingPerson(person);
     },
-    [query.data, setNodes],
+    [query.data],
   );
 
   const onEdgeDoubleClick = useCallback<EdgeMouseHandler>(
@@ -744,7 +780,6 @@ function GenogramCanvasInner({ clientId }: { clientId: string }) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["genogram", clientId] });
-      setSelectedPerson(null);
       toast.success("Removido.");
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
@@ -781,41 +816,6 @@ function GenogramCanvasInner({ clientId }: { clientId: string }) {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao salvar layout"),
   });
 
-  const resetLayout = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase
-        .from("genogram_persons")
-        .update({
-          position_x: null as unknown as number,
-          position_y: null as unknown as number,
-        })
-        .eq("client_id", clientId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      setLayoutDirty(false);
-      query.refetch();
-      toast.success("Árvore organizada e auto-alinhada com sucesso.");
-    },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao alinhar"),
-  });
-
-  const savePersonDetails = useMutation({
-    mutationFn: async (updatedFields: Partial<PersonRow>) => {
-      if (!selectedPerson) return;
-      const { error } = await supabase
-        .from("genogram_persons")
-        .update(updatedFields)
-        .eq("id", selectedPerson.id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["genogram", clientId] });
-      toast.success("Dados do familiar salvos.");
-    },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao salvar"),
-  });
-
   const persons = query.data?.persons ?? [];
   const qualifiedCount = nodes.filter((node) => node.type === "person").length;
   const totalCount = persons.length;
@@ -823,281 +823,255 @@ function GenogramCanvasInner({ clientId }: { clientId: string }) {
   const relCount = query.data?.rels.length ?? 0;
 
   return (
-    <div className="relative flex flex-row overflow-hidden rounded-[1.5rem] border border-border bg-slate-50/40 shadow-inner h-[800px] min-h-[calc(100vh-200px)] w-full">
-      {/* Canvas Area */}
-      <div className="flex-1 h-full relative overflow-hidden">
-        {/* ── CONTÊINER SUPERIOR (BARRA DE AÇÕES + LEGENDA) ── */}
-        <div className="absolute top-4 left-4 z-10 flex flex-col gap-2.5 pointer-events-none max-w-[calc(100%-32px)]">
-          {/* BARRA DE AÇÕES */}
-          <div className="pointer-events-auto flex flex-wrap items-center gap-2 px-4 py-3 rounded-xl bg-plum shadow-xl border border-white/10">
-            <div className="flex items-center gap-2 mr-3">
-              <TreePine className="size-4 text-gold" />
-              <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/60">
-                Genossociograma
-              </span>
-            </div>
+    <div className="relative flex flex-col overflow-hidden rounded-[1.5rem] border border-border bg-slate-50/40 shadow-inner h-[800px] min-h-[calc(100vh-200px)]">
+      {/* ── CONTÊINER SUPERIOR (BARRA DE AÇÕES + LEGENDA) ── */}
+      <div className="absolute top-4 left-4 z-10 flex flex-col gap-2.5 pointer-events-none max-w-[calc(100%-32px)]">
+        {/* BARRA DE AÇÕES */}
+        <div className="pointer-events-auto flex flex-wrap items-center gap-2 px-4 py-3 rounded-xl bg-plum shadow-xl border border-white/10">
+          <div className="flex items-center gap-2 mr-3">
+            <TreePine className="size-4 text-gold" />
+            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/60">
+              Genossociograma
+            </span>
+          </div>
 
-            <Button
-              size="sm"
-              variant="lavender"
-              onClick={() => setCreatingPerson(true)}
-              className="h-9 gap-2 font-bold"
-            >
-              <UserPlus className="size-4" />
-              Adicionar pessoa
-            </Button>
+          <Button
+            size="sm"
+            variant="lavender"
+            onClick={() => setCreatingPerson(true)}
+            className="h-9 gap-2"
+          >
+            <UserPlus className="size-4" />
+            Adicionar pessoa
+          </Button>
 
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setRelDialog({ open: true, editing: null })}
-              disabled={persons.length < 2}
-              className="h-9 gap-2 border-white/25 text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[13px]"
-            >
-              <Link2 className="size-4" />
-              Criar vínculo
-            </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setRelDialog({ open: true })}
+            disabled={persons.length < 2}
+            className="h-9 gap-2 border-white/25 text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[13px]"
+          >
+            <Link2 className="size-4" />
+            Criar vínculo
+          </Button>
 
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => saveLayout.mutate()}
-              disabled={saveLayout.isPending || !layoutDirty}
-              className="h-9 gap-2 border-white/25 text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[13px] disabled:opacity-45"
-            >
-              <Save className="size-4" />
-              {saveLayout.isPending ? "Salvando" : "Salvar layout"}
-            </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => saveLayout.mutate()}
+            disabled={saveLayout.isPending || !layoutDirty}
+            className="h-9 gap-2 border-white/25 text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[13px] disabled:opacity-45"
+          >
+            <Save className="size-4" />
+            {saveLayout.isPending ? "Salvando" : "Salvar layout"}
+          </Button>
 
-            {/* Undo, Redo, Organizar */}
-            <div className="flex items-center border-l border-white/10 pl-2 gap-1">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => toast.info("Desfazer alteração")}
-                className="h-9 w-9 p-0 border-white/25 text-white hover:bg-white/10 hover:text-white"
-                title="Desfazer (Ctrl+Z)"
-              >
-                <Undo className="size-4" />
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => toast.info("Refazer alteração")}
-                className="h-9 w-9 p-0 border-white/25 text-white hover:bg-white/10 hover:text-white"
-                title="Refazer (Ctrl+Y)"
-              >
-                <Redo className="size-4" />
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => resetLayout.mutate()}
-                disabled={resetLayout.isPending}
-                className="h-9 gap-1.5 border-white/25 text-white hover:bg-white/10 hover:text-white normal-case font-semibold text-[13px]"
-                title="Auto-alinhar e organizar gerações"
-              >
-                <Grid3X3 className="size-4" />
-                Organizar
-              </Button>
-            </div>
-
-            <div className="hidden items-center gap-4 lg:flex ml-3">
-              <span className="flex items-center gap-1.5 text-[13px] text-white/55">
-                <Users className="size-3.5 text-lavender" />
-                <strong className="text-white">{qualifiedCount}</strong>
-                <span>no mapa</span>
-                {incompleteCount > 0 && (
-                  <span className="ml-1 rounded-full bg-amber-500/25 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">
-                    {incompleteCount} incompletos
-                  </span>
-                )}
-              </span>
-              {(layoutDirty || lastSavedAt) && (
-                <span className="text-[12px] font-semibold text-white/50">
-                  {layoutDirty ? "Não salvo" : `Salvo às ${lastSavedAt}`}
+          <div className="hidden items-center gap-4 md:flex ml-3">
+            <span className="flex items-center gap-1.5 text-[13px] text-white/55">
+              <Users className="size-3.5 text-lavender" />
+              <strong className="text-white">{qualifiedCount}</strong>
+              <span>no mapa</span>
+              {incompleteCount > 0 && (
+                <span className="ml-1 rounded-full bg-amber-500/25 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">
+                  {incompleteCount} incompletos
                 </span>
               )}
-            </div>
-
-            <div className="ml-auto flex items-center gap-1">
-              <button
-                onClick={() => setShowGuide(!showGuide)}
-                className="flex items-center gap-1.5 rounded px-3 py-2 text-[12px] font-bold uppercase tracking-[0.1em] text-white/55 transition-colors hover:bg-white/10 hover:text-white cursor-pointer"
-              >
-                <HelpCircle className="size-4" />
-                <span className="hidden sm:inline">Guia</span>
-              </button>
-              <button
-                onClick={() => window.print()}
-                className="flex items-center gap-1.5 rounded px-3 py-2 text-[12px] font-bold uppercase tracking-[0.1em] text-white/55 transition-colors hover:bg-white/10 hover:text-white cursor-pointer"
-              >
-                <Printer className="size-4" />
-                <span className="hidden sm:inline">A3</span>
-              </button>
-              <button
-                onClick={() => deleteSelected.mutate()}
-                disabled={deleteSelected.isPending}
-                className="flex items-center gap-1.5 rounded px-3 py-2 text-[12px] font-bold uppercase tracking-[0.1em] text-destructive/70 transition-colors hover:bg-destructive/20 hover:text-destructive cursor-pointer"
-              >
-                <Trash2 className="size-4" />
-                <span className="hidden sm:inline">Remover</span>
-              </button>
-            </div>
+            </span>
+            <span className="flex items-center gap-1.5 text-[13px] text-white/55">
+              <Link2 className="size-3.5 text-gold" />
+              <strong className="text-white">{relCount}</strong> vínculos
+            </span>
+            {(layoutDirty || lastSavedAt) && (
+              <span className="text-[12px] font-semibold text-white/50">
+                {layoutDirty ? "Não salvo" : `Salvo às ${lastSavedAt}`}
+              </span>
+            )}
+            <span className="text-[10px] opacity-40 ml-4 text-white font-mono">{BUILD_TAG}</span>
           </div>
 
-          {/* Destaques / Filtros */}
-          <div className="pointer-events-auto flex flex-wrap items-center gap-1.5 rounded-xl border border-border/50 bg-white/90 backdrop-blur-sm shadow-md px-3.5 py-1.5 text-[12px] font-semibold w-fit">
-            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-[0.1em] mr-2 flex items-center gap-1">
-              <Sparkles className="size-3.5 text-plum" />
-              Destacar Padrão:
-            </span>
-            {[
-              { id: "none", label: "Nenhum" },
-              { id: "deceased", label: "Falecidos" },
-              { id: "professions", label: "Profissões" },
-              { id: "traumas", label: "Segredos/Traumas" },
-              { id: "diseases", label: "Doenças/Sintomas" },
-            ].map((f) => (
-              <button
-                key={f.id}
-                onClick={() => setHighlightFilter(f.id)}
-                className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
-                  highlightFilter === f.id
-                    ? "bg-plum text-white"
-                    : "bg-slate-100 text-muted-foreground hover:bg-slate-200"
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Legenda dos Símbolos */}
-          <div className="pointer-events-auto flex flex-wrap items-center gap-5 rounded-xl border border-border/50 bg-white/90 backdrop-blur-sm shadow-md px-4 py-2.5 text-[12px] font-semibold w-fit">
-            <span className="text-muted-foreground/60 mr-1 uppercase tracking-[0.15em] text-[10px]">
-              Legenda:
-            </span>
-            <span className="flex items-center gap-2">
-              <span className="inline-block size-4 border-[2.5px] border-plum bg-card" />
-              <span className="text-foreground/80">Masculino</span>
-            </span>
-            <span className="flex items-center gap-2">
-              <span className="inline-block size-4 rounded-full border-[2.5px] border-lavender bg-card" />
-              <span className="text-foreground/80">Feminino</span>
-            </span>
-            <span className="flex items-center gap-2">
-              <span className="inline-block size-4 rotate-45 border-[2.5px] border-gold bg-card" />
-              <span className="text-foreground/80">Não-binário</span>
-            </span>
-            <span className="flex items-center gap-2">
-              <svg
-                viewBox="0 0 10 10"
-                className="size-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-              >
-                <polygon points="5,1 9,9 1,9" className="text-foreground/70" />
-              </svg>
-              <span className="text-foreground/80">Aborto</span>
-            </span>
-            <span className="flex items-center gap-2">
-              <span className="text-red-500 text-lg leading-none">✕</span>
-              <span className="text-foreground/80">Falecido</span>
-            </span>
+          <div className="ml-auto flex items-center gap-1">
+            <button
+              onClick={() => setShowGuide(!showGuide)}
+              className="flex items-center gap-1.5 rounded px-3 py-2 text-[12px] font-bold uppercase tracking-[0.1em] text-white/55 transition-colors hover:bg-white/10 hover:text-white"
+            >
+              <HelpCircle className="size-4" />
+              <span className="hidden sm:inline">Guia</span>
+            </button>
+            <button
+              onClick={() => window.print()}
+              className="flex items-center gap-1.5 rounded px-3 py-2 text-[12px] font-bold uppercase tracking-[0.1em] text-white/55 transition-colors hover:bg-white/10 hover:text-white"
+            >
+              <Printer className="size-4" />
+              <span className="hidden sm:inline">A3</span>
+            </button>
+            <button
+              onClick={() => deleteSelected.mutate()}
+              disabled={deleteSelected.isPending}
+              className="flex items-center gap-1.5 rounded px-3 py-2 text-[12px] font-bold uppercase tracking-[0.1em] text-destructive/70 transition-colors hover:bg-destructive/20 hover:text-destructive"
+            >
+              <Trash2 className="size-4" />
+              <span className="hidden sm:inline">Remover</span>
+            </button>
           </div>
         </div>
 
-        {/* Guia Rápido */}
-        {showGuide && (
-          <div className="absolute top-48 left-4 z-10 border border-border/50 bg-white/90 backdrop-blur-sm rounded-xl px-4 py-3 shadow-md max-w-sm pointer-events-auto">
-            <div className="flex flex-col gap-2.5 text-[13px] text-foreground/75 font-medium">
-              {[
-                ["Espaço + Arrastar", "Navegar pela tela"],
-                ["Arrastar Pessoa", "Reposicionar horizontalmente"],
-                ["Clique Único", "Abrir Painel de Edição na direita"],
-                ["Remover selecionado", "Selecione e clique em 'Remover'"],
-                ["Scroll / Roda", "Aumentar/Diminuir Zoom"],
-              ].map(([key, desc]) => (
-                <div key={key} className="flex justify-between gap-4">
-                  <kbd className="rounded border border-border bg-white px-1.5 py-0.5 text-[11px] font-mono font-bold shrink-0">
-                    {key}
-                  </kbd>
-                  <span className="text-right text-[12px]">{desc}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Canvas React Flow */}
-        <div className="absolute inset-0 z-0 bg-transparent">
-          {query.isLoading ? (
-            <div className="flex h-full flex-col items-center justify-center gap-3">
-              <div className="h-8 w-8 animate-spin rounded-full border-2 border-lavender border-t-transparent" />
-              <p className="text-[14px] text-muted-foreground">Carregando a árvore...</p>
-            </div>
-          ) : persons.length === 0 ? (
-            <EmptyCanvas onCreate={() => setCreatingPerson(true)} />
-          ) : (
-            <ReactFlow
-              connectionMode={ConnectionMode.Loose}
-              nodes={nodes}
-              edges={edges}
-              nodeTypes={nodeTypes}
-              edgeTypes={edgeTypes}
-              onNodesChange={onNodesChangeCustom}
-              onEdgesChange={onEdgesChange}
-              onNodeDoubleClick={onNodeDoubleClick}
-              onEdgeDoubleClick={onEdgeDoubleClick}
-              onSelectionChange={onSelectionChange}
-              nodesDraggable
-              nodesConnectable={false}
-              panOnDrag={false}
-              panActivationKeyCode="Space"
-              minZoom={0.15}
-              maxZoom={2.5}
-              proOptions={{ hideAttribution: true }}
-              defaultEdgeOptions={{
-                type: "step",
-                style: { strokeWidth: 2, stroke: "var(--color-plum)" },
-              }}
-              fitView
-              fitViewOptions={{ padding: 0.2 }}
+        {/* ── LEGENDA — símbolos internacionais ────────────── */}
+        <div className="pointer-events-auto flex flex-wrap items-center gap-5 rounded-xl border border-border/50 bg-white/90 backdrop-blur-sm shadow-md px-4 py-2.5 text-[12px] font-semibold w-fit">
+          <span className="text-muted-foreground/60 mr-1 uppercase tracking-[0.15em] text-[10px]">
+            Legenda:
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="inline-block size-4 border-[2.5px] border-plum bg-card" />
+            <span className="text-foreground/80">Masculino</span>
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="inline-block size-4 rounded-full border-[2.5px] border-lavender bg-card" />
+            <span className="text-foreground/80">Feminino</span>
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="inline-block size-4 rotate-45 border-[2.5px] border-gold bg-card" />
+            <span className="text-foreground/80">Não-binário / desconhecido</span>
+          </span>
+          <span className="flex items-center gap-2">
+            <svg
+              viewBox="0 0 10 10"
+              className="size-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
             >
-              <Background
-                color="#cbd5e1"
-                variant={BackgroundVariant.Lines}
-                gap={24}
-                size={1}
-                style={{ opacity: 0.5 }}
-              />
-              <Controls
-                className="bg-white border-none shadow-xl overflow-hidden rounded-xl [&>button]:border-b [&>button]:border-slate-100 [&>button]:hover:bg-slate-50 [&>button]:text-plum"
-                showInteractive={false}
-              />
-            </ReactFlow>
-          )}
+              <polygon points="5,1 9,9 1,9" className="text-foreground/70" />
+            </svg>
+            <span className="text-foreground/80">Aborto</span>
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="text-red-500 text-lg leading-none">✕</span>
+            <span className="text-foreground/80">Falecido</span>
+          </span>
+          <span className="ml-auto text-plum font-bold uppercase tracking-[0.1em] text-[11px]">
+            Paciente destacado em ameixa
+          </span>
         </div>
       </div>
 
-      {/* Selected Person Sidebar Editor */}
-      {selectedPerson && (
-        <EditSidebar
-          person={selectedPerson}
-          onClose={() => {
-            // Deselect node to close panel
-            setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
-            setSelectedPerson(null);
-          }}
-          onSave={(fields) => {
-            savePersonDetails.mutate(fields);
-          }}
-        />
+      {showGuide && (
+        <div className="border-b border-border bg-lavender-soft px-4 py-3">
+          <div className="flex flex-wrap gap-6 text-[13px] text-foreground/70">
+            {[
+              ["Espaço + Arrastar", "Navegar pela tela"],
+              ["Arrastar Pessoa", "Reposicionar horizontalmente"],
+              ["Duplo Clique", "Ver informações completas"],
+              ["Selecionar + Remover", "Excluir o selecionado"],
+              ["Scroll", "Zoom in/out"],
+            ].map(([key, desc]) => (
+              <span key={key} className="flex items-center gap-2">
+                <kbd className="rounded border border-border bg-white px-1.5 py-0.5 text-[11px] font-mono font-semibold">
+                  {key}
+                </kbd>
+                {desc}
+              </span>
+            ))}
+          </div>
+        </div>
       )}
 
-      {/* Creating modal Dialog */}
+      {/* ── LEGENDA — símbolos internacionais ────────────── */}
+      <div className="absolute bottom-4 left-16 z-10 flex flex-wrap items-center gap-5 rounded-xl border border-border/50 bg-white/90 backdrop-blur-sm shadow-md px-4 py-2.5 text-[12px] font-semibold">
+        <span className="text-muted-foreground/60 mr-1 uppercase tracking-[0.15em] text-[10px]">
+          Legenda:
+        </span>
+        <span className="flex items-center gap-2">
+          <span className="inline-block size-4 border-[2.5px] border-plum bg-card" />
+          <span className="text-foreground/80">Masculino</span>
+        </span>
+        <span className="flex items-center gap-2">
+          <span className="inline-block size-4 rounded-full border-[2.5px] border-lavender bg-card" />
+          <span className="text-foreground/80">Feminino</span>
+        </span>
+        <span className="flex items-center gap-2">
+          <span className="inline-block size-4 rotate-45 border-[2.5px] border-gold bg-card" />
+          <span className="text-foreground/80">Não-binário / desconhecido</span>
+        </span>
+        <span className="flex items-center gap-2">
+          <svg
+            viewBox="0 0 10 10"
+            className="size-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          >
+            <polygon points="5,1 9,9 1,9" className="text-foreground/70" />
+          </svg>
+          <span className="text-foreground/80">Aborto</span>
+        </span>
+        <span className="flex items-center gap-2">
+          <span className="text-red-500 text-lg leading-none">✕</span>
+          <span className="text-foreground/80">Falecido</span>
+        </span>
+        <span className="ml-auto text-plum font-bold uppercase tracking-[0.1em] text-[11px]">
+          Paciente destacado em ameixa
+        </span>
+      </div>
+
+      {/* ── CANVAS ──────── */}
+      <div
+        className="absolute inset-0 z-0 bg-transparent"
+      >
+        {query.isLoading ? (
+          <div className="flex h-full flex-col items-center justify-center gap-3">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-lavender border-t-transparent" />
+            <p className="text-[14px] text-muted-foreground">Carregando a árvore...</p>
+          </div>
+        ) : persons.length === 0 ? (
+          <EmptyCanvas onCreate={() => setCreatingPerson(true)} />
+        ) : (
+          <ReactFlow
+            connectionMode={ConnectionMode.Loose}
+            nodes={nodes}
+            edges={edges}
+            nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
+            onNodesChange={onNodesChangeCustom}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onNodeDoubleClick={onNodeDoubleClick}
+            onEdgeDoubleClick={onEdgeDoubleClick}
+            nodesDraggable
+            nodesConnectable={false}
+            panOnDrag={false}
+            panActivationKeyCode="Space"
+            minZoom={0.15}
+            maxZoom={2.5}
+            proOptions={{ hideAttribution: true }}
+            defaultEdgeOptions={{
+              type: "step",
+              style: { strokeWidth: 2, stroke: "var(--color-plum)" },
+            }}
+            fitView
+            fitViewOptions={{ padding: 0.2 }}
+          >
+            <Background
+              color="#cbd5e1"
+              variant={BackgroundVariant.Lines}
+              gap={24}
+              size={1}
+              style={{ opacity: 0.5 }}
+            />
+            <Controls
+              className="bg-white border-none shadow-xl overflow-hidden rounded-xl [&>button]:border-b [&>button]:border-slate-100 [&>button]:hover:bg-slate-50 [&>button]:text-plum"
+              showInteractive={false}
+            />
+          </ReactFlow>
+        )}
+        {!query.isLoading && persons.length > 0 && (
+          <div className="pointer-events-none absolute bottom-4 right-4 z-50 hidden md:flex md:flex-col md:gap-4">
+            <GenerationRuler />
+            <ShortcutsLegend />
+          </div>
+        )}
+      </div>
+
       <PersonFormDialog
         open={creatingPerson}
         onOpenChange={(open) => {
@@ -1106,6 +1080,12 @@ function GenogramCanvasInner({ clientId }: { clientId: string }) {
         }}
         clientId={clientId}
         defaultPosition={{ x: 120 + persons.length * 200, y: 120 }}
+      />
+      <PersonFormDialog
+        open={Boolean(editingPerson)}
+        onOpenChange={(o) => !o && setEditingPerson(null)}
+        clientId={clientId}
+        editing={editingPerson}
       />
       <RelationshipFormDialog
         open={relDialog.open}
@@ -1125,184 +1105,74 @@ function GenogramCanvasInner({ clientId }: { clientId: string }) {
   );
 }
 
-// EDIT SIDEBAR COMPONENT
-function EditSidebar({
-  person,
-  onClose,
-  onSave,
-}: {
-  person: PersonRow;
-  onClose: () => void;
-  onSave: (fields: Partial<PersonRow>) => void;
-}) {
-  const [fullName, setFullName] = useState(person.full_name);
-  const [preferredName, setPreferredName] = useState(person.preferred_name || "");
-  const [gender, setGender] = useState(person.gender || "unknown");
-  const [birthDate, setBirthDate] = useState(person.birth_date || "");
-  const [isDeceased, setIsDeceased] = useState(!!person.is_deceased);
-  const [deathDate, setDeathDate] = useState(person.death_date || "");
-  const [causeOfDeath, setCauseOfDeath] = useState(person.cause_of_death || "");
-  const [occupation, setOccupation] = useState(person.occupation || "");
-  const [notes, setNotes] = useState(person.notes || "");
+const MARRIAGE_MARK: Record<number, string> = {
+  1: "①",
+  2: "②",
+  3: "③",
+  4: "④",
+  5: "⑤",
+};
 
-  useEffect(() => {
-    setFullName(person.full_name);
-    setPreferredName(person.preferred_name || "");
-    setGender(person.gender || "unknown");
-    setBirthDate(person.birth_date || "");
-    setIsDeceased(!!person.is_deceased);
-    setDeathDate(person.death_date || "");
-    setCauseOfDeath(person.cause_of_death || "");
-    setOccupation(person.occupation || "");
-    setNotes(person.notes || "");
-  }, [person]);
+function unionLabel(r: RelRow): string {
+  const base = relationshipLabel(r.relationship_type, r.qualifier);
+  if (base === "Parental" || base === "Parental · Biológico") return "";
 
-  return (
-    <div className="w-[340px] shrink-0 border-l border-border bg-white h-full flex flex-col z-20 shadow-2xl relative">
-      <div className="p-4 border-b border-border flex items-center justify-between bg-slate-50 shrink-0">
-        <div className="flex items-center gap-2">
-          <Eye className="size-4 text-plum" />
-          <h3 className="font-serif font-bold text-primary text-[15px]">Editar Membro</h3>
-        </div>
-        <button
-          onClick={onClose}
-          className="text-muted-foreground hover:text-primary font-bold text-sm cursor-pointer p-1"
-        >
-          ✕
-        </button>
-      </div>
+  if (r.relationship_type !== "union") return base;
+  const order = (r as RelRow & { marriage_order?: number | null }).marriage_order;
+  if (!order || order < 1) return base;
+  const mark = MARRIAGE_MARK[order] ?? `${order}ª`;
+  return `${mark} ${base}`;
+}
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 text-[13px]">
-        {/* Full Name */}
-        <div className="space-y-1">
-          <label className="font-bold text-muted-foreground/80">Nome Completo</label>
-          <input
-            type="text"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            className="w-full rounded-lg border border-border px-3 py-2 text-primary focus:outline-none focus:border-plum"
-          />
-        </div>
-        {/* Preferred Name */}
-        <div className="space-y-1">
-          <label className="font-bold text-muted-foreground/80">Nome de Preferência</label>
-          <input
-            type="text"
-            value={preferredName}
-            onChange={(e) => setPreferredName(e.target.value)}
-            className="w-full rounded-lg border border-border px-3 py-2 text-primary focus:outline-none focus:border-plum"
-          />
-        </div>
-        {/* Gender */}
-        <div className="space-y-1">
-          <label className="font-bold text-muted-foreground/80">Gênero / Símbolo</label>
-          <select
-            value={gender}
-            onChange={(e) => setGender(e.target.value)}
-            className="w-full rounded-lg border border-border px-3 py-2 text-primary focus:outline-none bg-white focus:border-plum"
-          >
-            <option value="male">Masculino (Quadrado)</option>
-            <option value="female">Feminino (Círculo)</option>
-            <option value="other">Não-binário (Losango)</option>
-            <option value="abortion">Aborto (Triângulo)</option>
-          </select>
-        </div>
-        {/* Dates */}
-        <div className="space-y-1">
-          <label className="font-bold text-muted-foreground/80">Nascimento</label>
-          <input
-            type="date"
-            value={birthDate}
-            onChange={(e) => setBirthDate(e.target.value)}
-            className="w-full rounded-lg border border-border px-3 py-2 text-primary focus:outline-none focus:border-plum"
-          />
-        </div>
+function relToEdge(r: RelRow): Edge {
+  const stroke = colorFor(r);
+  const dashed =
+    r.qualifier === "divorce" || r.qualifier === "separation" || r.qualifier === "rupture";
+  const thick = r.qualifier === "fusion";
+  const isUnion = r.relationship_type === "union";
+  const order = (r as RelRow & { marriage_order?: number | null }).marriage_order ?? null;
+  // 2ª/3ª união: linha um pouco mais grossa para diferenciar
+  const unionExtra = isUnion && order && order > 1 ? 1 : 0;
+  return {
+    id: r.id,
+    source: r.from_person_id,
+    target: r.to_person_id,
+    sourceHandle: isUnion ? "right" : undefined,
+    targetHandle: isUnion ? "left" : undefined,
+    type: "step",
+    label: unionLabel(r),
+    labelStyle: {
+      fontSize: 12,
+      fontWeight: 600,
+      fill: isUnion ? "var(--color-plum)" : "var(--color-muted-foreground)",
+      fontFamily: "var(--font-sans)",
+    },
+    labelBgStyle: { fill: "var(--color-card)", fillOpacity: 0.98, rx: 3, ry: 3 },
+    labelBgPadding: [4, 6] as [number, number],
+    animated: r.qualifier === "conflict",
+      data: { relationshipType: r.relationship_type, qualifier: r.qualifier, marriageOrder: order },
+    style: {
+      stroke,
+      strokeWidth: (thick ? 3 : 2) + unionExtra,
+      strokeDasharray: dashed ? "8 5" : undefined,
+    },
+  };
+}
 
-        {/* Deceased toggle */}
-        <div className="flex items-center gap-2 pt-2 pb-1">
-          <input
-            type="checkbox"
-            id="isDeceased"
-            checked={isDeceased}
-            onChange={(e) => setIsDeceased(e.target.checked)}
-            className="rounded border-border text-plum focus:ring-plum size-4"
-          />
-          <label htmlFor="isDeceased" className="font-bold text-muted-foreground/80 cursor-pointer">
-            Esta pessoa é falecida (✕)
-          </label>
-        </div>
-
-        {isDeceased && (
-          <div className="grid grid-cols-2 gap-2 p-3 bg-slate-50 border border-border rounded-xl">
-            <div className="space-y-1">
-              <label className="font-bold text-muted-foreground/80">Falecimento</label>
-              <input
-                type="date"
-                value={deathDate}
-                onChange={(e) => setDeathDate(e.target.value)}
-                className="w-full rounded-lg border border-border px-3 py-2 text-primary focus:outline-none bg-white focus:border-plum"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="font-bold text-muted-foreground/80">Causa</label>
-              <input
-                type="text"
-                value={causeOfDeath}
-                onChange={(e) => setCauseOfDeath(e.target.value)}
-                className="w-full rounded-lg border border-border px-3 py-2 text-primary focus:outline-none bg-white focus:border-plum"
-                placeholder="ex: Câncer"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Occupation */}
-        <div className="space-y-1">
-          <label className="font-bold text-muted-foreground/80">Profissão / Ocupação</label>
-          <input
-            type="text"
-            value={occupation}
-            onChange={(e) => setOccupation(e.target.value)}
-            className="w-full rounded-lg border border-border px-3 py-2 text-primary focus:outline-none focus:border-plum"
-            placeholder="ex: Agricultor"
-          />
-        </div>
-
-        {/* Notes / Clinical secrets */}
-        <div className="space-y-1">
-          <label className="font-bold text-muted-foreground/80">Segredos / Traumas / Notas</label>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            className="w-full rounded-lg border border-border px-3 py-2 text-primary focus:outline-none focus:border-plum min-h-[90px]"
-            placeholder="Anote dinâmicas sistêmicas, repetições, traumas..."
-          />
-        </div>
-      </div>
-
-      <div className="p-4 border-t border-border bg-slate-50 flex gap-2 shrink-0">
-        <Button
-          variant="hero"
-          className="flex-1"
-          onClick={() =>
-            onSave({
-              full_name: fullName,
-              preferred_name: preferredName || null,
-              gender,
-              birth_date: birthDate || null,
-              is_deceased: isDeceased,
-              death_date: isDeceased ? deathDate || null : null,
-              cause_of_death: isDeceased ? causeOfDeath || null : null,
-              occupation: occupation || null,
-              notes: notes || null,
-            })
-          }
-        >
-          Salvar Alterações
-        </Button>
-      </div>
-    </div>
-  );
+function colorFor(r: RelRow): string {
+  if (r.relationship_type === "parent") return "var(--color-plum)";
+  if (r.relationship_type === "sibling") return "var(--color-lavender)";
+  if (r.relationship_type === "union") return "var(--color-foreground)";
+  switch (r.qualifier) {
+    case "conflict":
+    case "rupture":
+      return "var(--color-destructive)";
+    case "fusion":
+    case "close":
+      return "var(--color-lavender)";
+    default:
+      return "var(--color-muted-foreground)";
+  }
 }
 
 function EmptyCanvas({ onCreate }: { onCreate: () => void }) {
