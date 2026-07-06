@@ -297,54 +297,33 @@ function ClientDossierPage() {
               </div>
             </div>
 
-            {/* CRM horizontal quick stats panel */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-2 border-t border-white/10 pt-4 text-[13px] text-white/80">
-              <div className="space-y-1">
-                <p className="text-[10px] uppercase font-bold tracking-wider text-white/40">
-                  Contatos
-                </p>
-                <p className="font-medium flex items-center gap-1.5 truncate">
-                  <Mail className="size-3.5 text-gold" /> {client.email || "—"}
-                </p>
-                <p className="font-medium flex items-center gap-1.5 truncate">
-                  <Phone className="size-3.5 text-gold" /> {client.phone || "—"}
-                </p>
+            {/* Minimalist Info Bar */}
+            <div className="flex flex-wrap items-center gap-6 mt-2 border-t border-white/10 pt-5 text-[13px] text-white/80">
+              <div className="flex items-center gap-2">
+                <Mail className="size-3.5 text-lavender" /> 
+                <span className="font-medium">{client.email || "Sem e-mail"}</span>
               </div>
-              <div className="space-y-1">
-                <p className="text-[10px] uppercase font-bold tracking-wider text-white/40">
-                  Localidade
-                </p>
-                <p className="font-medium flex items-center gap-1.5">
-                  <MapPin className="size-3.5 text-gold" /> {client.birthplace || "Não informado"}
-                </p>
-                <p className="font-medium">{age !== null ? `${age} anos` : "Sem idade"}</p>
+              <div className="flex items-center gap-2">
+                <Phone className="size-3.5 text-lavender" /> 
+                <span className="font-medium">{client.phone || "Sem telefone"}</span>
               </div>
-              <div className="space-y-1">
-                <p className="text-[10px] uppercase font-bold tracking-wider text-white/40">
-                  Sessões Clínicas
-                </p>
-                <p className="font-medium flex items-center gap-1.5">
-                  <CalendarDays className="size-3.5 text-gold" /> 12 sessões
-                </p>
-                <p className="font-medium text-[11px] text-emerald-300">Próxima: Amanhã 09:00</p>
+              <div className="flex items-center gap-2">
+                <MapPin className="size-3.5 text-lavender" /> 
+                <span className="font-medium">{client.birthplace || "Local não informado"}</span>
+                <span className="text-white/40 mx-1">•</span>
+                <span className="font-medium">{age !== null ? `${age} anos` : "Idade omitida"}</span>
               </div>
-              <div className="space-y-1">
-                <p className="text-[10px] uppercase font-bold tracking-wider text-white/40">
-                  Construção da Árvore
-                </p>
-                <p className="font-medium flex items-center gap-1.5">
-                  <Layers className="size-3.5 text-gold" /> 74% do Genograma
-                </p>
-                <p className="font-medium text-[11px] text-lavender-mid">60% da Linha do Tempo</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-[10px] uppercase font-bold tracking-wider text-white/40">
-                  Inteligência Clínica
-                </p>
-                <p className="font-medium flex items-center gap-1.5 text-gold">
-                  <Sparkles className="size-3.5 text-gold" /> 4 padrões ativos
-                </p>
-                <p className="font-medium text-[11px] text-amber-300">Síndrome Detectada</p>
+              
+              <div className="flex-1" />
+              
+              <div className="flex items-center gap-4 bg-white/5 px-4 py-1.5 rounded-full border border-white/10">
+                <span className="flex items-center gap-1.5 text-[12px] font-semibold text-gold" title="Próxima sessão: Amanhã 09:00">
+                  <CalendarDays className="size-3.5" /> {client.session_count || 0} sessões
+                </span>
+                <div className="w-px h-3 bg-white/20" />
+                <span className="flex items-center gap-1.5 text-[12px] font-semibold text-lavender-soft">
+                  <Sparkles className="size-3.5" /> IA Clínica Ativa
+                </span>
               </div>
             </div>
           </header>
