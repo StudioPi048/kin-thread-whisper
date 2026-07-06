@@ -93,7 +93,7 @@ function IaClinicaPage() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
-              placeholder="Pergunte à IA Clínica (ex: 'Quais os padrões do Pietro?' ou 'O que é Síndrome de Aniversário?')..."
+              placeholder="Pergunte à IA Clínica (ex: 'Quais padrões investigar?' ou 'O que é Síndrome de Aniversário?')..."
               className="flex-1 h-12 text-[14px] bg-white border-border/60"
             />
             <Button
