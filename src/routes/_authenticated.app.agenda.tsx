@@ -189,25 +189,66 @@ const QUICK_ACTIONS = [
 /* ------------------------------ Page Component ---------------------------- */
 
 function AgendaPage() {
-  const [selectedId, setSelectedId] = useState<string>("s1");
-  const selected = useMemo(() => SESSIONS.find((s) => s.id === selectedId) ?? SESSIONS[0], [selectedId]);
+  const query = useQuery({
+    queryKey: ["agenda-data"],
+    queryFn: () => getAgendaData(),
+    staleTime: 60_000,
+  });
+
+  const { sessions, isFallback, orphanClients, prontuariosPendentes } = useMemo(() => {
+    const dto = query.data;
+    if (dto && dto.today.length > 0) {
+      return {
+        sessions: mapDtosToSessions(dto.today),
+        isFallback: false,
+        orphanClients: dto.orphanClients,
+        prontuariosPendentes: dto.stats.prontuariosPendentes,
+      };
+    }
+    return {
+      sessions: FALLBACK_SESSIONS,
+      isFallback: true,
+      orphanClients: [] as OrphanClientDTO[],
+      prontuariosPendentes: 1,
+    };
+  }, [query.data]);
+
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const activeId = selectedId ?? sessions[0]?.id ?? "";
+  const selected = sessions.find((s) => s.id === activeId) ?? sessions[0];
+  const timeline = useMemo(() => buildTimeline(sessions), [sessions]);
 
   const stats = {
-    total: SESSIONS.length,
-    primeira: SESSIONS.filter((s) => s.type === "Primeira Consulta").length,
-    retornos: SESSIONS.filter((s) => s.type !== "Primeira Consulta").length,
-    aniversarios: SESSIONS.filter((s) => s.seals.includes("aniversario")).length,
-    ocupado: "4h",
-    livre: "2h40",
+    total: sessions.length,
+    primeira: sessions.filter((s) => s.type === "Primeira Consulta").length,
+    retornos: sessions.filter((s) => s.type !== "Primeira Consulta").length,
+    aniversarios: sessions.filter((s) => s.seals.includes("aniversario")).length,
+    ocupado: `${sessions.length}h`,
+    livre: `${Math.max(0, 8 - sessions.length)}h`,
   };
 
   return (
     <div className="min-h-[calc(100vh-64px)] bg-[radial-gradient(circle_at_20%_0%,oklch(0.97_0.02_295)_0%,transparent_45%),radial-gradient(circle_at_100%_100%,oklch(0.96_0.03_60/0.4)_0%,transparent_50%),var(--color-cream)]">
       {/* Breadcrumb */}
-      <div className="border-b border-border/60 bg-white/60 backdrop-blur-sm px-6 py-3">
+      <div className="border-b border-border/60 bg-white/60 backdrop-blur-sm px-6 py-3 flex items-center justify-between gap-3">
         <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-muted-foreground">
           Instituto Liz / Centro de Comando Clínico
         </p>
+        {query.isLoading && (
+          <span className="text-[10px] font-bold uppercase tracking-widest text-plum/70 flex items-center gap-1.5">
+            <Loader2 className="size-3 animate-spin" /> Carregando agenda
+          </span>
+        )}
+        {!query.isLoading && isFallback && (
+          <span className="text-[10px] font-bold uppercase tracking-widest text-amber-700 bg-amber-100/60 border border-amber-300/50 px-2 py-0.5 rounded-full">
+            Dados de exemplo — nenhuma sessão hoje
+          </span>
+        )}
+        {query.isError && (
+          <span className="text-[10px] font-bold uppercase tracking-widest text-rose-700 bg-rose-100/60 border border-rose-300/50 px-2 py-0.5 rounded-full">
+            Falha ao carregar — exibindo exemplo
+          </span>
+        )}
       </div>
 
       {/* Contextual Header */}
@@ -231,20 +272,45 @@ function AgendaPage() {
       {/* Three-column workspace */}
       <div className="container-liz py-6 grid gap-5 2xl:grid-cols-[260px_minmax(0,1fr)_320px] lg:grid-cols-[240px_minmax(0,1fr)] grid-cols-1">
         {/* LEFT — Timeline */}
-        <TimelineColumn selectedId={selectedId} onSelect={setSelectedId} />
+        <TimelineColumn
+          timeline={timeline}
+          sessions={sessions}
+          selectedId={activeId}
+          onSelect={setSelectedId}
+        />
 
         {/* CENTER — Featured session */}
-        <FeaturedSession session={selected} />
+        {selected ? (
+          <FeaturedSession session={selected} />
+        ) : (
+          <EmptyCenter />
+        )}
 
         {/* RIGHT — IA + Painel */}
         <div className="lg:col-span-2 2xl:col-span-1">
-          <RightPanel session={selected} />
+          <RightPanel
+            session={selected}
+            orphanClients={orphanClients}
+            prontuariosPendentes={prontuariosPendentes}
+          />
         </div>
-
       </div>
     </div>
   );
 }
+
+function EmptyCenter() {
+  return (
+    <div className="rounded-3xl bg-white/70 border border-dashed border-border/60 p-12 text-center">
+      <CalendarIcon className="size-10 text-muted-foreground/40 mx-auto mb-3" />
+      <h3 className="font-serif text-xl font-bold text-primary">Nenhuma sessão agendada</h3>
+      <p className="text-sm text-muted-foreground mt-2">
+        Quando você criar uma nova sessão, ela aparecerá aqui com todos os detalhes clínicos.
+      </p>
+    </div>
+  );
+}
+
 
 /* --------------------------------- Header --------------------------------- */
 
