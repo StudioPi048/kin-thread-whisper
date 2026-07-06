@@ -41,10 +41,94 @@ import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
+import leticiaAsset from "@/assets/leticia-baccin.png.asset.json";
 
 export const Route = createFileRoute("/_authenticated/app/biblioteca")({
   component: BibliotecaPage,
 });
+
+// ─────────────────────────────────────────────────────────────
+// BIBLIOTECA AUTORAL — LETÍCIA KUCHOCKOWOLEC BACCIN
+// ─────────────────────────────────────────────────────────────
+
+const LETICIA = {
+  name: "Letícia Kuchockowolec Baccin",
+  role: "Fundadora do Instituto Liz · Psicogenealogista clínica",
+  bio: "Autora, pesquisadora e formadora em Psicogenealogia. Fundadora da Academia Liz Indica, criadora de metodologias autorais e referência em transmissão clínica no Brasil.",
+  photo: leticiaAsset.url,
+};
+
+const LETICIA_WORKS: Array<{
+  title: string;
+  subtitle: string;
+  kind: "Livro" | "Manual" | "Almanaque" | "Curso" | "Protocolo";
+  badge: "Novo" | "Mais estudado" | "Exclusivo" | "Clássico";
+  concepts: number;
+  protocols: number;
+  citations: number;
+  accent: "plum" | "lavender" | "gold" | "cream";
+}> = [
+  {
+    title: "O Código Sagrado dos Dentes",
+    subtitle: "Simbologia oral e memória transgeracional",
+    kind: "Livro",
+    badge: "Novo",
+    concepts: 120,
+    protocols: 48,
+    citations: 312,
+    accent: "plum",
+  },
+  {
+    title: "Manual da Psicogenealogia",
+    subtitle: "Método clínico Instituto Liz",
+    kind: "Manual",
+    badge: "Mais estudado",
+    concepts: 86,
+    protocols: 34,
+    citations: 210,
+    accent: "gold",
+  },
+  {
+    title: "Raízes do Nome",
+    subtitle: "Onomástica e projeto sentido",
+    kind: "Livro",
+    badge: "Exclusivo",
+    concepts: 54,
+    protocols: 21,
+    citations: 143,
+    accent: "lavender",
+  },
+  {
+    title: "Fé com Lê, Lê com Fé",
+    subtitle: "Espiritualidade e clínica sistêmica",
+    kind: "Livro",
+    badge: "Clássico",
+    concepts: 62,
+    protocols: 18,
+    citations: 168,
+    accent: "cream",
+  },
+  {
+    title: "Almanaque Liz",
+    subtitle: "Compêndio de casos e verbetes",
+    kind: "Almanaque",
+    badge: "Exclusivo",
+    concepts: 240,
+    protocols: 72,
+    citations: 480,
+    accent: "plum",
+  },
+  {
+    title: "Protocolo do Clã",
+    subtitle: "Ferramenta de mapeamento em 4 gerações",
+    kind: "Protocolo",
+    badge: "Mais estudado",
+    concepts: 32,
+    protocols: 12,
+    citations: 96,
+    accent: "lavender",
+  },
+];
 
 type Entry = {
   id: string;
