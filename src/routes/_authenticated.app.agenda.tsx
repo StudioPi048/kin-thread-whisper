@@ -733,8 +733,9 @@ function MiniTreePreview({ session }: { session: Session }) {
   );
 }
 
-function UpcomingList({ currentId }: { currentId: string }) {
-  const others = SESSIONS.filter((s) => s.id !== currentId);
+function UpcomingList({ currentId, sessions }: { currentId: string; sessions: Session[] }) {
+  const others = sessions.filter((s) => s.id !== currentId);
+
   return (
     <div className="rounded-2xl bg-white/80 backdrop-blur border border-border/50 shadow-sm p-5">
       <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4 flex items-center gap-2">
