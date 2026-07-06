@@ -119,9 +119,9 @@ export default function LandingPage() {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
-              className="inline-flex items-center gap-2 rounded border border-forest/30 bg-forest/10 px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.3em] text-forest-mid"
+              className="inline-flex items-center gap-2 rounded border border-gold/40 bg-gold/10 px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.3em] text-gold"
             >
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-forest" />
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-gold" />
               Beta fechado · Psicogenealogistas
             </motion.div>
 
