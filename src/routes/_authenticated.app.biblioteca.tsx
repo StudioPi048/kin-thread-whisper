@@ -309,7 +309,19 @@ const THEMES: Array<{ name: string; count: number; icon: typeof Feather; accent:
   { name: "Ordens do Amor", count: 17, icon: Scale, accent: "bg-white text-plum border border-plum/10" },
 ];
 
-const ESSENTIAL_BOOKS = [
+const ESSENTIAL_BOOKS: Array<{
+  title: string;
+  subtitle: string;
+  author: string;
+  year: number;
+  level: string;
+  concepts: string[];
+  citations: number;
+  protocols: number;
+  cases: number;
+  spine: string;
+  cover?: string;
+}> = [
   {
     title: "Meus Antepassados",
     subtitle: "A síndrome de aniversário e o romance familiar",
@@ -321,6 +333,7 @@ const ESSENTIAL_BOOKS = [
     protocols: 8,
     cases: 12,
     spine: "bg-plum text-white",
+    cover: "https://covers.openlibrary.org/b/isbn/8532303617-L.jpg?default=false",
   },
   {
     title: "Metagenealogia",
@@ -333,6 +346,7 @@ const ESSENTIAL_BOOKS = [
     protocols: 5,
     cases: 9,
     spine: "bg-lavender text-white",
+    cover: "https://covers.openlibrary.org/b/isbn/9782226221315-L.jpg?default=false",
   },
   {
     title: "A Casca e o Núcleo",
@@ -345,6 +359,7 @@ const ESSENTIAL_BOOKS = [
     protocols: 3,
     cases: 7,
     spine: "bg-plum/80 text-white",
+    cover: "https://covers.openlibrary.org/b/isbn/9782081218918-L.jpg?default=false",
   },
   {
     title: "Ordens do Amor",
@@ -357,6 +372,7 @@ const ESSENTIAL_BOOKS = [
     protocols: 12,
     cases: 18,
     spine: "bg-gold text-plum",
+    cover: "https://covers.openlibrary.org/b/isbn/8531608872-L.jpg?default=false",
   },
   {
     title: "Minhas Ancestrais Feridas",
@@ -371,8 +387,8 @@ const ESSENTIAL_BOOKS = [
     spine: "bg-plum text-white",
   },
   {
-    title: "O Dom dos Traumatismos",
-    subtitle: "Resiliência como fenômeno sistêmico",
+    title: "O Murmúrio dos Fantasmas",
+    subtitle: "Como sair do passado transgeracional",
     author: "Boris Cyrulnik",
     year: 2004,
     level: "Resiliência",
@@ -381,6 +397,7 @@ const ESSENTIAL_BOOKS = [
     protocols: 4,
     cases: 8,
     spine: "bg-lavender/80 text-white",
+    cover: "https://covers.openlibrary.org/b/isbn/9782738113610-L.jpg?default=false",
   },
 ];
 
