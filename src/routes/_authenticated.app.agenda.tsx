@@ -69,6 +69,7 @@ const SEAL_META: Record<Seal, { label: string; className: string; Icon: typeof C
 
 type Session = {
   id: string;
+  clientId: string | null;
   start: string;
   end: string;
   patient: string;
