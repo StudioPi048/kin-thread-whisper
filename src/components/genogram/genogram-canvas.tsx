@@ -936,7 +936,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
       )}
 
       {/* ── LEGENDA — símbolos internacionais ────────────── */}
-      <div className="absolute top-[88px] right-4 z-10 flex flex-wrap items-center gap-5 rounded-xl border border-border/50 bg-white/90 backdrop-blur-sm shadow-md px-4 py-2.5 text-[12px] font-semibold">
+      <div className="absolute bottom-4 left-16 z-10 flex flex-wrap items-center gap-5 rounded-xl border border-border/50 bg-white/90 backdrop-blur-sm shadow-md px-4 py-2.5 text-[12px] font-semibold">
         <span className="text-muted-foreground/60 mr-1 uppercase tracking-[0.15em] text-[10px]">
           Legenda:
         </span>

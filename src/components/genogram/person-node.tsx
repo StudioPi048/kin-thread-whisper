@@ -138,7 +138,7 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
       <div
         className={cn(
           "mt-3 w-[120px] h-[72px] bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-sm px-2 py-1.5 flex flex-col justify-center items-center text-center select-none z-10 transition-all",
-          d.is_proband && "border-plum bg-plum/[0.01] shadow-[0_0_0_1px_var(--color-plum)/10]",
+          d.is_proband && "border-plum bg-white dark:bg-zinc-900 shadow-[0_0_0_1px_rgba(110,20,60,0.15)]",
           selected && "ring-1 ring-lavender border-lavender",
         )}
       >
