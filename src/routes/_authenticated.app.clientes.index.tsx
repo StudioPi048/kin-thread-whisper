@@ -9,6 +9,13 @@ import {
   Plus,
   Search,
   Trash2,
+  LayoutGrid,
+  List,
+  Sparkles,
+  MapPin,
+  Calendar,
+  Layers,
+  FileCheck
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -50,6 +57,7 @@ function ClientesIndex() {
   const qc = useQueryClient();
   const [tab, setTab] = useState<"active" | "archived">("active");
   const [query, setQuery] = useState("");
+  const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<ClientRow | null>(null);
   const [deleting, setDeleting] = useState<ClientRow | null>(null);
@@ -71,7 +79,16 @@ function ClientesIndex() {
     const q = query.trim().toLowerCase();
     if (!q) return clients;
     return clients.filter((c) => {
-      const hay = [c.full_name, c.preferred_name, c.email, (c.tags ?? []).join(" ")]
+      const hay = [
+        c.full_name, 
+        c.preferred_name, 
+        c.email, 
+        c.birthplace,
+        c.phone,
+        c.presenting_complaint,
+        c.clinical_notes,
+        (c.tags ?? []).join(" ")
+      ]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
@@ -125,7 +142,7 @@ function ClientesIndex() {
             </p>
             <h1 className="mt-2 font-serif text-5xl font-bold text-white">Clientes</h1>
             <p className="mt-2 text-[14px] text-white/55">
-              Cada cliente tem um dossiê vivo. Você é a única pessoa com acesso.
+              Cada cliente tem um dossiê vivo contendo genograma, linha do tempo e anamnese.
             </p>
           </div>
           <Button size="lg" variant="hero" onClick={() => setCreating(true)}>
@@ -135,47 +152,68 @@ function ClientesIndex() {
         </div>
       </div>
 
-      <div className="container-liz py-8">
+      <div className="container-liz py-8 space-y-6">
         {/* Filtros */}
-        <div className="mb-6 flex flex-wrap items-center gap-3">
-          <Tabs value={tab} onValueChange={(v) => setTab(v as "active" | "archived")}>
-            <TabsList>
-              <TabsTrigger value="active">Ativos</TabsTrigger>
-              <TabsTrigger value="archived">Arquivados</TabsTrigger>
-            </TabsList>
-          </Tabs>
-          <div className="relative ml-auto w-full max-w-sm">
+        <div className="flex flex-wrap items-center gap-4 justify-between border-b border-border/50 pb-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <Tabs value={tab} onValueChange={(v) => setTab(v as "active" | "archived")}>
+              <TabsList>
+                <TabsTrigger value="active">Ativos</TabsTrigger>
+                <TabsTrigger value="archived">Arquivados</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            
+            {/* View Mode Switcher */}
+            <div className="flex items-center border border-border rounded-lg p-1 bg-white">
+              <button
+                onClick={() => setViewMode("cards")}
+                className={`p-1.5 rounded-md cursor-pointer ${viewMode === "cards" ? "bg-plum/5 text-plum" : "text-muted-foreground hover:text-primary"}`}
+                title="Visualização em Grade"
+              >
+                <LayoutGrid className="size-4" />
+              </button>
+              <button
+                onClick={() => setViewMode("list")}
+                className={`p-1.5 rounded-md cursor-pointer ${viewMode === "list" ? "bg-plum/5 text-plum" : "text-muted-foreground hover:text-primary"}`}
+                title="Visualização em Lista"
+              >
+                <List className="size-4" />
+              </button>
+            </div>
+          </div>
+
+          <div className="relative w-full max-w-sm">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Buscar por nome, e-mail ou tag..."
+              placeholder="Buscar por nome, queixa, trauma, tag..."
               className="pl-9 h-10 text-[14px]"
             />
           </div>
         </div>
 
-        {/* Cards */}
+        {/* Clientes Content */}
         <div>
           {isLoading ? (
             <SkeletonGrid />
           ) : filtered.length === 0 ? (
             <EmptyState hasQuery={query.length > 0} onCreate={() => setCreating(true)} tab={tab} />
-          ) : (
+          ) : viewMode === "cards" ? (
             <motion.ul
-              className="grid gap-4 md:grid-cols-2 xl:grid-cols-3"
+              className="grid gap-6 md:grid-cols-2 xl:grid-cols-3"
               initial="hidden"
               animate="visible"
               variants={{
                 hidden: { opacity: 0 },
-                visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
+                visible: { opacity: 1, transition: { staggerChildren: 0.08 } },
               }}
             >
               {filtered.map((c) => (
                 <motion.li
                   key={c.id}
                   variants={{
-                    hidden: { opacity: 0, y: 20 },
+                    hidden: { opacity: 0, y: 15 },
                     visible: {
                       opacity: 1,
                       y: 0,
@@ -197,6 +235,86 @@ function ClientesIndex() {
                 </motion.li>
               ))}
             </motion.ul>
+          ) : (
+            // Lista compacta de alta densidade
+            <div className="bg-white border border-border/50 rounded-2xl shadow-sm overflow-hidden">
+              <table className="w-full text-left border-collapse text-[13px]">
+                <thead>
+                  <tr className="border-b border-border bg-slate-50 text-muted-foreground uppercase tracking-[0.1em] font-bold text-[10px]">
+                    <th className="p-4 pl-6">Cliente</th>
+                    <th className="p-4">Contato</th>
+                    <th className="p-4">Queixa / Trauma</th>
+                    <th className="p-4">Tags</th>
+                    <th className="p-4">Genograma</th>
+                    <th className="p-4 pr-6 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/40">
+                  {filtered.map(c => {
+                    const age = calcAge(c.birth_date);
+                    return (
+                      <tr key={c.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="p-4 pl-6">
+                          <Link 
+                            to="/app/clientes/$clientId"
+                            params={{ clientId: c.id }}
+                            className="font-serif font-bold text-[15px] text-primary hover:text-plum transition-colors block"
+                          >
+                            {c.preferred_name || c.full_name}
+                          </Link>
+                          <span className="text-[12px] text-muted-foreground">
+                            {age !== null ? `${age} anos · ` : ""}{c.birthplace || "Sem cidade"}
+                          </span>
+                        </td>
+                        <td className="p-4 font-mono text-[12px] text-primary/80">
+                          {c.email || "—"}<br />
+                          {c.phone || "—"}
+                        </td>
+                        <td className="p-4 max-w-xs truncate font-serif text-foreground/80">
+                          {c.presenting_complaint || "—"}
+                        </td>
+                        <td className="p-4">
+                          <div className="flex flex-wrap gap-1">
+                            {c.tags?.slice(0, 3).map(t => (
+                              <Badge key={t} variant="secondary" className="px-1.5 py-0.5 rounded text-[10px] font-semibold">
+                                {t}
+                              </Badge>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <span className="rounded-full bg-plum/5 text-plum border border-plum/10 px-2 py-0.5 font-bold text-[11px]">
+                            74% Completo
+                          </span>
+                        </td>
+                        <td className="p-4 pr-6 text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon-sm" className="size-8">
+                                <MoreHorizontal className="size-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => setEditing(c)}>
+                                <Pencil className="size-4" /> Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setStatus.mutate({ id: c.id, status: c.status === "active" ? "archived" : "active" })}>
+                                {c.status === "active" ? <Archive className="size-4" /> : <ArchiveRestore className="size-4" />}
+                                {c.status === "active" ? "Arquivar" : "Reativar"}
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem className="text-destructive" onClick={() => setDeleting(c)}>
+                                <Trash2 className="size-4" /> Excluir
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>
@@ -251,9 +369,9 @@ function ClientCard({
 
   return (
     <article className="group relative flex h-full flex-col glass-card rounded-[1rem] hover-lift accent-bar-lavender">
-      <div className="flex items-start gap-3 p-5">
+      <div className="flex items-start gap-4 p-5 pb-4">
         {/* Avatar lavanda */}
-        <div className="flex size-11 shrink-0 items-center justify-center rounded-md bg-lavender font-serif text-base font-bold text-white">
+        <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-lavender font-serif text-lg font-bold text-white shadow-sm">
           {initialsFrom(client.full_name)}
         </div>
         <div className="min-w-0 flex-1">
@@ -261,13 +379,18 @@ function ClientCard({
             to="/app/clientes/$clientId"
             params={{ clientId: client.id }}
             preload="intent"
-            className="block truncate font-serif text-xl font-bold text-primary hover:text-lavender transition-colors"
+            className="block truncate font-serif text-xl font-bold text-primary hover:text-lavender transition-colors leading-tight"
           >
             {display}
           </Link>
-          <p className="mt-0.5 truncate text-[13px] text-muted-foreground">
-            {age !== null ? `${age} anos · ` : ""}
-            {formatBirthDate(client.birth_date)}
+          <p className="mt-1 truncate text-[12px] text-muted-foreground flex items-center gap-1.5">
+            {age !== null ? <span>{age} anos</span> : null}
+            {client.birthplace && (
+              <>
+                <span>·</span>
+                <span className="inline-flex items-center gap-0.5"><MapPin className="size-3" /> {client.birthplace}</span>
+              </>
+            )}
           </p>
         </div>
         <DropdownMenu>
@@ -302,26 +425,37 @@ function ClientCard({
         </DropdownMenu>
       </div>
 
-      {client.presenting_complaint && (
-        <p className="px-5 line-clamp-2 text-[14px] leading-relaxed text-muted-foreground">
-          {client.presenting_complaint}
+      {/* Trauma / Queixa */}
+      <div className="px-5 pb-4 flex-1">
+        <p className="line-clamp-2 text-[14px] leading-relaxed text-muted-foreground font-serif">
+          {client.presenting_complaint || "Sem queixa registrada."}
         </p>
-      )}
+      </div>
 
-      {client.tags && client.tags.length > 0 && (
-        <div className="px-5 pt-3 flex flex-wrap gap-1.5">
-          {client.tags.slice(0, 4).map((t) => (
-            <Badge key={t} variant="secondary" className="rounded text-[11px] font-semibold">
-              {t}
-            </Badge>
-          ))}
+      {/* IA Alertas rápidos e progresso */}
+      <div className="px-5 pb-4 space-y-2 border-t border-slate-100 pt-3">
+        <div className="flex items-center justify-between text-[11px]">
+          <span className="text-muted-foreground font-bold flex items-center gap-1">
+            <Layers className="size-3.5 text-lavender" />
+            Genossociograma
+          </span>
+          <span className="text-plum font-bold">74% Completo</span>
         </div>
-      )}
+        <div className="flex flex-wrap gap-1.5">
+          <Badge variant="outline" className="text-emerald-700 border-emerald-200 bg-emerald-50 text-[10px] font-bold py-0.5 rounded-md">
+            🟢 Sessão amanhã
+          </Badge>
+          <Badge variant="outline" className="text-plum border-plum/20 bg-plum/[0.03] text-[10px] font-bold py-0.5 rounded-md">
+            🟣 IA detectou padrão
+          </Badge>
+        </div>
+      </div>
 
-      <div className="mt-auto flex items-center justify-between border-t border-border/60 px-5 py-3 text-[12px] text-muted-foreground">
+      {/* Footer do Card */}
+      <div className="mt-auto flex items-center justify-between border-t border-border/60 px-5 py-3 text-[12px] text-muted-foreground bg-slate-50/[0.3] rounded-b-[1rem]">
         <span>
           {client.consent_given_at ? (
-            <span className="font-semibold text-emerald-700">● Consentimento</span>
+            <span className="font-bold text-emerald-700 flex items-center gap-1"><FileCheck className="size-3.5" /> Consentimento</span>
           ) : (
             <span className="text-amber-600">● Sem consentimento</span>
           )}
@@ -330,7 +464,7 @@ function ClientCard({
           to="/app/clientes/$clientId"
           params={{ clientId: client.id }}
           preload="intent"
-          className="font-bold uppercase tracking-[0.08em] text-lavender hover:text-plum transition-colors"
+          className="font-bold uppercase tracking-[0.08em] text-plum hover:text-lavender transition-colors"
         >
           Abrir dossiê →
         </Link>

@@ -13,8 +13,12 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated.app.index'
+import { Route as AuthenticatedAppLinhaDoTempoRouteImport } from './routes/_authenticated.app.linha-do-tempo'
+import { Route as AuthenticatedAppIaClinicaRouteImport } from './routes/_authenticated.app.ia-clinica'
+import { Route as AuthenticatedAppGenossociogramasRouteImport } from './routes/_authenticated.app.genossociogramas'
 import { Route as AuthenticatedAppConfiguracoesRouteImport } from './routes/_authenticated.app.configuracoes'
 import { Route as AuthenticatedAppBibliotecaRouteImport } from './routes/_authenticated.app.biblioteca'
+import { Route as AuthenticatedAppAgendaRouteImport } from './routes/_authenticated.app.agenda'
 import { Route as AuthenticatedAppClientesIndexRouteImport } from './routes/_authenticated.app.clientes.index'
 import { Route as AuthenticatedAppClientesClientIdRouteImport } from './routes/_authenticated.app.clientes.$clientId'
 
@@ -37,6 +41,24 @@ const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
   path: '/app/',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedAppLinhaDoTempoRoute =
+  AuthenticatedAppLinhaDoTempoRouteImport.update({
+    id: '/app/linha-do-tempo',
+    path: '/app/linha-do-tempo',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAppIaClinicaRoute =
+  AuthenticatedAppIaClinicaRouteImport.update({
+    id: '/app/ia-clinica',
+    path: '/app/ia-clinica',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAppGenossociogramasRoute =
+  AuthenticatedAppGenossociogramasRouteImport.update({
+    id: '/app/genossociogramas',
+    path: '/app/genossociogramas',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedAppConfiguracoesRoute =
   AuthenticatedAppConfiguracoesRouteImport.update({
     id: '/app/configuracoes',
@@ -49,6 +71,11 @@ const AuthenticatedAppBibliotecaRoute =
     path: '/app/biblioteca',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedAppAgendaRoute = AuthenticatedAppAgendaRouteImport.update({
+  id: '/app/agenda',
+  path: '/app/agenda',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedAppClientesIndexRoute =
   AuthenticatedAppClientesIndexRouteImport.update({
     id: '/app/clientes/',
@@ -65,8 +92,12 @@ const AuthenticatedAppClientesClientIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/app/agenda': typeof AuthenticatedAppAgendaRoute
   '/app/biblioteca': typeof AuthenticatedAppBibliotecaRoute
   '/app/configuracoes': typeof AuthenticatedAppConfiguracoesRoute
+  '/app/genossociogramas': typeof AuthenticatedAppGenossociogramasRoute
+  '/app/ia-clinica': typeof AuthenticatedAppIaClinicaRoute
+  '/app/linha-do-tempo': typeof AuthenticatedAppLinhaDoTempoRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/clientes/$clientId': typeof AuthenticatedAppClientesClientIdRoute
   '/app/clientes/': typeof AuthenticatedAppClientesIndexRoute
@@ -74,8 +105,12 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/app/agenda': typeof AuthenticatedAppAgendaRoute
   '/app/biblioteca': typeof AuthenticatedAppBibliotecaRoute
   '/app/configuracoes': typeof AuthenticatedAppConfiguracoesRoute
+  '/app/genossociogramas': typeof AuthenticatedAppGenossociogramasRoute
+  '/app/ia-clinica': typeof AuthenticatedAppIaClinicaRoute
+  '/app/linha-do-tempo': typeof AuthenticatedAppLinhaDoTempoRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/clientes/$clientId': typeof AuthenticatedAppClientesClientIdRoute
   '/app/clientes': typeof AuthenticatedAppClientesIndexRoute
@@ -85,8 +120,12 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/app/agenda': typeof AuthenticatedAppAgendaRoute
   '/_authenticated/app/biblioteca': typeof AuthenticatedAppBibliotecaRoute
   '/_authenticated/app/configuracoes': typeof AuthenticatedAppConfiguracoesRoute
+  '/_authenticated/app/genossociogramas': typeof AuthenticatedAppGenossociogramasRoute
+  '/_authenticated/app/ia-clinica': typeof AuthenticatedAppIaClinicaRoute
+  '/_authenticated/app/linha-do-tempo': typeof AuthenticatedAppLinhaDoTempoRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/clientes/$clientId': typeof AuthenticatedAppClientesClientIdRoute
   '/_authenticated/app/clientes/': typeof AuthenticatedAppClientesIndexRoute
@@ -96,8 +135,12 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/app/agenda'
     | '/app/biblioteca'
     | '/app/configuracoes'
+    | '/app/genossociogramas'
+    | '/app/ia-clinica'
+    | '/app/linha-do-tempo'
     | '/app/'
     | '/app/clientes/$clientId'
     | '/app/clientes/'
@@ -105,8 +148,12 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/app/agenda'
     | '/app/biblioteca'
     | '/app/configuracoes'
+    | '/app/genossociogramas'
+    | '/app/ia-clinica'
+    | '/app/linha-do-tempo'
     | '/app'
     | '/app/clientes/$clientId'
     | '/app/clientes'
@@ -115,8 +162,12 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/app/agenda'
     | '/_authenticated/app/biblioteca'
     | '/_authenticated/app/configuracoes'
+    | '/_authenticated/app/genossociogramas'
+    | '/_authenticated/app/ia-clinica'
+    | '/_authenticated/app/linha-do-tempo'
     | '/_authenticated/app/'
     | '/_authenticated/app/clientes/$clientId'
     | '/_authenticated/app/clientes/'
@@ -158,6 +209,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/app/linha-do-tempo': {
+      id: '/_authenticated/app/linha-do-tempo'
+      path: '/app/linha-do-tempo'
+      fullPath: '/app/linha-do-tempo'
+      preLoaderRoute: typeof AuthenticatedAppLinhaDoTempoRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/app/ia-clinica': {
+      id: '/_authenticated/app/ia-clinica'
+      path: '/app/ia-clinica'
+      fullPath: '/app/ia-clinica'
+      preLoaderRoute: typeof AuthenticatedAppIaClinicaRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/app/genossociogramas': {
+      id: '/_authenticated/app/genossociogramas'
+      path: '/app/genossociogramas'
+      fullPath: '/app/genossociogramas'
+      preLoaderRoute: typeof AuthenticatedAppGenossociogramasRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/app/configuracoes': {
       id: '/_authenticated/app/configuracoes'
       path: '/app/configuracoes'
@@ -170,6 +242,13 @@ declare module '@tanstack/react-router' {
       path: '/app/biblioteca'
       fullPath: '/app/biblioteca'
       preLoaderRoute: typeof AuthenticatedAppBibliotecaRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/app/agenda': {
+      id: '/_authenticated/app/agenda'
+      path: '/app/agenda'
+      fullPath: '/app/agenda'
+      preLoaderRoute: typeof AuthenticatedAppAgendaRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/app/clientes/': {
@@ -190,16 +269,24 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedAppAgendaRoute: typeof AuthenticatedAppAgendaRoute
   AuthenticatedAppBibliotecaRoute: typeof AuthenticatedAppBibliotecaRoute
   AuthenticatedAppConfiguracoesRoute: typeof AuthenticatedAppConfiguracoesRoute
+  AuthenticatedAppGenossociogramasRoute: typeof AuthenticatedAppGenossociogramasRoute
+  AuthenticatedAppIaClinicaRoute: typeof AuthenticatedAppIaClinicaRoute
+  AuthenticatedAppLinhaDoTempoRoute: typeof AuthenticatedAppLinhaDoTempoRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
   AuthenticatedAppClientesClientIdRoute: typeof AuthenticatedAppClientesClientIdRoute
   AuthenticatedAppClientesIndexRoute: typeof AuthenticatedAppClientesIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAppAgendaRoute: AuthenticatedAppAgendaRoute,
   AuthenticatedAppBibliotecaRoute: AuthenticatedAppBibliotecaRoute,
   AuthenticatedAppConfiguracoesRoute: AuthenticatedAppConfiguracoesRoute,
+  AuthenticatedAppGenossociogramasRoute: AuthenticatedAppGenossociogramasRoute,
+  AuthenticatedAppIaClinicaRoute: AuthenticatedAppIaClinicaRoute,
+  AuthenticatedAppLinhaDoTempoRoute: AuthenticatedAppLinhaDoTempoRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
   AuthenticatedAppClientesClientIdRoute: AuthenticatedAppClientesClientIdRoute,
   AuthenticatedAppClientesIndexRoute: AuthenticatedAppClientesIndexRoute,
