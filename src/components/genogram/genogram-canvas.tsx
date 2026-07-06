@@ -368,7 +368,7 @@ function ShortcutsLegend() {
       <div className="bg-plum/5 px-2.5 py-1.5 border-b border-plum/20">
         <p className="font-serif text-[13px] font-bold leading-tight text-plum">Atalhos</p>
       </div>
-      <div className="px-2.5 py-2 flex flex-col gap-2">
+      <div className="px-3 py-2.5 flex flex-col gap-2.5">
         <div className="flex flex-col gap-0.5">
           <div className="flex items-center gap-1">
             <kbd className="px-1 py-0.5 text-[9px] font-mono font-medium rounded border border-border bg-muted text-muted-foreground">
