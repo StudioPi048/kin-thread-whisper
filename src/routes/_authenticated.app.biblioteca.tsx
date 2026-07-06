@@ -187,17 +187,110 @@ const AUTHORS: Array<{
   works: number;
   concepts: number;
   initials: string;
+  photo?: string;
+  years?: string;
+  nationality?: string;
 }> = [
-  { name: "Anne Ancelin Schützenberger", field: "Psicogenealogia", works: 12, concepts: 48, initials: "AS" },
-  { name: "Françoise Dolto", field: "Psicanálise da infância", works: 22, concepts: 61, initials: "FD" },
-  { name: "Alejandro Jodorowsky", field: "Metagenealogia · Psicomagia", works: 18, concepts: 40, initials: "AJ" },
-  { name: "Ivan Boszormenyi-Nagy", field: "Terapia contextual", works: 8, concepts: 22, initials: "IB" },
-  { name: "Bert Hellinger", field: "Constelação familiar", works: 30, concepts: 55, initials: "BH" },
-  { name: "Nicolas Abraham", field: "Cripta e Fantasma", works: 6, concepts: 18, initials: "NA" },
-  { name: "Maria Torok", field: "Cripta e Fantasma", works: 5, concepts: 15, initials: "MT" },
-  { name: "Didier Dumas", field: "Não-dito familiar", works: 9, concepts: 20, initials: "DD" },
-  { name: "Patrick Estrade", field: "Clínica transgeracional", works: 14, concepts: 26, initials: "PE" },
-  { name: "Boris Cyrulnik", field: "Resiliência sistêmica", works: 20, concepts: 34, initials: "BC" },
+  {
+    name: "Anne Ancelin Schützenberger",
+    field: "Psicogenealogia",
+    works: 12,
+    concepts: 48,
+    initials: "AS",
+    photo:
+      "https://commons.wikimedia.org/wiki/Special:FilePath/Anne_Ancelin_Sch%C3%BCtzenberger.jpg?width=400",
+    years: "1919–2018",
+    nationality: "França",
+  },
+  {
+    name: "Françoise Dolto",
+    field: "Psicanálise da infância",
+    works: 22,
+    concepts: 61,
+    initials: "FD",
+    photo:
+      "https://commons.wikimedia.org/wiki/Special:FilePath/Fran%C3%A7oise_Dolto_1980.jpg?width=400",
+    years: "1908–1988",
+    nationality: "França",
+  },
+  {
+    name: "Alejandro Jodorowsky",
+    field: "Metagenealogia · Psicomagia",
+    works: 18,
+    concepts: 40,
+    initials: "AJ",
+    photo:
+      "https://commons.wikimedia.org/wiki/Special:FilePath/Alejandro_Jodorowsky_2022.jpg?width=400",
+    years: "1929–",
+    nationality: "Chile · França",
+  },
+  {
+    name: "Ivan Boszormenyi-Nagy",
+    field: "Terapia contextual",
+    works: 8,
+    concepts: 22,
+    initials: "IB",
+    years: "1920–2007",
+    nationality: "Hungria · EUA",
+  },
+  {
+    name: "Bert Hellinger",
+    field: "Constelação familiar",
+    works: 30,
+    concepts: 55,
+    initials: "BH",
+    photo:
+      "https://commons.wikimedia.org/wiki/Special:FilePath/Bert_Hellinger.jpg?width=400",
+    years: "1925–2019",
+    nationality: "Alemanha",
+  },
+  {
+    name: "Nicolas Abraham",
+    field: "Cripta e Fantasma",
+    works: 6,
+    concepts: 18,
+    initials: "NA",
+    years: "1919–1975",
+    nationality: "Hungria · França",
+  },
+  {
+    name: "Maria Torok",
+    field: "Cripta e Fantasma",
+    works: 5,
+    concepts: 15,
+    initials: "MT",
+    years: "1925–1998",
+    nationality: "Hungria · França",
+  },
+  {
+    name: "Didier Dumas",
+    field: "Não-dito familiar",
+    works: 9,
+    concepts: 20,
+    initials: "DD",
+    years: "1943–2010",
+    nationality: "França",
+  },
+  {
+    name: "Patrick Estrade",
+    field: "Clínica transgeracional",
+    works: 14,
+    concepts: 26,
+    initials: "PE",
+    years: "1949–",
+    nationality: "França",
+  },
+  {
+    name: "Boris Cyrulnik",
+    field: "Resiliência sistêmica",
+    works: 20,
+    concepts: 34,
+    initials: "BC",
+    photo:
+      "https://commons.wikimedia.org/wiki/Special:FilePath/Boris_Cyrulnik_-_Comedie_du_Livre_2011_-_Montpellier_-_P1150907.jpg?width=400",
+    years: "1937–",
+    nationality: "França",
+  },
 ];
 
 const THEMES: Array<{ name: string; count: number; icon: typeof Feather; accent: string }> = [
