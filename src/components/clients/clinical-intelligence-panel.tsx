@@ -455,7 +455,9 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
                   <span className="text-foreground/80">Aborto</span>
                 </span>
                 <span className="flex items-center gap-2">
-                  <span className="text-red-500 text-base leading-none w-3.5 text-center">✕</span>
+                  <span className="relative inline-block size-3.5 border-[2px] border-transparent bg-white">
+                    <span className="absolute inset-[-2px] w-[140%] h-[2px] bg-[#3A3A3A] rotate-[45deg] origin-top-left" />
+                  </span>
                   <span className="text-foreground/80">Falecido</span>
                 </span>
                 <span className="flex items-center gap-2">

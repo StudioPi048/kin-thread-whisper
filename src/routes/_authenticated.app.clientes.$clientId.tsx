@@ -254,7 +254,7 @@ function ClientDossierPage() {
                   </label>
                 </motion.div>
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-forest-mid">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-white/60">
                     Dossiê Clínico
                   </p>
                   <div className="flex items-center gap-3">
@@ -300,15 +300,15 @@ function ClientDossierPage() {
             {/* Minimalist Info Bar */}
             <div className="flex flex-wrap items-center gap-6 border-t border-white/10 pt-3 text-[13px] text-white/80">
               <div className="flex items-center gap-2">
-                <Mail className="size-3.5 text-forest" /> 
+                <Mail className="size-3.5 text-white/50" /> 
                 <span className="font-medium">{client.email || "Sem e-mail"}</span>
               </div>
               <div className="flex items-center gap-2">
-                <Phone className="size-3.5 text-forest" /> 
+                <Phone className="size-3.5 text-white/50" /> 
                 <span className="font-medium">{client.phone || "Sem telefone"}</span>
               </div>
               <div className="flex items-center gap-2">
-                <MapPin className="size-3.5 text-forest" /> 
+                <MapPin className="size-3.5 text-white/50" /> 
                 <span className="font-medium">{client.birthplace || "Local não informado"}</span>
                 <span className="text-white/40 mx-1">•</span>
                 <span className="font-medium">{age !== null ? `${age} anos` : "Idade omitida"}</span>
@@ -316,13 +316,13 @@ function ClientDossierPage() {
               
               <div className="flex-1" />
               
-              <div className="flex items-center gap-4 bg-white/5 px-4 py-1.5 rounded-full border border-white/10">
-                <span className="flex items-center gap-1.5 text-[12px] font-semibold text-gold" title="Próxima sessão: Amanhã 09:00">
+              <div className="flex items-center gap-4 bg-white/10 px-4 py-1.5 rounded-full border border-white/20">
+                <span className="flex items-center gap-1.5 text-[12px] font-semibold text-white/90" title="Próxima sessão">
                   <CalendarDays className="size-3.5" /> {(client as { session_count?: number }).session_count || 0} sessões
                 </span>
                 <div className="w-px h-3 bg-white/20" />
-                <span className="flex items-center gap-1.5 text-[12px] font-semibold text-forest-soft">
-                  <Sparkles className="size-3.5" /> IA Clínica Ativa
+                <span className="flex items-center gap-1.5 text-[12px] font-bold text-white shadow-sm">
+                  <Sparkles className="size-3.5 text-gold" /> IA Clínica Ativa
                 </span>
               </div>
             </div>
