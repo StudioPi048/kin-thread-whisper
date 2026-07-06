@@ -632,19 +632,24 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
               <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-plum">
                 IA Clínica detectou
               </p>
+              {genogramQuery.isLoading && session.clientId && (
+                <Loader2 className="size-3 animate-spin text-plum/60 ml-1" />
+              )}
             </div>
-            {session.aiAlerts.length > 0 ? (
+            {mergedAlerts.length > 0 ? (
               <ul className="space-y-2">
-                {session.aiAlerts.map((alert, i) => (
+                {mergedAlerts.map((alert, i) => (
                   <li key={i} className="flex items-start gap-2.5 text-[13px] text-primary/85 leading-relaxed">
                     <AlertTriangle className="size-3.5 text-gold shrink-0 mt-1" />
                     <span>{alert}</span>
                   </li>
                 ))}
               </ul>
+            ) : genogramQuery.isLoading ? (
+              <p className="text-[12px] text-muted-foreground italic">Analisando genossociograma…</p>
             ) : (
               <p className="text-[12px] text-muted-foreground italic">
-                Nenhum padrão detectado ainda — o briefing clínico será gerado quando o genossociograma estiver integrado.
+                Nenhum padrão detectado — genossociograma completo e sem alertas por regra.
               </p>
             )}
           </div>
