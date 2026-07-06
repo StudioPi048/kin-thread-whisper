@@ -197,7 +197,7 @@ function AgendaPage() {
       </div>
 
       {/* Three-column workspace */}
-      <div className="container-liz py-6 grid gap-5 2xl:grid-cols-[260px_minmax(0,1fr)_320px] xl:grid-cols-[240px_minmax(0,1fr)] grid-cols-1">
+      <div className="container-liz py-6 grid gap-5 2xl:grid-cols-[260px_minmax(0,1fr)_320px] lg:grid-cols-[240px_minmax(0,1fr)] grid-cols-1">
         {/* LEFT — Timeline */}
         <TimelineColumn selectedId={selectedId} onSelect={setSelectedId} />
 
