@@ -813,25 +813,9 @@ function BibliotecaPage() {
                   key={b.title}
                   className="group relative flex gap-5 rounded-[1.25rem] bg-white border border-plum/10 p-5 shadow-sm hover:shadow-2xl hover:shadow-plum/10 transition-all duration-500 hover:-translate-y-1"
                 >
-                  {/* 3D book spine */}
-                  <div className="relative w-28 shrink-0 perspective-[800px]">
-                    <div
-                      className={`relative h-40 rounded-r-md rounded-l-sm shadow-[6px_6px_20px_-6px_oklch(0.25_0.10_295/0.4)] transition-transform duration-500 group-hover:-rotate-y-6 origin-left ${b.spine}`}
-                      style={{ transformStyle: "preserve-3d" }}
-                    >
-                      <div className="absolute inset-0 flex flex-col justify-between p-3">
-                        <span className="text-[8px] font-bold uppercase tracking-widest opacity-60">
-                          {b.year}
-                        </span>
-                        <div>
-                          <p className="font-serif text-[13px] font-bold italic leading-tight">
-                            {b.title}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="absolute inset-y-0 left-0 w-1 bg-black/20 rounded-l-sm" />
-                    </div>
-                  </div>
+                  {/* Real cover with typographic fallback */}
+                  <BookCoverArt book={b} />
+
 
                   {/* Meta */}
                   <div className="flex-1 min-w-0 flex flex-col">
