@@ -368,7 +368,7 @@ export default function LandingPage() {
               A <span className="text-gold italic">leveza</span> de uma <br />
               gestão impecável.
             </h2>
-            <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
+            <p className="text-lg text-archive/75 mb-8 leading-relaxed">
               O Dossiê Inteligente cuida da organização dos seus casos, permitindo que você retorne
               à sua essência terapêutica. Relaxe sabendo que o sistema operacional faz o trabalho
               pesado.
