@@ -25,7 +25,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { UserPlus, Link2, Trash2, Printer, HelpCircle, Users, TreePine, Save } from "lucide-react";
+import { UserPlus, Link2, Trash2, Printer, HelpCircle, Users, TreePine, Save, Lock, Unlock } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -40,6 +40,8 @@ import type { Database } from "@/integrations/supabase/types";
 
 type PersonRow = Database["public"]["Tables"]["genogram_persons"]["Row"];
 type RelRow = Database["public"]["Tables"]["genogram_relationships"]["Row"];
+type NodePositionRow = Database["public"]["Tables"]["genogram_node_positions"]["Row"];
+type LayoutRow = Database["public"]["Tables"]["genogram_layouts"]["Row"];
 
 const BUILD_TAG = "2026-07-05-spacing-and-styles";
 
@@ -546,15 +548,30 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
   const query = useQuery({
     queryKey: ["genogram", clientId],
     queryFn: async () => {
-      const [persons, rels] = await Promise.all([
+      const [persons, rels, layoutsResp] = await Promise.all([
         supabase.from("genogram_persons").select("*").eq("client_id", clientId),
         supabase.from("genogram_relationships").select("*").eq("client_id", clientId),
+        supabase.from("genogram_layouts").select("*").eq("client_id", clientId).order('updated_at', { ascending: false }).limit(1),
       ]);
       if (persons.error) throw persons.error;
       if (rels.error) throw rels.error;
+      if (layoutsResp.error) throw layoutsResp.error;
+
+      let positions: NodePositionRow[] = [];
+      let layout: LayoutRow | null = null;
+      if (layoutsResp.data && layoutsResp.data.length > 0) {
+        layout = layoutsResp.data[0] as LayoutRow;
+        const posResp = await supabase.from("genogram_node_positions").select("*").eq("layout_id", layout.id);
+        if (!posResp.error) {
+          positions = (posResp.data ?? []) as NodePositionRow[];
+        }
+      }
+
       return {
         persons: (persons.data ?? []) as PersonRow[],
         rels: (rels.data ?? []) as RelRow[],
+        layout,
+        positions,
       };
     },
   });
@@ -572,6 +589,13 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
   const [showGuide, setShowGuide] = useState(false);
   const [layoutDirty, setLayoutDirty] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [isLayoutFixed, setIsLayoutFixed] = useState(false);
+  
+  useEffect(() => {
+    if (query.data?.layout) {
+      setIsLayoutFixed(query.data.layout.is_fixed);
+    }
+  }, [query.data?.layout]);
   const rfInstance = useReactFlow();
 
   const handleQuickAdd = useCallback(
@@ -627,6 +651,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
       qualifiedPersons,
       query.data.rels,
       probandId,
+      query.data.positions
     );
 
     // Injeta o callback de quick-add nos nós de pessoa (função depende de state
@@ -788,23 +813,53 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
 
   const saveLayout = useMutation({
     mutationFn: async () => {
-      const currentNodes = rfInstance.getNodes().filter((node) => node.type === "person");
+      const currentNodes = rfInstance.getNodes();
+      const personNodes = currentNodes.filter((node) => node.type === "person");
+      const unionNodes = currentNodes.filter((node) => node.type === "union");
       const savedAt = new Date().toISOString();
-      const results = await Promise.all(
-        currentNodes.map((node) =>
-          supabase
-            .from("genogram_persons")
-            .update({
-              position_x: Math.round(node.position.x),
-              position_y: Math.round(node.position.y),
-              updated_at: savedAt,
-            })
-            .eq("id", node.id)
-            .eq("client_id", clientId),
-        ),
-      );
-      const failed = results.find((result) => result.error);
-      if (failed?.error) throw failed.error;
+
+      // Ensure layout exists or create one
+      let layoutId = query.data?.layout?.id;
+      if (!layoutId) {
+        const { data: newLayout, error: layoutErr } = await supabase
+          .from("genogram_layouts")
+          .insert({ client_id: clientId, name: "Layout Atual", is_fixed: false })
+          .select("id")
+          .single();
+        if (layoutErr) throw layoutErr;
+        layoutId = newLayout.id;
+      } else {
+        // Update updated_at of the layout
+        await supabase.from("genogram_layouts").update({ updated_at: savedAt }).eq("id", layoutId);
+      }
+
+      // Prepare positions to upsert
+      const positionsToUpsert = [
+        ...personNodes.map((n) => ({
+          layout_id: layoutId,
+          node_id: n.id,
+          node_type: "person",
+          x: Math.round(n.position.x),
+          y: Math.round(n.position.y),
+          layout_mode: "MANUAL",
+        })),
+        ...unionNodes.map((n) => ({
+          layout_id: layoutId,
+          node_id: n.id,
+          node_type: "union",
+          x: Math.round(n.position.x),
+          y: Math.round(n.position.y),
+          layout_mode: "MANUAL",
+        })),
+      ];
+
+      // Upsert node positions using the unique constraint (layout_id, node_id)
+      const { error: upsertErr } = await supabase
+        .from("genogram_node_positions")
+        .upsert(positionsToUpsert, { onConflict: "layout_id, node_id" });
+
+      if (upsertErr) throw upsertErr;
+
       return savedAt;
     },
     onSuccess: (savedAt) => {
@@ -812,9 +867,36 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
       setLastSavedAt(
         new Date(savedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
       );
-      toast.success("Layout do genossociograma salvo.");
+      // Optional: quietly invalidate to keep data in sync, but avoid full remounts
+      qc.invalidateQueries({ queryKey: ["genogram", clientId] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao salvar layout"),
+  });
+
+  // Auto-Save Effect (Debounce 2s)
+  useEffect(() => {
+    if (!layoutDirty) return;
+    const t = setTimeout(() => {
+      saveLayout.mutate();
+    }, 2000);
+    return () => clearTimeout(t);
+  }, [layoutDirty]);
+
+  const toggleLayoutFixed = useMutation({
+    mutationFn: async () => {
+      const layoutId = query.data?.layout?.id;
+      if (!layoutId) return false;
+      const newValue = !isLayoutFixed;
+      const { error } = await supabase.from("genogram_layouts").update({ is_fixed: newValue }).eq("id", layoutId);
+      if (error) throw error;
+      return newValue;
+    },
+    onSuccess: (newValue) => {
+      setIsLayoutFixed(newValue);
+      toast.success(newValue ? "Layout fixado" : "Layout destravado");
+      qc.invalidateQueries({ queryKey: ["genogram", clientId] });
+    },
+    onError: (e) => toast.error("Erro ao alterar fixação do layout"),
   });
 
   const persons = query.data?.persons ?? [];
@@ -866,6 +948,18 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
           >
             <Save className="size-4" />
             {saveLayout.isPending ? "Salvando" : "Salvar layout"}
+          </Button>
+
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => toggleLayoutFixed.mutate()}
+            disabled={!query.data?.layout?.id || toggleLayoutFixed.isPending}
+            className={`h-9 gap-2 border-white/25 normal-case tracking-normal font-semibold text-[13px] ${isLayoutFixed ? "bg-white/20 text-white" : "text-white hover:bg-white/10 hover:text-white"}`}
+            title={!query.data?.layout?.id ? "Salve o layout pelo menos uma vez para poder fixá-lo" : ""}
+          >
+            {isLayoutFixed ? <Lock className="size-4 text-gold" /> : <Unlock className="size-4" />}
+            {isLayoutFixed ? "Fixo" : "Livre"}
           </Button>
 
           <div className="hidden items-center gap-4 md:flex ml-3">
@@ -967,7 +1061,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
             onConnect={onConnect}
             onNodeDoubleClick={onNodeDoubleClick}
             onEdgeDoubleClick={onEdgeDoubleClick}
-            nodesDraggable
+            nodesDraggable={!isLayoutFixed}
             nodesConnectable={false}
             panOnDrag={false}
             panActivationKeyCode="Space"

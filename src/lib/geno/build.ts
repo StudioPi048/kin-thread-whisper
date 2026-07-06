@@ -20,6 +20,8 @@ import { smartNormalizeRelationship } from "@/lib/relationship-normalizer";
 
 type PersonRow = Database["public"]["Tables"]["genogram_persons"]["Row"];
 type RelRow = Database["public"]["Tables"]["genogram_relationships"]["Row"];
+export type NodePositionRow = Database["public"]["Tables"]["genogram_node_positions"]["Row"];
+export type LayoutRow = Database["public"]["Tables"]["genogram_layouts"]["Row"];
 
 // ── Constantes de layout ──────────────────────────────────────
 export const NODE_W = 140;
@@ -80,6 +82,7 @@ export interface LogicalGraph {
   unions: Map<string, UnionEntity>;
   edges: LogicalEdge[];
   errors: string[];
+  positions: Map<string, NodePositionRow>;
 }
 
 // ── Normalização de tags de parentesco ────────────────────────
@@ -164,6 +167,7 @@ interface BuildOptions {
   persons: PersonRow[];
   rels: RelRow[];
   probandId?: string;
+  positions?: NodePositionRow[];
 }
 
 export function buildLogicalGraph({ persons, rels, probandId }: BuildOptions): LogicalGraph {
@@ -173,7 +177,14 @@ export function buildLogicalGraph({ persons, rels, probandId }: BuildOptions): L
     unions: new Map(),
     edges: [],
     errors: [],
+    positions: new Map(),
   };
+
+  if (positions) {
+    for (const pos of positions) {
+      g.positions.set(pos.node_id, pos);
+    }
+  }
 
   const byKey = new Map<string, PersonRow[]>();
   for (const p of persons) {
@@ -655,7 +666,76 @@ export function layoutGraph(g: LogicalGraph): Placement {
   // Atribui as posições definitivas travando o eixo primário
   assignPosition(proband.id, 0, 0, "root");
 
-  const placement = { personPos, unionPos };
+  // ── Integração do Modelo Stateful Híbrido Incremental ──
+  const finalPersonPos = new Map<string, { x: number; y: number }>();
+  const finalUnionPos = new Map<string, { x: number; y: number }>();
+
+  // 1. Aplica todas as posições salvas (Ancoragem Absoluta)
+  for (const [id, pos] of g.positions) {
+    if (pos.node_type === "person") finalPersonPos.set(id, { x: pos.x, y: pos.y });
+    if (pos.node_type === "union") finalUnionPos.set(id, { x: pos.x, y: pos.y });
+  }
+
+  // 2. Função de Shift Dinâmico: encontra a âncora mais próxima
+  const getShift = (pid: string): { dx: number; dy: number } => {
+    const parentUnionId = parentUnionOfPerson.get(pid);
+    if (parentUnionId) {
+      if (finalUnionPos.has(parentUnionId)) {
+        const ideal = unionPos.get(parentUnionId);
+        const final = finalUnionPos.get(parentUnionId);
+        if (ideal && final) return { dx: final.x - ideal.x, dy: final.y - ideal.y };
+      }
+      const pu = g.unions.get(parentUnionId);
+      if (pu) {
+        for (const partnerId of pu.partners) {
+           if (finalPersonPos.has(partnerId)) {
+             const ideal = personPos.get(partnerId);
+             const final = finalPersonPos.get(partnerId);
+             if (ideal && final) return { dx: final.x - ideal.x, dy: final.y - ideal.y };
+           }
+        }
+      }
+    }
+    if (finalPersonPos.has(proband.id)) {
+       const ideal = personPos.get(proband.id);
+       const final = finalPersonPos.get(proband.id);
+       if (ideal && final) return { dx: final.x - ideal.x, dy: final.y - ideal.y };
+    }
+    return { dx: 0, dy: 0 };
+  };
+
+  // 3. Aplica o shift aos nós não-salvos (Posicionamento Relativo)
+  for (const [pid, idealPos] of personPos) {
+    if (!finalPersonPos.has(pid)) {
+      const shift = getShift(pid);
+      finalPersonPos.set(pid, { x: idealPos.x + shift.dx, y: idealPos.y + shift.dy });
+    }
+  }
+
+  for (const [uid, idealPos] of unionPos) {
+    if (!finalUnionPos.has(uid)) {
+      const union = g.unions.get(uid);
+      if (union) {
+        let shift = { dx: 0, dy: 0 };
+        const partnerAnchors = union.partners.filter(p => g.positions.has(p));
+        if (partnerAnchors.length > 0) {
+           const pId = partnerAnchors[0];
+           const pIdeal = personPos.get(pId);
+           const pFinal = finalPersonPos.get(pId);
+           if (pIdeal && pFinal) shift = { dx: pFinal.x - pIdeal.x, dy: pFinal.y - pIdeal.y };
+        } else if (finalPersonPos.has(proband.id)) {
+           const ideal = personPos.get(proband.id);
+           const final = finalPersonPos.get(proband.id);
+           if (ideal && final) shift = { dx: final.x - ideal.x, dy: final.y - ideal.y };
+        }
+        finalUnionPos.set(uid, { x: idealPos.x + shift.dx, y: idealPos.y + shift.dy });
+      } else {
+        finalUnionPos.set(uid, { x: idealPos.x, y: idealPos.y });
+      }
+    }
+  }
+
+  const placement = { personPos: finalPersonPos, unionPos: finalUnionPos };
   const violations = checkLayoutInvariants(g, placement);
   console.log(violations.length === 0 ? "✅ Layout OK" : `❌ ${violations.length} violação(ões)`);
   if (violations.length > 0) {
