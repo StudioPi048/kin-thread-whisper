@@ -10,6 +10,9 @@ import {
   Layers,
   HelpCircle as QuestionIcon,
   BookOpen as AuthorIcon,
+  Clock,
+  Users,
+  AlertTriangle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -192,6 +195,42 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
     return list.slice(0, 3);
   }, [patterns]);
 
+  // Alertas de consistência (Mock inteligent)
+  const consistencyAlerts = useMemo(() => {
+    const list: string[] = [];
+    if (!data?.persons) return list;
+
+    // Check for weird dates
+    data.persons.forEach(p => {
+      if (p.birth_date && p.death_date) {
+        if (new Date(p.birth_date) > new Date(p.death_date)) {
+          list.push(`Conflito temporal: ${p.preferred_name || p.full_name} tem data de morte anterior ao nascimento.`);
+        }
+      }
+    });
+    
+    if (list.length === 0 && patterns.length > 0) {
+       list.push("Revisar datas de nascimento na linhagem paterna para confirmar a síndrome de aniversário.");
+    }
+    return list;
+  }, [data, patterns]);
+
+  // Casos semelhantes (Mock inteligent)
+  const similarCases = useMemo(() => {
+    if (patterns.length > 0) {
+      return ["Você já atendeu 2 pacientes com padrão de abandono paterno semelhante (ex: Família Silva)."];
+    }
+    return [];
+  }, [patterns]);
+
+  // Linha do tempo inteligente (Mock)
+  const smartTimeline = useMemo(() => {
+    if (patterns.some(p => p.type === "anniversary_syndrome")) {
+      return ["1984: Nascimento do paciente coincide com falecimento do avô (1984)."];
+    }
+    return [];
+  }, [patterns]);
+
   if (isLoading) {
     return (
       <div className="w-[350px] shrink-0 hidden lg:block h-[500px] animate-pulse rounded-2xl bg-muted/20 border border-border/50" />
@@ -313,6 +352,62 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
                 ))}
               </div>
             </div>
+
+            {/* Linha do Tempo Inteligente */}
+            {smartTimeline.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  <Clock className="size-3.5 text-blue-500" />
+                  Linha do Tempo Inteligente
+                </h4>
+                <div className="space-y-2.5">
+                  {smartTimeline.map((item, i) => (
+                    <div key={i} className="p-3 bg-blue-50 border border-blue-100 rounded-xl">
+                      <p className="text-[12px] leading-relaxed text-blue-900 font-serif">
+                        {item}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Casos Semelhantes */}
+            {similarCases.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  <Users className="size-3.5 text-emerald-600" />
+                  Casos Semelhantes
+                </h4>
+                <div className="space-y-2.5">
+                  {similarCases.map((item, i) => (
+                    <div key={i} className="p-3 bg-emerald-50 border border-emerald-100 rounded-xl">
+                      <p className="text-[12px] leading-relaxed text-emerald-900 font-serif">
+                        {item}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Alertas de Consistência */}
+            {consistencyAlerts.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  <AlertTriangle className="size-3.5 text-rose-500" />
+                  Alertas de Consistência
+                </h4>
+                <ul className="space-y-1.5 pl-1">
+                  {consistencyAlerts.map((alert, i) => (
+                    <li key={i} className="text-[12px] text-rose-700 flex items-start gap-2 font-medium">
+                      <span className="text-rose-500 select-none">•</span>
+                      <span>{alert}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {/* Referências de Autores */}
             <div className="space-y-3 pt-4 border-t border-border/40">
