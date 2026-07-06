@@ -763,7 +763,16 @@ function UpcomingList({ currentId, sessions }: { currentId: string; sessions: Se
 
 /* -------------------------------- Right Panel ----------------------------- */
 
-function RightPanel({ session }: { session: Session }) {
+function RightPanel({
+  session,
+  orphanClients,
+  prontuariosPendentes,
+}: {
+  session: Session;
+  orphanClients: OrphanClientDTO[];
+  prontuariosPendentes: number;
+}) {
+
   return (
     <aside className="grid gap-4 md:grid-cols-2 2xl:grid-cols-1">
       {/* IA Clínica briefing */}
