@@ -364,8 +364,8 @@ export default function LandingPage() {
             </div>
           </motion.div>
           <div className="flex-1">
-            <h2 className="font-serif text-3xl font-bold text-primary md:text-5xl mb-6 leading-tight">
-              A <span className="text-forest italic">leveza</span> de uma <br />
+            <h2 className="font-serif text-3xl font-bold text-archive md:text-5xl mb-6 leading-tight">
+              A <span className="text-gold italic">leveza</span> de uma <br />
               gestão impecável.
             </h2>
             <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
