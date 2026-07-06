@@ -42,6 +42,9 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
   const rawGender = (d.gender || "").toLowerCase().trim();
   const rel = (d.relationship_to_proband || "").toLowerCase();
 
+  const rawName = (d.full_name || "").toLowerCase().trim();
+  const rawPref = (d.preferred_name || "").toLowerCase().trim();
+
   let gender = "desconhecido";
   if (
     rawGender.includes("masculino") ||
@@ -57,7 +60,9 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
     rel.match(/mãe|mae|tia|avó|avo|bisavó|filha|irmã|irma/)
   ) {
     gender = "feminino";
-  } else if (rawGender.includes("aborto")) {
+  }
+  
+  if (rawGender.includes("aborto") || rawName.includes("aborto") || rawPref.includes("aborto")) {
     gender = "aborto";
   }
 

@@ -590,6 +590,17 @@ export function layoutGraph(g: LogicalGraph): Placement {
 
     // Satélites (irmãos) pendurados do lado correto, fora da bounding box dos pais
     const siblings = pu.children.filter((cid) => cid !== personId);
+    
+    // Organiza os irmãos do mais velho para o mais novo
+    siblings.sort((a, b) => {
+      const pA = g.persons.get(a)?.row.birth_date;
+      const pB = g.persons.get(b)?.row.birth_date;
+      if (!pA && !pB) return 0;
+      if (!pA) return 1;
+      if (!pB) return -1;
+      return new Date(pA).getTime() - new Date(pB).getTime();
+    });
+
     if (siblings.length > 0) {
       let parentsLeft = -NODE_W / 2;
       let parentsRight = NODE_W / 2;
