@@ -214,5 +214,3 @@ function extractSummary(note: unknown): string | null {
   return typeof s === "string" && s.trim() ? s.trim() : null;
 }
 
-// avoid lint noise for placeholder
-const seq_noop = undefined;
