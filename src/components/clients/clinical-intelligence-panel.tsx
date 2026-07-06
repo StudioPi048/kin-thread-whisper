@@ -242,7 +242,7 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
       {/* Toggle button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="absolute -left-3 top-20 z-50 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-white text-plum shadow-md transition-transform hover:scale-105 hover:bg-slate-50 cursor-pointer"
+        className="absolute -left-3 top-20 z-50 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-white text-mahogany shadow-md transition-transform hover:scale-105 hover:bg-slate-50 cursor-pointer"
       >
         {isOpen ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}
       </button>
@@ -258,8 +258,8 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
           >
             {/* Header */}
             <div className="flex items-center gap-2 pb-4 border-b border-border/40">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-plum/5">
-                <Sparkles className="size-4 text-plum" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-mahogany/5">
+                <Sparkles className="size-4 text-mahogany" />
               </div>
               <div>
                 <h3 className="font-serif text-lg font-bold text-primary">Copiloto Clínico</h3>
@@ -272,7 +272,7 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
             {/* Padrões Ativos */}
             <div className="space-y-3">
               <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                <Layers className="size-3.5 text-lavender" />
+                <Layers className="size-3.5 text-forest" />
                 Padrões Ativos ({patterns.length})
               </h4>
               {patterns.length === 0 ? (
@@ -285,7 +285,7 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
                     <Badge
                       key={p.id}
                       variant="secondary"
-                      className="bg-plum/5 text-plum hover:bg-plum/10 text-[11px] font-medium border border-plum/10 py-1 px-2.5 rounded-full"
+                      className="bg-mahogany/5 text-mahogany hover:bg-mahogany/10 text-[11px] font-medium border border-mahogany/10 py-1 px-2.5 rounded-full"
                     >
                       {p.title}
                     </Badge>
@@ -319,7 +319,7 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
             {infoGaps.length > 0 && (
               <div className="space-y-3">
                 <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                  <HelpCircle className="size-3.5 text-lavender" />
+                  <HelpCircle className="size-3.5 text-forest" />
                   Lacunas de Informação
                 </h4>
                 <ul className="space-y-1.5 pl-1">
@@ -328,7 +328,7 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
                       key={i}
                       className="text-[12px] text-muted-foreground flex items-start gap-2"
                     >
-                      <span className="text-lavender select-none">•</span>
+                      <span className="text-forest select-none">•</span>
                       <span>{g}</span>
                     </li>
                   ))}
@@ -339,12 +339,12 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
             {/* Perguntas Recomendadas */}
             <div className="space-y-3">
               <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                <QuestionIcon className="size-3.5 text-plum" />
+                <QuestionIcon className="size-3.5 text-mahogany" />
                 Perguntas para Próxima Sessão
               </h4>
               <div className="space-y-2.5">
                 {suggestedQuestions.map((q, i) => (
-                  <div key={i} className="p-3 bg-plum/[0.02] border border-plum/5 rounded-xl">
+                  <div key={i} className="p-3 bg-mahogany/[0.02] border border-mahogany/5 rounded-xl">
                     <p className="text-[12px] leading-relaxed text-foreground/90 font-serif italic">
                       "{q}"
                     </p>
@@ -432,16 +432,16 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
             {/* Legenda do Mapa */}
             <div className="space-y-3 pt-4 border-t border-border/40">
               <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                <Layers className="size-3.5 text-plum" />
+                <Layers className="size-3.5 text-mahogany" />
                 Legenda do Mapa
               </h4>
               <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-[12px]">
                 <span className="flex items-center gap-2">
-                  <span className="inline-block size-3.5 border-[2px] border-plum bg-white" />
+                  <span className="inline-block size-3.5 border-[2px] border-mahogany bg-white" />
                   <span className="text-foreground/80">Masculino</span>
                 </span>
                 <span className="flex items-center gap-2">
-                  <span className="inline-block size-3.5 rounded-full border-[2px] border-lavender bg-white" />
+                  <span className="inline-block size-3.5 rounded-full border-[2px] border-forest bg-white" />
                   <span className="text-foreground/80">Feminino</span>
                 </span>
                 <span className="flex items-center gap-2">
@@ -459,7 +459,7 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
                   <span className="text-foreground/80">Falecido</span>
                 </span>
                 <span className="flex items-center gap-2">
-                  <span className="inline-block size-3.5 border-[2px] border-plum bg-plum/20" />
+                  <span className="inline-block size-3.5 border-[2px] border-mahogany bg-mahogany/20" />
                   <span className="text-foreground/80">Paciente-índice</span>
                 </span>
               </div>
@@ -474,9 +474,9 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
             className="w-12 h-[350px] bg-white border border-border/50 rounded-2xl flex flex-col items-center py-6 gap-6 shadow-sm cursor-pointer hover:bg-slate-50/50"
             onClick={() => setIsOpen(true)}
           >
-            <Sparkles className="size-4 text-plum animate-pulse" />
+            <Sparkles className="size-4 text-mahogany animate-pulse" />
             <div className="flex-1 flex items-center justify-center">
-              <p className="text-[10px] font-bold text-plum/60 uppercase tracking-widest vertical-text select-none">
+              <p className="text-[10px] font-bold text-mahogany/60 uppercase tracking-widest vertical-text select-none">
                 Copiloto Clínico
               </p>
             </div>

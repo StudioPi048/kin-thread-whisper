@@ -48,10 +48,10 @@ function GenogramsPage() {
       </div>
 
       {/* Header */}
-      <div className="block-plum px-6 py-10">
+      <div className="block-mahogany px-6 py-10">
         <div className="container-liz flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.35em] text-lavender-mid">
+            <p className="text-[11px] font-bold uppercase tracking-[0.35em] text-forest-mid">
               Estudos de Caso
             </p>
             <h1 className="mt-2 font-serif text-5xl font-bold text-white">Genossociogramas</h1>
@@ -85,7 +85,7 @@ function GenogramsPage() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border bg-white p-12 text-center">
-            <TreePine className="size-10 text-lavender/50 mx-auto" />
+            <TreePine className="size-10 text-forest/50 mx-auto" />
             <p className="font-serif text-lg font-bold text-primary mt-2">
               Nenhum genograma encontrado
             </p>
@@ -95,7 +95,7 @@ function GenogramsPage() {
             {filtered.map((c) => (
               <div
                 key={c.id}
-                className="rounded-2xl border border-border/50 bg-white p-6 shadow-sm flex flex-col justify-between hover-lift accent-bar-lavender"
+                className="rounded-2xl border border-border/50 bg-white p-6 shadow-sm flex flex-col justify-between hover-lift accent-bar-forest"
               >
                 <div className="space-y-3">
                   <div className="flex justify-between items-start gap-2">
@@ -104,7 +104,7 @@ function GenogramsPage() {
                     </h3>
                     <Badge
                       variant="outline"
-                      className="text-plum border-plum bg-plum/5 text-[10px] font-bold"
+                      className="text-mahogany border-mahogany bg-mahogany/5 text-[10px] font-bold"
                     >
                       74% completo
                     </Badge>
@@ -112,7 +112,7 @@ function GenogramsPage() {
 
                   <div className="space-y-1.5 text-[13px] text-muted-foreground">
                     <div className="flex items-center gap-2">
-                      <GitBranch className="size-4 text-lavender shrink-0" />
+                      <GitBranch className="size-4 text-forest shrink-0" />
                       <span>3 gerações mapeadas</span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -131,7 +131,7 @@ function GenogramsPage() {
                   <Link
                     to="/app/clientes/$clientId"
                     params={{ clientId: c.id }}
-                    className="font-bold text-[12px] uppercase tracking-wider text-plum hover:text-lavender flex items-center gap-1"
+                    className="font-bold text-[12px] uppercase tracking-wider text-mahogany hover:text-forest flex items-center gap-1"
                   >
                     Ver Árvore <ArrowRight className="size-3.5" />
                   </Link>

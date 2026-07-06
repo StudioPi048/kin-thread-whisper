@@ -26,7 +26,7 @@ const modules = [
     icon: GitBranch,
     title: "Genossociograma vivo",
     body: "Árvore interativa onde cada nó é um banco de dados: datas, doenças, profissões, traumas, segredos, mandatos.",
-    color: "lavender",
+    color: "forest",
   },
   {
     icon: ScanSearch,
@@ -38,7 +38,7 @@ const modules = [
     icon: Mic,
     title: "Prontuário por voz",
     body: "Fale ao final da sessão. A plataforma transcreve, estrutura e gera o registro clínico automaticamente.",
-    color: "lavender",
+    color: "forest",
   },
   {
     icon: Library,
@@ -50,7 +50,7 @@ const modules = [
     icon: Brain,
     title: "Copiloto clínico",
     body: "IA treinada em psicogenealogia. Sugere hipóteses, nunca diagnostica. Postura de supervisor, não de terapeuta.",
-    color: "lavender",
+    color: "forest",
   },
   {
     icon: Sparkles,
@@ -61,14 +61,14 @@ const modules = [
 ];
 
 const comparisons = [
-  { before: "Papel e caneta", after: "Memória estruturada e pesquisável", color: "lavender" },
+  { before: "Papel e caneta", after: "Memória estruturada e pesquisável", color: "forest" },
   { before: "Árvore desenhada à mão", after: "Banco de dados vivo e interativo", color: "gold" },
-  { before: "Memória do terapeuta", after: "IA que lembra, compara e sugere", color: "lavender" },
+  { before: "Memória do terapeuta", after: "IA que lembra, compara e sugere", color: "forest" },
   { before: "WhatsApp disperso", after: "Formulário adaptativo pré-sessão", color: "gold" },
   {
     before: "Word e prontuário manual",
     after: "Registro por voz, gerado pela IA",
-    color: "lavender",
+    color: "forest",
   },
   { before: "Livros espalhados na mesa", after: "Biblioteca sistêmica contextual", color: "gold" },
 ];
@@ -102,8 +102,8 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* ── HERO — full-plum ────────────────────────────── */}
-      <section className="block-plum relative overflow-hidden">
+      {/* ── HERO — full-mahogany ────────────────────────────── */}
+      <section className="block-mahogany relative overflow-hidden">
         <div className="container-liz relative py-20 md:py-32 flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
           <div className="flex-1 z-10 relative">
             {/* Elemento decorativo — número de fundo */}
@@ -119,9 +119,9 @@ export default function LandingPage() {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
-              className="inline-flex items-center gap-2 rounded border border-lavender/30 bg-lavender/10 px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.3em] text-lavender-mid"
+              className="inline-flex items-center gap-2 rounded border border-forest/30 bg-forest/10 px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.3em] text-forest-mid"
             >
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-lavender" />
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-forest" />
               Beta fechado · Psicogenealogistas
             </motion.div>
 
@@ -189,7 +189,7 @@ export default function LandingPage() {
           >
             <div className="aspect-[4/3] lg:aspect-square rounded-2xl overflow-hidden border border-white/10 shadow-2xl relative group">
               {/* Fallback color and image */}
-              <div className="absolute inset-0 bg-plum/50" />
+              <div className="absolute inset-0 bg-mahogany/50" />
               <img
                 src={hero1}
                 alt="Psicogenealogista utilizando a plataforma"
@@ -199,7 +199,7 @@ export default function LandingPage() {
                     "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&q=80&w=1000";
                 }}
               />
-              <div className="absolute inset-0 bg-gradient-to-tr from-plum/80 via-plum/20 to-transparent mix-blend-multiply" />
+              <div className="absolute inset-0 bg-gradient-to-tr from-mahogany/80 via-mahogany/20 to-transparent mix-blend-multiply" />
               <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-2xl" />
             </div>
           </motion.div>
@@ -215,7 +215,7 @@ export default function LandingPage() {
               01
             </span>
             <div className="pb-2">
-              <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-lavender">
+              <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-forest">
                 O que substitui
               </p>
               <h2 className="font-serif text-4xl font-bold text-primary md:text-5xl">
@@ -236,7 +236,7 @@ export default function LandingPage() {
                 transition={{ duration: 0.4, delay: i * 0.06 }}
                 className={
                   "bg-card p-6 shadow-sm transition-shadow hover:shadow-md " +
-                  (item.color === "lavender" ? "accent-bar-lavender" : "accent-bar-gold")
+                  (item.color === "forest" ? "accent-bar-forest" : "accent-bar-gold")
                 }
               >
                 <p className="text-[12px] font-bold uppercase tracking-[0.15em] text-muted-foreground/60 line-through">
@@ -251,14 +251,14 @@ export default function LandingPage() {
       </section>
 
       {/* ── MÓDULOS — lavanda soft ───────────────────────── */}
-      <section className="block-lavender py-24 md:py-32">
+      <section className="block-forest py-24 md:py-32">
         <div className="container-liz">
           <div className="relative mb-16 flex items-end gap-6">
             <span aria-hidden className="section-number leading-none select-none">
               02
             </span>
             <div className="pb-2">
-              <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-lavender">
+              <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-forest">
                 Arquitetura
               </p>
               <h2 className="font-serif text-4xl font-bold text-primary md:text-5xl">
@@ -279,17 +279,17 @@ export default function LandingPage() {
                 transition={{ duration: 0.4, delay: i * 0.06 }}
                 className={
                   "group bg-white p-8 shadow-sm transition-all duration-200 hover:shadow-lg hover:-translate-y-1 border-l-[5px] border-l-transparent " +
-                  (m.color === "lavender" ? "hover:border-l-lavender" : "hover:border-l-gold")
+                  (m.color === "forest" ? "hover:border-l-forest" : "hover:border-l-gold")
                 }
               >
                 <div
                   className={
                     "mb-5 flex h-11 w-11 items-center justify-center rounded-md " +
-                    (m.color === "lavender" ? "bg-lavender-soft" : "bg-gold-soft")
+                    (m.color === "forest" ? "bg-forest-soft" : "bg-gold-soft")
                   }
                 >
                   <m.icon
-                    className={"size-5 " + (m.color === "lavender" ? "text-lavender" : "text-gold")}
+                    className={"size-5 " + (m.color === "forest" ? "text-forest" : "text-gold")}
                   />
                 </div>
                 <h3 className="font-serif text-2xl font-bold text-primary">{m.title}</h3>
@@ -337,7 +337,7 @@ export default function LandingPage() {
                 "Menos papel, mais insight estruturado.",
               ].map((item, i) => (
                 <li key={i} className="flex items-center gap-3">
-                  <div className="flex-shrink-0 size-1.5 rounded-full bg-lavender" />
+                  <div className="flex-shrink-0 size-1.5 rounded-full bg-forest" />
                   <span className="text-[15px] font-medium text-primary/80">{item}</span>
                 </li>
               ))}
@@ -347,7 +347,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── SEÇÃO VISUAL: A VIDA SIMPLIFICADA ───────────────── */}
-      <section className="block-lavender py-24 md:py-32 overflow-hidden">
+      <section className="block-forest py-24 md:py-32 overflow-hidden">
         <div className="container-liz flex flex-col lg:flex-row-reverse items-center gap-12 lg:gap-20">
           <motion.div
             initial={{ opacity: 0, x: 20 }}
@@ -370,7 +370,7 @@ export default function LandingPage() {
           </motion.div>
           <div className="flex-1">
             <h2 className="font-serif text-3xl font-bold text-primary md:text-5xl mb-6 leading-tight">
-              A <span className="text-lavender italic">leveza</span> de uma <br />
+              A <span className="text-forest italic">leveza</span> de uma <br />
               gestão impecável.
             </h2>
             <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
@@ -393,10 +393,10 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── CITAÇÃO — full-plum ──────────────────────────── */}
-      <section className="block-plum py-24 md:py-36">
+      {/* ── CITAÇÃO — full-mahogany ──────────────────────────── */}
+      <section className="block-mahogany py-24 md:py-36">
         <div className="container-liz max-w-4xl text-center">
-          <p className="text-[11px] font-bold uppercase tracking-[0.4em] text-lavender-mid">
+          <p className="text-[11px] font-bold uppercase tracking-[0.4em] text-forest-mid">
             Fundamento clínico
           </p>
           <motion.blockquote
@@ -424,14 +424,14 @@ export default function LandingPage() {
               03
             </span>
             <div className="pb-2">
-              <div className="inline-flex items-center gap-2 rounded border border-lavender/30 bg-lavender/8 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-lavender mb-3">
+              <div className="inline-flex items-center gap-2 rounded border border-forest/30 bg-forest/8 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-forest mb-3">
                 <ShieldCheck className="size-3.5" />
                 Ética & LGPD
               </div>
               <h2 className="font-serif text-4xl font-bold text-primary md:text-5xl">
                 Dados clínicos são
                 <br />
-                <em className="italic text-lavender">fundação</em>,
+                <em className="italic text-forest">fundação</em>,
                 <br />
                 não feature.
               </h2>
@@ -440,8 +440,8 @@ export default function LandingPage() {
 
           <div className="grid gap-5 md:grid-cols-2">
             {ethics.map((item) => (
-              <div key={item.n} className="flex gap-5 border-l-[5px] border-l-lavender pl-5 py-2">
-                <span className="font-serif text-4xl font-bold text-lavender/20 leading-none shrink-0">
+              <div key={item.n} className="flex gap-5 border-l-[5px] border-l-forest pl-5 py-2">
+                <span className="font-serif text-4xl font-bold text-forest/20 leading-none shrink-0">
                   {item.n}
                 </span>
                 <p className="text-[16px] leading-relaxed text-foreground/80 pt-1">{item.text}</p>
@@ -451,8 +451,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── CTA FINAL — full-plum ───────────────────────── */}
-      <section className="block-plum py-28 text-center md:py-40">
+      {/* ── CTA FINAL — full-mahogany ───────────────────────── */}
+      <section className="block-mahogany py-28 text-center md:py-40">
         <div className="container-liz">
           <motion.div
             initial={{ opacity: 0, y: 16 }}
@@ -460,7 +460,7 @@ export default function LandingPage() {
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            <p className="text-[11px] font-bold uppercase tracking-[0.4em] text-lavender-mid">
+            <p className="text-[11px] font-bold uppercase tracking-[0.4em] text-forest-mid">
               Beta fechado · 2026
             </p>
             <h2 className="mt-6 font-serif text-5xl font-bold text-white md:text-7xl">
@@ -483,7 +483,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── FOOTER ──────────────────────────────────────── */}
-      <footer className="block-plum border-t border-sidebar-border">
+      <footer className="block-mahogany border-t border-sidebar-border">
         <div className="container-liz flex flex-wrap items-center justify-between gap-4 py-8">
           <div className="flex items-center gap-3">
             <LizLogo size={20} />

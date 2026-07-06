@@ -133,11 +133,11 @@ function ClientesIndex() {
         </p>
       </div>
 
-      {/* Header — bloco plum */}
-      <div className="block-plum px-6 py-10">
+      {/* Header — bloco mahogany */}
+      <div className="block-mahogany px-6 py-10">
         <div className="container-liz flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.35em] text-lavender-mid">
+            <p className="text-[11px] font-bold uppercase tracking-[0.35em] text-forest-mid">
               Consultório
             </p>
             <h1 className="mt-2 font-serif text-5xl font-bold text-white">Clientes</h1>
@@ -167,14 +167,14 @@ function ClientesIndex() {
             <div className="flex items-center border border-border rounded-lg p-1 bg-white">
               <button
                 onClick={() => setViewMode("cards")}
-                className={`p-1.5 rounded-md cursor-pointer ${viewMode === "cards" ? "bg-plum/5 text-plum" : "text-muted-foreground hover:text-primary"}`}
+                className={`p-1.5 rounded-md cursor-pointer ${viewMode === "cards" ? "bg-mahogany/5 text-mahogany" : "text-muted-foreground hover:text-primary"}`}
                 title="Visualização em Grade"
               >
                 <LayoutGrid className="size-4" />
               </button>
               <button
                 onClick={() => setViewMode("list")}
-                className={`p-1.5 rounded-md cursor-pointer ${viewMode === "list" ? "bg-plum/5 text-plum" : "text-muted-foreground hover:text-primary"}`}
+                className={`p-1.5 rounded-md cursor-pointer ${viewMode === "list" ? "bg-mahogany/5 text-mahogany" : "text-muted-foreground hover:text-primary"}`}
                 title="Visualização em Lista"
               >
                 <List className="size-4" />
@@ -258,7 +258,7 @@ function ClientesIndex() {
                           <Link
                             to="/app/clientes/$clientId"
                             params={{ clientId: c.id }}
-                            className="font-serif font-bold text-[15px] text-primary hover:text-plum transition-colors block"
+                            className="font-serif font-bold text-[15px] text-primary hover:text-mahogany transition-colors block"
                           >
                             {c.preferred_name || c.full_name}
                           </Link>
@@ -289,7 +289,7 @@ function ClientesIndex() {
                           </div>
                         </td>
                         <td className="p-4">
-                          <span className="rounded-full bg-plum/5 text-plum border border-plum/10 px-2 py-0.5 font-bold text-[11px]">
+                          <span className="rounded-full bg-mahogany/5 text-mahogany border border-mahogany/10 px-2 py-0.5 font-bold text-[11px]">
                             74% Completo
                           </span>
                         </td>
@@ -388,10 +388,10 @@ function ClientCard({
   const display = client.preferred_name || client.full_name;
 
   return (
-    <article className="group relative flex h-full flex-col glass-card rounded-[1rem] hover-lift accent-bar-lavender">
+    <article className="group relative flex h-full flex-col glass-card rounded-[1rem] hover-lift accent-bar-forest">
       <div className="flex items-start gap-4 p-5 pb-4">
         {/* Avatar lavanda */}
-        <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-lavender font-serif text-lg font-bold text-white shadow-sm">
+        <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-forest font-serif text-lg font-bold text-white shadow-sm">
           {initialsFrom(client.full_name)}
         </div>
         <div className="min-w-0 flex-1">
@@ -399,7 +399,7 @@ function ClientCard({
             to="/app/clientes/$clientId"
             params={{ clientId: client.id }}
             preload="intent"
-            className="block truncate font-serif text-xl font-bold text-primary hover:text-lavender transition-colors leading-tight"
+            className="block truncate font-serif text-xl font-bold text-primary hover:text-forest transition-colors leading-tight"
           >
             {display}
           </Link>
@@ -458,10 +458,10 @@ function ClientCard({
       <div className="px-5 pb-4 space-y-2 border-t border-slate-100 pt-3">
         <div className="flex items-center justify-between text-[11px]">
           <span className="text-muted-foreground font-bold flex items-center gap-1">
-            <Layers className="size-3.5 text-lavender" />
+            <Layers className="size-3.5 text-forest" />
             Genossociograma
           </span>
-          <span className="text-plum font-bold">74% Completo</span>
+          <span className="text-mahogany font-bold">74% Completo</span>
         </div>
         <div className="flex flex-wrap gap-1.5">
           <Badge
@@ -472,7 +472,7 @@ function ClientCard({
           </Badge>
           <Badge
             variant="outline"
-            className="text-plum border-plum/20 bg-plum/[0.03] text-[10px] font-bold py-0.5 rounded-md"
+            className="text-mahogany border-mahogany/20 bg-mahogany/[0.03] text-[10px] font-bold py-0.5 rounded-md"
           >
             🟣 IA detectou padrão
           </Badge>
@@ -494,7 +494,7 @@ function ClientCard({
           to="/app/clientes/$clientId"
           params={{ clientId: client.id }}
           preload="intent"
-          className="font-bold uppercase tracking-[0.08em] text-plum hover:text-lavender transition-colors"
+          className="font-bold uppercase tracking-[0.08em] text-mahogany hover:text-forest transition-colors"
         >
           Abrir dossiê →
         </Link>
@@ -523,7 +523,7 @@ function EmptyState({
     );
   }
   return (
-    <div className="flex flex-col md:flex-row items-center border-l-[5px] border-l-lavender glass-card rounded-r-[1rem] shadow-sm overflow-hidden">
+    <div className="flex flex-col md:flex-row items-center border-l-[5px] border-l-forest glass-card rounded-r-[1rem] shadow-sm overflow-hidden">
       <div className="flex-1 p-10 md:p-16 text-center md:text-left">
         <p className="font-serif text-3xl font-bold text-primary">
           {tab === "active" ? "A jornada começa aqui" : "Nenhum dossiê arquivado"}
@@ -534,14 +534,14 @@ function EmptyState({
             : "Quando arquivar um dossiê, ele aparecerá aqui para consulta."}
         </p>
         {tab === "active" && (
-          <Button onClick={onCreate} className="mt-8" size="lg" variant="lavender">
+          <Button onClick={onCreate} className="mt-8" size="lg" variant="forest">
             <Plus className="size-4" />
             Cadastrar primeiro cliente
           </Button>
         )}
       </div>
       {tab === "active" && (
-        <div className="hidden md:block flex-1 bg-lavender-soft/30 w-full h-full min-h-[300px] relative">
+        <div className="hidden md:block flex-1 bg-forest-soft/30 w-full h-full min-h-[300px] relative">
           <img
             src="/empty_clients.png"
             alt="Ilustração editorial de um consultório"

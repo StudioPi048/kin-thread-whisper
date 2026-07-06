@@ -5,21 +5,21 @@ import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
   // Base gráfica: uppercase, tracking largo, sem excesso de border-radius
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-[13px] font-bold uppercase tracking-[0.1em] cursor-pointer transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lavender focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-40 [&_svg]:pointer-events-none [&_svg]:size-[17px] [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-[13px] font-bold uppercase tracking-[0.1em] cursor-pointer transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-40 [&_svg]:pointer-events-none [&_svg]:size-[17px] [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground shadow-md hover:bg-plum-mid active:scale-[0.98]",
+          "bg-primary text-primary-foreground shadow-md hover:bg-mahogany-mid active:scale-[0.98]",
         destructive:
           "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90 active:scale-[0.98]",
         outline:
           "border-2 border-primary bg-transparent text-primary shadow-sm hover:bg-primary hover:text-primary-foreground active:scale-[0.98]",
-        secondary: "bg-lavender-soft text-plum hover:bg-lavender/20 active:scale-[0.98]",
+        secondary: "bg-forest-soft text-mahogany hover:bg-forest/20 active:scale-[0.98]",
         ghost: "hover:bg-secondary hover:text-secondary-foreground active:scale-[0.98]",
         link: "text-primary underline-offset-4 hover:underline p-0 h-auto normal-case tracking-normal font-semibold text-[15px]",
         gold: "bg-gold text-[oklch(0.10_0.04_295)] shadow-md hover:bg-gold/90 active:scale-[0.98]",
-        lavender: "bg-lavender text-white shadow-sm hover:bg-lavender-mid active:scale-[0.98]",
+        forest: "bg-forest text-white shadow-sm hover:bg-forest-mid active:scale-[0.98]",
         hero: "bg-gold text-[oklch(0.10_0.04_295)] shadow-xl hover:bg-gold/90 active:scale-[0.97] text-[15px] tracking-[0.12em]",
       },
       size: {

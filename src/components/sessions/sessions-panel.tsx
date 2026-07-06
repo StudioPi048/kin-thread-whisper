@@ -208,7 +208,7 @@ export function SessionsPanel({ clientId }: Props) {
   return (
     <div className="space-y-8">
       {/* Recorder Panel - Editorial Style */}
-      <section className="rounded-sm border-2 border-plum bg-plum text-white shadow-lg relative overflow-hidden">
+      <section className="rounded-sm border-2 border-mahogany bg-mahogany text-white shadow-lg relative overflow-hidden">
         <span className="section-number absolute -right-4 -bottom-10 opacity-[0.05] text-white">
           🎙️
         </span>
@@ -224,7 +224,7 @@ export function SessionsPanel({ clientId }: Props) {
           <div className="shrink-0 flex items-center">
             {recording ? (
               <div className="flex items-center gap-4 bg-white/10 px-6 py-4 rounded-md border border-white/20">
-                <span className="inline-flex items-center gap-2 text-2xl font-mono font-bold text-lavender-mid">
+                <span className="inline-flex items-center gap-2 text-2xl font-mono font-bold text-forest-mid">
                   <span className="h-3 w-3 rounded-full bg-destructive animate-pulse" />
                   {formatDuration(elapsed)}
                 </span>
@@ -268,9 +268,9 @@ export function SessionsPanel({ clientId }: Props) {
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="rounded-sm border border-dashed border-border bg-lavender-soft/40 p-16 text-center"
+            className="rounded-sm border border-dashed border-border bg-forest-soft/40 p-16 text-center"
           >
-            <AudioLines className="mx-auto size-10 text-lavender opacity-60" />
+            <AudioLines className="mx-auto size-10 text-forest opacity-60" />
             <p className="mt-4 font-serif text-2xl font-bold text-primary">
               Nenhuma sessão gravada
             </p>
@@ -351,11 +351,11 @@ function SessionCard({
   const statusBadge = isError
     ? "bg-destructive text-white"
     : isProcessing
-      ? "bg-lavender text-white"
+      ? "bg-forest text-white"
       : "bg-emerald-600 text-white";
 
   return (
-    <article className="rounded-sm border border-border bg-white shadow-sm overflow-hidden accent-bar-plum transition-shadow hover:shadow-md">
+    <article className="rounded-sm border border-border bg-white shadow-sm overflow-hidden accent-bar-mahogany transition-shadow hover:shadow-md">
       {/* Header */}
       <div className="border-b border-border/40 bg-background/50 px-6 py-4 flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -388,7 +388,7 @@ function SessionCard({
                 title="Reprocessar áudio"
               >
                 <RefreshCw
-                  className={`h-4 w-4 text-muted-foreground hover:text-plum ${reprocessing ? "animate-spin" : ""}`}
+                  className={`h-4 w-4 text-muted-foreground hover:text-mahogany ${reprocessing ? "animate-spin" : ""}`}
                 />
               </Button>
             )}

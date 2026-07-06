@@ -73,7 +73,7 @@ function TabSuspense({ children }: { children: React.ReactNode }) {
     <Suspense
       fallback={
         <div className="flex h-64 items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-plum border-r-transparent"></div>
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-mahogany border-r-transparent"></div>
         </div>
       }
     >
@@ -208,8 +208,8 @@ function ClientDossierPage() {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pb-12">
-      {/* Editorial CRM-Style Plum Header */}
-      <div className="block-plum pb-6 pt-4 px-6 relative overflow-hidden">
+      {/* Editorial CRM-Style Mahogany Header */}
+      <div className="block-mahogany pb-6 pt-4 px-6 relative overflow-hidden">
         {/* Giant decorative initial */}
         <span className="section-number absolute -right-4 -bottom-10 opacity-[0.03] text-white select-none">
           {initials}
@@ -232,7 +232,7 @@ function ClientDossierPage() {
               <div className="flex items-center gap-4">
                 <motion.div
                   layoutId={`avatar-${client.id}`}
-                  className="relative flex size-16 shrink-0 items-center justify-center rounded-lg bg-lavender font-serif text-2xl font-bold text-white shadow-lg overflow-hidden group cursor-pointer"
+                  className="relative flex size-16 shrink-0 items-center justify-center rounded-lg bg-forest font-serif text-2xl font-bold text-white shadow-lg overflow-hidden group cursor-pointer"
                 >
                   {avatarUrl ? (
                     <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
@@ -254,7 +254,7 @@ function ClientDossierPage() {
                   </label>
                 </motion.div>
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-lavender-mid">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-forest-mid">
                     Dossiê Clínico
                   </p>
                   <div className="flex items-center gap-3">
@@ -300,15 +300,15 @@ function ClientDossierPage() {
             {/* Minimalist Info Bar */}
             <div className="flex flex-wrap items-center gap-6 border-t border-white/10 pt-3 text-[13px] text-white/80">
               <div className="flex items-center gap-2">
-                <Mail className="size-3.5 text-lavender" /> 
+                <Mail className="size-3.5 text-forest" /> 
                 <span className="font-medium">{client.email || "Sem e-mail"}</span>
               </div>
               <div className="flex items-center gap-2">
-                <Phone className="size-3.5 text-lavender" /> 
+                <Phone className="size-3.5 text-forest" /> 
                 <span className="font-medium">{client.phone || "Sem telefone"}</span>
               </div>
               <div className="flex items-center gap-2">
-                <MapPin className="size-3.5 text-lavender" /> 
+                <MapPin className="size-3.5 text-forest" /> 
                 <span className="font-medium">{client.birthplace || "Local não informado"}</span>
                 <span className="text-white/40 mx-1">•</span>
                 <span className="font-medium">{age !== null ? `${age} anos` : "Idade omitida"}</span>
@@ -321,7 +321,7 @@ function ClientDossierPage() {
                   <CalendarDays className="size-3.5" /> {(client as { session_count?: number }).session_count || 0} sessões
                 </span>
                 <div className="w-px h-3 bg-white/20" />
-                <span className="flex items-center gap-1.5 text-[12px] font-semibold text-lavender-soft">
+                <span className="flex items-center gap-1.5 text-[12px] font-semibold text-forest-soft">
                   <Sparkles className="size-3.5" /> IA Clínica Ativa
                 </span>
               </div>
@@ -339,43 +339,43 @@ function ClientDossierPage() {
               <TabsList className="w-fit justify-start h-auto p-1 bg-white shadow-md rounded-full flex gap-1 border border-border/40">
                 <TabsTrigger
                   value="overview"
-                  className="flex items-center gap-1.5 py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-plum data-[state=state]:bg-plum data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
+                  className="flex items-center gap-1.5 py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-mahogany data-[state=state]:bg-mahogany data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
                 >
                   <FileText className="size-3.5" /> Visão geral
                 </TabsTrigger>
                 <TabsTrigger
                   value="genogram"
-                  className="flex items-center gap-1.5 py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-plum data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
+                  className="flex items-center gap-1.5 py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-mahogany data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
                 >
                   <TreePine className="size-3.5" /> Genossociograma
                 </TabsTrigger>
                 <TabsTrigger
                   value="timeline"
-                  className="flex items-center gap-1.5 py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-plum data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
+                  className="flex items-center gap-1.5 py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-mahogany data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
                 >
                   <History className="size-3.5" /> Linha do tempo
                 </TabsTrigger>
                 <TabsTrigger
                   value="patterns"
-                  className="flex items-center gap-1.5 py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-plum data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
+                  className="flex items-center gap-1.5 py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-mahogany data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
                 >
                   <Activity className="size-3.5" /> Padrões
                 </TabsTrigger>
                 <TabsTrigger
                   value="intake"
-                  className="py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-plum data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
+                  className="py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-mahogany data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
                 >
                   Anamnese
                 </TabsTrigger>
                 <TabsTrigger
                   value="sessions"
-                  className="py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-plum data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
+                  className="py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-mahogany data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
                 >
                   Sessões
                 </TabsTrigger>
                 <TabsTrigger
                   value="clan"
-                  className="py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-plum data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
+                  className="py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-mahogany data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
                 >
                   Planilha
                 </TabsTrigger>
@@ -390,8 +390,8 @@ function ClientDossierPage() {
                     {/* Bloco 2: Resumo IA Clínico */}
                     <Panel
                       title="Análise IA: Resumo Sistêmico"
-                      accent="plum"
-                      icon={<Sparkles className="size-4 text-plum" />}
+                      accent="mahogany"
+                      icon={<Sparkles className="size-4 text-mahogany" />}
                     >
                       <p className="text-[14px] leading-relaxed text-foreground font-serif">
                         O clã de <strong>{display}</strong> exibe repetições notáveis de queixas de
@@ -402,7 +402,7 @@ function ClientDossierPage() {
                       </p>
                     </Panel>
 
-                    <Panel title="Queixa apresentada" accent="lavender">
+                    <Panel title="Queixa apresentada" accent="forest">
                       {client.presenting_complaint ? (
                         <p className="whitespace-pre-wrap text-[14px] leading-relaxed text-foreground/80 font-serif">
                           {client.presenting_complaint}
@@ -574,7 +574,7 @@ function ClientNotFound() {
       <p className="mt-3 text-[15px] text-muted-foreground">
         Este cliente não existe ou foi removido.
       </p>
-      <Button asChild className="mt-8" variant="lavender">
+      <Button asChild className="mt-8" variant="forest">
         <Link to="/app/clientes">Voltar para clientes</Link>
       </Button>
     </div>
@@ -589,16 +589,16 @@ function Panel({
 }: {
   title: string;
   icon?: React.ReactNode;
-  accent?: "lavender" | "gold" | "plum";
+  accent?: "forest" | "gold" | "mahogany";
   children: React.ReactNode;
 }) {
   const accentClass =
-    accent === "lavender"
-      ? "accent-bar-lavender"
+    accent === "forest"
+      ? "accent-bar-forest"
       : accent === "gold"
         ? "accent-bar-gold"
-        : accent === "plum"
-          ? "accent-bar-plum"
+        : accent === "mahogany"
+          ? "accent-bar-mahogany"
           : "";
 
   return (

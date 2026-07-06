@@ -89,11 +89,11 @@ function DossierView({ data }: { data: PatientDossierDTO }) {
       <div className="border-b border-border/60 bg-white/60 backdrop-blur-sm px-6 py-3">
         <div className="container-liz flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.25em] text-muted-foreground">
-            <Link to="/app/agenda" className="hover:text-plum flex items-center gap-1.5">
+            <Link to="/app/agenda" className="hover:text-mahogany flex items-center gap-1.5">
               <ArrowLeft className="size-3" /> Agenda
             </Link>
             <span className="text-muted-foreground/40">/</span>
-            <span className="text-plum">Dossiê Clínico</span>
+            <span className="text-mahogany">Dossiê Clínico</span>
           </div>
           <span className="text-[10px] font-semibold text-muted-foreground/70">
             {counts.totalSessions} sessão(ões) · {counts.totalPersons} pessoas no genograma · {counts.totalPatterns} padrões
@@ -145,7 +145,7 @@ function PatientHeader({ identity }: { identity: PatientIdentityDTO }) {
 
   return (
     <div className="relative overflow-hidden">
-      <div className="block-plum px-6 pt-10 pb-14 relative">
+      <div className="block-mahogany px-6 pt-10 pb-14 relative">
         <div
           aria-hidden
           className="absolute inset-0 opacity-[0.05] mix-blend-overlay pointer-events-none"
@@ -166,18 +166,18 @@ function PatientHeader({ identity }: { identity: PatientIdentityDTO }) {
                     className="size-24 md:size-28 rounded-2xl object-cover border-2 border-white/20 shadow-2xl"
                   />
                 ) : (
-                  <div className="size-24 md:size-28 rounded-2xl bg-gradient-to-br from-lavender to-plum text-white flex items-center justify-center font-serif text-3xl md:text-4xl font-bold shadow-2xl border-2 border-white/20">
+                  <div className="size-24 md:size-28 rounded-2xl bg-gradient-to-br from-forest to-mahogany text-white flex items-center justify-center font-serif text-3xl md:text-4xl font-bold shadow-2xl border-2 border-white/20">
                     {monogram || "?"}
                   </div>
                 )}
-                <div className="absolute -bottom-1 -right-1 size-7 rounded-full bg-white border-2 border-plum flex items-center justify-center">
-                  <CircleDot className="size-3.5 text-plum" />
+                <div className="absolute -bottom-1 -right-1 size-7 rounded-full bg-white border-2 border-mahogany flex items-center justify-center">
+                  <CircleDot className="size-3.5 text-mahogany" />
                 </div>
               </div>
 
               {/* Identity */}
               <div className="min-w-0 pt-1">
-                <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-lavender-mid mb-2">
+                <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-forest-mid mb-2">
                   Dossiê Clínico
                 </p>
                 <h1 className="font-serif text-3xl md:text-5xl font-bold text-white leading-tight truncate">
@@ -266,7 +266,7 @@ function JourneyStrip({ journey }: { journey: JourneyDTO }) {
         <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground flex items-center gap-2">
           <Feather className="size-3.5" /> Jornada clínica
         </p>
-        <span className="text-[10px] text-plum font-bold uppercase tracking-wider">
+        <span className="text-[10px] text-mahogany font-bold uppercase tracking-wider">
           Etapa atual: {journey.stages.find((s) => s.status === "current")?.label}
         </span>
       </div>
@@ -279,16 +279,16 @@ function JourneyStrip({ journey }: { journey: JourneyDTO }) {
               <div className="flex items-center gap-1">
                 <div
                   className={`size-6 rounded-full flex items-center justify-center shrink-0 text-white text-[10px] font-bold ${
-                    isCurrent ? "bg-plum ring-4 ring-plum/15" : isDone ? "bg-lavender" : "bg-cream border border-border text-muted-foreground/60"
+                    isCurrent ? "bg-mahogany ring-4 ring-mahogany/15" : isDone ? "bg-forest" : "bg-cream border border-border text-muted-foreground/60"
                   }`}
                 >
                   {isDone ? <CheckCircle2 className="size-3.5" /> : i + 1}
                 </div>
                 {i < journey.stages.length - 1 && (
-                  <div className={`h-0.5 flex-1 rounded-full ${isDone ? "bg-lavender" : "bg-border"}`} />
+                  <div className={`h-0.5 flex-1 rounded-full ${isDone ? "bg-forest" : "bg-border"}`} />
                 )}
               </div>
-              <p className={`mt-2 text-[11.5px] font-bold ${isCurrent ? "text-plum" : isDone ? "text-primary" : "text-muted-foreground"}`}>
+              <p className={`mt-2 text-[11.5px] font-bold ${isCurrent ? "text-mahogany" : isDone ? "text-primary" : "text-muted-foreground"}`}>
                 {s.label}
               </p>
               <p className="text-[10.5px] text-muted-foreground/80 leading-tight mt-0.5">{s.description}</p>
@@ -315,7 +315,7 @@ function ClinicalSummary({
 }) {
   return (
     <div className="rounded-3xl bg-white border border-border/60 shadow-[0_20px_60px_-30px_rgba(60,20,80,0.35)] p-6 md:p-7">
-      <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-plum flex items-center gap-2 mb-4">
+      <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-mahogany flex items-center gap-2 mb-4">
         <Sparkles className="size-3.5" /> Resumo clínico vivo
       </p>
 
@@ -371,11 +371,11 @@ function SummaryBlock({ title, empty, children }: { title: string; empty: string
 function GenogramShowcase({ genogram, patientName }: { genogram: DossierGenogramDTO; patientName: string }) {
   return (
     <div className="rounded-3xl bg-white border border-border/60 shadow-[0_10px_40px_-25px_rgba(60,20,80,0.25)] overflow-hidden">
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border/40 bg-gradient-to-r from-plum/[0.03] to-lavender/[0.05]">
-        <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-plum flex items-center gap-2">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-border/40 bg-gradient-to-r from-mahogany/[0.03] to-forest/[0.05]">
+        <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-mahogany flex items-center gap-2">
           <GitBranch className="size-3.5" /> Genossociograma
         </p>
-        <Link to="/app/genossociogramas" className="text-[11px] text-plum font-bold hover:underline flex items-center gap-1">
+        <Link to="/app/genossociogramas" className="text-[11px] text-mahogany font-bold hover:underline flex items-center gap-1">
           Abrir editor <ChevronRight className="size-3" />
         </Link>
       </div>
@@ -430,8 +430,8 @@ function BigTree({ genogram, patientName }: { genogram: DossierGenogramDTO; pati
     }
     const isFem = person.role === "mother" || person.role === "grandmother";
     const isMasc = person.role === "father" || person.role === "grandfather";
-    const stroke = highlight ? "stroke-gold" : isMasc ? "stroke-plum/70" : isFem ? "stroke-lavender/80" : "stroke-border";
-    const fill = highlight ? "fill-gold/25" : isMasc ? "fill-plum/12" : isFem ? "fill-lavender/20" : "fill-cream";
+    const stroke = highlight ? "stroke-gold" : isMasc ? "stroke-mahogany/70" : isFem ? "stroke-forest/80" : "stroke-border";
+    const fill = highlight ? "fill-gold/25" : isMasc ? "fill-mahogany/12" : isFem ? "fill-forest/20" : "fill-cream";
     const sw = highlight ? 2.5 : 1.75;
     const size = highlight ? 20 : 15;
     const shape = isFem && !isMasc ? (
@@ -491,8 +491,8 @@ function BigTree({ genogram, patientName }: { genogram: DossierGenogramDTO; pati
       <div className="mt-4 flex items-center justify-between text-[11px] flex-wrap gap-2">
         <div className="flex items-center gap-4 text-muted-foreground">
           <span className="flex items-center gap-1"><Circle className="size-2 fill-gold text-gold" /> Paciente</span>
-          <span className="flex items-center gap-1"><Circle className="size-2 fill-plum text-plum" /> Masculino</span>
-          <span className="flex items-center gap-1"><Circle className="size-2 fill-lavender text-lavender" /> Feminino</span>
+          <span className="flex items-center gap-1"><Circle className="size-2 fill-mahogany text-mahogany" /> Masculino</span>
+          <span className="flex items-center gap-1"><Circle className="size-2 fill-forest text-forest" /> Feminino</span>
           <span className="text-muted-foreground/70">✕ falecido</span>
         </div>
         <span className="text-muted-foreground/70">
@@ -519,7 +519,7 @@ function FamilyTimeline({ events }: { events: TimelineEventDTO[] }) {
   return (
     <div className="rounded-3xl bg-white border border-border/60 shadow-[0_10px_40px_-25px_rgba(60,20,80,0.2)] p-6">
       <div className="flex items-center justify-between mb-5">
-        <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-plum flex items-center gap-2">
+        <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-mahogany flex items-center gap-2">
           <Clock className="size-3.5" /> Linha do tempo familiar
         </p>
         <span className="text-[10px] text-muted-foreground/70">{events.length} eventos</span>
@@ -536,7 +536,7 @@ function FamilyTimeline({ events }: { events: TimelineEventDTO[] }) {
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-2">
                 Década de {decade}
               </p>
-              <ul className="space-y-2 pl-2 border-l-2 border-lavender/30">
+              <ul className="space-y-2 pl-2 border-l-2 border-forest/30">
                 {list.map((e, i) => (
                   <li key={i} className="flex items-start gap-3 -ml-[9px]">
                     <span
@@ -569,7 +569,7 @@ function RecentEvolutions({ evolutions }: { evolutions: EvolutionDTO[] }) {
   return (
     <div className="rounded-3xl bg-white border border-border/60 shadow-[0_10px_40px_-25px_rgba(60,20,80,0.2)] p-6">
       <div className="flex items-center justify-between mb-4">
-        <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-plum flex items-center gap-2">
+        <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-mahogany flex items-center gap-2">
           <FileText className="size-3.5" /> Últimas evoluções
         </p>
         <span className="text-[10px] text-muted-foreground/70">{evolutions.length}/8 mais recentes</span>
@@ -585,7 +585,7 @@ function RecentEvolutions({ evolutions }: { evolutions: EvolutionDTO[] }) {
           {evolutions.map((e) => (
             <li key={e.id} className="flex items-start gap-4 py-3 first:pt-0 last:pb-0">
               <div className="text-center w-14 shrink-0">
-                <p className="font-serif text-2xl font-bold text-plum tabular-nums leading-none">
+                <p className="font-serif text-2xl font-bold text-mahogany tabular-nums leading-none">
                   {new Date(e.dateISO).getDate().toString().padStart(2, "0")}
                 </p>
                 <p className="text-[10px] font-bold uppercase text-muted-foreground mt-0.5">
@@ -624,7 +624,7 @@ function AiBriefing({ briefing }: { briefing: BriefingDTO }) {
     briefing.clinicalAlerts.length > 0;
 
   return (
-    <div className="rounded-3xl bg-gradient-to-br from-plum via-plum to-plum/95 text-white p-6 shadow-[0_20px_60px_-30px_rgba(60,20,80,0.6)] relative overflow-hidden">
+    <div className="rounded-3xl bg-gradient-to-br from-mahogany via-mahogany to-mahogany/95 text-white p-6 shadow-[0_20px_60px_-30px_rgba(60,20,80,0.6)] relative overflow-hidden">
       <div
         aria-hidden
         className="absolute -top-16 -right-16 size-52 rounded-full bg-gold/20 blur-3xl pointer-events-none"
@@ -656,7 +656,7 @@ function AiBriefing({ briefing }: { briefing: BriefingDTO }) {
             <ul className="space-y-1.5">
               {briefing.clinicalAlerts.map((a, i) => (
                 <li key={i} className="flex items-start gap-2 text-[13px] text-white/90 leading-relaxed">
-                  <AlertTriangle className={`size-3.5 shrink-0 mt-0.5 ${a.severity === "high" ? "text-rose-300" : a.severity === "warn" ? "text-gold" : "text-lavender-mid"}`} />
+                  <AlertTriangle className={`size-3.5 shrink-0 mt-0.5 ${a.severity === "high" ? "text-rose-300" : a.severity === "warn" ? "text-gold" : "text-forest-mid"}`} />
                   <span>{a.message}</span>
                 </li>
               ))}
@@ -718,10 +718,10 @@ function ConnectedLibrary({ items }: { items: LibrarySuggestionDTO[] }) {
   return (
     <div className="rounded-3xl bg-white border border-border/60 shadow-[0_10px_40px_-25px_rgba(60,20,80,0.2)] p-6">
       <div className="flex items-center justify-between mb-4">
-        <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-plum flex items-center gap-2">
+        <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-mahogany flex items-center gap-2">
           <BookOpen className="size-3.5" /> Biblioteca conectada
         </p>
-        <Link to="/app/biblioteca" className="text-[11px] text-plum font-bold hover:underline flex items-center gap-1">
+        <Link to="/app/biblioteca" className="text-[11px] text-mahogany font-bold hover:underline flex items-center gap-1">
           Ver tudo <ChevronRight className="size-3" />
         </Link>
       </div>
@@ -736,19 +736,19 @@ function ConnectedLibrary({ items }: { items: LibrarySuggestionDTO[] }) {
             <li key={it.id}>
               <Link
                 to="/app/biblioteca"
-                className="group flex items-start gap-3 p-3 rounded-xl border border-border/40 bg-cream/40 hover:bg-lavender-soft/40 hover:border-lavender/40 transition-colors"
+                className="group flex items-start gap-3 p-3 rounded-xl border border-border/40 bg-cream/40 hover:bg-forest-soft/40 hover:border-forest/40 transition-colors"
               >
-                <div className="size-10 rounded-lg bg-gradient-to-br from-plum/15 to-lavender/25 flex items-center justify-center shrink-0">
-                  <BookOpen className="size-4 text-plum" />
+                <div className="size-10 rounded-lg bg-gradient-to-br from-mahogany/15 to-forest/25 flex items-center justify-center shrink-0">
+                  <BookOpen className="size-4 text-mahogany" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="font-bold text-primary text-[13px] truncate">{it.title}</p>
                   <p className="text-[11.5px] text-muted-foreground">{it.author}</p>
-                  <span className="inline-block mt-1 text-[9.5px] font-bold uppercase tracking-wider text-plum/70 bg-plum/8 px-1.5 py-0.5 rounded">
+                  <span className="inline-block mt-1 text-[9.5px] font-bold uppercase tracking-wider text-mahogany/70 bg-mahogany/8 px-1.5 py-0.5 rounded">
                     {it.matchedTag}
                   </span>
                 </div>
-                <ChevronRight className="size-4 text-muted-foreground/40 mt-2 group-hover:text-plum transition-colors" />
+                <ChevronRight className="size-4 text-muted-foreground/40 mt-2 group-hover:text-mahogany transition-colors" />
               </Link>
             </li>
           ))}
@@ -766,7 +766,7 @@ function ActionBar({ clientId }: { clientId: string }) {
     <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border/60 bg-white/95 backdrop-blur-lg shadow-[0_-8px_30px_-15px_rgba(60,20,80,0.25)]">
       <div className="container-liz py-3 flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-          <Users className="size-3.5 text-plum" /> Ações do dossiê
+          <Users className="size-3.5 text-mahogany" /> Ações do dossiê
         </div>
         <div className="flex gap-2 flex-wrap">
           <Button size="lg" className="font-bold shadow-md">
@@ -797,7 +797,7 @@ function ActionBar({ clientId }: { clientId: string }) {
 function DossierSkeleton() {
   return (
     <div className="min-h-[calc(100vh-64px)] bg-cream flex flex-col items-center justify-center gap-3">
-      <Loader2 className="size-8 animate-spin text-plum" />
+      <Loader2 className="size-8 animate-spin text-mahogany" />
       <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Carregando dossiê clínico…</p>
     </div>
   );

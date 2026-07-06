@@ -62,7 +62,7 @@ const UnionNodeComponent = ({ data }: NodeProps) => {
     >
       {d.label && (
         <div
-          className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-card/95 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-plum shadow-sm"
+          className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-card/95 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-mahogany shadow-sm"
           style={{ top: -22 }}
         >
           {d.label}
@@ -99,7 +99,7 @@ function GenerationBandNode({ data }: NodeProps) {
   return (
     <div
       style={{ width: 15000, height: GENERATION_GAP, pointerEvents: "none" }}
-      className={`border-b border-dashed border-plum/20 ${isEven ? "bg-plum/[0.02]" : "bg-transparent"}`}
+      className={`border-b border-dashed border-mahogany/20 ${isEven ? "bg-mahogany/[0.02]" : "bg-transparent"}`}
     />
   );
 }
@@ -345,7 +345,7 @@ function isParentEdge(edge: Edge): boolean {
 
 function GenerationRuler() {
   return (
-    <div className="w-[154px] overflow-hidden rounded-md border border-plum/25 bg-card/92 shadow-sm backdrop-blur">
+    <div className="w-[154px] overflow-hidden rounded-md border border-mahogany/25 bg-card/92 shadow-sm backdrop-blur">
       {[
         ["Paciente", "ponto de partida"],
         ["Geração 1", "pais e tios"],
@@ -353,7 +353,7 @@ function GenerationRuler() {
         ["Geração 3", "bisavós"],
       ].map(([label, subtitle]) => (
         <div key={label} className="border-b border-border/60 px-2.5 py-2 last:border-b-0">
-          <p className="font-serif text-[14px] font-bold leading-tight text-plum">{label}</p>
+          <p className="font-serif text-[14px] font-bold leading-tight text-mahogany">{label}</p>
           <p className="mt-0.5 text-[9px] font-bold uppercase leading-snug tracking-[0.08em] text-muted-foreground">
             {subtitle}
           </p>
@@ -365,10 +365,10 @@ function GenerationRuler() {
 
 function ShortcutsLegend() {
   return (
-    <div className="w-[168px] overflow-hidden rounded-lg border border-plum/25 bg-white/95 shadow-lg backdrop-blur-md ring-1 ring-black/5">
+    <div className="w-[168px] overflow-hidden rounded-lg border border-mahogany/25 bg-white/95 shadow-lg backdrop-blur-md ring-1 ring-black/5">
 
-      <div className="bg-plum/5 px-2.5 py-1.5 border-b border-plum/20">
-        <p className="font-serif text-[13px] font-bold leading-tight text-plum">Atalhos</p>
+      <div className="bg-mahogany/5 px-2.5 py-1.5 border-b border-mahogany/20">
+        <p className="font-serif text-[13px] font-bold leading-tight text-mahogany">Atalhos</p>
       </div>
       <div className="px-3 py-2.5 flex flex-col gap-2.5">
         <div className="flex flex-col gap-0.5">
@@ -532,7 +532,7 @@ function buildRenderGraph(
       sourceHandle: "bottom",
       targetHandle: "top-target",
       type: "pedigree",
-      style: { stroke: "var(--color-plum)", strokeWidth: 2 },
+      style: { stroke: "var(--color-mahogany)", strokeWidth: 2 },
       data: { unionId: uid, childIds: union.children },
       zIndex: 2,
     });
@@ -766,7 +766,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
 
   const onConnect = useCallback(
     (conn: Connection) => {
-      setEdges((eds) => addEdge({ ...conn, style: { stroke: "var(--color-lavender)" } }, eds));
+      setEdges((eds) => addEdge({ ...conn, style: { stroke: "var(--color-forest)" } }, eds));
       setRelDialog({
         open: true,
         seed: { from: conn.source ?? undefined, to: conn.target ?? undefined },
@@ -911,7 +911,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
       {/* ── CONTÊINER SUPERIOR (BARRA DE AÇÕES + LEGENDA) ── */}
       <div className="absolute top-4 left-4 z-10 flex flex-col gap-2.5 pointer-events-none max-w-[calc(100%-32px)]">
         {/* BARRA DE AÇÕES */}
-        <div className="pointer-events-auto flex flex-wrap items-center gap-2 px-4 py-3 rounded-xl bg-plum shadow-xl border border-white/10">
+        <div className="pointer-events-auto flex flex-wrap items-center gap-2 px-4 py-3 rounded-xl bg-mahogany shadow-xl border border-white/10">
           <div className="flex items-center gap-2 mr-3">
             <TreePine className="size-4 text-gold" />
             <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/60">
@@ -921,7 +921,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
 
           <Button
             size="sm"
-            variant="lavender"
+            variant="forest"
             onClick={() => setCreatingPerson(true)}
             className="h-9 gap-2"
           >
@@ -965,7 +965,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
 
           <div className="hidden items-center gap-4 md:flex ml-3">
             <span className="flex items-center gap-1.5 text-[13px] text-white/55">
-              <Users className="size-3.5 text-lavender" />
+              <Users className="size-3.5 text-forest" />
               <strong className="text-white">{qualifiedCount}</strong>
               <span>no mapa</span>
               {incompleteCount > 0 && (
@@ -1016,7 +1016,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
 
 
       {showGuide && (
-        <div className="border-b border-border bg-lavender-soft px-4 py-3">
+        <div className="border-b border-border bg-forest-soft px-4 py-3">
           <div className="flex flex-wrap gap-6 text-[13px] text-foreground/70">
             {[
               ["Espaço + Arrastar", "Navegar pela tela"],
@@ -1045,7 +1045,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
       >
         {query.isLoading ? (
           <div className="flex h-full flex-col items-center justify-center gap-3">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-lavender border-t-transparent" />
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-forest border-t-transparent" />
             <p className="text-[14px] text-muted-foreground">Carregando a árvore...</p>
           </div>
         ) : persons.length === 0 ? (
@@ -1071,7 +1071,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
             proOptions={{ hideAttribution: true }}
             defaultEdgeOptions={{
               type: "step",
-              style: { strokeWidth: 2, stroke: "var(--color-plum)" },
+              style: { strokeWidth: 2, stroke: "var(--color-mahogany)" },
             }}
             fitView
             fitViewOptions={{ padding: 0.2 }}
@@ -1084,7 +1084,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
               style={{ opacity: 0.5 }}
             />
             <Controls
-              className="bg-white border-none shadow-xl overflow-hidden rounded-xl [&>button]:border-b [&>button]:border-slate-100 [&>button]:hover:bg-slate-50 [&>button]:text-plum"
+              className="bg-white border-none shadow-xl overflow-hidden rounded-xl [&>button]:border-b [&>button]:border-slate-100 [&>button]:hover:bg-slate-50 [&>button]:text-mahogany"
               showInteractive={false}
             />
           </ReactFlow>
@@ -1169,7 +1169,7 @@ function relToEdge(r: RelRow): Edge {
     labelStyle: {
       fontSize: 12,
       fontWeight: 600,
-      fill: isUnion ? "var(--color-plum)" : "var(--color-muted-foreground)",
+      fill: isUnion ? "var(--color-mahogany)" : "var(--color-muted-foreground)",
       fontFamily: "var(--font-sans)",
     },
     labelBgStyle: { fill: "var(--color-card)", fillOpacity: 0.98, rx: 3, ry: 3 },
@@ -1185,8 +1185,8 @@ function relToEdge(r: RelRow): Edge {
 }
 
 function colorFor(r: RelRow): string {
-  if (r.relationship_type === "parent") return "var(--color-plum)";
-  if (r.relationship_type === "sibling") return "var(--color-lavender)";
+  if (r.relationship_type === "parent") return "var(--color-mahogany)";
+  if (r.relationship_type === "sibling") return "var(--color-forest)";
   if (r.relationship_type === "union") return "var(--color-foreground)";
   switch (r.qualifier) {
     case "conflict":
@@ -1194,7 +1194,7 @@ function colorFor(r: RelRow): string {
       return "var(--color-destructive)";
     case "fusion":
     case "close":
-      return "var(--color-lavender)";
+      return "var(--color-forest)";
     default:
       return "var(--color-muted-foreground)";
   }
@@ -1203,8 +1203,8 @@ function colorFor(r: RelRow): string {
 function EmptyCanvas({ onCreate }: { onCreate: () => void }) {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-6 p-10 text-center">
-      <div className="flex h-20 w-20 items-center justify-center border-2 border-dashed border-lavender/40 bg-lavender-soft">
-        <TreePine className="size-9 text-lavender/60" />
+      <div className="flex h-20 w-20 items-center justify-center border-2 border-dashed border-forest/40 bg-forest-soft">
+        <TreePine className="size-9 text-forest/60" />
       </div>
 
       <div>
@@ -1215,7 +1215,7 @@ function EmptyCanvas({ onCreate }: { onCreate: () => void }) {
         </p>
       </div>
 
-      <Button onClick={onCreate} size="lg" variant="lavender">
+      <Button onClick={onCreate} size="lg" variant="forest">
         <UserPlus className="size-5" />
         Adicionar primeira pessoa
       </Button>

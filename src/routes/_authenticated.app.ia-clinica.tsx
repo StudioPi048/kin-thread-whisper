@@ -68,8 +68,8 @@ function IaClinicaPage() {
                 <div
                   className={`size-8 rounded-full shrink-0 flex items-center justify-center border ${
                     msg.sender === "user"
-                      ? "bg-lavender-soft border-lavender/30 text-lavender"
-                      : "bg-plum/5 border-plum/10 text-plum"
+                      ? "bg-forest-soft border-forest/30 text-forest"
+                      : "bg-mahogany/5 border-mahogany/10 text-mahogany"
                   }`}
                 >
                   {msg.sender === "user" ? <User className="size-4" /> : <Bot className="size-4" />}
@@ -77,7 +77,7 @@ function IaClinicaPage() {
                 <div
                   className={`p-4 rounded-2xl shadow-sm text-[14px] leading-relaxed font-serif ${
                     msg.sender === "user"
-                      ? "bg-lavender text-white rounded-tr-none"
+                      ? "bg-forest text-white rounded-tr-none"
                       : "bg-white border border-border/50 text-primary rounded-tl-none"
                   }`}
                 >
@@ -108,7 +108,7 @@ function IaClinicaPage() {
         {/* Sidebar right (Context details) */}
         <div className="w-[300px] border-l border-border/50 bg-white p-6 hidden lg:block space-y-6 overflow-y-auto">
           <div className="flex items-center gap-2 pb-4 border-b border-border/40">
-            <Brain className="size-5 text-plum" />
+            <Brain className="size-5 text-mahogany" />
             <h3 className="font-serif text-lg font-bold text-primary">Cérebro Clínico</h3>
           </div>
 
@@ -135,7 +135,7 @@ function IaClinicaPage() {
             <div className="space-y-2 text-[13px]">
               <div className="flex justify-between items-center py-1">
                 <span className="font-semibold text-primary">Paciente Exemplo A</span>
-                <Badge className="bg-plum/5 text-plum border-plum/10 text-[10px]">Ativo</Badge>
+                <Badge className="bg-mahogany/5 text-mahogany border-mahogany/10 text-[10px]">Ativo</Badge>
               </div>
               <div className="flex justify-between items-center py-1">
                 <span className="font-semibold text-primary">Paciente Exemplo B</span>

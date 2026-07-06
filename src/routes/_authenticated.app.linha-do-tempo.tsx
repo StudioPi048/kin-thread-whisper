@@ -40,10 +40,10 @@ function TimelinesPage() {
       </div>
 
       {/* Header */}
-      <div className="block-plum px-6 py-10">
+      <div className="block-mahogany px-6 py-10">
         <div className="container-liz flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.35em] text-lavender-mid">
+            <p className="text-[11px] font-bold uppercase tracking-[0.35em] text-forest-mid">
               Estudos de Caso
             </p>
             <h1 className="mt-2 font-serif text-5xl font-bold text-white">Linhas do Tempo</h1>
@@ -78,7 +78,7 @@ function TimelinesPage() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border bg-white p-12 text-center">
-            <History className="size-10 text-lavender/50 mx-auto" />
+            <History className="size-10 text-forest/50 mx-auto" />
             <p className="font-serif text-lg font-bold text-primary mt-2">
               Nenhuma linha do tempo encontrada
             </p>
@@ -88,7 +88,7 @@ function TimelinesPage() {
             {filtered.map((c) => (
               <div
                 key={c.id}
-                className="rounded-2xl border border-border/50 bg-white p-6 shadow-sm flex flex-col justify-between hover-lift accent-bar-lavender"
+                className="rounded-2xl border border-border/50 bg-white p-6 shadow-sm flex flex-col justify-between hover-lift accent-bar-forest"
               >
                 <div className="space-y-3">
                   <div className="flex justify-between items-start gap-2">
@@ -97,7 +97,7 @@ function TimelinesPage() {
                     </h3>
                     <Badge
                       variant="outline"
-                      className="text-lavender border-lavender bg-lavender/5 text-[10px] font-bold"
+                      className="text-forest border-forest bg-forest/5 text-[10px] font-bold"
                     >
                       60% completa
                     </Badge>
@@ -109,7 +109,7 @@ function TimelinesPage() {
                       <span>12 marcos históricos registrados</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Sparkles className="size-4 text-plum shrink-0" />
+                      <Sparkles className="size-4 text-mahogany shrink-0" />
                       <span>2 traumas principais mapeados</span>
                     </div>
                   </div>
@@ -124,7 +124,7 @@ function TimelinesPage() {
                   <Link
                     to="/app/clientes/$clientId"
                     params={{ clientId: c.id }}
-                    className="font-bold text-[12px] uppercase tracking-wider text-plum hover:text-lavender flex items-center gap-1"
+                    className="font-bold text-[12px] uppercase tracking-wider text-mahogany hover:text-forest flex items-center gap-1"
                   >
                     Ver Linha do Tempo <ArrowRight className="size-3.5" />
                   </Link>

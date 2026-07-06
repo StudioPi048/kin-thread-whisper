@@ -66,7 +66,7 @@ const LETICIA_WORKS: Array<{
   concepts: number;
   protocols: number;
   citations: number;
-  accent: "plum" | "lavender" | "gold" | "cream";
+  accent: "mahogany" | "forest" | "gold" | "cream";
 }> = [
   {
     title: "O Código Sagrado dos Dentes",
@@ -76,7 +76,7 @@ const LETICIA_WORKS: Array<{
     concepts: 120,
     protocols: 48,
     citations: 312,
-    accent: "plum",
+    accent: "mahogany",
   },
   {
     title: "Manual da Psicogenealogia",
@@ -96,7 +96,7 @@ const LETICIA_WORKS: Array<{
     concepts: 54,
     protocols: 21,
     citations: 143,
-    accent: "lavender",
+    accent: "forest",
   },
   {
     title: "Fé com Lê, Lê com Fé",
@@ -116,7 +116,7 @@ const LETICIA_WORKS: Array<{
     concepts: 240,
     protocols: 72,
     citations: 480,
-    accent: "plum",
+    accent: "mahogany",
   },
   {
     title: "Protocolo do Clã",
@@ -126,7 +126,7 @@ const LETICIA_WORKS: Array<{
     concepts: 32,
     protocols: 12,
     citations: 96,
-    accent: "lavender",
+    accent: "forest",
   },
 ];
 
@@ -294,19 +294,19 @@ const AUTHORS: Array<{
 ];
 
 const THEMES: Array<{ name: string; count: number; icon: typeof Feather; accent: string }> = [
-  { name: "Traumas", count: 42, icon: HeartCrack, accent: "bg-plum text-white" },
-  { name: "Lealdades", count: 28, icon: Link2, accent: "bg-white text-plum border border-plum/10" },
-  { name: "Doenças", count: 31, icon: Dna, accent: "bg-white text-plum border border-plum/10" },
-  { name: "Projeto Sentido", count: 19, icon: Target, accent: "bg-lavender text-white" },
-  { name: "Nome", count: 12, icon: Fingerprint, accent: "bg-white text-plum border border-plum/10" },
-  { name: "Empresa Familiar", count: 15, icon: Building2, accent: "bg-white text-plum border border-plum/10" },
-  { name: "Abandono", count: 24, icon: UserMinus, accent: "bg-white text-plum border border-plum/10" },
-  { name: "Luto", count: 33, icon: Anchor, accent: "bg-gold text-plum" },
-  { name: "Exclusão", count: 21, icon: Users, accent: "bg-white text-plum border border-plum/10" },
-  { name: "Aborto", count: 18, icon: Baby, accent: "bg-white text-plum border border-plum/10" },
-  { name: "Segredos", count: 26, icon: Lock, accent: "bg-plum/90 text-white" },
-  { name: "Epigenética", count: 14, icon: Dna, accent: "bg-white text-plum border border-plum/10" },
-  { name: "Ordens do Amor", count: 17, icon: Scale, accent: "bg-white text-plum border border-plum/10" },
+  { name: "Traumas", count: 42, icon: HeartCrack, accent: "bg-mahogany text-white" },
+  { name: "Lealdades", count: 28, icon: Link2, accent: "bg-white text-mahogany border border-mahogany/10" },
+  { name: "Doenças", count: 31, icon: Dna, accent: "bg-white text-mahogany border border-mahogany/10" },
+  { name: "Projeto Sentido", count: 19, icon: Target, accent: "bg-forest text-white" },
+  { name: "Nome", count: 12, icon: Fingerprint, accent: "bg-white text-mahogany border border-mahogany/10" },
+  { name: "Empresa Familiar", count: 15, icon: Building2, accent: "bg-white text-mahogany border border-mahogany/10" },
+  { name: "Abandono", count: 24, icon: UserMinus, accent: "bg-white text-mahogany border border-mahogany/10" },
+  { name: "Luto", count: 33, icon: Anchor, accent: "bg-gold text-mahogany" },
+  { name: "Exclusão", count: 21, icon: Users, accent: "bg-white text-mahogany border border-mahogany/10" },
+  { name: "Aborto", count: 18, icon: Baby, accent: "bg-white text-mahogany border border-mahogany/10" },
+  { name: "Segredos", count: 26, icon: Lock, accent: "bg-mahogany/90 text-white" },
+  { name: "Epigenética", count: 14, icon: Dna, accent: "bg-white text-mahogany border border-mahogany/10" },
+  { name: "Ordens do Amor", count: 17, icon: Scale, accent: "bg-white text-mahogany border border-mahogany/10" },
 ];
 
 const ESSENTIAL_BOOKS: Array<{
@@ -332,7 +332,7 @@ const ESSENTIAL_BOOKS: Array<{
     citations: 42,
     protocols: 8,
     cases: 12,
-    spine: "bg-plum text-white",
+    spine: "bg-mahogany text-white",
     cover: "https://covers.openlibrary.org/b/isbn/8532303617-L.jpg?default=false",
   },
   {
@@ -345,7 +345,7 @@ const ESSENTIAL_BOOKS: Array<{
     citations: 31,
     protocols: 5,
     cases: 9,
-    spine: "bg-lavender text-white",
+    spine: "bg-forest text-white",
     cover: "https://covers.openlibrary.org/b/isbn/9782226221315-L.jpg?default=false",
   },
   {
@@ -358,7 +358,7 @@ const ESSENTIAL_BOOKS: Array<{
     citations: 27,
     protocols: 3,
     cases: 7,
-    spine: "bg-plum/80 text-white",
+    spine: "bg-mahogany/80 text-white",
     cover: "https://covers.openlibrary.org/b/isbn/9782081218918-L.jpg?default=false",
   },
   {
@@ -371,7 +371,7 @@ const ESSENTIAL_BOOKS: Array<{
     citations: 55,
     protocols: 12,
     cases: 18,
-    spine: "bg-gold text-plum",
+    spine: "bg-gold text-mahogany",
     cover: "https://covers.openlibrary.org/b/isbn/8531608872-L.jpg?default=false",
   },
   {
@@ -384,7 +384,7 @@ const ESSENTIAL_BOOKS: Array<{
     citations: 19,
     protocols: 6,
     cases: 11,
-    spine: "bg-plum text-white",
+    spine: "bg-mahogany text-white",
   },
   {
     title: "O Murmúrio dos Fantasmas",
@@ -396,7 +396,7 @@ const ESSENTIAL_BOOKS: Array<{
     citations: 22,
     protocols: 4,
     cases: 8,
-    spine: "bg-lavender/80 text-white",
+    spine: "bg-forest/80 text-white",
     cover: "https://covers.openlibrary.org/b/isbn/9782738113610-L.jpg?default=false",
   },
 ];
@@ -416,7 +416,7 @@ const QUOTES = [
     work: "Metagenealogia",
     year: 2011,
     theme: "Sentido",
-    tone: "plum",
+    tone: "mahogany",
   },
   {
     text: "O que não é dito em voz alta é vivido na carne.",
@@ -440,7 +440,7 @@ const QUOTES = [
     work: "A Causa das Crianças",
     year: 1985,
     theme: "Não-dito",
-    tone: "lavender",
+    tone: "forest",
   },
   {
     text: "Nenhuma resiliência sem alguém que ofereça um olhar.",
@@ -562,7 +562,7 @@ const PROTOCOLS = [
     duration: "30 min",
     complexity: 2,
     steps: ["Idade atual do paciente", "Idades de morte dos avós", "Datas traumáticas do clã", "Coincidências ativas"],
-    accent: "border-l-lavender",
+    accent: "border-l-forest",
   },
   {
     title: "Mapa de Segredos",
@@ -571,7 +571,7 @@ const PROTOCOLS = [
     duration: "60 min",
     complexity: 3,
     steps: ["O que não é falado?", "Quem desapareceu da história?", "O que o corpo expressa?", "Ritual de nomeação"],
-    accent: "border-l-plum",
+    accent: "border-l-mahogany",
   },
 ];
 
@@ -621,11 +621,11 @@ function BibliotecaPage() {
 
             <div className="relative z-10 space-y-6">
               <div className="space-y-3">
-                <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-lavender">
+                <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-forest">
                   Hub de Inteligência Clínica
                 </p>
-                <h1 className="font-serif text-6xl md:text-7xl font-bold leading-[0.95] text-plum">
-                  Biblioteca <span className="italic font-medium text-lavender">Clínica</span>
+                <h1 className="font-serif text-6xl md:text-7xl font-bold leading-[0.95] text-mahogany">
+                  Biblioteca <span className="italic font-medium text-forest">Clínica</span>
                 </h1>
                 <p className="max-w-2xl text-[16px] leading-relaxed text-foreground/70">
                   Todo o conhecimento da Psicogenealogia conectado em um único lugar. Autores,
@@ -634,9 +634,9 @@ function BibliotecaPage() {
               </div>
 
               <div className="group relative max-w-3xl">
-                <div className="absolute inset-0 rounded-[1.25rem] bg-gradient-to-r from-lavender/30 to-gold/20 blur-xl opacity-60 group-focus-within:opacity-100 transition-opacity duration-500" />
-                <div className="relative flex items-center gap-3 rounded-[1.25rem] border border-plum/10 bg-white p-2 pl-5 shadow-[0_20px_60px_-30px_oklch(0.25_0.10_295/0.5)]">
-                  <Search className="size-5 text-lavender shrink-0" />
+                <div className="absolute inset-0 rounded-[1.25rem] bg-gradient-to-r from-forest/30 to-gold/20 blur-xl opacity-60 group-focus-within:opacity-100 transition-opacity duration-500" />
+                <div className="relative flex items-center gap-3 rounded-[1.25rem] border border-mahogany/10 bg-white p-2 pl-5 shadow-[0_20px_60px_-30px_oklch(0.25_0.10_295/0.5)]">
+                  <Search className="size-5 text-forest shrink-0" />
                   <input
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
@@ -646,7 +646,7 @@ function BibliotecaPage() {
                   <kbd className="hidden md:inline-flex items-center gap-1 rounded-md border border-border/60 bg-muted/50 px-2 py-1 text-[10px] font-mono font-semibold text-muted-foreground">
                     ⌘K
                   </kbd>
-                  <button className="hidden sm:inline-flex items-center gap-2 rounded-[0.85rem] bg-plum px-5 py-3 text-[13px] font-semibold text-white transition-colors hover:bg-lavender">
+                  <button className="hidden sm:inline-flex items-center gap-2 rounded-[0.85rem] bg-mahogany px-5 py-3 text-[13px] font-semibold text-white transition-colors hover:bg-forest">
                     Buscar <ArrowRight className="size-4" />
                   </button>
                 </div>
@@ -660,7 +660,7 @@ function BibliotecaPage() {
                   <button
                     key={s}
                     onClick={() => setQ(s)}
-                    className="rounded-full border border-plum/10 bg-white px-3.5 py-1.5 text-[12px] font-medium text-foreground/80 shadow-sm transition-all hover:-translate-y-0.5 hover:border-lavender hover:bg-lavender hover:text-white hover:shadow-md"
+                    className="rounded-full border border-mahogany/10 bg-white px-3.5 py-1.5 text-[12px] font-medium text-foreground/80 shadow-sm transition-all hover:-translate-y-0.5 hover:border-forest hover:bg-forest hover:text-white hover:shadow-md"
                   >
                     {s}
                   </button>
@@ -679,7 +679,7 @@ function BibliotecaPage() {
 
             <div className="grid grid-cols-4 gap-4 auto-rows-[minmax(180px,auto)]">
               {/* Concept of day — big */}
-              <div className="col-span-4 md:col-span-2 md:row-span-2 relative overflow-hidden rounded-[1.25rem] bg-plum text-white p-8 flex flex-col justify-between group hover-lift">
+              <div className="col-span-4 md:col-span-2 md:row-span-2 relative overflow-hidden rounded-[1.25rem] bg-mahogany text-white p-8 flex flex-col justify-between group hover-lift">
                 <div className="absolute -right-6 -top-2 font-serif text-[180px] italic leading-none text-white/[0.05] select-none">
                   {TODAY.concept.title.charAt(0)}
                 </div>
@@ -712,8 +712,8 @@ function BibliotecaPage() {
               </div>
 
               {/* Author of week */}
-              <div className="col-span-4 md:col-span-2 rounded-[1.25rem] bg-gold p-6 text-plum flex items-center gap-5 hover-lift">
-                <div className="flex size-20 shrink-0 items-center justify-center rounded-full bg-plum text-white font-serif text-2xl font-bold shadow-lg">
+              <div className="col-span-4 md:col-span-2 rounded-[1.25rem] bg-gold p-6 text-mahogany flex items-center gap-5 hover-lift">
+                <div className="flex size-20 shrink-0 items-center justify-center rounded-full bg-mahogany text-white font-serif text-2xl font-bold shadow-lg">
                   {TODAY.authorOfWeek.initials}
                 </div>
                 <div className="min-w-0">
@@ -728,29 +728,29 @@ function BibliotecaPage() {
               </div>
 
               {/* Recommended book */}
-              <div className="col-span-2 md:col-span-1 rounded-[1.25rem] bg-white border border-plum/10 p-5 flex flex-col justify-between hover-lift">
+              <div className="col-span-2 md:col-span-1 rounded-[1.25rem] bg-white border border-mahogany/10 p-5 flex flex-col justify-between hover-lift">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-lavender">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-forest">
                     Livro recomendado
                   </p>
-                  <h4 className="mt-2 font-serif text-[18px] font-bold text-plum italic leading-tight">
+                  <h4 className="mt-2 font-serif text-[18px] font-bold text-mahogany italic leading-tight">
                     {TODAY.bookRecommended.title}
                   </h4>
                   <p className="text-[11px] text-muted-foreground mt-1">
                     {TODAY.bookRecommended.author}
                   </p>
                 </div>
-                <span className="mt-3 self-start rounded-full bg-gold/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-plum">
+                <span className="mt-3 self-start rounded-full bg-gold/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-mahogany">
                   {TODAY.bookRecommended.tag}
                 </span>
               </div>
 
               {/* Clinical question */}
-              <div className="col-span-2 md:col-span-1 rounded-[1.25rem] bg-lavender-soft/60 border border-lavender/20 p-5 flex flex-col justify-between hover-lift">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-lavender">
+              <div className="col-span-2 md:col-span-1 rounded-[1.25rem] bg-forest-soft/60 border border-forest/20 p-5 flex flex-col justify-between hover-lift">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-forest">
                   Pergunta clínica
                 </p>
-                <p className="text-[13px] font-serif italic leading-relaxed text-plum">
+                <p className="text-[13px] font-serif italic leading-relaxed text-mahogany">
                   "{TODAY.clinicalQuestion}"
                 </p>
               </div>
@@ -811,7 +811,7 @@ function BibliotecaPage() {
               {ESSENTIAL_BOOKS.map((b) => (
                 <article
                   key={b.title}
-                  className="group relative flex gap-5 rounded-[1.25rem] bg-white border border-plum/10 p-5 shadow-sm hover:shadow-2xl hover:shadow-plum/10 transition-all duration-500 hover:-translate-y-1"
+                  className="group relative flex gap-5 rounded-[1.25rem] bg-white border border-mahogany/10 p-5 shadow-sm hover:shadow-2xl hover:shadow-mahogany/10 transition-all duration-500 hover:-translate-y-1"
                 >
                   {/* Real cover with typographic fallback */}
                   <BookCoverArt book={b} />
@@ -821,17 +821,17 @@ function BibliotecaPage() {
                   <div className="flex-1 min-w-0 flex flex-col">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <h3 className="font-serif text-xl font-bold text-plum leading-tight">
+                        <h3 className="font-serif text-xl font-bold text-mahogany leading-tight">
                           {b.title}
                         </h3>
                         <p className="text-[12px] italic text-muted-foreground mt-0.5 leading-snug">
                           {b.subtitle}
                         </p>
-                        <p className="text-[12px] font-semibold text-lavender mt-2">
+                        <p className="text-[12px] font-semibold text-forest mt-2">
                           {b.author} · {b.year}
                         </p>
                       </div>
-                      <span className="shrink-0 rounded-full bg-gold/15 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-plum">
+                      <span className="shrink-0 rounded-full bg-gold/15 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-mahogany">
                         {b.level}
                       </span>
                     </div>
@@ -840,7 +840,7 @@ function BibliotecaPage() {
                       {b.concepts.map((c) => (
                         <span
                           key={c}
-                          className="rounded-md bg-cream border border-plum/5 px-2 py-0.5 text-[10px] font-semibold text-plum/70"
+                          className="rounded-md bg-cream border border-mahogany/5 px-2 py-0.5 text-[10px] font-semibold text-mahogany/70"
                         >
                           {c}
                         </span>
@@ -850,16 +850,16 @@ function BibliotecaPage() {
                     <div className="mt-auto pt-4 border-t border-border/50 flex items-center justify-between">
                       <div className="flex items-center gap-4 text-[11px] text-muted-foreground">
                         <span>
-                          <strong className="text-plum">{b.citations}</strong> citações
+                          <strong className="text-mahogany">{b.citations}</strong> citações
                         </span>
                         <span>
-                          <strong className="text-plum">{b.protocols}</strong> protocolos
+                          <strong className="text-mahogany">{b.protocols}</strong> protocolos
                         </span>
                         <span>
-                          <strong className="text-plum">{b.cases}</strong> casos
+                          <strong className="text-mahogany">{b.cases}</strong> casos
                         </span>
                       </div>
-                      <button className="inline-flex items-center gap-1.5 rounded-lg bg-plum px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-white hover:bg-lavender transition-colors">
+                      <button className="inline-flex items-center gap-1.5 rounded-lg bg-mahogany px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-white hover:bg-forest transition-colors">
                         Abrir
                       </button>
                     </div>
@@ -876,17 +876,17 @@ function BibliotecaPage() {
             <div className="columns-1 md:columns-2 xl:columns-3 gap-5 [column-fill:_balance]">
               {QUOTES.map((q, i) => {
                 const bg =
-                  q.tone === "plum"
-                    ? "bg-plum text-white"
+                  q.tone === "mahogany"
+                    ? "bg-mahogany text-white"
                     : q.tone === "gold"
-                      ? "bg-gold text-plum"
-                      : q.tone === "lavender"
-                        ? "bg-lavender/15 text-plum border border-lavender/30"
-                        : "bg-white text-plum border border-plum/10";
+                      ? "bg-gold text-mahogany"
+                      : q.tone === "forest"
+                        ? "bg-forest/15 text-mahogany border border-forest/30"
+                        : "bg-white text-mahogany border border-mahogany/10";
                 const authorColor =
-                  q.tone === "plum" ? "text-gold" : q.tone === "gold" ? "text-plum" : "text-lavender";
+                  q.tone === "mahogany" ? "text-gold" : q.tone === "gold" ? "text-mahogany" : "text-forest";
                 const iconColor =
-                  q.tone === "plum" ? "text-white/20" : q.tone === "gold" ? "text-plum/20" : "text-lavender/40";
+                  q.tone === "mahogany" ? "text-white/20" : q.tone === "gold" ? "text-mahogany/20" : "text-forest/40";
                 return (
                   <figure
                     key={i}
@@ -907,7 +907,7 @@ function BibliotecaPage() {
                         </p>
                         <p
                           className={`text-[10px] mt-0.5 ${
-                            q.tone === "plum" ? "text-white/50" : "text-muted-foreground"
+                            q.tone === "mahogany" ? "text-white/50" : "text-muted-foreground"
                           }`}
                         >
                           {q.work} · {q.year} · {q.theme}
@@ -930,7 +930,7 @@ function BibliotecaPage() {
               action={{ label: "Ver glossário completo", onClick: () => {} }}
             />
 
-            <div className="rounded-[1.25rem] bg-white border border-plum/10 overflow-hidden shadow-sm">
+            <div className="rounded-[1.25rem] bg-white border border-mahogany/10 overflow-hidden shadow-sm">
               <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-border/50">
                 <div className="divide-y divide-border/50">
                   {GLOSSARY.slice(0, Math.ceil(GLOSSARY.length / 2)).map((g) => (
@@ -954,10 +954,10 @@ function BibliotecaPage() {
               {PROTOCOLS.map((p) => (
                 <article
                   key={p.title}
-                  className={`group rounded-[1.25rem] bg-white p-6 border border-plum/10 border-l-[5px] shadow-sm hover:shadow-xl transition-all ${p.accent}`}
+                  className={`group rounded-[1.25rem] bg-white p-6 border border-mahogany/10 border-l-[5px] shadow-sm hover:shadow-xl transition-all ${p.accent}`}
                 >
                   <div className="flex items-center justify-between mb-4">
-                    <span className="inline-flex items-center gap-1.5 rounded-md bg-cream px-2 py-1 text-[10px] font-bold text-plum/70">
+                    <span className="inline-flex items-center gap-1.5 rounded-md bg-cream px-2 py-1 text-[10px] font-bold text-mahogany/70">
                       <Clock className="size-3" /> {p.duration}
                     </span>
                     <div className="flex gap-0.5" aria-label={`Complexidade ${p.complexity} de 3`}>
@@ -965,29 +965,29 @@ function BibliotecaPage() {
                         <span
                           key={n}
                           className={`size-1.5 rounded-full ${
-                            n <= p.complexity ? "bg-plum" : "bg-plum/15"
+                            n <= p.complexity ? "bg-mahogany" : "bg-mahogany/15"
                           }`}
                         />
                       ))}
                     </div>
                   </div>
 
-                  <h3 className="font-serif text-xl font-bold text-plum leading-tight">
+                  <h3 className="font-serif text-xl font-bold text-mahogany leading-tight">
                     {p.title}
                   </h3>
                   <p className="mt-2 text-[13px] text-foreground/70 leading-relaxed">{p.goal}</p>
 
-                  <div className="mt-4 rounded-lg bg-lavender-soft/40 border border-lavender/20 p-3">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-lavender mb-1">
+                  <div className="mt-4 rounded-lg bg-forest-soft/40 border border-forest/20 p-3">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-forest mb-1">
                       Indicação
                     </p>
-                    <p className="text-[12px] text-plum/80">{p.indication}</p>
+                    <p className="text-[12px] text-mahogany/80">{p.indication}</p>
                   </div>
 
                   <ol className="mt-4 space-y-2">
                     {p.steps.map((s, i) => (
                       <li key={s} className="flex items-start gap-2.5 text-[13px] text-foreground/80">
-                        <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-plum text-[10px] font-bold text-white">
+                        <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-mahogany text-[10px] font-bold text-white">
                           {i + 1}
                         </span>
                         <span>{s}</span>
@@ -996,10 +996,10 @@ function BibliotecaPage() {
                   </ol>
 
                   <div className="mt-6 flex gap-2">
-                    <button className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-plum py-2.5 text-[11px] font-bold uppercase tracking-wider text-white hover:bg-lavender transition-colors">
+                    <button className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-mahogany py-2.5 text-[11px] font-bold uppercase tracking-wider text-white hover:bg-forest transition-colors">
                       <ScrollText className="size-3.5" /> Checklist
                     </button>
-                    <button className="inline-flex items-center justify-center rounded-lg border border-plum/15 px-3 text-plum hover:bg-plum hover:text-white transition-colors">
+                    <button className="inline-flex items-center justify-center rounded-lg border border-mahogany/15 px-3 text-mahogany hover:bg-mahogany hover:text-white transition-colors">
                       <Play className="size-3.5" />
                     </button>
                   </div>
@@ -1023,10 +1023,10 @@ function BibliotecaPage() {
                     key={e.id}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="rounded-[1.25rem] bg-white border border-plum/10 p-5 hover:shadow-lg transition-all"
+                    className="rounded-[1.25rem] bg-white border border-mahogany/10 p-5 hover:shadow-lg transition-all"
                   >
                     <div className="flex items-baseline justify-between gap-3">
-                      <h4 className="font-serif text-lg font-bold text-plum">{e.author}</h4>
+                      <h4 className="font-serif text-lg font-bold text-mahogany">{e.author}</h4>
                       {e.school && (
                         <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60">
                           {e.school}
@@ -1049,7 +1049,7 @@ function BibliotecaPage() {
                         {e.tags.slice(0, 4).map((t) => (
                           <span
                             key={t}
-                            className="rounded-md bg-cream border border-plum/5 px-2 py-0.5 text-[10px] font-semibold text-plum/70"
+                            className="rounded-md bg-cream border border-mahogany/5 px-2 py-0.5 text-[10px] font-semibold text-mahogany/70"
                           >
                             {t}
                           </span>
@@ -1095,14 +1095,14 @@ function SectionHeader({
   return (
     <div className="flex items-end justify-between gap-4">
       <div className="flex items-end gap-4 min-w-0">
-        <span className="font-serif text-4xl md:text-5xl italic font-bold text-lavender/25 leading-none select-none shrink-0">
+        <span className="font-serif text-4xl md:text-5xl italic font-bold text-forest/25 leading-none select-none shrink-0">
           {number}
         </span>
         <div className="min-w-0">
-          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-lavender">
+          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-forest">
             {eyebrow}
           </p>
-          <h2 className="font-serif text-2xl md:text-3xl font-bold text-plum leading-tight mt-1">
+          <h2 className="font-serif text-2xl md:text-3xl font-bold text-mahogany leading-tight mt-1">
             {title}
           </h2>
         </div>
@@ -1110,7 +1110,7 @@ function SectionHeader({
       {action && (
         <button
           onClick={action.onClick}
-          className="shrink-0 inline-flex items-center gap-1 text-[12px] font-semibold text-lavender hover:text-plum transition-colors"
+          className="shrink-0 inline-flex items-center gap-1 text-[12px] font-semibold text-forest hover:text-mahogany transition-colors"
         >
           {action.label} <ArrowRight className="size-3.5" />
         </button>
@@ -1132,13 +1132,13 @@ function GlossaryRow({
       onClick={onOpen}
       className="group w-full text-left flex items-start gap-4 p-5 hover:bg-cream/60 transition-colors"
     >
-      <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-lavender-soft/60 text-lavender group-hover:bg-lavender group-hover:text-white transition-colors">
+      <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-forest-soft/60 text-forest group-hover:bg-forest group-hover:text-white transition-colors">
         <Icon className="size-5" />
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
-          <h4 className="font-serif text-[16px] font-bold text-plum leading-tight">{item.term}</h4>
-          <ChevronRight className="size-4 text-muted-foreground/40 group-hover:text-lavender group-hover:translate-x-0.5 transition-all shrink-0" />
+          <h4 className="font-serif text-[16px] font-bold text-mahogany leading-tight">{item.term}</h4>
+          <ChevronRight className="size-4 text-muted-foreground/40 group-hover:text-forest group-hover:translate-x-0.5 transition-all shrink-0" />
         </div>
         <p className="mt-1 text-[12.5px] text-muted-foreground leading-snug line-clamp-1">
           {item.short}
@@ -1152,7 +1152,7 @@ function GlossaryDetail({ item }: { item: (typeof GLOSSARY)[number] }) {
   const Icon = item.icon;
   return (
     <div>
-      <div className="block-plum p-8 relative overflow-hidden">
+      <div className="block-mahogany p-8 relative overflow-hidden">
         <span className="section-number absolute -right-4 -bottom-8 opacity-[0.06] text-white select-none">
           {item.term.charAt(0)}
         </span>
@@ -1186,7 +1186,7 @@ function GlossaryDetail({ item }: { item: (typeof GLOSSARY)[number] }) {
             {item.authors.map((a) => (
               <span
                 key={a}
-                className="rounded-full bg-lavender-soft/60 px-3 py-1 text-[12px] font-semibold text-plum"
+                className="rounded-full bg-forest-soft/60 px-3 py-1 text-[12px] font-semibold text-mahogany"
               >
                 {a}
               </span>
@@ -1199,7 +1199,7 @@ function GlossaryDetail({ item }: { item: (typeof GLOSSARY)[number] }) {
             {item.related.map((r) => (
               <span
                 key={r}
-                className="inline-flex items-center gap-1 rounded-md border border-plum/15 bg-white px-2.5 py-1 text-[12px] font-medium text-plum hover:bg-plum hover:text-white transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1 rounded-md border border-mahogany/15 bg-white px-2.5 py-1 text-[12px] font-medium text-mahogany hover:bg-mahogany hover:text-white transition-colors cursor-pointer"
               >
                 <Link2 className="size-3" /> {r}
               </span>
@@ -1221,7 +1221,7 @@ function GlossaryDetail({ item }: { item: (typeof GLOSSARY)[number] }) {
           </ul>
         </DetailBlock>
 
-        <button className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-plum py-3 text-[12px] font-bold uppercase tracking-wider text-white hover:bg-lavender transition-colors">
+        <button className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-mahogany py-3 text-[12px] font-bold uppercase tracking-wider text-white hover:bg-forest transition-colors">
           <Wand2 className="size-4" /> Usar em sessão
         </button>
       </div>
@@ -1232,7 +1232,7 @@ function GlossaryDetail({ item }: { item: (typeof GLOSSARY)[number] }) {
 function DetailBlock({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-lavender mb-2">
+      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-forest mb-2">
         {label}
       </p>
       {children}
@@ -1250,11 +1250,11 @@ function QuoteActions({
   author: string;
 }) {
   const iconClass =
-    tone === "plum"
+    tone === "mahogany"
       ? "text-white/40 hover:text-gold"
       : tone === "gold"
-        ? "text-plum/40 hover:text-plum"
-        : "text-muted-foreground/40 hover:text-lavender";
+        ? "text-mahogany/40 hover:text-mahogany"
+        : "text-muted-foreground/40 hover:text-forest";
 
   const handleCopy = () => {
     navigator.clipboard.writeText(`"${text}" — ${author}`);
@@ -1284,7 +1284,7 @@ function ClinicalAiRail({ open, onToggle }: { open: boolean; onToggle: () => voi
     <aside className="relative shrink-0 hidden xl:block transition-all duration-300">
       <button
         onClick={onToggle}
-        className="absolute -left-3 top-16 z-50 flex size-7 items-center justify-center rounded-full border border-plum/15 bg-white text-plum shadow-md hover:scale-105 transition-transform"
+        className="absolute -left-3 top-16 z-50 flex size-7 items-center justify-center rounded-full border border-mahogany/15 bg-white text-mahogany shadow-md hover:scale-105 transition-transform"
       >
         {open ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}
       </button>
@@ -1300,11 +1300,11 @@ function ClinicalAiRail({ open, onToggle }: { open: boolean; onToggle: () => voi
             className="w-[320px] sticky top-6 space-y-5 overflow-hidden"
           >
             {/* AI card */}
-            <div className="relative overflow-hidden rounded-[1.25rem] bg-plum p-6 text-white shadow-xl">
-              <div className="absolute -right-6 -top-6 size-32 rounded-full bg-lavender/25 blur-3xl" />
+            <div className="relative overflow-hidden rounded-[1.25rem] bg-mahogany p-6 text-white shadow-xl">
+              <div className="absolute -right-6 -top-6 size-32 rounded-full bg-forest/25 blur-3xl" />
               <div className="relative">
                 <div className="flex items-center gap-2.5">
-                  <div className="flex size-9 items-center justify-center rounded-lg bg-lavender">
+                  <div className="flex size-9 items-center justify-center rounded-lg bg-forest">
                     <BrainCircuit className="size-5 text-white" />
                   </div>
                   <div>
@@ -1344,17 +1344,17 @@ function ClinicalAiRail({ open, onToggle }: { open: boolean; onToggle: () => voi
 
             {/* Curiosidade histórica */}
             <div className="rounded-[1.25rem] bg-gold/15 border border-gold/30 p-5">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-plum/70">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-mahogany/70">
                 Curiosidade histórica
               </p>
-              <p className="mt-2 text-[13px] leading-relaxed text-plum italic font-serif">
+              <p className="mt-2 text-[13px] leading-relaxed text-mahogany italic font-serif">
                 {TODAY.historyBite}
               </p>
             </div>
 
             {/* Mini timeline */}
-            <div className="rounded-[1.25rem] bg-white border border-plum/10 p-5 shadow-sm">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-lavender">
+            <div className="rounded-[1.25rem] bg-white border border-mahogany/10 p-5 shadow-sm">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-forest">
                 Linha do tempo
               </p>
               <ol className="mt-3 space-y-3">
@@ -1366,7 +1366,7 @@ function ClinicalAiRail({ open, onToggle }: { open: boolean; onToggle: () => voi
                   { y: "2005", e: "Yehuda · epigenética do trauma" },
                 ].map((t) => (
                   <li key={t.y} className="flex items-start gap-3 text-[12px]">
-                    <span className="mt-0.5 rounded-md bg-plum px-1.5 py-0.5 font-mono font-bold text-white text-[10px]">
+                    <span className="mt-0.5 rounded-md bg-mahogany px-1.5 py-0.5 font-mono font-bold text-white text-[10px]">
                       {t.y}
                     </span>
                     <span className="text-foreground/75 leading-snug">{t.e}</span>
@@ -1381,12 +1381,12 @@ function ClinicalAiRail({ open, onToggle }: { open: boolean; onToggle: () => voi
             initial={{ width: 0, opacity: 0 }}
             animate={{ width: 48, opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
-            className="w-12 sticky top-6 flex flex-col items-center gap-4 rounded-[1.25rem] bg-white border border-plum/10 py-6 shadow-sm cursor-pointer"
+            className="w-12 sticky top-6 flex flex-col items-center gap-4 rounded-[1.25rem] bg-white border border-mahogany/10 py-6 shadow-sm cursor-pointer"
             onClick={onToggle}
           >
-            <BrainCircuit className="size-5 text-plum animate-pulse" />
+            <BrainCircuit className="size-5 text-mahogany animate-pulse" />
             <p
-              className="text-[10px] font-bold uppercase tracking-widest text-plum/60"
+              className="text-[10px] font-bold uppercase tracking-widest text-mahogany/60"
               style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
             >
               IA Clínica
@@ -1417,7 +1417,7 @@ function AiList({ label, items }: { label: string; items: string[] }) {
         {items.map((it) => (
           <button
             key={it}
-            className="w-full text-left rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-[11.5px] text-white/85 hover:bg-lavender hover:border-lavender transition-colors flex items-center justify-between group"
+            className="w-full text-left rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-[11.5px] text-white/85 hover:bg-forest hover:border-forest transition-colors flex items-center justify-between group"
           >
             <span className="min-w-0 truncate pr-2">{it}</span>
             <ArrowRight className="size-3 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -1468,7 +1468,7 @@ function AuthorPortraitCard({
 }) {
   return (
     <button className="group text-left space-y-3">
-      <div className="relative aspect-[4/5] overflow-hidden rounded-[1.1rem] border border-plum/10 shadow-[0_10px_30px_-15px_oklch(0.25_0.10_295/0.35)] bg-gradient-to-br from-[#e8dfd0] via-[#d8ccb6] to-[#b89e7f] group-hover:shadow-[0_20px_50px_-15px_oklch(0.25_0.10_295/0.5)] transition-all duration-500">
+      <div className="relative aspect-[4/5] overflow-hidden rounded-[1.1rem] border border-mahogany/10 shadow-[0_10px_30px_-15px_oklch(0.25_0.10_295/0.35)] bg-gradient-to-br from-[#e8dfd0] via-[#d8ccb6] to-[#b89e7f] group-hover:shadow-[0_20px_50px_-15px_oklch(0.25_0.10_295/0.5)] transition-all duration-500">
         {/* Museum paper grain */}
         <div
           aria-hidden
@@ -1487,7 +1487,7 @@ function AuthorPortraitCard({
           fallback={
             <div className="absolute inset-0 flex items-center justify-center">
               <span
-                className="font-serif text-[68px] font-black italic text-plum/25 select-none"
+                className="font-serif text-[68px] font-black italic text-mahogany/25 select-none"
                 style={{ letterSpacing: "-0.04em" }}
               >
                 {author.initials}
@@ -1496,7 +1496,7 @@ function AuthorPortraitCard({
           }
         />
         {/* Editorial vignette */}
-        <div className="absolute inset-0 bg-gradient-to-t from-plum/70 via-plum/10 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-mahogany/70 via-mahogany/10 to-transparent" />
         {/* Bottom caption strip */}
         <div className="absolute inset-x-0 bottom-0 p-3">
           {author.years && (
@@ -1507,16 +1507,16 @@ function AuthorPortraitCard({
           <p className="mt-0.5 text-[10px] text-white/70">{author.nationality ?? ""}</p>
         </div>
         {featured && (
-          <span className="absolute top-2.5 right-2.5 rounded-full bg-gold px-2 py-0.5 text-[8px] font-black uppercase tracking-widest text-plum shadow-md">
+          <span className="absolute top-2.5 right-2.5 rounded-full bg-gold px-2 py-0.5 text-[8px] font-black uppercase tracking-widest text-mahogany shadow-md">
             Semana
           </span>
         )}
       </div>
       <div>
-        <h4 className="font-serif text-[15px] font-bold text-plum leading-tight">
+        <h4 className="font-serif text-[15px] font-bold text-mahogany leading-tight">
           {author.name}
         </h4>
-        <p className="mt-0.5 text-[10px] uppercase tracking-wider text-lavender font-semibold">
+        <p className="mt-0.5 text-[10px] uppercase tracking-wider text-forest font-semibold">
           {author.field}
         </p>
         <p className="mt-1 text-[10px] text-muted-foreground/60">
@@ -1567,10 +1567,10 @@ function BookCoverArt({ book }: { book: (typeof ESSENTIAL_BOOKS)[number] }) {
 
 function LeticiaAutoralSection() {
   const accentMap = {
-    plum: "bg-plum text-white",
-    lavender: "bg-lavender text-white",
-    gold: "bg-gold text-plum",
-    cream: "bg-cream text-plum border border-plum/10",
+    mahogany: "bg-mahogany text-white",
+    forest: "bg-forest text-white",
+    gold: "bg-gold text-mahogany",
+    cream: "bg-cream text-mahogany border border-mahogany/10",
   } as const;
 
   return (
@@ -1578,7 +1578,7 @@ function LeticiaAutoralSection() {
       {/* Ambient glow */}
       <div
         aria-hidden
-        className="absolute -inset-x-8 -top-8 -bottom-8 -z-10 rounded-[2rem] bg-gradient-to-br from-plum/[0.03] via-gold/[0.05] to-lavender/[0.06] blur-2xl"
+        className="absolute -inset-x-8 -top-8 -bottom-8 -z-10 rounded-[2rem] bg-gradient-to-br from-mahogany/[0.03] via-gold/[0.05] to-forest/[0.06] blur-2xl"
       />
 
       <SectionHeader
@@ -1591,7 +1591,7 @@ function LeticiaAutoralSection() {
       <div className="relative grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-8 items-stretch">
         {/* Portrait */}
         <div className="relative">
-          <div className="relative aspect-[4/5] overflow-hidden rounded-[1.5rem] shadow-[0_30px_80px_-30px_oklch(0.25_0.10_295/0.55)] ring-1 ring-plum/10">
+          <div className="relative aspect-[4/5] overflow-hidden rounded-[1.5rem] shadow-[0_30px_80px_-30px_oklch(0.25_0.10_295/0.55)] ring-1 ring-mahogany/10">
             <img
               src={LETICIA.photo}
               alt={LETICIA.name}
@@ -1607,7 +1607,7 @@ function LeticiaAutoralSection() {
                 backgroundSize: "3px 3px, 5px 5px",
               }}
             />
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-plum via-plum/70 to-transparent p-6">
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-mahogany via-mahogany/70 to-transparent p-6">
               <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-gold">
                 Fundadora · Instituto Liz
               </p>
@@ -1615,27 +1615,27 @@ function LeticiaAutoralSection() {
                 Letícia Kuchockowolec Baccin
               </h3>
             </div>
-            <span className="absolute top-4 left-4 inline-flex items-center gap-1.5 rounded-full bg-white/90 backdrop-blur px-3 py-1 text-[9px] font-black uppercase tracking-widest text-plum shadow-md">
+            <span className="absolute top-4 left-4 inline-flex items-center gap-1.5 rounded-full bg-white/90 backdrop-blur px-3 py-1 text-[9px] font-black uppercase tracking-widest text-mahogany shadow-md">
               <Sparkles className="size-3 text-gold" /> Coleção autoral
             </span>
           </div>
         </div>
 
         {/* Bio + counters */}
-        <div className="flex flex-col justify-between rounded-[1.5rem] bg-white/70 backdrop-blur-sm border border-plum/10 p-8 shadow-sm">
+        <div className="flex flex-col justify-between rounded-[1.5rem] bg-white/70 backdrop-blur-sm border border-mahogany/10 p-8 shadow-sm">
           <div className="space-y-5">
-            <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-lavender">
+            <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-forest">
               Biblioteca Autoral
             </p>
-            <h3 className="font-serif text-3xl md:text-4xl font-bold text-plum leading-[1.05]">
+            <h3 className="font-serif text-3xl md:text-4xl font-bold text-mahogany leading-[1.05]">
               Toda a produção científica, clínica e didática da{" "}
-              <span className="italic text-lavender">fundadora</span> da Academia.
+              <span className="italic text-forest">fundadora</span> da Academia.
             </h3>
             <p className="text-[15px] leading-relaxed text-foreground/75 max-w-xl">
               {LETICIA.bio}
             </p>
           </div>
-          <div className="mt-8 grid grid-cols-3 gap-4 border-t border-plum/10 pt-6">
+          <div className="mt-8 grid grid-cols-3 gap-4 border-t border-mahogany/10 pt-6">
             {[
               { n: LETICIA_WORKS.length, l: "Obras" },
               {
@@ -1648,8 +1648,8 @@ function LeticiaAutoralSection() {
               },
             ].map((s) => (
               <div key={s.l}>
-                <p className="font-serif text-3xl font-bold text-plum">{s.n}</p>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-lavender/80 mt-0.5">
+                <p className="font-serif text-3xl font-bold text-mahogany">{s.n}</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-forest/80 mt-0.5">
                   {s.l}
                 </p>
               </div>
@@ -1663,7 +1663,7 @@ function LeticiaAutoralSection() {
         {LETICIA_WORKS.map((w) => (
           <article
             key={w.title}
-            className="group relative overflow-hidden rounded-[1.25rem] bg-white border border-plum/10 shadow-sm hover:shadow-2xl hover:shadow-plum/10 hover:-translate-y-1 transition-all duration-500"
+            className="group relative overflow-hidden rounded-[1.25rem] bg-white border border-mahogany/10 shadow-sm hover:shadow-2xl hover:shadow-mahogany/10 hover:-translate-y-1 transition-all duration-500"
           >
             {/* Cover panel */}
             <div
@@ -1702,12 +1702,12 @@ function LeticiaAutoralSection() {
               <span
                 className={`absolute top-3 left-3 rounded-full px-2 py-0.5 text-[8px] font-black uppercase tracking-widest shadow ${
                   w.badge === "Novo"
-                    ? "bg-gold text-plum"
+                    ? "bg-gold text-mahogany"
                     : w.badge === "Exclusivo"
-                      ? "bg-plum text-gold border border-gold/40"
+                      ? "bg-mahogany text-gold border border-gold/40"
                       : w.badge === "Mais estudado"
-                        ? "bg-white text-plum"
-                        : "bg-lavender text-white"
+                        ? "bg-white text-mahogany"
+                        : "bg-forest text-white"
                 }`}
               >
                 {w.badge}
@@ -1721,16 +1721,16 @@ function LeticiaAutoralSection() {
               </p>
               <div className="flex items-center justify-between text-[11px] text-muted-foreground border-t border-border/40 pt-3">
                 <span>
-                  <strong className="text-plum">{w.concepts}</strong> conceitos
+                  <strong className="text-mahogany">{w.concepts}</strong> conceitos
                 </span>
                 <span>
-                  <strong className="text-plum">{w.protocols}</strong> protocolos
+                  <strong className="text-mahogany">{w.protocols}</strong> protocolos
                 </span>
                 <span>
-                  <strong className="text-plum">{w.citations}</strong> citações
+                  <strong className="text-mahogany">{w.citations}</strong> citações
                 </span>
               </div>
-              <button className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-plum py-2 text-[11px] font-bold uppercase tracking-wider text-white hover:bg-lavender transition-colors">
+              <button className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-mahogany py-2 text-[11px] font-bold uppercase tracking-wider text-white hover:bg-forest transition-colors">
                 <Play className="size-3 fill-current" /> Explorar
               </button>
             </div>

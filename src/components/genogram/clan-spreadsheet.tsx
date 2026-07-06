@@ -487,7 +487,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
             size="sm"
             onClick={() => fileInputRef.current?.click()}
             disabled={isImporting}
-            className="font-bold border-plum/20 text-plum hover:bg-plum/5"
+            className="font-bold border-mahogany/20 text-mahogany hover:bg-mahogany/5"
           >
             {isImporting ? (
               <Loader2 className="size-4 mr-2 animate-spin" />
@@ -543,7 +543,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
           >
             <Download className="size-4 mr-2" /> Exportar CSV
           </Button>
-          <Button size="sm" onClick={() => addPerson.mutate(undefined)} variant="lavender">
+          <Button size="sm" onClick={() => addPerson.mutate(undefined)} variant="forest">
             <Plus className="size-4 mr-2" /> Nova pessoa
           </Button>
         </div>
@@ -559,7 +559,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
             <img src="/data_import.png" alt="" className="w-[300px] h-[300px] object-cover" />
           </div>
           <div className="relative z-10 flex flex-col items-center">
-            <Table2 className="mx-auto size-12 text-lavender opacity-80 mb-4" />
+            <Table2 className="mx-auto size-12 text-forest opacity-80 mb-4" />
             <h3 className="font-serif text-3xl font-bold text-primary">Nenhum dado mapeado</h3>
             <p className="mx-auto mt-3 max-w-md text-[14px] text-muted-foreground leading-relaxed">
               Você pode importar uma planilha CSV com os dados da família, aplicar o modelo de 4
@@ -568,7 +568,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
             <div className="mt-8 flex flex-wrap justify-center gap-4">
               <Button
                 className="font-bold"
-                variant="lavender"
+                variant="forest"
                 onClick={() => fileInputRef.current?.click()}
               >
                 <Upload className="size-4 mr-2" /> Importar CSV/XLSX
@@ -593,7 +593,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
 
           <div className="overflow-x-auto rounded-sm border-2 border-border/80 bg-white shadow-sm">
             <table className="w-full min-w-[1500px] border-collapse text-[13px]">
-              <thead className="bg-lavender-soft/40 text-[10px] font-bold uppercase tracking-[0.15em] text-plum border-b-2 border-border/80">
+              <thead className="bg-forest-soft/40 text-[10px] font-bold uppercase tracking-[0.15em] text-mahogany border-b-2 border-border/80">
                 <tr>
                   <Th w="w-8">#</Th>
                   <Th w="min-w-[180px]">Nome</Th>
@@ -614,7 +614,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
                 {rows.map((r, i) => (
                   <tr
                     key={r.id}
-                    className="border-b border-border/40 hover:bg-lavender-soft/20 transition-colors"
+                    className="border-b border-border/40 hover:bg-forest-soft/20 transition-colors"
                   >
                     <td className="px-3 text-center text-[11px] font-mono font-medium text-muted-foreground/60">
                       {i + 1}
@@ -861,7 +861,7 @@ function CellInput(props: {
       onChange={(e) => props.onChange(e.target.value)}
       placeholder={props.placeholder}
       list={props.list}
-      className={`w-full h-8 rounded-sm border-0 bg-transparent px-2 text-[13px] font-medium text-foreground outline-none ring-1 ring-transparent transition-all focus:bg-lavender-soft/30 focus:ring-lavender placeholder:text-muted-foreground/40 ${props.className ?? ""}`}
+      className={`w-full h-8 rounded-sm border-0 bg-transparent px-2 text-[13px] font-medium text-foreground outline-none ring-1 ring-transparent transition-all focus:bg-forest-soft/30 focus:ring-forest placeholder:text-muted-foreground/40 ${props.className ?? ""}`}
     />
   );
 }

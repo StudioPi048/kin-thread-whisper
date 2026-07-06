@@ -129,7 +129,7 @@ function AuthenticatedLayout() {
     <div className="flex min-h-screen bg-background">
       {/* ── SIDEBAR ────────────────────────────────────── */}
       <aside
-        className={`hidden shrink-0 flex-col bg-plum text-white transition-all duration-300 md:flex ${isCollapsed ? "w-[72px]" : "w-72"}`}
+        className={`hidden shrink-0 flex-col bg-mahogany text-white transition-all duration-300 md:flex ${isCollapsed ? "w-[72px]" : "w-72"}`}
       >
         {/* Logo — borda inferior dourada */}
         <div className="flex items-center justify-between border-b-2 border-gold/30 px-4 py-6 h-[90px] shrink-0">
@@ -159,18 +159,18 @@ function AuthenticatedLayout() {
 
         {/* Busca Rápida */}
         <div className={`px-6 pt-6 pb-2 ${isCollapsed ? "opacity-0 hidden" : "opacity-100"}`}>
-          <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-white/40 mb-3">
+          <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-sidebar-foreground/40 mb-3">
             Menu Principal
           </p>
           <button
             onClick={() => setIsSearchOpen(true)}
-            className="flex items-center justify-between w-full rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition-colors px-3 py-2 text-[13px] text-white/50 font-medium cursor-pointer"
+            className="flex items-center justify-between w-full rounded-lg border border-sidebar-foreground/10 bg-sidebar-foreground/5 hover:bg-sidebar-foreground/10 transition-colors px-3 py-2 text-[13px] text-sidebar-foreground/50 font-medium cursor-pointer"
           >
             <span className="flex items-center gap-2">
               <Search className="size-4" />
               <span>Busca rápida...</span>
             </span>
-            <kbd className="hidden sm:inline-block rounded bg-white/10 border border-white/10 px-1.5 py-0.5 text-[10px] font-mono">
+            <kbd className="hidden sm:inline-block rounded bg-sidebar-foreground/10 border border-sidebar-foreground/10 px-1.5 py-0.5 text-[10px] font-mono">
               ⌘K
             </kbd>
           </button>
@@ -203,14 +203,14 @@ function AuthenticatedLayout() {
                 className={
                   `group relative flex items-center gap-4 py-3.5 text-[14px] font-semibold transition-all duration-150 overflow-hidden rounded-md mx-2 ${isCollapsed ? "px-0 justify-center" : "px-4"} ` +
                   (active
-                    ? "text-white bg-white/10 before:absolute before:-left-2 before:top-2 before:bottom-2 before:w-1 before:rounded-r-full before:bg-gold"
-                    : "text-white/60 hover:text-white hover:bg-white/5")
+                    ? "text-sidebar-primary-foreground bg-sidebar-primary before:absolute before:-left-2 before:top-2 before:bottom-2 before:w-1 before:rounded-r-full before:bg-sidebar-ring"
+                    : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-foreground/5")
                 }
               >
                 <item.icon
                   className={
                     "size-5 shrink-0 transition-colors " +
-                    (active ? "text-gold" : "text-white/45 group-hover:text-white/80")
+                    (active ? "text-sidebar-ring" : "text-sidebar-foreground/45 group-hover:text-sidebar-foreground/80")
                   }
                 />
                 {!isCollapsed && <span>{item.label}</span>}
@@ -224,7 +224,7 @@ function AuthenticatedLayout() {
           <div
             className={`flex items-center gap-3 rounded-md bg-sidebar-accent/60 ${isCollapsed ? "justify-center p-2" : "p-3"}`}
           >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-lavender text-[12px] font-bold text-white">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-forest text-[12px] font-bold text-white">
               {initials || "?"}
             </div>
             {!isCollapsed && (

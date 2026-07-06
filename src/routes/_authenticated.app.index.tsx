@@ -71,19 +71,19 @@ function AppHome() {
         <div className="container-liz relative z-10 space-y-10">
           <div className="max-w-3xl space-y-2 border-b-2 border-archive-old pb-6">
             <h1 className="font-serif text-5xl font-bold tracking-tight text-ink leading-tight">
-              Bom dia, <span className="italic text-plum-mid">{firstName}</span>.
+              Bom dia, <span className="italic text-mahogany-mid">{firstName}</span>.
             </h1>
             <p className="text-lg text-ink/70 font-medium font-sans">
-              Você tem <strong className="text-plum-mid">3 arquivos abertos</strong> sobre a mesa hoje.
+              Você tem <strong className="text-mahogany-mid">3 arquivos abertos</strong> sobre a mesa hoje.
             </p>
           </div>
 
           {/* Dossiê em Destaque (Missão do Dia) */}
-          <div className="bg-archive-doc border border-[#E6DDD0] rounded-sm p-6 md:p-8 flex flex-col xl:flex-row gap-8 items-start xl:items-center shadow-[0_4px_20px_rgba(0,0,0,0.03),0_1px_3px_rgba(0,0,0,0.02)] relative before:absolute before:top-0 before:left-0 before:w-1 before:h-full before:bg-plum-mid before:rounded-l-sm">
+          <div className="bg-archive-doc border border-[#E6DDD0] rounded-sm p-6 md:p-8 flex flex-col xl:flex-row gap-8 items-start xl:items-center shadow-[0_4px_20px_rgba(0,0,0,0.03),0_1px_3px_rgba(0,0,0,0.02)] relative before:absolute before:top-0 before:left-0 before:w-1 before:h-full before:bg-mahogany-mid before:rounded-l-sm">
             
             <div className="flex-1 space-y-5">
               <div className="flex items-center gap-3">
-                <span className="flex items-center justify-center border border-plum-mid text-plum-mid text-[10px] font-bold uppercase tracking-widest px-3 py-1 bg-archive-old">
+                <span className="flex items-center justify-center border border-mahogany-mid text-mahogany-mid text-[10px] font-bold uppercase tracking-widest px-3 py-1 bg-archive-old">
                   Ficha de Investigação
                 </span>
                 <span className="text-ink/50 text-sm font-sans italic flex items-center gap-1">
@@ -96,7 +96,7 @@ function AppHome() {
               </h2>
               
               <div className="bg-archive-old/50 rounded-sm p-5 border border-[#E6DDD0] text-sm md:text-base text-ink/80 font-serif leading-relaxed italic">
-                <strong className="text-plum font-bold block mb-1 font-sans not-italic text-xs uppercase tracking-widest">Anotação da IA Clínica:</strong>
+                <strong className="text-mahogany font-bold block mb-1 font-sans not-italic text-xs uppercase tracking-widest">Anotação da IA Clínica:</strong>
                 "Investigar a relação entre a data de nascimento e o falecimento do avô paterno. Há indícios de lealdades invisíveis e repetição no Projeto Sentido."
               </div>
             </div>
@@ -122,14 +122,14 @@ function AppHome() {
                {lastActiveClient ? (
                   <Link to="/app/clientes/$clientId" params={{ clientId: lastActiveClient.id }} className="w-full">
                     <Button variant="outline" className="w-full xl:w-auto h-16 px-10 text-lg font-serif border-[#E6DDD0] hover:bg-archive-old text-ink group rounded-sm shadow-sm">
-                      <FolderOpen className="size-5 mr-3 text-plum-mid group-hover:scale-110 transition-transform" />
+                      <FolderOpen className="size-5 mr-3 text-mahogany-mid group-hover:scale-110 transition-transform" />
                       Abrir Dossiê
                     </Button>
                   </Link>
                ) : (
                   <Link to="/app/clientes" className="w-full">
                     <Button variant="outline" className="w-full xl:w-auto h-16 px-10 text-lg font-serif border-[#E6DDD0] hover:bg-archive-old text-ink group rounded-sm shadow-sm">
-                      <FolderOpen className="size-5 mr-3 text-plum-mid group-hover:scale-110 transition-transform" />
+                      <FolderOpen className="size-5 mr-3 text-mahogany-mid group-hover:scale-110 transition-transform" />
                       Ver Arquivo Completo
                     </Button>
                   </Link>
@@ -152,7 +152,7 @@ function AppHome() {
               <RadarCard 
                 title="Padrão de Exclusão" 
                 desc="Detectado em 3 linhagens ativas." 
-                icon={<FolderOpen className="size-5 text-plum-mid" />} 
+                icon={<FolderOpen className="size-5 text-mahogany-mid" />} 
               />
               <RadarCard 
                 title="Repetição de Nomes" 
@@ -259,13 +259,13 @@ function RadarCard({ title, desc, icon }: { title: string, desc: string, icon: R
 function FeedItem({ time, action, target, icon }: { time: string, action: string, target: string, icon: React.ReactNode }) {
   return (
     <div className="flex items-start gap-4 group">
-      <div className="mt-1 bg-archive-doc border-2 border-archive-old p-1.5 z-10 group-hover:border-plum-mid transition-colors">
+      <div className="mt-1 bg-archive-doc border-2 border-archive-old p-1.5 z-10 group-hover:border-mahogany-mid transition-colors">
         {icon}
       </div>
       <div className="flex-1 bg-transparent pt-1.5">
         <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-2">
           <span className="text-sm font-sans font-medium text-ink/80">{action}</span>
-          <span className="text-sm font-serif font-bold text-plum-mid underline decoration-plum-mid/30 underline-offset-2">{target}</span>
+          <span className="text-sm font-serif font-bold text-mahogany-mid underline decoration-mahogany-mid/30 underline-offset-2">{target}</span>
         </div>
         <span className="text-xs font-sans text-ink/40 mt-1 block">{time}</span>
       </div>
@@ -295,15 +295,15 @@ function AgendaVisualItem({ time, name, state }: { time: string, name: string, s
   return (
     <div className={`flex items-start gap-4 relative z-10 ${isPast ? 'opacity-50' : 'opacity-100'}`}>
       <div className="flex flex-col items-center mt-1">
-        <div className={`w-3 h-3 border-2 ${isCurrent ? 'border-plum-mid bg-plum-mid' : 'border-archive-old bg-archive-doc'} rounded-none rotate-45`}></div>
+        <div className={`w-3 h-3 border-2 ${isCurrent ? 'border-mahogany-mid bg-mahogany-mid' : 'border-archive-old bg-archive-doc'} rounded-none rotate-45`}></div>
       </div>
       <div className="flex-1 pb-4 border-b border-[#E6DDD0] border-dashed last:border-0 last:pb-0">
         <div className="flex justify-between items-baseline">
-          <span className={`text-lg font-serif font-bold ${isCurrent ? 'text-plum-mid' : 'text-ink'}`}>{name}</span>
+          <span className={`text-lg font-serif font-bold ${isCurrent ? 'text-mahogany-mid' : 'text-ink'}`}>{name}</span>
           <span className="text-sm font-sans text-ink/50">{time}</span>
         </div>
         {isCurrent && (
-          <span className="text-[10px] uppercase font-sans tracking-widest text-plum-mid font-bold mt-1 block">Em andamento</span>
+          <span className="text-[10px] uppercase font-sans tracking-widest text-mahogany-mid font-bold mt-1 block">Em andamento</span>
         )}
       </div>
     </div>

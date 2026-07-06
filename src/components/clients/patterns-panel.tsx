@@ -82,9 +82,9 @@ export function PatternsPanel({ clientId }: Props) {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-sm border border-dashed border-border bg-lavender-soft/40 p-16 text-center"
+          className="rounded-sm border border-dashed border-border bg-forest-soft/40 p-16 text-center"
         >
-          <Sparkles className="mx-auto size-10 text-lavender opacity-60" />
+          <Sparkles className="mx-auto size-10 text-forest opacity-60" />
           <p className="mt-4 font-serif text-2xl font-bold text-primary">
             Nenhum padrão detectado ainda
           </p>
@@ -105,8 +105,8 @@ export function PatternsPanel({ clientId }: Props) {
         >
           {patterns.map((p) => {
             const isHigh = p.severity === "critical";
-            const borderAccent = isHigh ? "accent-bar-plum" : "accent-bar-lavender";
-            const badgeClass = isHigh ? "bg-plum text-white" : "bg-lavender text-white";
+            const borderAccent = isHigh ? "accent-bar-mahogany" : "accent-bar-forest";
+            const badgeClass = isHigh ? "bg-mahogany text-white" : "bg-forest text-white";
 
             return (
               <motion.li

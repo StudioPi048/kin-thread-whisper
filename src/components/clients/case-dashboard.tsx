@@ -56,14 +56,14 @@ export function CaseDashboard({ clientId }: Props) {
   const withCause = persons.filter((p) => p.cause_of_death && p.cause_of_death.trim()).length;
 
   const pieData = [
-    { name: "Mulheres", value: female, color: "oklch(0.65 0.20 295)" }, // Lavender
-    { name: "Homens", value: male, color: "oklch(0.25 0.10 295)" }, // Plum mid
+    { name: "Mulheres", value: female, color: "oklch(0.65 0.20 295)" }, // Forest
+    { name: "Homens", value: male, color: "oklch(0.25 0.10 295)" }, // Mahogany mid
   ];
   if (unknown > 0)
     pieData.push({ name: "Outros/S/N", value: unknown, color: "oklch(0.95 0.03 295)" });
 
   return (
-    <div className="rounded-[1rem] glass-card shadow-sm accent-bar-lavender overflow-hidden hover-lift">
+    <div className="rounded-[1rem] glass-card shadow-sm accent-bar-forest overflow-hidden hover-lift">
       <div className="border-b border-border/50 px-4 py-3 flex items-center justify-between">
         <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
           Estatísticas do Clã
@@ -101,7 +101,7 @@ export function CaseDashboard({ clientId }: Props) {
                     fontFamily: "var(--font-sans)",
                     fontWeight: 500,
                   }}
-                  itemStyle={{ color: "var(--color-plum)" }}
+                  itemStyle={{ color: "var(--color-mahogany)" }}
                 />
               </PieChart>
             </ResponsiveContainer>

@@ -217,30 +217,30 @@ export function PersonFormDialog({
         className="flex flex-col gap-0 p-0 sm:max-w-xl w-full border-l-0 shadow-2xl rounded-l-3xl overflow-hidden"
       >
         {/* Header Magazine Style */}
-        <div className="bg-lavender-soft px-8 py-10 relative shrink-0 border-b border-plum/10">
-          <span className="section-number absolute right-4 top-4 opacity-5 text-plum">
+        <div className="bg-forest-soft px-8 py-10 relative shrink-0 border-b border-mahogany/10">
+          <span className="section-number absolute right-4 top-4 opacity-5 text-mahogany">
             {initials}
           </span>
           <SheetHeader className="relative z-10">
             <div className="flex items-center gap-4 mb-4">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-2xl font-serif font-bold text-plum shadow-sm">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-2xl font-serif font-bold text-mahogany shadow-sm">
                 {initials}
               </div>
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-plum/50">
+                <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-mahogany/50">
                   Dossiê
                 </p>
-                <SheetTitle className="font-serif text-3xl font-bold text-plum">
+                <SheetTitle className="font-serif text-3xl font-bold text-mahogany">
                   {editing ? "Editar Dossiê" : "Nova Adição"}
                 </SheetTitle>
               </div>
             </div>
             {!v.is_proband && v.relationship_to_proband && (
-              <span className="mt-2 inline-block rounded-full bg-plum/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-plum">
+              <span className="mt-2 inline-block rounded-full bg-mahogany/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-mahogany">
                 Contexto: {v.relationship_to_proband}
               </span>
             )}
-            <SheetDescription className="mt-2 font-sans text-[13px] text-plum/70">
+            <SheetDescription className="mt-2 font-sans text-[13px] text-mahogany/70">
               Preencha os dados do {editing ? "dossiê selecionado" : "novo integrante da árvore"}.
             </SheetDescription>
           </SheetHeader>
@@ -288,7 +288,7 @@ export function PersonFormDialog({
                     <SelectContent>
                       {genogramGenderOptions.map((g) => (
                         <SelectItem key={g.value} value={g.value}>
-                          <span className="mr-2 font-serif font-bold text-lavender">
+                          <span className="mr-2 font-serif font-bold text-forest">
                             {g.symbol}
                           </span>{" "}
                           {g.label}
@@ -340,7 +340,7 @@ export function PersonFormDialog({
                   />
                   Já faleceu
                 </label>
-                <label className="flex items-center gap-2 text-[14px] font-bold text-lavender cursor-pointer">
+                <label className="flex items-center gap-2 text-[14px] font-bold text-forest cursor-pointer">
                   <Checkbox
                     checked={v.is_proband}
                     onCheckedChange={(c) => set("is_proband", c === true)}
@@ -381,7 +381,7 @@ export function PersonFormDialog({
                     }}
                     placeholder="Diabetes, luto, depressão... (Enter para adicionar)"
                   />
-                  <Button type="button" variant="lavender" size="icon" onClick={addCondition}>
+                  <Button type="button" variant="forest" size="icon" onClick={addCondition}>
                     <Plus className="size-4" />
                   </Button>
                 </div>
@@ -484,7 +484,7 @@ export function PersonFormDialog({
             type="submit"
             form="person-form"
             disabled={mutation.isPending}
-            variant="lavender"
+            variant="forest"
             size="lg"
           >
             {mutation.isPending ? "Salvando..." : editing ? "Salvar dossiê" : "Adicionar à árvore"}

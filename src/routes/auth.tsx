@@ -103,7 +103,7 @@ function AuthPage() {
   return (
     <div className="grid min-h-screen md:grid-cols-[1fr_1fr]">
       {/* ── PAINEL ESQUERDO — Manifesto editorial ───────── */}
-      <aside className="block-plum hidden md:flex md:flex-col md:justify-between md:p-12">
+      <aside className="block-mahogany hidden md:flex md:flex-col md:justify-between md:p-12">
         <Link to="/" className="flex items-center gap-3">
           <LizLogoLockup variant="light" />
         </Link>
@@ -112,12 +112,12 @@ function AuthPage() {
           {/* Número decorativo */}
           <span
             aria-hidden
-            className="mb-4 block font-serif text-9xl font-bold leading-none text-lavender/10 select-none"
+            className="mb-4 block font-serif text-9xl font-bold leading-none text-forest/10 select-none"
           >
             Liz
           </span>
 
-          <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-lavender-mid mb-6">
+          <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-forest-mid mb-6">
             Beta fechado
           </p>
 
@@ -135,7 +135,7 @@ function AuthPage() {
               "Dados criptografados. LGPD. Sigilo profissional.",
             ].map((f) => (
               <p key={f} className="flex items-start gap-2 text-[14px] text-white/60">
-                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-lavender" />
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-forest" />
                 {f}
               </p>
             ))}
@@ -156,7 +156,7 @@ function AuthPage() {
 
           {/* Header */}
           <div className="mb-8">
-            <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-lavender">
+            <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-forest">
               {mode === "signin" ? "Acesso à plataforma" : "Beta fechado"}
             </p>
             <h1 className="mt-3 font-serif text-4xl font-bold text-primary">
@@ -279,7 +279,7 @@ function AuthPage() {
                 Não tem conta?{" "}
                 <button
                   type="button"
-                  className="font-bold text-lavender hover:text-plum transition-colors underline-offset-4 hover:underline"
+                  className="font-bold text-forest hover:text-mahogany transition-colors underline-offset-4 hover:underline"
                   onClick={() => setMode("signup")}
                 >
                   Solicitar acesso
@@ -290,7 +290,7 @@ function AuthPage() {
                 Já tem conta?{" "}
                 <button
                   type="button"
-                  className="font-bold text-lavender hover:text-plum transition-colors underline-offset-4 hover:underline"
+                  className="font-bold text-forest hover:text-mahogany transition-colors underline-offset-4 hover:underline"
                   onClick={() => setMode("signin")}
                 >
                   Entrar

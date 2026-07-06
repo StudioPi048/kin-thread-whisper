@@ -46,13 +46,13 @@
   --color-input:         var(--input);
   --color-ring:          var(--ring);
 
-  /* Tokens de marca */
-  --color-plum:          var(--plum);
-  --color-plum-mid:      var(--plum-mid);
-  --color-plum-soft:     var(--plum-soft);
-  --color-lavender:      var(--lavender);
-  --color-lavender-mid:  var(--lavender-mid);
-  --color-lavender-soft: var(--lavender-soft);
+  /* Tokens de marca (Arquivo Vivo) */
+  --color-mahogany:      var(--mahogany);
+  --color-mahogany-mid:  var(--mahogany-mid);
+  --color-mahogany-soft: var(--mahogany-soft);
+  --color-forest:        var(--forest);
+  --color-forest-mid:    var(--forest-mid);
+  --color-forest-soft:   var(--forest-soft);
   --color-gold:          var(--gold);
   --color-gold-soft:     var(--gold-soft);
   --color-cream:         var(--cream);
@@ -75,19 +75,19 @@
 :root {
   --radius: 1rem; /* Bordas arredondadas e acolhedoras */
 
-  /* ─── AMEIXA PROFUNDA ─────────────────────────── */
-  --plum:        oklch(0.18 0.12 295);
-  --plum-mid:    oklch(0.25 0.10 295);
-  --plum-soft:   oklch(0.35 0.09 295);
+  /* ─── MARROM / COURO (MAHOGANY) ──────────────── */
+  --mahogany:        #3B2F2F;
+  --mahogany-mid:    #4A3B3B;
+  --mahogany-soft:   #5C4D4D;
 
-  /* ─── LAVANDA VIBRANTE ───────────────────────── */
-  --lavender:      oklch(0.65 0.20 295);
-  --lavender-mid:  oklch(0.78 0.14 295);
-  --lavender-soft: oklch(0.94 0.05 295);
+  /* ─── VERDE MUSGO (FOREST) ───────────────────── */
+  --forest:          #2F3E2F;
+  --forest-mid:      #3B4A3B;
+  --forest-soft:     #4D5C4D;
 
-  /* ─── DOURADO ────────────────────────────────── */
-  --gold:      oklch(0.73 0.14 78);
-  --gold-soft: oklch(0.95 0.04 78);
+  /* ─── OURO ENVELHECIDO ───────────────────────── */
+  --gold:      #C8A951;
+  --gold-soft: #D4B96A;
 
   /* ─── PAPÉIS HISTÓRICOS (O ARQUIVO VIVO) ─────── */
   --archive:     #F8F4EE; /* Fundo global */
@@ -105,17 +105,17 @@
   --popover:            oklch(1.00 0.0 0);
   --popover-foreground: oklch(0.14 0.06 295);
 
-  --primary:            oklch(0.18 0.12 295);
-  --primary-foreground: oklch(0.985 0.005 80);
+  --primary:            var(--mahogany);
+  --primary-foreground: var(--archive);
 
-  --secondary:            oklch(0.94 0.05 295);
-  --secondary-foreground: oklch(0.25 0.10 295);
+  --secondary:            var(--forest);
+  --secondary-foreground: var(--archive);
 
-  --muted:            oklch(0.95 0.03 295);
-  --muted-foreground: oklch(0.50 0.07 295);
+  --muted:            var(--archive-old);
+  --muted-foreground: var(--mahogany-soft);
 
-  --accent:            oklch(0.91 0.05 295);
-  --accent-foreground: oklch(0.22 0.10 295);
+  --accent:            var(--archive-doc);
+  --accent-foreground: var(--mahogany);
 
   --destructive:            oklch(0.55 0.19 25);
   --destructive-foreground: oklch(0.98 0.01 25);
@@ -124,15 +124,15 @@
   --input:  oklch(0.93 0.03 295);
   --ring:   oklch(0.65 0.20 295);
 
-  /* Sidebar: ameixa profunda */
-  --sidebar:                    oklch(0.18 0.12 295);
-  --sidebar-foreground:         oklch(0.93 0.04 295);
-  --sidebar-primary:            oklch(0.65 0.20 295);
-  --sidebar-primary-foreground: oklch(0.14 0.06 295);
-  --sidebar-accent:             oklch(0.25 0.10 295);
-  --sidebar-accent-foreground:  oklch(0.93 0.04 295);
-  --sidebar-border:             oklch(0.29 0.09 295);
-  --sidebar-ring:               oklch(0.65 0.20 295);
+  /* Sidebar: Couro / Fichário escuro */
+  --sidebar:                    var(--mahogany);
+  --sidebar-foreground:         var(--archive);
+  --sidebar-primary:            var(--forest);
+  --sidebar-primary-foreground: var(--archive);
+  --sidebar-accent:             var(--mahogany-mid);
+  --sidebar-accent-foreground:  var(--archive-doc);
+  --sidebar-border:             var(--mahogany-soft);
+  --sidebar-ring:               var(--gold);
 }
 
 .dark {
@@ -151,24 +151,24 @@
   --popover:            oklch(0.16 0.06 295);
   --popover-foreground: oklch(0.94 0.03 295);
 
-  --primary:            oklch(0.65 0.20 295);
-  --primary-foreground: oklch(0.11 0.05 295);
+  --primary:            var(--forest);
+  --primary-foreground: var(--archive);
 
-  --secondary:            oklch(0.22 0.08 295);
-  --secondary-foreground: oklch(0.94 0.03 295);
+  --secondary:            var(--mahogany);
+  --secondary-foreground: var(--archive);
 
-  --muted:            oklch(0.20 0.06 295);
-  --muted-foreground: oklch(0.64 0.08 295);
+  --muted:            var(--archive-old);
+  --muted-foreground: var(--forest-soft);
 
-  --accent:            oklch(0.24 0.08 295);
-  --accent-foreground: oklch(0.94 0.03 295);
+  --accent:            var(--mahogany-mid);
+  --accent-foreground: var(--archive-doc);
 
-  --gold:      oklch(0.76 0.14 78);
-  --gold-soft: oklch(0.28 0.06 78);
+  --gold:      #C8A951;
+  --gold-soft: #D4B96A;
 
-  --lavender:      oklch(0.70 0.18 295);
-  --lavender-mid:  oklch(0.82 0.12 295);
-  --lavender-soft: oklch(0.22 0.07 295);
+  --mahogany:        #3B2F2F;
+  --mahogany-mid:    #4A3B3B;
+  --mahogany-soft:   #5C4D4D;
 
   --destructive:            oklch(0.58 0.18 22);
   --destructive-foreground: oklch(0.97 0.01 22);
@@ -177,14 +177,14 @@
   --input:  oklch(0.24 0.07 295);
   --ring:   oklch(0.65 0.20 295);
 
-  --sidebar:                    oklch(0.11 0.05 295);
-  --sidebar-foreground:         oklch(0.92 0.04 295);
-  --sidebar-primary:            oklch(0.70 0.18 295);
-  --sidebar-primary-foreground: oklch(0.11 0.05 295);
-  --sidebar-accent:             oklch(0.20 0.07 295);
-  --sidebar-accent-foreground:  oklch(0.94 0.03 295);
-  --sidebar-border:             oklch(0.22 0.07 295);
-  --sidebar-ring:               oklch(0.65 0.20 295);
+  --sidebar:                    var(--mahogany);
+  --sidebar-foreground:         var(--archive);
+  --sidebar-primary:            var(--forest);
+  --sidebar-primary-foreground: var(--archive);
+  --sidebar-accent:             var(--mahogany-mid);
+  --sidebar-accent-foreground:  var(--archive-doc);
+  --sidebar-border:             var(--mahogany-soft);
+  --sidebar-ring:               var(--gold);
 }
 
 @keyframes loadReveal {
@@ -221,7 +221,7 @@
     letter-spacing: -0.02em;
   }
   :focus-visible {
-    outline: 2px solid var(--color-lavender);
+    outline: 2px solid var(--color-forest);
     outline-offset: 2px;
     border-radius: 2px;
   }
@@ -244,31 +244,31 @@
   font-size: clamp(72px, 11vw, 130px);
   font-weight: 700;
   line-height: 1;
-  color: color-mix(in oklab, var(--lavender) 14%, transparent);
+  color: color-mix(in oklab, var(--forest) 14%, transparent);
   user-select: none;
   pointer-events: none;
   letter-spacing: -0.04em;
 }
 
 /* Accent bars — borda esquerda espessa, elemento gráfico principal */
-@utility accent-bar-lavender {
-  border-left: 5px solid var(--color-lavender);
+@utility accent-bar-forest {
+  border-left: 5px solid var(--color-forest);
 }
 @utility accent-bar-gold {
   border-left: 5px solid var(--color-gold);
 }
-@utility accent-bar-plum {
-  border-left: 5px solid var(--color-plum);
+@utility accent-bar-mahogany {
+  border-left: 5px solid var(--color-mahogany);
 }
 
 /* Blocos de cor full-section */
-@utility block-plum {
-  background-color: oklch(0.18 0.12 295);
-  color: oklch(0.93 0.04 295);
+@utility block-mahogany {
+  background-color: var(--color-mahogany);
+  color: var(--color-archive);
 }
-@utility block-lavender {
-  background-color: oklch(0.94 0.05 295);
-  color: oklch(0.18 0.12 295);
+@utility block-forest {
+  background-color: var(--color-forest);
+  color: var(--color-archive);
 }
 
 /* ────────────────────────────────────────────────────────────
@@ -287,7 +287,7 @@
       0 20px 40px -18px oklch(0.25 0.10 295 / 0.28),
       0 8px 16px -8px oklch(0.25 0.10 295 / 0.12),
       0 0 0 1px oklch(0.65 0.20 295 / 0.15) inset;
-    border-color: var(--color-lavender-mid);
+    border-color: var(--color-forest-mid);
   }
 }
 
@@ -378,7 +378,7 @@
   width: 10px !important;
   height: 10px !important;
   border-radius: 2px !important;
-  background: var(--color-lavender) !important;
+  background: var(--color-forest) !important;
   border: 2px solid var(--color-card) !important;
   opacity: 0;
   transition: opacity 0.2s;
