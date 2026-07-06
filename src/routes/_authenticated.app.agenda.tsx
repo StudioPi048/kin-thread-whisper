@@ -239,22 +239,22 @@ function AgendaPage() {
   return (
     <div className="min-h-[calc(100vh-64px)] bg-transparent">
       {/* Breadcrumb */}
-      <div className="border-b border-border/60 bg-white/60 backdrop-blur-sm px-6 py-3 flex items-center justify-between gap-3">
+      <div className="border-b border-border/60 bg-white/60 backdrop-blur-sm px-6 py-3 flex flex-wrap items-center justify-between gap-3">
         <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-muted-foreground">
           Instituto Liz / Centro de Comando Clínico
         </p>
         {query.isLoading && (
-          <span className="text-[10px] font-bold uppercase tracking-widest text-mahogany/70 flex items-center gap-1.5">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-mahogany/70 flex items-center gap-1.5 whitespace-nowrap">
             <Loader2 className="size-3 animate-spin" /> Carregando agenda
           </span>
         )}
         {!query.isLoading && isFallback && (
-          <span className="text-[10px] font-bold uppercase tracking-widest text-amber-700 bg-amber-100/60 border border-amber-300/50 px-2 py-0.5 rounded-full">
+          <span className="max-w-full text-[10px] font-bold uppercase tracking-[0.15em] text-amber-800 bg-amber-100 border border-amber-300 px-2.5 py-0.5 rounded-full whitespace-nowrap">
             Dados de exemplo — nenhuma sessão hoje
           </span>
         )}
         {query.isError && (
-          <span className="text-[10px] font-bold uppercase tracking-widest text-rose-700 bg-rose-100/60 border border-rose-300/50 px-2 py-0.5 rounded-full">
+          <span className="max-w-full text-[10px] font-bold uppercase tracking-[0.15em] text-rose-800 bg-rose-100 border border-rose-300 px-2.5 py-0.5 rounded-full whitespace-nowrap">
             Falha ao carregar — exibindo exemplo
           </span>
         )}
