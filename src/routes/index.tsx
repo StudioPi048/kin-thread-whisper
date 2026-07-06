@@ -462,7 +462,7 @@ export default function LandingPage() {
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            <p className="text-[11px] font-bold uppercase tracking-[0.4em] text-forest-mid">
+            <p className="text-[11px] font-bold uppercase tracking-[0.4em] text-gold">
               Beta fechado · 2026
             </p>
             <h2 className="mt-6 font-serif text-5xl font-bold text-white md:text-7xl">
