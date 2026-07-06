@@ -115,15 +115,20 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
           />
         )}
 
-        {/* Cruz de falecido — SEMPRE contida no shape, nunca sobre o label */}
+        {/* Linha diagonal de falecido — Convenção McGoldrick/Gerson */}
         {d.is_deceased && (
-          <span
+          <svg
             aria-hidden
-            className="pointer-events-none absolute inset-0 flex items-center justify-center text-red-500 font-black leading-none"
-            style={{ fontSize: shapeSize * 0.75 }}
+            className="pointer-events-none absolute inset-0 size-full"
+            viewBox="0 0 100 100"
           >
-            ✕
-          </span>
+            <line 
+              x1="15" y1="85" x2="85" y2="15" 
+              stroke="#3A3A3A" 
+              strokeWidth="4" 
+              strokeLinecap="round" 
+            />
+          </svg>
         )}
         {/* Handles fixados NA FORMA com 6px de respiro (stub) */}
         <Handle
@@ -209,7 +214,7 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
           {displayName}
         </p>
         {years ? (
-          <p className="mt-0.5 text-[10px] font-semibold text-muted-foreground leading-tight tabular-nums">
+          <p className="mt-0.5 text-[10.5px] font-bold text-ink/80 leading-tight tabular-nums">
             {years}
           </p>
         ) : (

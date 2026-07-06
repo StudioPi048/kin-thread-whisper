@@ -295,19 +295,19 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
             </div>
 
             {/* Hipóteses Clínicas */}
-            <div className="space-y-3">
-              <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                <AlertCircle className="size-3.5 text-amber-500" />
+            <div className="space-y-4">
+              <h4 className="text-[12px] font-bold uppercase tracking-widest text-clinical-warning flex items-center gap-2">
+                <AlertCircle className="size-4" />
                 Hipóteses Clínicas
               </h4>
-              <div className="space-y-2.5">
+              <div className="space-y-3">
                 {hypotheses.map((h, i) => (
                   <div
                     key={i}
-                    className="p-3 bg-amber-500/[0.03] border border-amber-500/10 rounded-xl space-y-1"
+                    className="p-3 bg-clinical-warning/10 border-l-2 border-clinical-warning rounded-r-xl space-y-1.5"
                   >
-                    <p className="text-[12px] font-bold text-amber-900">{h.title}</p>
-                    <p className="text-[12px] leading-relaxed text-foreground/80 font-serif">
+                    <p className="text-[13px] font-bold text-ink">{h.title}</p>
+                    <p className="text-[12px] leading-relaxed text-ink/80 font-serif">
                       {h.description}
                     </p>
                   </div>
@@ -355,15 +355,15 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
 
             {/* Linha do Tempo Inteligente */}
             {smartTimeline.length > 0 && (
-              <div className="space-y-3">
-                <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                  <Clock className="size-3.5 text-blue-500" />
+              <div className="space-y-4">
+                <h4 className="text-[12px] font-bold uppercase tracking-widest text-mahogany-soft flex items-center gap-2">
+                  <Clock className="size-4" />
                   Linha do Tempo Inteligente
                 </h4>
-                <div className="space-y-2.5">
+                <div className="space-y-3">
                   {smartTimeline.map((item, i) => (
-                    <div key={i} className="p-3 bg-blue-50 border border-blue-100 rounded-xl">
-                      <p className="text-[12px] leading-relaxed text-blue-900 font-serif">
+                    <div key={i} className="p-3 bg-mahogany/5 border-l-2 border-mahogany-soft rounded-r-xl">
+                      <p className="text-[12px] leading-relaxed text-ink font-serif">
                         {item}
                       </p>
                     </div>
@@ -374,15 +374,15 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
 
             {/* Casos Semelhantes */}
             {similarCases.length > 0 && (
-              <div className="space-y-3">
-                <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                  <Users className="size-3.5 text-emerald-600" />
+              <div className="space-y-4">
+                <h4 className="text-[12px] font-bold uppercase tracking-widest text-clinical-positive flex items-center gap-2">
+                  <Users className="size-4" />
                   Casos Semelhantes
                 </h4>
-                <div className="space-y-2.5">
+                <div className="space-y-3">
                   {similarCases.map((item, i) => (
-                    <div key={i} className="p-3 bg-emerald-50 border border-emerald-100 rounded-xl">
-                      <p className="text-[12px] leading-relaxed text-emerald-900 font-serif">
+                    <div key={i} className="p-3 bg-clinical-positive/10 border-l-2 border-clinical-positive rounded-r-xl">
+                      <p className="text-[12px] leading-relaxed text-ink font-serif">
                         {item}
                       </p>
                     </div>
@@ -393,15 +393,15 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
 
             {/* Alertas de Consistência */}
             {consistencyAlerts.length > 0 && (
-              <div className="space-y-3">
-                <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                  <AlertTriangle className="size-3.5 text-rose-500" />
+              <div className="space-y-4">
+                <h4 className="text-[12px] font-bold uppercase tracking-widest text-clinical-critical flex items-center gap-2">
+                  <AlertTriangle className="size-4" />
                   Alertas de Consistência
                 </h4>
-                <ul className="space-y-1.5 pl-1">
+                <ul className="space-y-2 pl-1">
                   {consistencyAlerts.map((alert, i) => (
-                    <li key={i} className="text-[12px] text-rose-700 flex items-start gap-2 font-medium">
-                      <span className="text-rose-500 select-none">•</span>
+                    <li key={i} className="text-[12px] text-ink flex items-start gap-2 font-medium bg-clinical-critical/10 p-2 rounded border-l-2 border-clinical-critical">
+                      <span className="text-clinical-critical select-none mt-0.5">•</span>
                       <span>{alert}</span>
                     </li>
                   ))}

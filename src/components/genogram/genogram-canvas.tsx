@@ -78,8 +78,8 @@ const UnionNodeComponent = ({ data }: NodeProps) => {
           style={{ left: -12, top: -8, width: 36, height: 28 }}
           viewBox="0 0 36 28"
         >
-          <path d="M8 22 L16 4" stroke="var(--color-destructive)" strokeWidth={2.5} strokeLinecap="round" />
-          <path d="M20 22 L28 4" stroke="var(--color-destructive)" strokeWidth={2.5} strokeLinecap="round" />
+          <path d="M8 22 L16 4" stroke="#3A3A3A" strokeWidth={2.5} strokeLinecap="round" />
+          <path d="M20 22 L28 4" stroke="#3A3A3A" strokeWidth={2.5} strokeLinecap="round" />
         </svg>
       )}
       <Handle id="top" type="source" position={Position.Top} className="opacity-0 pointer-events-none" />
@@ -191,7 +191,7 @@ function StraightStepEdge({
             key={i}
             d={`M ${x - 7} ${breakY + 12} L ${x + 7} ${breakY - 12}`}
             fill="none"
-            stroke="var(--color-destructive)"
+            stroke="#3A3A3A"
             strokeWidth={2.5}
             strokeLinecap="round"
             pointerEvents="none"
@@ -1004,7 +1004,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
             <button
               onClick={() => deleteSelected.mutate()}
               disabled={deleteSelected.isPending}
-              className="flex items-center gap-1.5 rounded px-3 py-2 text-[12px] font-bold uppercase tracking-[0.1em] text-destructive/70 transition-colors hover:bg-destructive/20 hover:text-destructive"
+              className="flex items-center gap-1.5 rounded px-3 py-2 text-[12px] font-bold uppercase tracking-[0.1em] text-clinical-critical/80 transition-colors hover:bg-clinical-critical/10 hover:text-clinical-critical ml-4 border-l border-border pl-4"
             >
               <Trash2 className="size-4" />
               <span className="hidden sm:inline">Remover</span>
@@ -1041,7 +1041,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
 
       {/* ── CANVAS ──────── */}
       <div
-        className="absolute inset-0 z-0 bg-transparent"
+        className="absolute inset-0 z-0 bg-transparent shadow-[inset_0_0_120px_rgba(59,47,47,0.1)]"
       >
         {query.isLoading ? (
           <div className="flex h-full flex-col items-center justify-center gap-3">

@@ -90,10 +90,10 @@ export default function LandingPage() {
             <LizLogoLockup />
           </Link>
           <div className="flex items-center gap-3">
-            <Button asChild variant="ghost" size="sm">
+            <Button asChild variant="ghost" size="sm" className="font-serif">
               <Link to="/auth">Entrar</Link>
             </Button>
-            <Button asChild variant="hero" size="sm">
+            <Button asChild variant="outline" size="sm" className="border-forest text-forest hover:bg-forest/5 font-serif">
               <Link to="/auth" search={{ mode: "signup" }}>
                 Acesso beta →
               </Link>
@@ -187,20 +187,20 @@ export default function LandingPage() {
             transition={{ duration: 0.8, delay: 0.2 }}
             className="flex-1 relative z-10 w-full max-w-[600px] lg:max-w-none mt-10 lg:mt-0"
           >
-            <div className="aspect-[4/3] lg:aspect-square rounded-2xl overflow-hidden border border-white/10 shadow-2xl relative group">
+            <div className="aspect-[4/3] lg:aspect-square bg-[#FCF9F4] rounded-sm overflow-hidden border-[12px] border-[#FCF9F4] border-b-[40px] shadow-2xl relative group rotate-[-2deg]">
               {/* Fallback color and image */}
               <div className="absolute inset-0 bg-mahogany/50" />
               <img
                 src={hero1}
                 alt="Psicogenealogista utilizando a plataforma"
-                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                className="absolute inset-0 w-full h-full object-cover sepia-[.3] contrast-[1.1] saturate-[0.8] transition-transform duration-700 group-hover:scale-105"
                 onError={(e) => {
                   (e.target as HTMLImageElement).src =
                     "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&q=80&w=1000";
                 }}
               />
-              <div className="absolute inset-0 bg-gradient-to-tr from-mahogany/80 via-mahogany/20 to-transparent mix-blend-multiply" />
-              <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-2xl" />
+              <div className="absolute inset-0 bg-gradient-to-tr from-mahogany/40 via-transparent to-transparent mix-blend-multiply pointer-events-none" />
+              <div className="absolute inset-0 ring-1 ring-inset ring-black/10 rounded-sm pointer-events-none" />
             </div>
           </motion.div>
         </div>
@@ -234,15 +234,18 @@ export default function LandingPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.4, delay: i * 0.06 }}
-                className={
-                  "bg-card p-6 shadow-sm transition-shadow hover:shadow-md " +
-                  (item.color === "forest" ? "accent-bar-forest" : "accent-bar-gold")
-                }
+                className="bg-[#FCF9F4] p-6 shadow-sm transition-shadow hover:shadow-md border border-[#E6DDD0] relative"
               >
-                <p className="text-[12px] font-bold uppercase tracking-[0.15em] text-muted-foreground/60 line-through">
+                {/* Cantoneiras vintage */}
+                <div className="absolute -top-[1px] -left-[1px] w-4 h-4 border-t-2 border-l-2 border-[#D4AF37]/50" />
+                <div className="absolute -top-[1px] -right-[1px] w-4 h-4 border-t-2 border-r-2 border-[#D4AF37]/50" />
+                <div className="absolute -bottom-[1px] -left-[1px] w-4 h-4 border-b-2 border-l-2 border-[#D4AF37]/50" />
+                <div className="absolute -bottom-[1px] -right-[1px] w-4 h-4 border-b-2 border-r-2 border-[#D4AF37]/50" />
+                
+                <p className="text-[12px] font-bold uppercase tracking-[0.15em] text-ink/60 line-through decoration-mahogany-mid/70 decoration-2">
                   {item.before}
                 </p>
-                <div className="my-3 h-px w-6 bg-muted" />
+                <div className="my-3 h-px w-6 bg-archive-old" />
                 <p className="font-serif text-xl font-semibold text-primary">{item.after}</p>
               </motion.div>
             ))}
@@ -277,20 +280,10 @@ export default function LandingPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-40px" }}
                 transition={{ duration: 0.4, delay: i * 0.06 }}
-                className={
-                  "group bg-white p-8 shadow-sm transition-all duration-200 hover:shadow-lg hover:-translate-y-1 border-l-[5px] border-l-transparent " +
-                  (m.color === "forest" ? "hover:border-l-forest" : "hover:border-l-gold")
-                }
+                className="group bg-[#FCF9F4] p-8 shadow-sm transition-all duration-200 hover:shadow-md border border-[#E6DDD0] hover:border-mahogany/30"
               >
-                <div
-                  className={
-                    "mb-5 flex h-11 w-11 items-center justify-center rounded-md " +
-                    (m.color === "forest" ? "bg-forest-soft" : "bg-gold-soft")
-                  }
-                >
-                  <m.icon
-                    className={"size-5 " + (m.color === "forest" ? "text-forest" : "text-gold")}
-                  />
+                <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-sm bg-[#EFE9E0] border border-[#E6DDD0]">
+                  <m.icon className="size-5 text-mahogany-mid" />
                 </div>
                 <h3 className="font-serif text-2xl font-bold text-primary">{m.title}</h3>
                 <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">{m.body}</p>
@@ -310,16 +303,17 @@ export default function LandingPage() {
             transition={{ duration: 0.8 }}
             className="flex-1 w-full"
           >
-            <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl relative">
+            <div className="aspect-[4/3] bg-[#FCF9F4] rounded-sm overflow-hidden border-[12px] border-[#FCF9F4] border-b-[40px] shadow-2xl relative rotate-[2deg]">
               <img
                 src={hero2}
                 alt="Conexão com o paciente"
-                className="absolute inset-0 w-full h-full object-cover"
+                className="absolute inset-0 w-full h-full object-cover sepia-[.2] contrast-[1.1]"
                 onError={(e) => {
                   (e.target as HTMLImageElement).src =
                     "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&q=80&w=1000";
                 }}
               />
+              <div className="absolute inset-0 ring-1 ring-inset ring-black/10 rounded-sm pointer-events-none" />
             </div>
           </motion.div>
           <div className="flex-1">
@@ -356,16 +350,17 @@ export default function LandingPage() {
             transition={{ duration: 0.8 }}
             className="flex-1 w-full"
           >
-            <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl relative">
+            <div className="aspect-[4/3] bg-[#FCF9F4] rounded-sm overflow-hidden border-[12px] border-[#FCF9F4] border-b-[40px] shadow-2xl relative rotate-[-1.5deg]">
               <img
                 src={hero3}
                 alt="A vida simplificada"
-                className="absolute inset-0 w-full h-full object-cover"
+                className="absolute inset-0 w-full h-full object-cover sepia-[.3] contrast-[1.1] saturate-[0.9]"
                 onError={(e) => {
                   (e.target as HTMLImageElement).src =
                     "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&q=80&w=1000";
                 }}
               />
+              <div className="absolute inset-0 ring-1 ring-inset ring-black/10 rounded-sm pointer-events-none" />
             </div>
           </motion.div>
           <div className="flex-1">
@@ -393,26 +388,33 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── CITAÇÃO — full-mahogany ──────────────────────────── */}
-      <section className="block-mahogany py-24 md:py-36">
-        <div className="container-liz max-w-4xl text-center">
-          <p className="text-[11px] font-bold uppercase tracking-[0.4em] text-forest-mid">
+      {/* ── CITAÇÃO — Textura de papel com cantoneiras ──────────────────────────── */}
+      <section className="bg-[#EFE9E0] py-24 md:py-36 relative border-y border-[#E6DDD0]">
+        <div className="container-liz max-w-4xl text-center relative z-10">
+          <p className="text-[11px] font-bold uppercase tracking-[0.4em] text-mahogany-mid/70">
             Fundamento clínico
           </p>
-          <motion.blockquote
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="mt-8 font-serif text-4xl font-bold italic leading-tight text-white md:text-6xl"
-          >
-            "O que não pode ser dito,
-            <br />
-            não pode ser esquecido —
-            <br />
-            <span className="text-gold">apenas repetido."</span>
-          </motion.blockquote>
-          <p className="mt-8 text-[15px] text-white/45">— inspirado em Françoise Dolto</p>
+          
+          <div className="mt-8 relative inline-block">
+            {/* Efeito de papel cortado/fita para a citação */}
+            <div className="absolute -top-4 -left-4 w-12 h-6 bg-white/40 rotate-[-8deg] shadow-sm" />
+            <div className="absolute -bottom-4 -right-4 w-12 h-6 bg-white/40 rotate-[5deg] shadow-sm" />
+            
+            <motion.blockquote
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className="bg-[#FCF9F4] p-10 md:p-14 shadow-md border border-[#E6DDD0] font-serif text-3xl font-bold italic leading-tight text-ink md:text-5xl"
+            >
+              "O que não pode ser dito,
+              <br />
+              não pode ser esquecido —
+              <br />
+              <span className="text-mahogany-mid">apenas repetido."</span>
+            </motion.blockquote>
+          </div>
+          <p className="mt-8 text-[15px] font-sans font-medium text-ink/60">— inspirado em Françoise Dolto</p>
         </div>
       </section>
 

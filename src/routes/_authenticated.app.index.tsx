@@ -79,9 +79,9 @@ function AppHome() {
           </div>
 
           {/* Dossiê em Destaque (Missão do Dia) */}
-          <div className="bg-archive-doc border border-[#E6DDD0] rounded-sm p-6 md:p-8 flex flex-col xl:flex-row gap-8 items-start xl:items-center shadow-[0_4px_20px_rgba(0,0,0,0.03),0_1px_3px_rgba(0,0,0,0.02)] relative before:absolute before:top-0 before:left-0 before:w-1 before:h-full before:bg-mahogany-mid before:rounded-l-sm">
+          <div className="bg-white border border-[#E6DDD0] rounded-sm p-6 md:p-8 flex flex-col xl:flex-row gap-8 items-start xl:items-center shadow-[0_12px_40px_rgba(59,47,47,0.06),0_1px_3px_rgba(0,0,0,0.02)] relative z-20 before:absolute before:top-0 before:left-0 before:w-1 before:h-full before:bg-mahogany-mid before:rounded-l-sm">
             
-            <div className="flex-1 space-y-5">
+            <div className="flex-1 space-y-6">
               <div className="flex items-center gap-3">
                 <span className="flex items-center justify-center border border-mahogany-mid text-mahogany-mid text-[10px] font-bold uppercase tracking-widest px-3 py-1 bg-archive-old">
                   Ficha de Investigação
@@ -99,9 +99,27 @@ function AppHome() {
                 <strong className="text-mahogany font-bold block mb-1 font-sans not-italic text-xs uppercase tracking-widest">Anotação da IA Clínica:</strong>
                 "Investigar a relação entre a data de nascimento e o falecimento do avô paterno. Há indícios de lealdades invisíveis e repetição no Projeto Sentido."
               </div>
+
+              <div className="pt-2">
+                {lastActiveClient ? (
+                   <Link to="/app/clientes/$clientId" params={{ clientId: lastActiveClient.id }}>
+                     <Button variant="outline" className="h-12 px-6 text-sm font-serif border-mahogany-mid hover:bg-mahogany-mid text-mahogany-mid hover:text-white group rounded-sm shadow-sm transition-all">
+                       <FolderOpen className="size-4 mr-2 group-hover:scale-110 transition-transform" />
+                       Abrir Dossiê
+                     </Button>
+                   </Link>
+                ) : (
+                   <Link to="/app/clientes">
+                     <Button variant="outline" className="h-12 px-6 text-sm font-serif border-mahogany-mid hover:bg-mahogany-mid text-mahogany-mid hover:text-white group rounded-sm shadow-sm transition-all">
+                       <FolderOpen className="size-4 mr-2 group-hover:scale-110 transition-transform" />
+                       Ver Arquivos
+                     </Button>
+                   </Link>
+                )}
+              </div>
             </div>
 
-            <div className="w-full xl:w-80 bg-archive-old rounded-sm p-6 border border-[#E6DDD0] space-y-4 shrink-0 shadow-inner">
+            <div className="w-full xl:w-80 bg-archive-old/80 rounded-sm p-6 border border-[#E6DDD0] space-y-4 shrink-0 shadow-inner">
               <h3 className="text-[11px] font-bold text-ink/60 uppercase tracking-widest flex items-center gap-2 font-sans border-b border-archive-doc pb-2">
                 <BookOpen className="size-4" />
                 Referência Bibliográfica
@@ -112,28 +130,10 @@ function AppHome() {
               </div>
               <div className="pt-3 border-t border-archive-doc flex flex-col gap-1 text-sm font-sans">
                 <div className="flex justify-between items-center">
-                  <span className="text-ink/60">Tópico:</span>
-                  <span className="text-ink font-medium">Síndrome de Aniversário</span>
+                  <span className="text-ink/80">Tópico:</span>
+                  <span className="text-ink font-bold">Síndrome de Aniversário</span>
                 </div>
               </div>
-            </div>
-
-            <div className="w-full xl:w-auto shrink-0 flex justify-center">
-               {lastActiveClient ? (
-                  <Link to="/app/clientes/$clientId" params={{ clientId: lastActiveClient.id }} className="w-full">
-                    <Button variant="outline" className="w-full xl:w-auto h-16 px-10 text-lg font-serif border-[#E6DDD0] hover:bg-archive-old text-ink group rounded-sm shadow-sm">
-                      <FolderOpen className="size-5 mr-3 text-mahogany-mid group-hover:scale-110 transition-transform" />
-                      Abrir Dossiê
-                    </Button>
-                  </Link>
-               ) : (
-                  <Link to="/app/clientes" className="w-full">
-                    <Button variant="outline" className="w-full xl:w-auto h-16 px-10 text-lg font-serif border-[#E6DDD0] hover:bg-archive-old text-ink group rounded-sm shadow-sm">
-                      <FolderOpen className="size-5 mr-3 text-mahogany-mid group-hover:scale-110 transition-transform" />
-                      Ver Arquivo Completo
-                    </Button>
-                  </Link>
-               )}
             </div>
           </div>
         </div>
@@ -171,15 +171,15 @@ function AppHome() {
               
               <div className="space-y-8 relative z-10">
                 <div className="space-y-6">
-                  <h4 className="text-[11px] font-bold font-sans uppercase tracking-widest text-ink/50 bg-archive-doc inline-block pr-4">Hoje, 12 de Outubro</h4>
+                  <h4 className="text-[11px] font-bold font-sans uppercase tracking-widest text-ink/70 bg-archive-doc inline-block pr-4">Hoje, 12 de Outubro</h4>
                   
-                  <FeedItem time="09:10" action="Anexou documento para" target="Paciente A" icon={<FileText className="size-4 text-ink/60" />} />
-                  <FeedItem time="10:45" action="Carimbou conclusão de sessão" target="Paciente B" icon={<Stamp className="size-4 text-ink/60" />} />
-                  <FeedItem time="11:00" action="Anotação transcrita para" target="Paciente B" icon={<PenTool className="size-4 text-ink/60" />} />
+                  <FeedItem time="09:10" action="Anexou documento para" target="Paciente A" icon={<FileText className="size-4 text-ink/80 stroke-2" />} />
+                  <FeedItem time="10:45" action="Carimbou conclusão de sessão" target="Paciente B" icon={<Stamp className="size-4 text-ink/80 stroke-2" />} />
+                  <FeedItem time="11:00" action="Anotação transcrita para" target="Paciente B" icon={<PenTool className="size-4 text-ink/80 stroke-2" />} />
                 </div>
                 
                 <div className="space-y-6 pt-2">
-                  <h4 className="text-[11px] font-bold font-sans uppercase tracking-widest text-ink/50 bg-archive-doc inline-block pr-4">Ontem</h4>
+                  <h4 className="text-[11px] font-bold font-sans uppercase tracking-widest text-ink/70 bg-archive-doc inline-block pr-4">Ontem</h4>
                   
                   <FeedItem time="18:42" action="Gerou hipótese investigativa para" target="Paciente C" icon={<Search className="size-4 text-ink/60" />} />
                   <FeedItem time="15:30" action="Descobriu vínculo oculto em" target="Paciente D" icon={<Bookmark className="size-4 text-ink/60" />} />
@@ -244,13 +244,13 @@ function SectionHeader({ title, icon }: { title: string, icon: React.ReactNode }
 
 function RadarCard({ title, desc, icon }: { title: string, desc: string, icon: React.ReactNode }) {
   return (
-    <div className="bg-archive-doc border border-[#E6DDD0] p-5 hover:bg-archive-old transition-colors cursor-pointer group shadow-sm flex flex-col gap-3">
-      <div className="bg-archive-old p-2 w-fit border border-[#E6DDD0] group-hover:bg-archive-doc transition-colors">
+    <div className="bg-archive-old border border-mahogany/10 p-5 hover:bg-archive-doc transition-colors cursor-pointer group shadow-[inset_0_1px_3px_rgba(0,0,0,0.02)] flex flex-col gap-3">
+      <div className="bg-archive-doc p-2 w-fit border border-[#E6DDD0] group-hover:bg-archive-old transition-colors">
         {icon}
       </div>
       <div>
         <h4 className="font-serif font-bold text-ink text-lg">{title}</h4>
-        <p className="text-sm font-sans text-ink/60 mt-1">{desc}</p>
+        <p className="text-sm font-sans text-ink/80 mt-1">{desc}</p>
       </div>
     </div>
   );
@@ -275,9 +275,9 @@ function FeedItem({ time, action, target, icon }: { time: string, action: string
 
 function ActionItem({ type, label, patient }: { type: "urgent" | "warning" | "info", label: string, patient: string }) {
   const colors = {
-    urgent: "border-l-4 border-l-[#8B3A3A] bg-[#FCF9F4]",
-    warning: "border-l-4 border-l-[#B8860B] bg-[#FCF9F4]",
-    info: "border-l-4 border-l-[#4A5D23] bg-[#FCF9F4]",
+    urgent: "border-l-4 border-l-clinical-critical bg-clinical-critical/5 text-ink",
+    warning: "border-l-4 border-l-clinical-warning bg-clinical-warning/5 text-ink",
+    info: "border-l-4 border-l-clinical-positive bg-clinical-positive/5 text-ink",
   };
 
   return (
@@ -295,11 +295,11 @@ function AgendaVisualItem({ time, name, state }: { time: string, name: string, s
   return (
     <div className={`flex items-start gap-4 relative z-10 ${isPast ? 'opacity-50' : 'opacity-100'}`}>
       <div className="flex flex-col items-center mt-1">
-        <div className={`w-3 h-3 border-2 ${isCurrent ? 'border-mahogany-mid bg-mahogany-mid' : 'border-archive-old bg-archive-doc'} rounded-none rotate-45`}></div>
+        <div className={`w-3.5 h-3.5 border-2 ${isCurrent ? 'border-clinical-positive bg-clinical-positive' : isPast ? 'border-archive-old bg-transparent' : 'border-mahogany-mid bg-transparent'} rounded-full`}></div>
       </div>
       <div className="flex-1 pb-4 border-b border-[#E6DDD0] border-dashed last:border-0 last:pb-0">
         <div className="flex justify-between items-baseline">
-          <span className={`text-lg font-serif font-bold ${isCurrent ? 'text-mahogany-mid' : 'text-ink'}`}>{name}</span>
+          <span className={`text-lg font-serif font-bold ${isCurrent ? 'text-clinical-positive' : 'text-ink'}`}>{name}</span>
           <span className="text-sm font-sans text-ink/50">{time}</span>
         </div>
         {isCurrent && (
