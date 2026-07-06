@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   Calendar as CalendarIcon,
   Clock,
@@ -30,10 +31,13 @@ import {
   Users,
   ChevronRight,
   Circle,
+  Loader2,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { getAgendaData, type AgendaSessionDTO, type OrphanClientDTO } from "@/lib/agenda.functions";
+
 
 export const Route = createFileRoute("/_authenticated/app/agenda")({
   component: AgendaPage,
