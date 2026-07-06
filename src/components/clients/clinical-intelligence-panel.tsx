@@ -428,6 +428,43 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
                 ))}
               </div>
             </div>
+
+            {/* Legenda do Mapa */}
+            <div className="space-y-3 pt-4 border-t border-border/40">
+              <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <Layers className="size-3.5 text-plum" />
+                Legenda do Mapa
+              </h4>
+              <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-[12px]">
+                <span className="flex items-center gap-2">
+                  <span className="inline-block size-3.5 border-[2px] border-plum bg-white" />
+                  <span className="text-foreground/80">Masculino</span>
+                </span>
+                <span className="flex items-center gap-2">
+                  <span className="inline-block size-3.5 rounded-full border-[2px] border-lavender bg-white" />
+                  <span className="text-foreground/80">Feminino</span>
+                </span>
+                <span className="flex items-center gap-2">
+                  <span className="inline-block size-3.5 rotate-45 border-[2px] border-gold bg-white" />
+                  <span className="text-foreground/80 leading-tight">Não-binário / desconhecido</span>
+                </span>
+                <span className="flex items-center gap-2">
+                  <svg viewBox="0 0 10 10" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <polygon points="5,1 9,9 1,9" className="text-foreground/70" />
+                  </svg>
+                  <span className="text-foreground/80">Aborto</span>
+                </span>
+                <span className="flex items-center gap-2">
+                  <span className="text-red-500 text-base leading-none w-3.5 text-center">✕</span>
+                  <span className="text-foreground/80">Falecido</span>
+                </span>
+                <span className="flex items-center gap-2">
+                  <span className="inline-block size-3.5 border-[2px] border-plum bg-plum/20" />
+                  <span className="text-foreground/80">Paciente-índice</span>
+                </span>
+              </div>
+            </div>
+
           </motion.div>
         ) : (
           <motion.div

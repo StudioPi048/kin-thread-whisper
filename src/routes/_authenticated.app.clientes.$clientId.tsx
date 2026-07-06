@@ -215,7 +215,7 @@ function ClientDossierPage() {
           {initials}
         </span>
 
-        <div className="container-liz relative z-10 space-y-6">
+        <div className="container-liz relative z-10 space-y-3">
           <nav className="flex items-center gap-1 text-[12px] uppercase tracking-[0.1em] font-bold text-white/50">
             <Link
               to="/app/clientes"
@@ -227,7 +227,7 @@ function ClientDossierPage() {
             <span className="truncate text-gold">{display}</span>
           </nav>
 
-          <header className="flex flex-col gap-6">
+          <header className="flex flex-col gap-3">
             <div className="flex flex-wrap items-center justify-between gap-6">
               <div className="flex items-center gap-4">
                 <motion.div
@@ -298,7 +298,7 @@ function ClientDossierPage() {
             </div>
 
             {/* Minimalist Info Bar */}
-            <div className="flex flex-wrap items-center gap-6 mt-2 border-t border-white/10 pt-5 text-[13px] text-white/80">
+            <div className="flex flex-wrap items-center gap-6 border-t border-white/10 pt-3 text-[13px] text-white/80">
               <div className="flex items-center gap-2">
                 <Mail className="size-3.5 text-lavender" /> 
                 <span className="font-medium">{client.email || "Sem e-mail"}</span>
@@ -318,7 +318,7 @@ function ClientDossierPage() {
               
               <div className="flex items-center gap-4 bg-white/5 px-4 py-1.5 rounded-full border border-white/10">
                 <span className="flex items-center gap-1.5 text-[12px] font-semibold text-gold" title="Próxima sessão: Amanhã 09:00">
-                  <CalendarDays className="size-3.5" /> {client.session_count || 0} sessões
+                  <CalendarDays className="size-3.5" /> {(client as { session_count?: number }).session_count || 0} sessões
                 </span>
                 <div className="w-px h-3 bg-white/20" />
                 <span className="flex items-center gap-1.5 text-[12px] font-semibold text-lavender-soft">

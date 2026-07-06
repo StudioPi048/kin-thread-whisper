@@ -363,11 +363,12 @@ function GenerationRuler() {
 
 function ShortcutsLegend() {
   return (
-    <div className="w-[154px] overflow-hidden rounded-md border border-plum/25 bg-card/92 shadow-sm backdrop-blur">
+    <div className="w-[168px] overflow-hidden rounded-lg border border-plum/25 bg-white/95 shadow-lg backdrop-blur-md ring-1 ring-black/5">
+
       <div className="bg-plum/5 px-2.5 py-1.5 border-b border-plum/20">
         <p className="font-serif text-[13px] font-bold leading-tight text-plum">Atalhos</p>
       </div>
-      <div className="px-2.5 py-2 flex flex-col gap-2">
+      <div className="px-3 py-2.5 flex flex-col gap-2.5">
         <div className="flex flex-col gap-0.5">
           <div className="flex items-center gap-1">
             <kbd className="px-1 py-0.5 text-[9px] font-mono font-medium rounded border border-border bg-muted text-muted-foreground">
@@ -940,43 +941,8 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
         </div>
       )}
 
-      {/* ── LEGENDA — símbolos internacionais ────────────── */}
-      <div className="absolute bottom-4 right-4 z-10 flex flex-wrap items-center gap-5 rounded-xl border border-border/50 bg-white/90 backdrop-blur-sm shadow-md px-4 py-2.5 text-[12px] font-semibold">
-        <span className="text-muted-foreground/60 mr-1 uppercase tracking-[0.15em] text-[10px]">
-          Legenda:
-        </span>
-        <span className="flex items-center gap-2">
-          <span className="inline-block size-4 border-[2.5px] border-plum bg-card" />
-          <span className="text-foreground/80">Masculino</span>
-        </span>
-        <span className="flex items-center gap-2">
-          <span className="inline-block size-4 rounded-full border-[2.5px] border-lavender bg-card" />
-          <span className="text-foreground/80">Feminino</span>
-        </span>
-        <span className="flex items-center gap-2">
-          <span className="inline-block size-4 rotate-45 border-[2.5px] border-gold bg-card" />
-          <span className="text-foreground/80">Não-binário / desconhecido</span>
-        </span>
-        <span className="flex items-center gap-2">
-          <svg
-            viewBox="0 0 10 10"
-            className="size-4"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-          >
-            <polygon points="5,1 9,9 1,9" className="text-foreground/70" />
-          </svg>
-          <span className="text-foreground/80">Aborto</span>
-        </span>
-        <span className="flex items-center gap-2">
-          <span className="text-red-500 text-lg leading-none">✕</span>
-          <span className="text-foreground/80">Falecido</span>
-        </span>
-        <span className="ml-auto text-plum font-bold uppercase tracking-[0.1em] text-[11px]">
-          Paciente destacado em ameixa
-        </span>
-      </div>
+      {/* Legenda movida para o painel lateral "Copiloto Clínico" */}
+
 
       {/* ── CANVAS ──────── */}
       <div
