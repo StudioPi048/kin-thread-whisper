@@ -363,7 +363,8 @@ function GenerationRuler() {
 
 function ShortcutsLegend() {
   return (
-    <div className="w-[154px] overflow-hidden rounded-md border border-plum/25 bg-card/92 shadow-sm backdrop-blur">
+    <div className="w-[168px] overflow-hidden rounded-lg border border-plum/25 bg-white/95 shadow-lg backdrop-blur-md ring-1 ring-black/5">
+
       <div className="bg-plum/5 px-2.5 py-1.5 border-b border-plum/20">
         <p className="font-serif text-[13px] font-bold leading-tight text-plum">Atalhos</p>
       </div>
