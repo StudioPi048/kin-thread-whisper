@@ -29,7 +29,7 @@ export const PROBAND_SHAPE = 84;
 export const GEN_GAP = 320;
 export const COUPLE_GAP = 64; // distância centro-a-centro dentro de um casal
 export const SIBLING_GAP = 20; // distância centro-a-centro padrão
-export const BRANCH_GAP = 100; // folga entre subárvores ancestrais irmãs
+export const BRANCH_GAP = 16; // folga entre subárvores ancestrais irmãs
 export const BRANCH_SEPARATION = 160; // folga extra paterno vs materno
 
 export function getSiblingStep(siblingsCount: number): number {
