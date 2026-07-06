@@ -857,7 +857,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
       // Upsert node positions using the unique constraint
       const { error: upsertErr } = await supabase
         .from("genogram_node_positions")
-        .upsert(positionsToUpsert, { onConflict: "genogram_node_positions_layout_node_key" });
+        .upsert(positionsToUpsert, { onConflict: "layout_id,node_id" });
 
       if (upsertErr) throw upsertErr;
 
