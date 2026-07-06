@@ -318,7 +318,7 @@ function ClientDossierPage() {
               
               <div className="flex items-center gap-4 bg-white/5 px-4 py-1.5 rounded-full border border-white/10">
                 <span className="flex items-center gap-1.5 text-[12px] font-semibold text-gold" title="Próxima sessão: Amanhã 09:00">
-                  <CalendarDays className="size-3.5" /> {client.session_count || 0} sessões
+                  <CalendarDays className="size-3.5" /> {(client as { session_count?: number }).session_count || 0} sessões
                 </span>
                 <div className="w-px h-3 bg-white/20" />
                 <span className="flex items-center gap-1.5 text-[12px] font-semibold text-lavender-soft">
