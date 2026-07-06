@@ -261,10 +261,10 @@ export default function LandingPage() {
               02
             </span>
             <div className="pb-2">
-              <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-forest">
+              <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-gold">
                 Arquitetura
               </p>
-              <h2 className="font-serif text-4xl font-bold text-primary md:text-5xl">
+              <h2 className="font-serif text-4xl font-bold text-archive md:text-5xl">
                 Cinco camadas.
                 <br />
                 Um fluxo clínico.
