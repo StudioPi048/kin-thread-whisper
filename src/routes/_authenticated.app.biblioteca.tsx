@@ -766,43 +766,13 @@ function BibliotecaPage() {
               action={{ label: `Ver todos (${AUTHORS.length})`, onClick: () => {} }}
             />
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-6">
               {AUTHORS.map((a, i) => (
-                <button
-                  key={a.name}
-                  className="group text-left space-y-3"
-                >
-                  <div className="relative aspect-square rounded-full overflow-hidden bg-gradient-to-br from-lavender-soft to-cream border border-plum/10 shadow-sm group-hover:shadow-xl group-hover:shadow-lavender/20 transition-all duration-500">
-                    <div className="absolute inset-0 flex items-center justify-center font-serif text-4xl font-bold italic text-plum/30 group-hover:scale-110 transition-transform duration-500">
-                      {a.initials}
-                    </div>
-                    <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-plum/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <div className="absolute inset-0 flex items-end justify-center pb-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-white">
-                        Ver perfil
-                      </span>
-                    </div>
-                    {i === 0 && (
-                      <span className="absolute top-2 right-2 rounded-full bg-gold px-1.5 py-0.5 text-[8px] font-black uppercase text-plum">
-                        Semana
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-center">
-                    <h4 className="font-serif text-[15px] font-bold text-plum leading-tight">
-                      {a.name}
-                    </h4>
-                    <p className="mt-0.5 text-[10px] uppercase tracking-wider text-muted-foreground/70 font-semibold">
-                      {a.field}
-                    </p>
-                    <p className="mt-1 text-[10px] text-muted-foreground/60">
-                      {a.works} obras · {a.concepts} conceitos
-                    </p>
-                  </div>
-                </button>
+                <AuthorPortraitCard key={a.name} author={a} featured={i === 0} />
               ))}
             </div>
           </section>
+
 
           {/* ── EXPLORAR POR TEMA ──────────────────────────── */}
           <section className="space-y-6">
