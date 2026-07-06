@@ -522,6 +522,21 @@ function TimelineColumn({
 /* --------------------------- Featured Session Card ------------------------ */
 
 function FeaturedSession({ session, sessions }: { session: Session; sessions: Session[] }) {
+  // Progressive genogram load — only fetches when a real client is attached.
+  const genogramQuery = useQuery({
+    queryKey: ["client-genogram", session.clientId],
+    queryFn: () => getClientGenogram({ data: { clientId: session.clientId! } }),
+    enabled: !!session.clientId,
+    staleTime: 5 * 60_000,
+    retry: 1,
+  });
+
+  const genogramAlerts = genogramQuery.data?.alerts ?? [];
+  const mergedAlerts = [
+    ...session.aiAlerts,
+    ...genogramAlerts.map((a) => a.message),
+  ];
+
   const accentBar = {
     plum: "bg-gradient-to-b from-plum to-lavender",
     lavender: "bg-gradient-to-b from-lavender to-plum",
