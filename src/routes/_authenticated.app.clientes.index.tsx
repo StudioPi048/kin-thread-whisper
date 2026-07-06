@@ -137,7 +137,7 @@ function ClientesIndex() {
       <div className="block-mahogany px-6 py-10">
         <div className="container-liz flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.35em] text-forest-mid">
+            <p className="text-[11px] font-bold uppercase tracking-[0.35em] text-gold">
               Consultório
             </p>
             <h1 className="mt-2 font-serif text-5xl font-bold text-white">Clientes</h1>
