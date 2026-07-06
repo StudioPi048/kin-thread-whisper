@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   Calendar as CalendarIcon,
   Clock,
@@ -30,10 +31,13 @@ import {
   Users,
   ChevronRight,
   Circle,
+  Loader2,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { getAgendaData, type AgendaSessionDTO, type OrphanClientDTO } from "@/lib/agenda.functions";
+
 
 export const Route = createFileRoute("/_authenticated/app/agenda")({
   component: AgendaPage,
@@ -79,7 +83,7 @@ type Session = {
   accent: "plum" | "lavender" | "gold";
 };
 
-const SESSIONS: Session[] = [
+const FALLBACK_SESSIONS: Session[] = [
   {
     id: "s1",
     start: "09:00",
@@ -134,16 +138,48 @@ const SESSIONS: Session[] = [
   },
 ];
 
-const TIMELINE = [
-  { time: "08:30", label: "Preparação do dia", kind: "ritual" as const, icon: Sunrise },
-  { time: "09:00", label: "Pietro Vinicius Baccin", kind: "session" as const, sessionId: "s1" },
-  { time: "10:15", label: "Espaço para evolução", kind: "gap" as const, icon: FileText },
-  { time: "11:30", label: "Leticia Baccin", kind: "session" as const, sessionId: "s2" },
-  { time: "13:00", label: "Almoço", kind: "gap" as const, icon: Coffee },
-  { time: "15:00", label: "Anapaula Farhat", kind: "session" as const, sessionId: "s3" },
-  { time: "16:30", label: "Responder mensagens", kind: "gap" as const, icon: MessageSquare },
-  { time: "17:00", label: "Finalizar evoluções", kind: "gap" as const, icon: CheckCircle2 },
-];
+type TimelineItem =
+  | { time: string; label: string; kind: "session"; sessionId: string }
+  | { time: string; label: string; kind: "ritual" | "gap"; icon: typeof CircleDot };
+
+function buildTimeline(sessions: Session[]): TimelineItem[] {
+  const items: TimelineItem[] = [];
+  const first = sessions[0]?.start ?? "09:00";
+  const preTime = shiftTime(first, -30);
+  items.push({ time: preTime, label: "Preparação do dia", kind: "ritual", icon: Sunrise });
+  sessions.forEach((s, i) => {
+    items.push({ time: s.start, label: s.patient, kind: "session", sessionId: s.id });
+    const next = sessions[i + 1];
+    if (next) {
+      const gapMin = minutesBetween(s.end, next.start);
+      if (gapMin >= 45) {
+        items.push({
+          time: s.end,
+          label: gapMin >= 90 ? "Almoço / pausa" : "Espaço para evolução",
+          kind: "gap",
+          icon: gapMin >= 90 ? Coffee : FileText,
+        });
+      }
+    }
+  });
+  const last = sessions[sessions.length - 1];
+  if (last) {
+    items.push({ time: shiftTime(last.end, 30), label: "Finalizar evoluções", kind: "gap", icon: CheckCircle2 });
+  }
+  return items;
+}
+
+function shiftTime(hm: string, minutes: number): string {
+  const [h, m] = hm.split(":").map(Number);
+  const d = new Date(2000, 0, 1, h, m + minutes);
+  return `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
+}
+function minutesBetween(a: string, b: string): number {
+  const [ah, am] = a.split(":").map(Number);
+  const [bh, bm] = b.split(":").map(Number);
+  return bh * 60 + bm - (ah * 60 + am);
+}
+
 
 const QUICK_ACTIONS = [
   { label: "Nova sessão", icon: Plus },
@@ -157,25 +193,66 @@ const QUICK_ACTIONS = [
 /* ------------------------------ Page Component ---------------------------- */
 
 function AgendaPage() {
-  const [selectedId, setSelectedId] = useState<string>("s1");
-  const selected = useMemo(() => SESSIONS.find((s) => s.id === selectedId) ?? SESSIONS[0], [selectedId]);
+  const query = useQuery({
+    queryKey: ["agenda-data"],
+    queryFn: () => getAgendaData(),
+    staleTime: 60_000,
+  });
+
+  const { sessions, isFallback, orphanClients, prontuariosPendentes } = useMemo(() => {
+    const dto = query.data;
+    if (dto && dto.today.length > 0) {
+      return {
+        sessions: mapDtosToSessions(dto.today),
+        isFallback: false,
+        orphanClients: dto.orphanClients,
+        prontuariosPendentes: dto.stats.prontuariosPendentes,
+      };
+    }
+    return {
+      sessions: FALLBACK_SESSIONS,
+      isFallback: true,
+      orphanClients: [] as OrphanClientDTO[],
+      prontuariosPendentes: 1,
+    };
+  }, [query.data]);
+
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const activeId = selectedId ?? sessions[0]?.id ?? "";
+  const selected = sessions.find((s) => s.id === activeId) ?? sessions[0];
+  const timeline = useMemo(() => buildTimeline(sessions), [sessions]);
 
   const stats = {
-    total: SESSIONS.length,
-    primeira: SESSIONS.filter((s) => s.type === "Primeira Consulta").length,
-    retornos: SESSIONS.filter((s) => s.type !== "Primeira Consulta").length,
-    aniversarios: SESSIONS.filter((s) => s.seals.includes("aniversario")).length,
-    ocupado: "4h",
-    livre: "2h40",
+    total: sessions.length,
+    primeira: sessions.filter((s) => s.type === "Primeira Consulta").length,
+    retornos: sessions.filter((s) => s.type !== "Primeira Consulta").length,
+    aniversarios: sessions.filter((s) => s.seals.includes("aniversario")).length,
+    ocupado: `${sessions.length}h`,
+    livre: `${Math.max(0, 8 - sessions.length)}h`,
   };
 
   return (
     <div className="min-h-[calc(100vh-64px)] bg-[radial-gradient(circle_at_20%_0%,oklch(0.97_0.02_295)_0%,transparent_45%),radial-gradient(circle_at_100%_100%,oklch(0.96_0.03_60/0.4)_0%,transparent_50%),var(--color-cream)]">
       {/* Breadcrumb */}
-      <div className="border-b border-border/60 bg-white/60 backdrop-blur-sm px-6 py-3">
+      <div className="border-b border-border/60 bg-white/60 backdrop-blur-sm px-6 py-3 flex items-center justify-between gap-3">
         <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-muted-foreground">
           Instituto Liz / Centro de Comando Clínico
         </p>
+        {query.isLoading && (
+          <span className="text-[10px] font-bold uppercase tracking-widest text-plum/70 flex items-center gap-1.5">
+            <Loader2 className="size-3 animate-spin" /> Carregando agenda
+          </span>
+        )}
+        {!query.isLoading && isFallback && (
+          <span className="text-[10px] font-bold uppercase tracking-widest text-amber-700 bg-amber-100/60 border border-amber-300/50 px-2 py-0.5 rounded-full">
+            Dados de exemplo — nenhuma sessão hoje
+          </span>
+        )}
+        {query.isError && (
+          <span className="text-[10px] font-bold uppercase tracking-widest text-rose-700 bg-rose-100/60 border border-rose-300/50 px-2 py-0.5 rounded-full">
+            Falha ao carregar — exibindo exemplo
+          </span>
+        )}
       </div>
 
       {/* Contextual Header */}
@@ -199,20 +276,45 @@ function AgendaPage() {
       {/* Three-column workspace */}
       <div className="container-liz py-6 grid gap-5 2xl:grid-cols-[260px_minmax(0,1fr)_320px] lg:grid-cols-[240px_minmax(0,1fr)] grid-cols-1">
         {/* LEFT — Timeline */}
-        <TimelineColumn selectedId={selectedId} onSelect={setSelectedId} />
+        <TimelineColumn
+          timeline={timeline}
+          sessions={sessions}
+          selectedId={activeId}
+          onSelect={setSelectedId}
+        />
 
         {/* CENTER — Featured session */}
-        <FeaturedSession session={selected} />
+        {selected ? (
+          <FeaturedSession session={selected} sessions={sessions} />
+        ) : (
+          <EmptyCenter />
+        )}
 
         {/* RIGHT — IA + Painel */}
         <div className="lg:col-span-2 2xl:col-span-1">
-          <RightPanel session={selected} />
+          <RightPanel
+            session={selected}
+            orphanClients={orphanClients}
+            prontuariosPendentes={prontuariosPendentes}
+          />
         </div>
-
       </div>
     </div>
   );
 }
+
+function EmptyCenter() {
+  return (
+    <div className="rounded-3xl bg-white/70 border border-dashed border-border/60 p-12 text-center">
+      <CalendarIcon className="size-10 text-muted-foreground/40 mx-auto mb-3" />
+      <h3 className="font-serif text-xl font-bold text-primary">Nenhuma sessão agendada</h3>
+      <p className="text-sm text-muted-foreground mt-2">
+        Quando você criar uma nova sessão, ela aparecerá aqui com todos os detalhes clínicos.
+      </p>
+    </div>
+  );
+}
+
 
 /* --------------------------------- Header --------------------------------- */
 
@@ -295,7 +397,17 @@ function HeaderStat({ icon: Icon, label, value, accent }: { icon: typeof Clock; 
 
 /* -------------------------------- Timeline -------------------------------- */
 
-function TimelineColumn({ selectedId, onSelect }: { selectedId: string; onSelect: (id: string) => void }) {
+function TimelineColumn({
+  timeline,
+  sessions,
+  selectedId,
+  onSelect,
+}: {
+  timeline: TimelineItem[];
+  sessions: Session[];
+  selectedId: string;
+  onSelect: (id: string) => void;
+}) {
   return (
     <aside className="space-y-3">
       <div className="flex items-center justify-between px-1">
@@ -310,11 +422,12 @@ function TimelineColumn({ selectedId, onSelect }: { selectedId: string; onSelect
         <div className="absolute left-[38px] top-6 bottom-6 w-px bg-gradient-to-b from-transparent via-border to-transparent" />
 
         <ul className="space-y-3 relative">
-          {TIMELINE.map((item, i) => {
+          {timeline.map((item, i) => {
             const isSession = item.kind === "session";
-            const session = isSession ? SESSIONS.find((s) => s.id === item.sessionId) : null;
+            const session = isSession ? sessions.find((s) => s.id === item.sessionId) : null;
             const isSelected = session?.id === selectedId;
             const Icon = isSession ? CircleDot : (item as { icon: typeof CircleDot }).icon;
+
 
             return (
               <li key={i}>
@@ -403,7 +516,7 @@ function TimelineColumn({ selectedId, onSelect }: { selectedId: string; onSelect
 
 /* --------------------------- Featured Session Card ------------------------ */
 
-function FeaturedSession({ session }: { session: Session }) {
+function FeaturedSession({ session, sessions }: { session: Session; sessions: Session[] }) {
   const accentBar = {
     plum: "bg-gradient-to-b from-plum to-lavender",
     lavender: "bg-gradient-to-b from-lavender to-plum",
@@ -500,15 +613,22 @@ function FeaturedSession({ session }: { session: Session }) {
                 IA Clínica detectou
               </p>
             </div>
-            <ul className="space-y-2">
-              {session.aiAlerts.map((alert, i) => (
-                <li key={i} className="flex items-start gap-2.5 text-[13px] text-primary/85 leading-relaxed">
-                  <AlertTriangle className="size-3.5 text-gold shrink-0 mt-1" />
-                  <span>{alert}</span>
-                </li>
-              ))}
-            </ul>
+            {session.aiAlerts.length > 0 ? (
+              <ul className="space-y-2">
+                {session.aiAlerts.map((alert, i) => (
+                  <li key={i} className="flex items-start gap-2.5 text-[13px] text-primary/85 leading-relaxed">
+                    <AlertTriangle className="size-3.5 text-gold shrink-0 mt-1" />
+                    <span>{alert}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-[12px] text-muted-foreground italic">
+                Nenhum padrão detectado ainda — o briefing clínico será gerado quando o genossociograma estiver integrado.
+              </p>
+            )}
           </div>
+
 
           {/* Protocols */}
           <div className="mt-5">
@@ -561,7 +681,7 @@ function FeaturedSession({ session }: { session: Session }) {
       {/* Mini árvore preview + próximas */}
       <div className="grid md:grid-cols-2 gap-4">
         <MiniTreePreview session={session} />
-        <UpcomingList currentId={session.id} />
+        <UpcomingList currentId={session.id} sessions={sessions} />
       </div>
     </main>
   );
@@ -620,8 +740,9 @@ function MiniTreePreview({ session }: { session: Session }) {
   );
 }
 
-function UpcomingList({ currentId }: { currentId: string }) {
-  const others = SESSIONS.filter((s) => s.id !== currentId);
+function UpcomingList({ currentId, sessions }: { currentId: string; sessions: Session[] }) {
+  const others = sessions.filter((s) => s.id !== currentId);
+
   return (
     <div className="rounded-2xl bg-white/80 backdrop-blur border border-border/50 shadow-sm p-5">
       <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4 flex items-center gap-2">
@@ -649,7 +770,16 @@ function UpcomingList({ currentId }: { currentId: string }) {
 
 /* -------------------------------- Right Panel ----------------------------- */
 
-function RightPanel({ session }: { session: Session }) {
+function RightPanel({
+  session,
+  orphanClients,
+  prontuariosPendentes,
+}: {
+  session: Session;
+  orphanClients: OrphanClientDTO[];
+  prontuariosPendentes: number;
+}) {
+
   return (
     <aside className="grid gap-4 md:grid-cols-2 2xl:grid-cols-1">
       {/* IA Clínica briefing */}
@@ -697,12 +827,23 @@ function RightPanel({ session }: { session: Session }) {
           <ClipboardList className="size-3.5" /> Pendências
         </p>
         <ul className="space-y-2.5 text-[13px]">
-          <PendingRow label="Prontuários sem evolução" count={1} tone="rose" />
+          <PendingRow label="Prontuários sem evolução" count={prontuariosPendentes} tone="rose" />
           <PendingRow label="Checklists não preenchidos" count={2} tone="gold" />
           <PendingRow label="Genogramas incompletos" count={3} tone="lavender" />
-          <PendingRow label="Clientes sem retorno" count={2} tone="plum" />
+          <PendingRow label="Clientes sem retorno" count={orphanClients.length} tone="plum" />
         </ul>
+        {orphanClients.length > 0 && (
+          <ul className="mt-3 pt-3 border-t border-border/40 space-y-1.5">
+            {orphanClients.slice(0, 3).map((c) => (
+              <li key={c.id} className="flex items-center justify-between text-[12px]">
+                <span className="text-primary/80 font-medium truncate">{c.name}</span>
+                <button className="text-plum font-bold hover:underline">Agendar</button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
+
 
       {/* Receita + tempo */}
       <div className="rounded-2xl bg-white/80 backdrop-blur border border-border/50 shadow-sm p-5">
@@ -764,3 +905,41 @@ function PendingRow({ label, count, tone }: { label: string; count: number; tone
     </li>
   );
 }
+
+/* ---------------------------- DTO → UI Mapping ---------------------------- */
+
+function mapDtosToSessions(dtos: AgendaSessionDTO[]): Session[] {
+  const accents: Session["accent"][] = ["plum", "lavender", "gold"];
+  const now = Date.now();
+  return dtos.map((d, i) => {
+    const seals: Seal[] = [];
+    if (d.isFirst) seals.push("primeira");
+    else seals.push("retorno");
+    if (d.status === "processing" || d.status === "failed") seals.push("prioridade");
+
+    const startTs = new Date(d.startISO).getTime();
+    const isNext = startTs >= now && dtos.slice(0, i).every((p) => new Date(p.startISO).getTime() < now);
+
+    const protocols: string[] = d.isFirst
+      ? ["Anamnese Sistêmica", "Coleta de 3 Gerações", "Mapa Inicial"]
+      : ["Entrevista Transgeracional", "Linha do Tempo", "Mapa de Segredos"];
+
+    return {
+      id: d.id,
+      start: d.start,
+      end: d.end,
+      patient: d.patient,
+      initials: d.initials || "?",
+      type: d.type,
+      sessionNumber: d.isFirst ? undefined : `Sessão ${d.sessionNumber}`,
+      daysSinceFirst: d.daysSinceFirst ?? undefined,
+      lastEvolution: d.lastEvolution ?? undefined,
+      seals,
+      aiAlerts: [], // populated in Commit 4 (real IA)
+      protocols,
+      status: isNext ? "next" : "later",
+      accent: accents[i % accents.length],
+    };
+  });
+}
+
