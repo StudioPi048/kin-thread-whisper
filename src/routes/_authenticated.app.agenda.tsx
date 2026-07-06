@@ -397,7 +397,17 @@ function HeaderStat({ icon: Icon, label, value, accent }: { icon: typeof Clock; 
 
 /* -------------------------------- Timeline -------------------------------- */
 
-function TimelineColumn({ selectedId, onSelect }: { selectedId: string; onSelect: (id: string) => void }) {
+function TimelineColumn({
+  timeline,
+  sessions,
+  selectedId,
+  onSelect,
+}: {
+  timeline: TimelineItem[];
+  sessions: Session[];
+  selectedId: string;
+  onSelect: (id: string) => void;
+}) {
   return (
     <aside className="space-y-3">
       <div className="flex items-center justify-between px-1">
@@ -412,11 +422,12 @@ function TimelineColumn({ selectedId, onSelect }: { selectedId: string; onSelect
         <div className="absolute left-[38px] top-6 bottom-6 w-px bg-gradient-to-b from-transparent via-border to-transparent" />
 
         <ul className="space-y-3 relative">
-          {TIMELINE.map((item, i) => {
+          {timeline.map((item, i) => {
             const isSession = item.kind === "session";
-            const session = isSession ? SESSIONS.find((s) => s.id === item.sessionId) : null;
+            const session = isSession ? sessions.find((s) => s.id === item.sessionId) : null;
             const isSelected = session?.id === selectedId;
             const Icon = isSession ? CircleDot : (item as { icon: typeof CircleDot }).icon;
+
 
             return (
               <li key={i}>
