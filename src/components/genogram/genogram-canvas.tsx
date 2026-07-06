@@ -25,14 +25,14 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { 
-  UserPlus, 
-  Link2, 
-  Trash2, 
-  Printer, 
-  HelpCircle, 
-  Users, 
-  TreePine, 
+import {
+  UserPlus,
+  Link2,
+  Trash2,
+  Printer,
+  HelpCircle,
+  Users,
+  TreePine,
   Save,
   Undo,
   Redo,
@@ -41,7 +41,7 @@ import {
   Layers,
   ChevronRight,
   Eye,
-  Grid3X3
+  Grid3X3,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -90,31 +90,81 @@ const UnionNodeComponent = ({ data }: NodeProps) => {
           style={{ left: -12, top: -8, width: 36, height: 28 }}
           viewBox="0 0 36 28"
         >
-          <path d="M8 22 L16 4" stroke="var(--color-destructive)" strokeWidth={2.5} strokeLinecap="round" />
-          <path d="M20 22 L28 4" stroke="var(--color-destructive)" strokeWidth={2.5} strokeLinecap="round" />
+          <path
+            d="M8 22 L16 4"
+            stroke="var(--color-destructive)"
+            strokeWidth={2.5}
+            strokeLinecap="round"
+          />
+          <path
+            d="M20 22 L28 4"
+            stroke="var(--color-destructive)"
+            strokeWidth={2.5}
+            strokeLinecap="round"
+          />
         </svg>
       )}
-      <Handle id="top" type="source" position={Position.Top} className="opacity-0 pointer-events-none" />
-      <Handle id="bottom" type="source" position={Position.Bottom} className="opacity-0 pointer-events-none" />
-      <Handle id="left" type="source" position={Position.Left} className="opacity-0 pointer-events-none" />
-      <Handle id="right" type="source" position={Position.Right} className="opacity-0 pointer-events-none" />
-      <Handle id="top-target" type="target" position={Position.Top} className="opacity-0 pointer-events-none" />
-      <Handle id="bottom-target" type="target" position={Position.Bottom} className="opacity-0 pointer-events-none" />
-      <Handle id="left-target" type="target" position={Position.Left} className="opacity-0 pointer-events-none" />
-      <Handle id="right-target" type="target" position={Position.Right} className="opacity-0 pointer-events-none" />
+      <Handle
+        id="top"
+        type="source"
+        position={Position.Top}
+        className="opacity-0 pointer-events-none"
+      />
+      <Handle
+        id="bottom"
+        type="source"
+        position={Position.Bottom}
+        className="opacity-0 pointer-events-none"
+      />
+      <Handle
+        id="left"
+        type="source"
+        position={Position.Left}
+        className="opacity-0 pointer-events-none"
+      />
+      <Handle
+        id="right"
+        type="source"
+        position={Position.Right}
+        className="opacity-0 pointer-events-none"
+      />
+      <Handle
+        id="top-target"
+        type="target"
+        position={Position.Top}
+        className="opacity-0 pointer-events-none"
+      />
+      <Handle
+        id="bottom-target"
+        type="target"
+        position={Position.Bottom}
+        className="opacity-0 pointer-events-none"
+      />
+      <Handle
+        id="left-target"
+        type="target"
+        position={Position.Left}
+        className="opacity-0 pointer-events-none"
+      />
+      <Handle
+        id="right-target"
+        type="target"
+        position={Position.Right}
+        className="opacity-0 pointer-events-none"
+      />
     </div>
   );
 };
 
 function GenerationBandNode({ data }: NodeProps) {
-  const isEven = (data.generation as number) % 2 === 0;
+  const isEven = ((data as { generation?: number }).generation as number) % 2 === 0;
   return (
     <div
       style={{ width: 15000, height: GENERATION_GAP, pointerEvents: "none" }}
       className={`border-b border-dashed border-plum/20 ${isEven ? "bg-plum/[0.02]" : "bg-transparent"}`}
     >
       <div className="absolute left-6 top-3 text-[10px] font-black uppercase tracking-[0.25em] text-plum/35">
-        Geração {data.generation}
+        Geração {(data as { generation?: number }).generation}
       </div>
     </div>
   );
@@ -166,11 +216,7 @@ const edgeTypes = {
 };
 
 // HELPER LOCAL LAYOUT GENERATION
-function buildRenderGraph(
-  persons: PersonRow[],
-  rels: RelRow[],
-  probandId: string | undefined
-) {
+function buildRenderGraph(persons: PersonRow[], rels: RelRow[], probandId: string | undefined) {
   const graph = buildLogicalGraph({ persons, rels, probandId });
   const validation = validateGraph(graph);
   if (!validation.ok) {
@@ -280,8 +326,8 @@ export function GenogramCanvas({ clientId }: { clientId: string }) {
 function GenogramCanvasInner({ clientId }: { clientId: string }) {
   const qc = useQueryClient();
   const rfInstance = useReactFlow();
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [creatingPerson, setCreatingPerson] = useState(false);
   const [defaultRelationship, setDefaultRelationship] = useState("");
   const [editingPerson, setEditingPerson] = useState<PersonRow | null>(null);
@@ -299,45 +345,49 @@ function GenogramCanvasInner({ clientId }: { clientId: string }) {
   const query = useQuery({
     queryKey: ["genogram", clientId],
     queryFn: async () => {
+      // 1. Ensure proband exists in database
+      await ensureProband(clientId);
+
+      // 2. Fetch updated persons
       const { data: persons, error: pe } = await supabase
         .from("genogram_persons")
         .select("*")
         .eq("client_id", clientId);
       if (pe) throw pe;
 
+      // 3. Fetch relationships
       const { data: rels, error: re } = await supabase
         .from("genogram_relationships")
         .select("*")
         .eq("client_id", clientId);
       if (re) throw re;
 
-      const cleanPersons = await ensureProband(clientId, persons ?? []);
-      return { persons: cleanPersons, rels: rels ?? [] };
+      return { persons: (persons as PersonRow[]) ?? [], rels: (rels as RelRow[]) ?? [] };
     },
   });
 
   // Re-build render graph when data or highlight filter changes
   useEffect(() => {
     if (!query.data) return;
-    
-    const qualifiedPersons = query.data.persons.filter((p) => {
+
+    const qualifiedPersons = query.data.persons.filter((p: PersonRow) => {
       if (p.is_proband) return true;
       const hasName = !!p.full_name?.trim();
       const hasRel = !!p.relationship_to_proband?.trim();
       return hasName || hasRel;
     });
 
-    const proband = qualifiedPersons.find((p) => p.is_proband) || qualifiedPersons[0];
+    const proband = qualifiedPersons.find((p: PersonRow) => p.is_proband) || qualifiedPersons[0];
     const probandId = proband?.id;
 
     const { nodes: rawNodes, edges: rawEdges } = buildRenderGraph(
       qualifiedPersons,
       query.data.rels,
-      probandId
+      probandId,
     );
 
     const styledNodes = rawNodes.map((node) => {
-      const person = query.data.persons.find((p) => p.id === node.id);
+      const person = query.data.persons.find((p: PersonRow) => p.id === node.id);
       let opacity = 1;
       let shadow = undefined;
 
@@ -421,7 +471,7 @@ function GenogramCanvasInner({ clientId }: { clientId: string }) {
       if (hasPositionChange) setLayoutDirty(true);
       onNodesChange(nextChanges);
     },
-    [onNodesChange, rfInstance]
+    [onNodesChange, rfInstance],
   );
 
   const onSelectionChange = useCallback(
@@ -434,7 +484,7 @@ function GenogramCanvasInner({ clientId }: { clientId: string }) {
         setSelectedPerson(null);
       }
     },
-    [query.data]
+    [query.data],
   );
 
   const onNodeDoubleClick = useCallback<NodeMouseHandler>(
@@ -445,7 +495,7 @@ function GenogramCanvasInner({ clientId }: { clientId: string }) {
         setNodes((nds) => nds.map((n) => ({ ...n, selected: n.id === node.id })));
       }
     },
-    [query.data, setNodes]
+    [query.data, setNodes],
   );
 
   const onEdgeDoubleClick = useCallback<EdgeMouseHandler>(
@@ -453,7 +503,7 @@ function GenogramCanvasInner({ clientId }: { clientId: string }) {
       const rel = query.data?.rels.find((r) => r.id === edge.id);
       if (rel) setRelDialog({ open: true, editing: rel });
     },
-    [query.data]
+    [query.data],
   );
 
   const deleteSelected = useMutation({
@@ -492,8 +542,8 @@ function GenogramCanvasInner({ clientId }: { clientId: string }) {
               updated_at: savedAt,
             })
             .eq("id", node.id)
-            .eq("client_id", clientId)
-        )
+            .eq("client_id", clientId),
+        ),
       );
       const failed = results.find((result) => result.error);
       if (failed?.error) throw failed.error;
@@ -502,7 +552,7 @@ function GenogramCanvasInner({ clientId }: { clientId: string }) {
     onSuccess: (savedAt) => {
       setLayoutDirty(false);
       setLastSavedAt(
-        new Date(savedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+        new Date(savedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
       );
       toast.success("Layout do genossociograma salvo.");
     },
@@ -513,7 +563,10 @@ function GenogramCanvasInner({ clientId }: { clientId: string }) {
     mutationFn: async () => {
       const { error } = await supabase
         .from("genogram_persons")
-        .update({ position_x: null, position_y: null })
+        .update({
+          position_x: null as unknown as number,
+          position_y: null as unknown as number,
+        })
         .eq("client_id", clientId);
       if (error) throw error;
     },
@@ -549,13 +602,10 @@ function GenogramCanvasInner({ clientId }: { clientId: string }) {
 
   return (
     <div className="relative flex flex-row overflow-hidden rounded-[1.5rem] border border-border bg-slate-50/40 shadow-inner h-[800px] min-h-[calc(100vh-200px)] w-full">
-      
       {/* Canvas Area */}
       <div className="flex-1 h-full relative overflow-hidden">
-        
         {/* ── CONTÊINER SUPERIOR (BARRA DE AÇÕES + LEGENDA) ── */}
         <div className="absolute top-4 left-4 z-10 flex flex-col gap-2.5 pointer-events-none max-w-[calc(100%-32px)]">
-          
           {/* BARRA DE AÇÕES */}
           <div className="pointer-events-auto flex flex-wrap items-center gap-2 px-4 py-3 rounded-xl bg-plum shadow-xl border border-white/10">
             <div className="flex items-center gap-2 mr-3">
@@ -578,7 +628,7 @@ function GenogramCanvasInner({ clientId }: { clientId: string }) {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => setRelDialog({ open: true })}
+              onClick={() => setRelDialog({ open: true, editing: null })}
               disabled={persons.length < 2}
               className="h-9 gap-2 border-white/25 text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[13px]"
             >
@@ -685,14 +735,14 @@ function GenogramCanvasInner({ clientId }: { clientId: string }) {
               { id: "deceased", label: "Falecidos" },
               { id: "professions", label: "Profissões" },
               { id: "traumas", label: "Segredos/Traumas" },
-              { id: "diseases", label: "Doenças/Sintomas" }
+              { id: "diseases", label: "Doenças/Sintomas" },
             ].map((f) => (
               <button
                 key={f.id}
                 onClick={() => setHighlightFilter(f.id)}
                 className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
-                  highlightFilter === f.id 
-                    ? "bg-plum text-white" 
+                  highlightFilter === f.id
+                    ? "bg-plum text-white"
                     : "bg-slate-100 text-muted-foreground hover:bg-slate-200"
                 }`}
               >
@@ -719,7 +769,13 @@ function GenogramCanvasInner({ clientId }: { clientId: string }) {
               <span className="text-foreground/80">Não-binário</span>
             </span>
             <span className="flex items-center gap-2">
-              <svg viewBox="0 0 10 10" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <svg
+                viewBox="0 0 10 10"
+                className="size-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              >
                 <polygon points="5,1 9,9 1,9" className="text-foreground/70" />
               </svg>
               <span className="text-foreground/80">Aborto</span>
@@ -729,7 +785,6 @@ function GenogramCanvasInner({ clientId }: { clientId: string }) {
               <span className="text-foreground/80">Falecido</span>
             </span>
           </div>
-
         </div>
 
         {/* Guia Rápido */}
@@ -772,7 +827,6 @@ function GenogramCanvasInner({ clientId }: { clientId: string }) {
               edgeTypes={edgeTypes}
               onNodesChange={onNodesChangeCustom}
               onEdgesChange={onEdgesChange}
-              onConnect={onConnect}
               onNodeDoubleClick={onNodeDoubleClick}
               onEdgeDoubleClick={onEdgeDoubleClick}
               onSelectionChange={onSelectionChange}
@@ -804,7 +858,6 @@ function GenogramCanvasInner({ clientId }: { clientId: string }) {
             </ReactFlow>
           )}
         </div>
-
       </div>
 
       {/* Selected Person Sidebar Editor */}
@@ -862,9 +915,8 @@ function EditSidebar({
 }) {
   const [fullName, setFullName] = useState(person.full_name);
   const [preferredName, setPreferredName] = useState(person.preferred_name || "");
-  const [gender, setGender] = useState(person.gender);
+  const [gender, setGender] = useState(person.gender || "unknown");
   const [birthDate, setBirthDate] = useState(person.birth_date || "");
-  const [birthplace, setBirthplace] = useState(person.birthplace || "");
   const [isDeceased, setIsDeceased] = useState(!!person.is_deceased);
   const [deathDate, setDeathDate] = useState(person.death_date || "");
   const [causeOfDeath, setCauseOfDeath] = useState(person.cause_of_death || "");
@@ -874,9 +926,8 @@ function EditSidebar({
   useEffect(() => {
     setFullName(person.full_name);
     setPreferredName(person.preferred_name || "");
-    setGender(person.gender);
+    setGender(person.gender || "unknown");
     setBirthDate(person.birth_date || "");
-    setBirthplace(person.birthplace || "");
     setIsDeceased(!!person.is_deceased);
     setDeathDate(person.death_date || "");
     setCauseOfDeath(person.cause_of_death || "");
@@ -935,26 +986,14 @@ function EditSidebar({
           </select>
         </div>
         {/* Dates */}
-        <div className="grid grid-cols-2 gap-2">
-          <div className="space-y-1">
-            <label className="font-bold text-muted-foreground/80">Nascimento</label>
-            <input
-              type="date"
-              value={birthDate}
-              onChange={(e) => setBirthDate(e.target.value)}
-              className="w-full rounded-lg border border-border px-3 py-2 text-primary focus:outline-none focus:border-plum"
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="font-bold text-muted-foreground/80">Cidade</label>
-            <input
-              type="text"
-              value={birthplace}
-              onChange={(e) => setBirthplace(e.target.value)}
-              className="w-full rounded-lg border border-border px-3 py-2 text-primary focus:outline-none focus:border-plum"
-              placeholder="ex: Caxias do Sul"
-            />
-          </div>
+        <div className="space-y-1">
+          <label className="font-bold text-muted-foreground/80">Nascimento</label>
+          <input
+            type="date"
+            value={birthDate}
+            onChange={(e) => setBirthDate(e.target.value)}
+            className="w-full rounded-lg border border-border px-3 py-2 text-primary focus:outline-none focus:border-plum"
+          />
         </div>
 
         {/* Deceased toggle */}
@@ -1029,7 +1068,6 @@ function EditSidebar({
               preferred_name: preferredName || null,
               gender,
               birth_date: birthDate || null,
-              birthplace: birthplace || null,
               is_deceased: isDeceased,
               death_date: isDeceased ? deathDate || null : null,
               cause_of_death: isDeceased ? causeOfDeath || null : null,

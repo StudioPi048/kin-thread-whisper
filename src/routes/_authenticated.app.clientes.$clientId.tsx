@@ -44,7 +44,7 @@ import {
   MapPin,
   Sparkles,
   Layers,
-  CalendarDays
+  CalendarDays,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -258,9 +258,7 @@ function ClientDossierPage() {
                     Dossiê Clínico
                   </p>
                   <div className="flex items-center gap-3">
-                    <h1 className="font-serif text-3xl font-bold text-white">
-                      {display}
-                    </h1>
+                    <h1 className="font-serif text-3xl font-bold text-white">{display}</h1>
                     <div className="flex items-center gap-1 opacity-50 hover:opacity-100 transition-opacity">
                       <Button
                         variant="ghost"
@@ -302,28 +300,50 @@ function ClientDossierPage() {
             {/* CRM horizontal quick stats panel */}
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-2 border-t border-white/10 pt-4 text-[13px] text-white/80">
               <div className="space-y-1">
-                <p className="text-[10px] uppercase font-bold tracking-wider text-white/40">Contatos</p>
-                <p className="font-medium flex items-center gap-1.5 truncate"><Mail className="size-3.5 text-gold" /> {client.email || "—"}</p>
-                <p className="font-medium flex items-center gap-1.5 truncate"><Phone className="size-3.5 text-gold" /> {client.phone || "—"}</p>
+                <p className="text-[10px] uppercase font-bold tracking-wider text-white/40">
+                  Contatos
+                </p>
+                <p className="font-medium flex items-center gap-1.5 truncate">
+                  <Mail className="size-3.5 text-gold" /> {client.email || "—"}
+                </p>
+                <p className="font-medium flex items-center gap-1.5 truncate">
+                  <Phone className="size-3.5 text-gold" /> {client.phone || "—"}
+                </p>
               </div>
               <div className="space-y-1">
-                <p className="text-[10px] uppercase font-bold tracking-wider text-white/40">Localidade</p>
-                <p className="font-medium flex items-center gap-1.5"><MapPin className="size-3.5 text-gold" /> {client.birthplace || "Não informado"}</p>
+                <p className="text-[10px] uppercase font-bold tracking-wider text-white/40">
+                  Localidade
+                </p>
+                <p className="font-medium flex items-center gap-1.5">
+                  <MapPin className="size-3.5 text-gold" /> {client.birthplace || "Não informado"}
+                </p>
                 <p className="font-medium">{age !== null ? `${age} anos` : "Sem idade"}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-[10px] uppercase font-bold tracking-wider text-white/40">Sessões Clínicas</p>
-                <p className="font-medium flex items-center gap-1.5"><CalendarDays className="size-3.5 text-gold" /> 12 sessões</p>
+                <p className="text-[10px] uppercase font-bold tracking-wider text-white/40">
+                  Sessões Clínicas
+                </p>
+                <p className="font-medium flex items-center gap-1.5">
+                  <CalendarDays className="size-3.5 text-gold" /> 12 sessões
+                </p>
                 <p className="font-medium text-[11px] text-emerald-300">Próxima: Amanhã 09:00</p>
               </div>
               <div className="space-y-1">
-                <p className="text-[10px] uppercase font-bold tracking-wider text-white/40">Construção da Árvore</p>
-                <p className="font-medium flex items-center gap-1.5"><Layers className="size-3.5 text-gold" /> 74% do Genograma</p>
+                <p className="text-[10px] uppercase font-bold tracking-wider text-white/40">
+                  Construção da Árvore
+                </p>
+                <p className="font-medium flex items-center gap-1.5">
+                  <Layers className="size-3.5 text-gold" /> 74% do Genograma
+                </p>
                 <p className="font-medium text-[11px] text-lavender-mid">60% da Linha do Tempo</p>
               </div>
               <div className="space-y-1">
-                <p className="text-[10px] uppercase font-bold tracking-wider text-white/40">Inteligência Clínica</p>
-                <p className="font-medium flex items-center gap-1.5 text-gold"><Sparkles className="size-3.5 text-gold" /> 4 padrões ativos</p>
+                <p className="text-[10px] uppercase font-bold tracking-wider text-white/40">
+                  Inteligência Clínica
+                </p>
+                <p className="font-medium flex items-center gap-1.5 text-gold">
+                  <Sparkles className="size-3.5 text-gold" /> 4 padrões ativos
+                </p>
                 <p className="font-medium text-[11px] text-amber-300">Síndrome Detectada</p>
               </div>
             </div>
@@ -389,9 +409,17 @@ function ClientDossierPage() {
                 <div className="grid gap-6 xl:grid-cols-3">
                   <section className="xl:col-span-2 space-y-6">
                     {/* Bloco 2: Resumo IA Clínico */}
-                    <Panel title="Análise IA: Resumo Sistêmico" accent="plum" icon={<Sparkles className="size-4 text-plum" />}>
+                    <Panel
+                      title="Análise IA: Resumo Sistêmico"
+                      accent="plum"
+                      icon={<Sparkles className="size-4 text-plum" />}
+                    >
                       <p className="text-[14px] leading-relaxed text-foreground font-serif">
-                        O clã de <strong>{display}</strong> exibe repetições notáveis de queixas de abandono nas três últimas gerações (particularmente na linhagem paterna). O padrão de união em casamento coincide de forma significativa com mortes de avós em idades próximas aos 64 anos. Recomenda-se focar na reabilitação simbólica dos membros excluídos.
+                        O clã de <strong>{display}</strong> exibe repetições notáveis de queixas de
+                        abandono nas três últimas gerações (particularmente na linhagem paterna). O
+                        padrão de união em casamento coincide de forma significativa com mortes de
+                        avós em idades próximas aos 64 anos. Recomenda-se focar na reabilitação
+                        simbólica dos membros excluídos.
                       </p>
                     </Panel>
 
@@ -436,11 +464,14 @@ function ClientDossierPage() {
                     <TabSuspense>
                       <CaseDashboard clientId={client.id} />
                     </TabSuspense>
-                    
+
                     <Panel title="Identificação do Paciente-Índice">
                       <InfoRow label="Nome completo" value={client.full_name} />
                       <InfoRow label="Gênero" value={genderLabel} />
-                      <InfoRow label="Nascimento" value={client.birth_date ? formatBirthDate(client.birth_date) : "—"} />
+                      <InfoRow
+                        label="Nascimento"
+                        value={client.birth_date ? formatBirthDate(client.birth_date) : "—"}
+                      />
                       <InfoRow label="Cidade" value={client.birthplace ?? "—"} />
                       <InfoRow label="Telefone" value={client.phone ?? "—"} />
                       <InfoRow label="E-mail" value={client.email ?? "—"} />

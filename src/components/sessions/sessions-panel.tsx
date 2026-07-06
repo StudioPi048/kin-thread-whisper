@@ -459,6 +459,7 @@ function SessionCard({
               >
                 <Textarea
                   readOnly
+                  aria-label="Transcrição da sessão"
                   value={session.transcript}
                   className="font-mono text-[12px] min-h-[160px] bg-background border-border/50 resize-none text-muted-foreground/80 p-4 leading-relaxed"
                 />

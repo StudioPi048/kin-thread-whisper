@@ -79,8 +79,6 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
       className={cn("relative flex flex-col items-center group", d.is_proband && "z-20")}
       style={{ userSelect: "none", width: 140 }}
     >
-
-
       {/* ── SHAPE ─────────────────────────────────────────── */}
       <div
         className="relative flex items-center justify-center"
@@ -123,22 +121,77 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
           </span>
         )}
         {/* Handles fixados NA FORMA com 6px de respiro (stub) */}
-        <Handle id="top" type="target" position={Position.Top} style={{ top: -6 }} className="opacity-0 pointer-events-none" />
-        <Handle id="top" type="source" position={Position.Top} style={{ top: -6 }} className="opacity-0 pointer-events-none" />
-        <Handle id="top-target" type="target" position={Position.Top} style={{ top: -6 }} className="opacity-0 pointer-events-none" />
-        <Handle id="bottom" type="source" position={Position.Bottom} style={{ bottom: -6 }} className="opacity-0 pointer-events-none" />
-        <Handle id="bottom-target" type="target" position={Position.Bottom} style={{ bottom: -6 }} className="opacity-0 pointer-events-none" />
-        <Handle id="left" type="target" position={Position.Left} style={{ left: -6 }} className="opacity-0 pointer-events-none" />
-        <Handle id="left" type="source" position={Position.Left} style={{ left: -6 }} className="opacity-0 pointer-events-none" />
-        <Handle id="right" type="source" position={Position.Right} style={{ right: -6 }} className="opacity-0 pointer-events-none" />
-        <Handle id="right" type="target" position={Position.Right} style={{ right: -6 }} className="opacity-0 pointer-events-none" />
+        <Handle
+          id="top"
+          type="target"
+          position={Position.Top}
+          style={{ top: -6 }}
+          className="opacity-0 pointer-events-none"
+        />
+        <Handle
+          id="top"
+          type="source"
+          position={Position.Top}
+          style={{ top: -6 }}
+          className="opacity-0 pointer-events-none"
+        />
+        <Handle
+          id="top-target"
+          type="target"
+          position={Position.Top}
+          style={{ top: -6 }}
+          className="opacity-0 pointer-events-none"
+        />
+        <Handle
+          id="bottom"
+          type="source"
+          position={Position.Bottom}
+          style={{ bottom: -6 }}
+          className="opacity-0 pointer-events-none"
+        />
+        <Handle
+          id="bottom-target"
+          type="target"
+          position={Position.Bottom}
+          style={{ bottom: -6 }}
+          className="opacity-0 pointer-events-none"
+        />
+        <Handle
+          id="left"
+          type="target"
+          position={Position.Left}
+          style={{ left: -6 }}
+          className="opacity-0 pointer-events-none"
+        />
+        <Handle
+          id="left"
+          type="source"
+          position={Position.Left}
+          style={{ left: -6 }}
+          className="opacity-0 pointer-events-none"
+        />
+        <Handle
+          id="right"
+          type="source"
+          position={Position.Right}
+          style={{ right: -6 }}
+          className="opacity-0 pointer-events-none"
+        />
+        <Handle
+          id="right"
+          type="target"
+          position={Position.Right}
+          style={{ right: -6 }}
+          className="opacity-0 pointer-events-none"
+        />
       </div>
 
       {/* ── CARD DE INFORMAÇÃO — Independente e flutuante ── */}
       <div
         className={cn(
           "mt-3 w-[140px] min-h-[72px] h-auto bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-sm px-2 py-1.5 flex flex-col justify-center items-center text-center select-none z-10 transition-all pb-2",
-          d.is_proband && "border-plum bg-white dark:bg-zinc-900 shadow-[0_0_0_1px_rgba(110,20,60,0.15)]",
+          d.is_proband &&
+            "border-plum bg-white dark:bg-zinc-900 shadow-[0_0_0_1px_rgba(110,20,60,0.15)]",
           selected && "ring-1 ring-lavender border-lavender",
         )}
       >

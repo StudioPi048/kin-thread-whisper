@@ -223,7 +223,8 @@ export function buildLogicalGraph({ persons, rels, probandId }: BuildOptions): L
     const { id, partners, children, generation, branchId, rel } = params;
     if (partners.length === 0 && children.length === 0) return null;
     const kind = deriveUnionKind(rel);
-    const order = (rel as (RelRow & { marriage_order?: number | null }) | undefined)?.marriage_order ?? null;
+    const order =
+      (rel as (RelRow & { marriage_order?: number | null }) | undefined)?.marriage_order ?? null;
     const label = unionKindLabel(kind, order);
     const union: UnionEntity = {
       id,
@@ -446,32 +447,39 @@ export function layoutGraph(g: LogicalGraph): Placement {
     personPos.set(id, { x: cx - NODE_W / 2, y: y(gen) });
   };
 
-  interface Extent { left: number; right: number; }
+  interface Extent {
+    left: number;
+    right: number;
+  }
   const personExtents = new Map<string, Extent>();
   const unionD = new Map<string, number>();
 
   // PASSO 1: Bottom-up compute width (extents)
   const computeExtent = (personId: string, side: "root" | "paternal" | "maternal"): Extent => {
     if (personExtents.has(personId)) return personExtents.get(personId)!;
-    
+
     let left = -NODE_W / 2;
     let right = NODE_W / 2;
-    
+
     const person = g.persons.get(personId);
     if (!person) return { left, right };
-    
+
     const parentUnionId = parentUnionOfPerson.get(personId);
     if (parentUnionId) {
       const pu = g.unions.get(parentUnionId);
       if (pu) {
-        const partners = pu.partners.map((pid) => g.persons.get(pid)).filter(Boolean) as PersonEntity[];
-        
+        const partners = pu.partners
+          .map((pid) => g.persons.get(pid))
+          .filter(Boolean) as PersonEntity[];
+
         // Sort: paternal (pai) à esquerda, maternal (mãe) à direita
         partners.sort((a, b) => {
           const relA = (a.row.relationship_to_proband || "").toLowerCase();
           const relB = (b.row.relationship_to_proband || "").toLowerCase();
-          const isMale = (r: string) => r.includes("pai") || r.includes("avô") || r.includes("bisavô");
-          const isFemale = (r: string) => r.includes("mãe") || r.includes("mae") || r.includes("avó") || r.includes("bisavó");
+          const isMale = (r: string) =>
+            r.includes("pai") || r.includes("avô") || r.includes("bisavô");
+          const isFemale = (r: string) =>
+            r.includes("mãe") || r.includes("mae") || r.includes("avó") || r.includes("bisavó");
           if (isMale(relA) && !isMale(relB)) return -1;
           if (isFemale(relA) && !isFemale(relB)) return 1;
           if (!isMale(relA) && isMale(relB)) return 1;
@@ -480,19 +488,19 @@ export function layoutGraph(g: LogicalGraph): Placement {
           const gB = (b.row.gender || "").toLowerCase().startsWith("m") ? -1 : 1;
           return gA - gB;
         });
-        
+
         if (partners.length === 2) {
           const pExt = computeExtent(partners[0].id, "paternal");
           const mExt = computeExtent(partners[1].id, "maternal");
-          
+
           let D = (COUPLE_GAP + pExt.right - mExt.left) / 2;
           if (D < COUPLE_GAP / 2) D = COUPLE_GAP / 2;
-          
+
           unionD.set(parentUnionId, D);
-          
+
           const parentsLeft = -D + pExt.left;
           const parentsRight = D + mExt.right;
-          
+
           left = Math.min(left, parentsLeft);
           right = Math.max(right, parentsRight);
         } else if (partners.length === 1) {
@@ -503,13 +511,13 @@ export function layoutGraph(g: LogicalGraph): Placement {
           left = Math.min(left, ext.left);
           right = Math.max(right, ext.right);
         }
-        
+
         // Satélites (irmãos) da pessoa
         const siblings = pu.children.filter((cid) => cid !== personId);
         if (siblings.length > 0) {
           let direction = 1;
           if (side === "paternal") direction = -1;
-          
+
           const step = getSiblingStep(siblings.length);
           const siblingsWidth = siblings.length * step;
           if (side !== "root") {
@@ -529,32 +537,38 @@ export function layoutGraph(g: LogicalGraph): Placement {
         }
       }
     }
-    
+
     const ext = { left, right };
     personExtents.set(personId, ext);
     return ext;
   };
 
   // PASSO 2: Top-down assign positions
-  const assignPosition = (personId: string, cx: number, gen: number, side: "root" | "paternal" | "maternal") => {
+  const assignPosition = (
+    personId: string,
+    cx: number,
+    gen: number,
+    side: "root" | "paternal" | "maternal",
+  ) => {
     placePerson(personId, cx, gen);
-    
+
     const parentUnionId = parentUnionOfPerson.get(personId);
     if (!parentUnionId) return;
-    
+
     const pu = g.unions.get(parentUnionId);
     if (!pu) return;
-    
+
     const parentGen = gen + 1;
     // A união do casal parental fica exatamente sobre a pessoa, verticalmente centralizada na geração deles
     unionPos.set(parentUnionId, { x: cx, y: y(parentGen) + PERSON_SHAPE / 2 });
-    
+
     const partners = pu.partners.map((pid) => g.persons.get(pid)).filter(Boolean) as PersonEntity[];
     partners.sort((a, b) => {
       const relA = (a.row.relationship_to_proband || "").toLowerCase();
       const relB = (b.row.relationship_to_proband || "").toLowerCase();
       const isMale = (r: string) => r.includes("pai") || r.includes("avô") || r.includes("bisavô");
-      const isFemale = (r: string) => r.includes("mãe") || r.includes("mae") || r.includes("avó") || r.includes("bisavó");
+      const isFemale = (r: string) =>
+        r.includes("mãe") || r.includes("mae") || r.includes("avó") || r.includes("bisavó");
       if (isMale(relA) && !isMale(relB)) return -1;
       if (isFemale(relA) && !isFemale(relB)) return 1;
       if (!isMale(relA) && isMale(relB)) return 1;
@@ -563,9 +577,9 @@ export function layoutGraph(g: LogicalGraph): Placement {
       const gB = (b.row.gender || "").toLowerCase().startsWith("m") ? -1 : 1;
       return gA - gB;
     });
-    
+
     if (partners.length === 2) {
-      const D = unionD.get(parentUnionId) ?? (COUPLE_GAP / 2);
+      const D = unionD.get(parentUnionId) ?? COUPLE_GAP / 2;
       assignPosition(partners[0].id, cx - D, parentGen, "paternal");
       assignPosition(partners[1].id, cx + D, parentGen, "maternal");
     } else if (partners.length === 1) {
@@ -573,17 +587,17 @@ export function layoutGraph(g: LogicalGraph): Placement {
       const pSide = gender.startsWith("m") ? "paternal" : "maternal";
       assignPosition(partners[0].id, cx, parentGen, pSide);
     }
-    
+
     // Satélites (irmãos) pendurados do lado correto, fora da bounding box dos pais
     const siblings = pu.children.filter((cid) => cid !== personId);
     if (siblings.length > 0) {
       let parentsLeft = -NODE_W / 2;
       let parentsRight = NODE_W / 2;
-      
+
       if (partners.length === 2) {
         const pExt = personExtents.get(partners[0].id) || { left: -NODE_W / 2, right: NODE_W / 2 };
         const mExt = personExtents.get(partners[1].id) || { left: -NODE_W / 2, right: NODE_W / 2 };
-        const D = unionD.get(parentUnionId) ?? (COUPLE_GAP / 2);
+        const D = unionD.get(parentUnionId) ?? COUPLE_GAP / 2;
         parentsLeft = -D + pExt.left;
         parentsRight = D + mExt.right;
       } else if (partners.length === 1) {
@@ -632,7 +646,7 @@ export function layoutGraph(g: LogicalGraph): Placement {
 
   const placement = { personPos, unionPos };
   const violations = checkLayoutInvariants(g, placement);
-  console.log(violations.length === 0 ? '✅ Layout OK' : `❌ ${violations.length} violação(ões)`);
+  console.log(violations.length === 0 ? "✅ Layout OK" : `❌ ${violations.length} violação(ões)`);
   if (violations.length > 0) {
     console.table(violations);
   }

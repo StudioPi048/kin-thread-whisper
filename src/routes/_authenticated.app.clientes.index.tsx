@@ -15,7 +15,7 @@ import {
   MapPin,
   Calendar,
   Layers,
-  FileCheck
+  FileCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -80,14 +80,14 @@ function ClientesIndex() {
     if (!q) return clients;
     return clients.filter((c) => {
       const hay = [
-        c.full_name, 
-        c.preferred_name, 
-        c.email, 
+        c.full_name,
+        c.preferred_name,
+        c.email,
         c.birthplace,
         c.phone,
         c.presenting_complaint,
         c.clinical_notes,
-        (c.tags ?? []).join(" ")
+        (c.tags ?? []).join(" "),
       ]
         .filter(Boolean)
         .join(" ")
@@ -162,7 +162,7 @@ function ClientesIndex() {
                 <TabsTrigger value="archived">Arquivados</TabsTrigger>
               </TabsList>
             </Tabs>
-            
+
             {/* View Mode Switcher */}
             <div className="flex items-center border border-border rounded-lg p-1 bg-white">
               <button
@@ -250,12 +250,12 @@ function ClientesIndex() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/40">
-                  {filtered.map(c => {
+                  {filtered.map((c) => {
                     const age = calcAge(c.birth_date);
                     return (
                       <tr key={c.id} className="hover:bg-slate-50/50 transition-colors">
                         <td className="p-4 pl-6">
-                          <Link 
+                          <Link
                             to="/app/clientes/$clientId"
                             params={{ clientId: c.id }}
                             className="font-serif font-bold text-[15px] text-primary hover:text-plum transition-colors block"
@@ -263,11 +263,13 @@ function ClientesIndex() {
                             {c.preferred_name || c.full_name}
                           </Link>
                           <span className="text-[12px] text-muted-foreground">
-                            {age !== null ? `${age} anos · ` : ""}{c.birthplace || "Sem cidade"}
+                            {age !== null ? `${age} anos · ` : ""}
+                            {c.birthplace || "Sem cidade"}
                           </span>
                         </td>
                         <td className="p-4 font-mono text-[12px] text-primary/80">
-                          {c.email || "—"}<br />
+                          {c.email || "—"}
+                          <br />
                           {c.phone || "—"}
                         </td>
                         <td className="p-4 max-w-xs truncate font-serif text-foreground/80">
@@ -275,8 +277,12 @@ function ClientesIndex() {
                         </td>
                         <td className="p-4">
                           <div className="flex flex-wrap gap-1">
-                            {c.tags?.slice(0, 3).map(t => (
-                              <Badge key={t} variant="secondary" className="px-1.5 py-0.5 rounded text-[10px] font-semibold">
+                            {c.tags?.slice(0, 3).map((t) => (
+                              <Badge
+                                key={t}
+                                variant="secondary"
+                                className="px-1.5 py-0.5 rounded text-[10px] font-semibold"
+                              >
                                 {t}
                               </Badge>
                             ))}
@@ -298,12 +304,26 @@ function ClientesIndex() {
                               <DropdownMenuItem onClick={() => setEditing(c)}>
                                 <Pencil className="size-4" /> Editar
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => setStatus.mutate({ id: c.id, status: c.status === "active" ? "archived" : "active" })}>
-                                {c.status === "active" ? <Archive className="size-4" /> : <ArchiveRestore className="size-4" />}
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  setStatus.mutate({
+                                    id: c.id,
+                                    status: c.status === "active" ? "archived" : "active",
+                                  })
+                                }
+                              >
+                                {c.status === "active" ? (
+                                  <Archive className="size-4" />
+                                ) : (
+                                  <ArchiveRestore className="size-4" />
+                                )}
                                 {c.status === "active" ? "Arquivar" : "Reativar"}
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem className="text-destructive" onClick={() => setDeleting(c)}>
+                              <DropdownMenuItem
+                                className="text-destructive"
+                                onClick={() => setDeleting(c)}
+                              >
                                 <Trash2 className="size-4" /> Excluir
                               </DropdownMenuItem>
                             </DropdownMenuContent>
@@ -388,7 +408,9 @@ function ClientCard({
             {client.birthplace && (
               <>
                 <span>·</span>
-                <span className="inline-flex items-center gap-0.5"><MapPin className="size-3" /> {client.birthplace}</span>
+                <span className="inline-flex items-center gap-0.5">
+                  <MapPin className="size-3" /> {client.birthplace}
+                </span>
               </>
             )}
           </p>
@@ -442,10 +464,16 @@ function ClientCard({
           <span className="text-plum font-bold">74% Completo</span>
         </div>
         <div className="flex flex-wrap gap-1.5">
-          <Badge variant="outline" className="text-emerald-700 border-emerald-200 bg-emerald-50 text-[10px] font-bold py-0.5 rounded-md">
+          <Badge
+            variant="outline"
+            className="text-emerald-700 border-emerald-200 bg-emerald-50 text-[10px] font-bold py-0.5 rounded-md"
+          >
             🟢 Sessão amanhã
           </Badge>
-          <Badge variant="outline" className="text-plum border-plum/20 bg-plum/[0.03] text-[10px] font-bold py-0.5 rounded-md">
+          <Badge
+            variant="outline"
+            className="text-plum border-plum/20 bg-plum/[0.03] text-[10px] font-bold py-0.5 rounded-md"
+          >
             🟣 IA detectou padrão
           </Badge>
         </div>
@@ -455,7 +483,9 @@ function ClientCard({
       <div className="mt-auto flex items-center justify-between border-t border-border/60 px-5 py-3 text-[12px] text-muted-foreground bg-slate-50/[0.3] rounded-b-[1rem]">
         <span>
           {client.consent_given_at ? (
-            <span className="font-bold text-emerald-700 flex items-center gap-1"><FileCheck className="size-3.5" /> Consentimento</span>
+            <span className="font-bold text-emerald-700 flex items-center gap-1">
+              <FileCheck className="size-3.5" /> Consentimento
+            </span>
           ) : (
             <span className="text-amber-600">● Sem consentimento</span>
           )}

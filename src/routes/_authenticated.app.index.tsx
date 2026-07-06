@@ -1,21 +1,22 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { 
-  ArrowRight, 
-  Sparkles, 
-  Calendar, 
-  CheckCircle2, 
-  AlertTriangle, 
-  Clock, 
-  History, 
-  Users, 
-  FileText, 
+import {
+  ArrowRight,
+  Sparkles,
+  Calendar,
+  CheckCircle2,
+  AlertTriangle,
+  Clock,
+  History,
+  Users,
+  FileText,
   HeartCrack,
   BadgeAlert,
   HelpCircle,
-  Play
+  Play,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -47,7 +48,7 @@ function AppHome() {
         .select("*")
         .eq("status", "active")
         .order("updated_at", { ascending: false });
-      
+
       const activeClients = clientsRes ?? [];
 
       // 2. Fetch recent sessions
@@ -56,7 +57,7 @@ function AppHome() {
         .select("*, clients(full_name, preferred_name)")
         .order("session_date", { ascending: false })
         .limit(10);
-      
+
       return {
         clients: activeClients,
         sessions: sessionsRes ?? [],
@@ -111,10 +112,8 @@ function AppHome() {
 
         {/* Notion / Linear Layout Grid */}
         <div className="grid gap-6 lg:grid-cols-3">
-          
           {/* Coluna 1 & 2 (Principal) */}
           <div className="lg:col-span-2 space-y-6">
-            
             {/* Bloco 2: Continue de Onde Parou */}
             {lastActiveClient ? (
               <div className="rounded-2xl border border-border/50 bg-white p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
@@ -126,7 +125,9 @@ function AppHome() {
                     {lastActiveClient.preferred_name || lastActiveClient.full_name}
                   </h3>
                   <div className="flex items-center gap-4 text-[12px] text-muted-foreground">
-                    <span>Genossociograma: <strong className="text-plum">74% completo</strong></span>
+                    <span>
+                      Genossociograma: <strong className="text-plum">74% completo</strong>
+                    </span>
                     <span>•</span>
                     <span>Última edição: Ontem</span>
                   </div>
@@ -145,9 +146,13 @@ function AppHome() {
             ) : (
               <div className="rounded-2xl border border-dashed border-border bg-white p-8 text-center space-y-2">
                 <Users className="size-8 text-lavender/50 mx-auto" />
-                <p className="font-serif text-lg font-bold text-primary">Nenhum cliente ativo no consultório</p>
+                <p className="font-serif text-lg font-bold text-primary">
+                  Nenhum cliente ativo no consultório
+                </p>
                 <Link to="/app/clientes">
-                  <Button variant="outline" size="sm" className="mt-2 font-bold">Ver Clientes</Button>
+                  <Button variant="outline" size="sm" className="mt-2 font-bold">
+                    Ver Clientes
+                  </Button>
                 </Link>
               </div>
             )}
@@ -164,17 +169,17 @@ function AppHome() {
                 </span>
               </div>
               <div className="p-6 divide-y divide-border/40">
-                <AlertItem 
+                <AlertItem
                   title="Repetição de trauma detectada"
                   description="A IA encontrou padrões de abandono emocional repetidos em 3 gerações do clã de Pietro."
                   severity="critical"
                 />
-                <AlertItem 
+                <AlertItem
                   title="Coincidência da Síndrome de Aniversário"
                   description="A data de casamento da mãe coincide exatamente com o aniversário de falecimento do avô materno."
                   severity="attention"
                 />
-                <AlertItem 
+                <AlertItem
                   title="Conflito de Consistência Sistêmica"
                   description="Existem idades inconsistentes no casamento dos bisavós paternos na árvore genealógica."
                   severity="info"
@@ -193,19 +198,19 @@ function AppHome() {
               <div className="p-6">
                 <div className="flow-root">
                   <ul className="-mb-8">
-                    <ActivityTimelineItem 
+                    <ActivityTimelineItem
                       action="Dossiê editado"
                       target="Pietro Vinicius Baccin"
                       time="há 2 horas"
                       desc="Você atualizou a queixa do caso e adicionou a profissão do pai."
                     />
-                    <ActivityTimelineItem 
+                    <ActivityTimelineItem
                       action="Vínculo criado"
                       target="Letícia Baccin"
                       time="Ontem"
                       desc="Adicionou relacionamento de conflito emocional na subárvore materna."
                     />
-                    <ActivityTimelineItem 
+                    <ActivityTimelineItem
                       action="Árvore gerada"
                       target="Daniel Baccin"
                       time="2 dias atrás"
@@ -215,12 +220,10 @@ function AppHome() {
                 </div>
               </div>
             </div>
-
           </div>
 
           {/* Coluna 3 (Lateral) */}
           <div className="space-y-6">
-            
             {/* Bloco 3: Agenda do Dia */}
             <div className="rounded-2xl border border-border/50 bg-white shadow-sm overflow-hidden">
               <div className="border-b border-border/40 px-6 py-4">
@@ -230,22 +233,14 @@ function AppHome() {
                 </h3>
               </div>
               <div className="p-6 divide-y divide-border/40">
-                <AgendaItem 
+                <AgendaItem
                   time="09:00"
                   clientName="Pietro Vinicius"
                   type="Sessão 3 / Genograma"
                   active
                 />
-                <AgendaItem 
-                  time="11:30"
-                  clientName="Leticia Baccin"
-                  type="Anamnese Sistêmica"
-                />
-                <AgendaItem 
-                  time="15:00"
-                  clientName="Anapaula Farhat"
-                  type="Primeira Consulta"
-                />
+                <AgendaItem time="11:30" clientName="Leticia Baccin" type="Anamnese Sistêmica" />
+                <AgendaItem time="15:00" clientName="Anapaula Farhat" type="Primeira Consulta" />
               </div>
             </div>
 
@@ -258,22 +253,32 @@ function AppHome() {
                 <div className="flex items-center justify-between rounded-xl bg-slate-50 border border-border/50 p-3">
                   <div>
                     <p className="text-[13px] font-bold text-primary">Gravação da Sessão 2</p>
-                    <p className="text-[11px] text-muted-foreground">Pietro Vinicius · transcrito</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Pietro Vinicius · transcrito
+                    </p>
                   </div>
-                  <Button size="sm" variant="outline" className="h-8 font-bold">Estruturar</Button>
+                  <Button size="sm" variant="outline" className="h-8 font-bold">
+                    Estruturar
+                  </Button>
                 </div>
               </div>
             </div>
-
           </div>
-
         </div>
       </div>
     </div>
   );
 }
 
-function AlertItem({ title, description, severity }: { title: string; description: string; severity: "critical" | "attention" | "info" }) {
+function AlertItem({
+  title,
+  description,
+  severity,
+}: {
+  title: string;
+  description: string;
+  severity: "critical" | "attention" | "info";
+}) {
   const iconMap = {
     critical: <HeartCrack className="size-4 text-plum" />,
     attention: <BadgeAlert className="size-4 text-gold" />,
@@ -287,18 +292,32 @@ function AlertItem({ title, description, severity }: { title: string; descriptio
 
   return (
     <div className="flex gap-4 py-4 first:pt-0 last:pb-0">
-      <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${colorMap[severity]}`}>
+      <div
+        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${colorMap[severity]}`}
+      >
         {iconMap[severity]}
       </div>
       <div className="space-y-1">
         <h4 className="text-[13px] font-bold text-primary leading-tight">{title}</h4>
-        <p className="text-[13px] text-muted-foreground leading-relaxed font-serif">{description}</p>
+        <p className="text-[13px] text-muted-foreground leading-relaxed font-serif">
+          {description}
+        </p>
       </div>
     </div>
   );
 }
 
-function ActivityTimelineItem({ action, target, time, desc }: { action: string; target: string; time: string; desc: string }) {
+function ActivityTimelineItem({
+  action,
+  target,
+  time,
+  desc,
+}: {
+  action: string;
+  target: string;
+  time: string;
+  desc: string;
+}) {
   return (
     <li className="relative pb-8 last:pb-0">
       <span className="absolute left-4 top-4 -ml-px h-full w-0.5 bg-border/50" aria-hidden="true" />
@@ -322,11 +341,23 @@ function ActivityTimelineItem({ action, target, time, desc }: { action: string; 
   );
 }
 
-function AgendaItem({ time, clientName, type, active }: { time: string; clientName: string; type: string; active?: boolean }) {
+function AgendaItem({
+  time,
+  clientName,
+  type,
+  active,
+}: {
+  time: string;
+  clientName: string;
+  type: string;
+  active?: boolean;
+}) {
   return (
     <div className="flex items-center justify-between gap-4 py-4.5 first:pt-0 last:pb-0">
       <div className="flex gap-3 min-w-0">
-        <div className={`text-[12px] font-black uppercase tracking-[0.1em] px-2 py-1 rounded ${active ? "bg-plum text-white" : "bg-slate-100 text-muted-foreground"}`}>
+        <div
+          className={`text-[12px] font-black uppercase tracking-[0.1em] px-2 py-1 rounded ${active ? "bg-plum text-white" : "bg-slate-100 text-muted-foreground"}`}
+        >
           {time}
         </div>
         <div className="min-w-0">
@@ -334,9 +365,7 @@ function AgendaItem({ time, clientName, type, active }: { time: string; clientNa
           <p className="text-[11px] text-muted-foreground truncate">{type}</p>
         </div>
       </div>
-      {active && (
-        <span className="flex h-2 w-2 rounded-full bg-plum" />
-      )}
+      {active && <span className="flex h-2 w-2 rounded-full bg-plum" />}
     </div>
   );
 }

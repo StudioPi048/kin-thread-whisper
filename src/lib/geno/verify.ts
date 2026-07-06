@@ -22,7 +22,7 @@ export function checkLayoutInvariants(g: LogicalGraph, placement: Placement): Vi
 
         if (Math.abs(un.x - expectedCenter) > EPS) {
           violations.push({
-            rule: 'UNIAO_FORA_DO_MEIO',
+            rule: "UNIAO_FORA_DO_MEIO",
             detail: `União ${uid} em x=${un.x}, esperado x=${expectedCenter}`,
             ids: [uid, u.partners[0], u.partners[1]],
           });
@@ -42,7 +42,7 @@ export function checkLayoutInvariants(g: LogicalGraph, placement: Placement): Vi
         const childCenter = childPos.x + NODE_W / 2;
         if (Math.abs(childCenter - un.x) > EPS) {
           violations.push({
-            rule: 'FILHO_UNICO_DESALINHADO',
+            rule: "FILHO_UNICO_DESALINHADO",
             detail: `Filho ${childId} em x=${childCenter}, união em x=${un.x}`,
             ids: [uid, childId],
           });
@@ -60,14 +60,11 @@ export function checkLayoutInvariants(g: LogicalGraph, placement: Placement): Vi
       const w = NODE_W;
       const h = NODE_H; // Full card height including text
 
-      if (
-        Math.abs(p1.x - p2.x) < w - EPS &&
-        Math.abs(p1.y - p2.y) < h - EPS
-      ) {
-        violations.push({ 
-          rule: 'SOBREPOSICAO', 
-          detail: `${id1} e ${id2} se sobrepõem: P1(${p1.x}, ${p1.y}) P2(${p2.x}, ${p2.y})`, 
-          ids: [id1, id2] 
+      if (Math.abs(p1.x - p2.x) < w - EPS && Math.abs(p1.y - p2.y) < h - EPS) {
+        violations.push({
+          rule: "SOBREPOSICAO",
+          detail: `${id1} e ${id2} se sobrepõem: P1(${p1.x}, ${p1.y}) P2(${p2.x}, ${p2.y})`,
+          ids: [id1, id2],
         });
       }
     }

@@ -1,7 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Calendar as CalendarIcon, Clock, Users, ArrowRight, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import {
+  Calendar as CalendarIcon,
+  Clock,
+  Users,
+  ArrowRight,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+} from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 export const Route = createFileRoute("/_authenticated/app/agenda")({
   component: AgendaPage,
@@ -11,9 +20,19 @@ function AgendaPage() {
   const [view, setView] = useState<"day" | "week" | "month">("week");
 
   const todaySessions = [
-    { time: "09:00 - 10:00", client: "Pietro Vinicius Baccin", type: "Genograma - Sessão 3", active: true },
+    {
+      time: "09:00 - 10:00",
+      client: "Pietro Vinicius Baccin",
+      type: "Genograma - Sessão 3",
+      active: true,
+    },
     { time: "11:30 - 12:30", client: "Leticia Baccin", type: "Anamnese Sistêmica", active: false },
-    { time: "15:00 - 16:00", client: "Anapaula Farhat Kuchockowolec", type: "Primeira Consulta", active: false },
+    {
+      time: "15:00 - 16:00",
+      client: "Anapaula Farhat Kuchockowolec",
+      type: "Primeira Consulta",
+      active: false,
+    },
   ];
 
   return (
@@ -38,7 +57,11 @@ function AgendaPage() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button size="lg" variant="outline" className="border-white/25 text-white hover:bg-white/10">
+            <Button
+              size="lg"
+              variant="outline"
+              className="border-white/25 text-white hover:bg-white/10"
+            >
               Configurar Horários
             </Button>
             <Button size="lg" variant="hero">
@@ -54,19 +77,19 @@ function AgendaPage() {
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border/50 pb-4">
           <div className="flex items-center gap-3">
             <div className="flex items-center border border-border rounded-lg p-1 bg-white">
-              <button 
+              <button
                 onClick={() => setView("day")}
                 className={`px-3 py-1.5 rounded-md text-[13px] font-bold ${view === "day" ? "bg-plum text-white" : "text-muted-foreground hover:text-primary"}`}
               >
                 Dia
               </button>
-              <button 
+              <button
                 onClick={() => setView("week")}
                 className={`px-3 py-1.5 rounded-md text-[13px] font-bold ${view === "week" ? "bg-plum text-white" : "text-muted-foreground hover:text-primary"}`}
               >
                 Semana
               </button>
-              <button 
+              <button
                 onClick={() => setView("month")}
                 className={`px-3 py-1.5 rounded-md text-[13px] font-bold ${view === "month" ? "bg-plum text-white" : "text-muted-foreground hover:text-primary"}`}
               >
@@ -98,34 +121,47 @@ function AgendaPage() {
                 <Clock className="size-4 text-plum" />
                 Sessões Agendadas para Hoje
               </h3>
-              
+
               <div className="space-y-3">
                 {todaySessions.map((session, i) => (
-                  <div 
+                  <div
                     key={i}
                     className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 border rounded-xl gap-4 transition-all ${
-                      session.active 
-                        ? "border-plum bg-plum/[0.02]" 
+                      session.active
+                        ? "border-plum bg-plum/[0.02]"
                         : "border-border/60 bg-slate-50/[0.3] hover:bg-slate-50/[0.8]"
                     }`}
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className={`text-[12px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${
-                          session.active ? "bg-plum text-white" : "bg-slate-200 text-muted-foreground"
-                        }`}>
+                        <span
+                          className={`text-[12px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${
+                            session.active
+                              ? "bg-plum text-white"
+                              : "bg-slate-200 text-muted-foreground"
+                          }`}
+                        >
                           {session.time}
                         </span>
                         {session.active && (
-                          <Badge variant="outline" className="text-plum border-plum bg-plum/5 text-[10px] font-bold">
+                          <Badge
+                            variant="outline"
+                            className="text-plum border-plum bg-plum/5 text-[10px] font-bold"
+                          >
                             Em breve
                           </Badge>
                         )}
                       </div>
-                      <h4 className="font-serif text-lg font-bold text-primary">{session.client}</h4>
+                      <h4 className="font-serif text-lg font-bold text-primary">
+                        {session.client}
+                      </h4>
                       <p className="text-[12px] text-muted-foreground">{session.type}</p>
                     </div>
-                    <Button variant="outline" size="sm" className="font-bold flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="font-bold flex items-center gap-1"
+                    >
                       Iniciar Sala <ArrowRight className="size-4" />
                     </Button>
                   </div>
@@ -142,7 +178,9 @@ function AgendaPage() {
               <div className="grid grid-cols-5 gap-4 divide-x divide-border/40">
                 {["Seg 06", "Ter 07", "Qua 08", "Qui 09", "Sex 10"].map((day, idx) => (
                   <div key={day} className="pl-4 first:pl-0 space-y-3">
-                    <p className="text-[12px] font-bold text-primary pb-2 border-b border-border/40">{day}</p>
+                    <p className="text-[12px] font-bold text-primary pb-2 border-b border-border/40">
+                      {day}
+                    </p>
                     <div className="space-y-2">
                       {idx === 0 && (
                         <div className="p-2 bg-plum/5 border border-plum/10 rounded-lg text-[11px] text-plum font-bold">
@@ -174,16 +212,21 @@ function AgendaPage() {
                 Clientes Sem Sessões
               </h3>
               <p className="text-[12px] text-muted-foreground leading-relaxed">
-                Esses clientes concluíram sua última sessão mas ainda não possuem um próximo agendamento ativo.
+                Esses clientes concluíram sua última sessão mas ainda não possuem um próximo
+                agendamento ativo.
               </p>
               <div className="space-y-3">
                 <div className="flex justify-between items-center text-[13px] border-b border-border/40 pb-2">
                   <span className="font-semibold text-primary">Dirceu Baccin</span>
-                  <Button variant="ghost" size="sm" className="font-bold text-lavender p-0 h-auto">Agendar</Button>
+                  <Button variant="ghost" size="sm" className="font-bold text-lavender p-0 h-auto">
+                    Agendar
+                  </Button>
                 </div>
                 <div className="flex justify-between items-center text-[13px] border-b border-border/40 pb-2">
                   <span className="font-semibold text-primary">Anapaula Farhat</span>
-                  <Button variant="ghost" size="sm" className="font-bold text-lavender p-0 h-auto">Agendar</Button>
+                  <Button variant="ghost" size="sm" className="font-bold text-lavender p-0 h-auto">
+                    Agendar
+                  </Button>
                 </div>
               </div>
             </div>

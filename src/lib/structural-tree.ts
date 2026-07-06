@@ -5,7 +5,6 @@ import { smartNormalizeRelationship } from "@/lib/relationship-normalizer";
 type PersonRow = Database["public"]["Tables"]["genogram_persons"]["Row"];
 type RelRow = Database["public"]["Tables"]["genogram_relationships"]["Row"];
 
-
 /** Remove acentos e parênteses, normaliza lowercase */
 function clean(s: string | null | undefined): string {
   if (!s) return "";
@@ -137,7 +136,6 @@ export function computeStructuralEdges(persons: PersonRow[], rels: RelRow[] = []
     first("Consulente") || first("Paciente") || persons.find((p) => p.is_proband) || persons[0];
   if (!proband) return [];
 
-
   const pai = first("Pai");
   const mae = first("Mãe");
 
@@ -237,14 +235,10 @@ export function computeStructuralEdges(persons: PersonRow[], rels: RelRow[] = []
   get("Irmã(o)").forEach((s, i) => linkSibling(s, pai, mae, `auto_sib_${i}`));
 
   // Tios paternos → filhos dos avós paternos
-  get("Tio(a) paterno(a)").forEach((t, i) =>
-    linkSibling(t, avoPat, avoPatF, `auto_tiopat_${i}`),
-  );
+  get("Tio(a) paterno(a)").forEach((t, i) => linkSibling(t, avoPat, avoPatF, `auto_tiopat_${i}`));
 
   // Tios maternos → filhos dos avós maternos
-  get("Tio(a) materno(a)").forEach((t, i) =>
-    linkSibling(t, avoMat, avoMatF, `auto_tiomat_${i}`),
-  );
+  get("Tio(a) materno(a)").forEach((t, i) => linkSibling(t, avoMat, avoMatF, `auto_tiomat_${i}`));
 
   // Tios-avós paternos (irmãos do avô paterno) → filhos dos bisavós que geraram o avô
   const bp1 = first("Bisavô paterno (pai do avô)");

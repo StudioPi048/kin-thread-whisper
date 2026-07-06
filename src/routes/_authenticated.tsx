@@ -61,7 +61,7 @@ function AuthenticatedLayout() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
-        setIsSearchOpen(prev => !prev);
+        setIsSearchOpen((prev) => !prev);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -96,13 +96,16 @@ function AuthenticatedLayout() {
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return searchClients;
     const q = searchQuery.toLowerCase().trim();
-    return searchClients.filter(c => {
+    return searchClients.filter((c) => {
       const haystack = [
         c.full_name,
         c.preferred_name,
         c.presenting_complaint,
-        (c.tags ?? []).join(" ")
-      ].filter(Boolean).join(" ").toLowerCase();
+        (c.tags ?? []).join(" "),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
       return haystack.includes(q);
     });
   }, [searchClients, searchQuery]);
@@ -159,7 +162,7 @@ function AuthenticatedLayout() {
           <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-white/40 mb-3">
             Menu Principal
           </p>
-          <button 
+          <button
             onClick={() => setIsSearchOpen(true)}
             className="flex items-center justify-between w-full rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition-colors px-3 py-2 text-[13px] text-white/50 font-medium cursor-pointer"
           >
@@ -175,7 +178,7 @@ function AuthenticatedLayout() {
 
         {isCollapsed && (
           <div className="pt-6 flex justify-center">
-            <button 
+            <button
               onClick={() => setIsSearchOpen(true)}
               className="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition-colors mb-2 cursor-pointer"
               title="Busca rápida (⌘K)"
@@ -207,9 +210,7 @@ function AuthenticatedLayout() {
                 <item.icon
                   className={
                     "size-5 shrink-0 transition-colors " +
-                    (active
-                      ? "text-gold"
-                      : "text-white/45 group-hover:text-white/80")
+                    (active ? "text-gold" : "text-white/45 group-hover:text-white/80")
                   }
                 />
                 {!isCollapsed && <span>{item.label}</span>}
@@ -298,13 +299,13 @@ function AuthenticatedLayout() {
 
       {/* ── COMMAND PALETTE SEARCH MODAL ── */}
       {isSearchOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-[999] bg-slate-900/60 backdrop-blur-sm flex justify-center pt-24 px-4"
           onClick={() => setIsSearchOpen(false)}
         >
-          <div 
+          <div
             className="bg-white dark:bg-zinc-900 border border-border w-full max-w-lg h-fit max-h-[450px] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
-            onClick={e => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
           >
             {/* Input search */}
             <div className="relative shrink-0">
@@ -313,7 +314,7 @@ function AuthenticatedLayout() {
                 autoFocus
                 type="text"
                 value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Busque clientes por nome, sintoma, trauma, profissão, tag..."
                 className="w-full h-12 pl-11 pr-4 bg-transparent border-b border-border text-[14px] text-primary focus:outline-none focus:ring-0 placeholder:text-muted-foreground/60"
               />
@@ -326,7 +327,7 @@ function AuthenticatedLayout() {
                   Nenhum cliente correspondente encontrado.
                 </div>
               ) : (
-                searchResults.map(c => (
+                searchResults.map((c) => (
                   <Link
                     key={c.id}
                     to="/app/clientes/$clientId"
@@ -344,8 +345,11 @@ function AuthenticatedLayout() {
                     )}
                     {c.tags && c.tags.length > 0 && (
                       <div className="flex gap-1.5 mt-1.5">
-                        {c.tags.map(t => (
-                          <span key={t} className="text-[9px] font-bold uppercase tracking-wider bg-slate-100 text-muted-foreground px-1.5 py-0.5 rounded">
+                        {c.tags.map((t) => (
+                          <span
+                            key={t}
+                            className="text-[9px] font-bold uppercase tracking-wider bg-slate-100 text-muted-foreground px-1.5 py-0.5 rounded"
+                          >
                             {t}
                           </span>
                         ))}
@@ -369,4 +373,3 @@ function AuthenticatedLayout() {
     </div>
   );
 }
-

@@ -3,6 +3,7 @@ import { Sparkles, Send, Bot, User, Brain, AlertTriangle } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 
 export const Route = createFileRoute("/_authenticated/app/ia-clinica")({
   component: IaClinicaPage,
@@ -13,30 +14,34 @@ function IaClinicaPage() {
   const [messages, setMessages] = useState<Array<{ sender: "ai" | "user"; text: string }>>([
     {
       sender: "ai",
-      text: "Olá Letícia! Sou a IA Clínica Liz, seu segundo cérebro para psicogenealogia. Posso analisar repetições transgeracionais, sugerir hipóteses para casos ou pesquisar conceitos teóricos. Em qual caso ou padrão estamos trabalhando hoje?"
-    }
+      text: "Olá Letícia! Sou a IA Clínica Liz, seu segundo cérebro para psicogenealogia. Posso analisar repetições transgeracionais, sugerir hipóteses para casos ou pesquisar conceitos teóricos. Em qual caso ou padrão estamos trabalhando hoje?",
+    },
   ]);
 
   const handleSend = () => {
     if (!input.trim()) return;
     const userMsg = input.trim();
-    setMessages(prev => [...prev, { sender: "user", text: userMsg }]);
+    setMessages((prev) => [...prev, { sender: "user", text: userMsg }]);
     setInput("");
 
     // Simulate AI response based on keyword matching
     setTimeout(() => {
-      let aiText = "Compreendo a dinâmica. Do ponto de vista transgeracional, isso sugere que o paciente pode estar carregando um mandato invisível. Recomendo mapear as profissões e causas de falecimento nas três gerações anteriores.";
-      
+      let aiText =
+        "Compreendo a dinâmica. Do ponto de vista transgeracional, isso sugere que o paciente pode estar carregando um mandato invisível. Recomendo mapear as profissões e causas de falecimento nas três gerações anteriores.";
+
       const lower = userMsg.toLowerCase();
       if (lower.includes("pietro") || lower.includes("baccin")) {
-        aiText = "No caso de Pietro Vinicius Baccin, detectamos uma síndrome de aniversário em relação à data de casamento da mãe e o falecimento do avô materno. Além disso, há repetição de queixas de abandono. Seria produtivo perguntar a ele como se sente em datas festivas da família.";
+        aiText =
+          "No caso de Pietro Vinicius Baccin, detectamos uma síndrome de aniversário em relação à data de casamento da mãe e o falecimento do avô materno. Além disso, há repetição de queixas de abandono. Seria produtivo perguntar a ele como se sente em datas festivas da família.";
       } else if (lower.includes("síndrome de aniversário") || lower.includes("aniversario")) {
-        aiText = "A síndrome de aniversário (estudada por Anne Ancelin Schützenberger) aponta que eventos de vida importantes (doenças, acidentes, casamentos, mortes) tendem a se repetir na mesma data ou na mesma idade em gerações sucessivas. Recomendo investigar datas exatas dos avós e tios.";
+        aiText =
+          "A síndrome de aniversário (estudada por Anne Ancelin Schützenberger) aponta que eventos de vida importantes (doenças, acidentes, casamentos, mortes) tendem a se repetir na mesma data ou na mesma idade em gerações sucessivas. Recomendo investigar datas exatas dos avós e tios.";
       } else if (lower.includes("abandono") || lower.includes("trauma")) {
-        aiText = "Traumas de abandono repetidos geram lealdades sistêmicas invisíveis onde os descendentes recriam a exclusão para se manterem 'fiéis' ao destino dos antepassados. O trabalho de constelação e genograma visa trazer esses excluídos de volta ao clã.";
+        aiText =
+          "Traumas de abandono repetidos geram lealdades sistêmicas invisíveis onde os descendentes recriam a exclusão para se manterem 'fiéis' ao destino dos antepassados. O trabalho de constelação e genograma visa trazer esses excluídos de volta ao clã.";
       }
 
-      setMessages(prev => [...prev, { sender: "ai", text: aiText }]);
+      setMessages((prev) => [...prev, { sender: "ai", text: aiText }]);
     }, 1000);
   };
 
@@ -56,22 +61,26 @@ function IaClinicaPage() {
           {/* Chat messages */}
           <div className="flex-1 overflow-y-auto space-y-4 pr-2">
             {messages.map((msg, i) => (
-              <div 
+              <div
                 key={i}
                 className={`flex gap-3 max-w-[80%] ${msg.sender === "user" ? "ml-auto flex-row-reverse" : "mr-auto"}`}
               >
-                <div className={`size-8 rounded-full shrink-0 flex items-center justify-center border ${
-                  msg.sender === "user" 
-                    ? "bg-lavender-soft border-lavender/30 text-lavender" 
-                    : "bg-plum/5 border-plum/10 text-plum"
-                }`}>
+                <div
+                  className={`size-8 rounded-full shrink-0 flex items-center justify-center border ${
+                    msg.sender === "user"
+                      ? "bg-lavender-soft border-lavender/30 text-lavender"
+                      : "bg-plum/5 border-plum/10 text-plum"
+                  }`}
+                >
                   {msg.sender === "user" ? <User className="size-4" /> : <Bot className="size-4" />}
                 </div>
-                <div className={`p-4 rounded-2xl shadow-sm text-[14px] leading-relaxed font-serif ${
-                  msg.sender === "user" 
-                    ? "bg-lavender text-white rounded-tr-none" 
-                    : "bg-white border border-border/50 text-primary rounded-tl-none"
-                }`}>
+                <div
+                  className={`p-4 rounded-2xl shadow-sm text-[14px] leading-relaxed font-serif ${
+                    msg.sender === "user"
+                      ? "bg-lavender text-white rounded-tr-none"
+                      : "bg-white border border-border/50 text-primary rounded-tl-none"
+                  }`}
+                >
                   {msg.text}
                 </div>
               </div>
@@ -82,12 +91,15 @@ function IaClinicaPage() {
           <div className="shrink-0 flex gap-2 border-t border-border/50 pt-4 bg-transparent">
             <Input
               value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && handleSend()}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSend()}
               placeholder="Pergunte à IA Clínica (ex: 'Quais os padrões do Pietro?' ou 'O que é Síndrome de Aniversário?')..."
               className="flex-1 h-12 text-[14px] bg-white border-border/60"
             />
-            <Button onClick={handleSend} className="h-12 w-12 p-0 flex items-center justify-center shrink-0">
+            <Button
+              onClick={handleSend}
+              className="h-12 w-12 p-0 flex items-center justify-center shrink-0"
+            >
               <Send className="size-4 fill-current" />
             </Button>
           </div>
@@ -105,8 +117,14 @@ function IaClinicaPage() {
               Diretrizes de Análise
             </h4>
             <div className="p-3.5 bg-slate-50 border border-border/60 rounded-xl space-y-2 text-[12px] text-muted-foreground leading-relaxed">
-              <p>🟢 <strong>Sempre uma hipótese:</strong> A IA sugere caminhos transgeracionais que o terapeuta deve validar na relação clínica.</p>
-              <p>🟢 <strong>Foco Sistêmico:</strong> Cruza ocupações, perdas, causas de morte, idades e coincidências de datas.</p>
+              <p>
+                🟢 <strong>Sempre uma hipótese:</strong> A IA sugere caminhos transgeracionais que o
+                terapeuta deve validar na relação clínica.
+              </p>
+              <p>
+                🟢 <strong>Foco Sistêmico:</strong> Cruza ocupações, perdas, causas de morte, idades
+                e coincidências de datas.
+              </p>
             </div>
           </div>
 
