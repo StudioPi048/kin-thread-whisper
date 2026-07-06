@@ -30,9 +30,9 @@ function IaClinicaPage() {
         "Compreendo a dinâmica. Do ponto de vista transgeracional, isso sugere que o paciente pode estar carregando um mandato invisível. Recomendo mapear as profissões e causas de falecimento nas três gerações anteriores.";
 
       const lower = userMsg.toLowerCase();
-      if (lower.includes("pietro") || lower.includes("baccin")) {
+      if (lower.includes("exemplo") || lower.includes("caso demonstrativo")) {
         aiText =
-          "No caso de Pietro Vinicius Baccin, detectamos uma síndrome de aniversário em relação à data de casamento da mãe e o falecimento do avô materno. Além disso, há repetição de queixas de abandono. Seria produtivo perguntar a ele como se sente em datas festivas da família.";
+          "Em um caso demonstrativo, podemos detectar uma síndrome de aniversário em relação a datas familiares importantes (casamentos, nascimentos, falecimentos). Investigue coincidências de datas nas três gerações anteriores e observe repetições de queixas de abandono ou exclusão.";
       } else if (lower.includes("síndrome de aniversário") || lower.includes("aniversario")) {
         aiText =
           "A síndrome de aniversário (estudada por Anne Ancelin Schützenberger) aponta que eventos de vida importantes (doenças, acidentes, casamentos, mortes) tendem a se repetir na mesma data ou na mesma idade em gerações sucessivas. Recomendo investigar datas exatas dos avós e tios.";
