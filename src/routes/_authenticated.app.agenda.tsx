@@ -285,7 +285,7 @@ function AgendaPage() {
 
         {/* CENTER — Featured session */}
         {selected ? (
-          <FeaturedSession session={selected} />
+          <FeaturedSession session={selected} sessions={sessions} />
         ) : (
           <EmptyCenter />
         )}
