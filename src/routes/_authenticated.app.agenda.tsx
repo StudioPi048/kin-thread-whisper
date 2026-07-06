@@ -674,7 +674,7 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
       {/* Mini árvore preview + próximas */}
       <div className="grid md:grid-cols-2 gap-4">
         <MiniTreePreview session={session} />
-        <UpcomingList currentId={session.id} />
+        <UpcomingList currentId={session.id} sessions={sessions} />
       </div>
     </main>
   );
