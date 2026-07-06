@@ -14,7 +14,7 @@ function IaClinicaPage() {
   const [messages, setMessages] = useState<Array<{ sender: "ai" | "user"; text: string }>>([
     {
       sender: "ai",
-      text: "Olá Letícia! Sou a IA Clínica Liz, seu segundo cérebro para psicogenealogia. Posso analisar repetições transgeracionais, sugerir hipóteses para casos ou pesquisar conceitos teóricos. Em qual caso ou padrão estamos trabalhando hoje?",
+      text: "Olá! Sou a IA Clínica Liz, seu segundo cérebro para psicogenealogia. Posso analisar repetições transgeracionais, sugerir hipóteses para casos ou pesquisar conceitos teóricos. Em qual caso ou padrão estamos trabalhando hoje?",
     },
   ]);
 
