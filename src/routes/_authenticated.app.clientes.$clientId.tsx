@@ -298,7 +298,7 @@ function ClientDossierPage() {
             </div>
 
             {/* Minimalist Info Bar */}
-            <div className="flex flex-wrap items-center gap-6 mt-2 border-t border-white/10 pt-5 text-[13px] text-white/80">
+            <div className="flex flex-wrap items-center gap-6 border-t border-white/10 pt-3 text-[13px] text-white/80">
               <div className="flex items-center gap-2">
                 <Mail className="size-3.5 text-lavender" /> 
                 <span className="font-medium">{client.email || "Sem e-mail"}</span>
