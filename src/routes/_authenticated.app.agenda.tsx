@@ -516,7 +516,7 @@ function TimelineColumn({
 
 /* --------------------------- Featured Session Card ------------------------ */
 
-function FeaturedSession({ session }: { session: Session }) {
+function FeaturedSession({ session, sessions }: { session: Session; sessions: Session[] }) {
   const accentBar = {
     plum: "bg-gradient-to-b from-plum to-lavender",
     lavender: "bg-gradient-to-b from-lavender to-plum",
