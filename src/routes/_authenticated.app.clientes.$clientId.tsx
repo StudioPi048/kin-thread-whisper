@@ -227,7 +227,7 @@ function ClientDossierPage() {
             <span className="truncate text-gold">{display}</span>
           </nav>
 
-          <header className="flex flex-col gap-6">
+          <header className="flex flex-col gap-3">
             <div className="flex flex-wrap items-center justify-between gap-6">
               <div className="flex items-center gap-4">
                 <motion.div
