@@ -613,15 +613,22 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
                 IA Clínica detectou
               </p>
             </div>
-            <ul className="space-y-2">
-              {session.aiAlerts.map((alert, i) => (
-                <li key={i} className="flex items-start gap-2.5 text-[13px] text-primary/85 leading-relaxed">
-                  <AlertTriangle className="size-3.5 text-gold shrink-0 mt-1" />
-                  <span>{alert}</span>
-                </li>
-              ))}
-            </ul>
+            {session.aiAlerts.length > 0 ? (
+              <ul className="space-y-2">
+                {session.aiAlerts.map((alert, i) => (
+                  <li key={i} className="flex items-start gap-2.5 text-[13px] text-primary/85 leading-relaxed">
+                    <AlertTriangle className="size-3.5 text-gold shrink-0 mt-1" />
+                    <span>{alert}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-[12px] text-muted-foreground italic">
+                Nenhum padrão detectado ainda — o briefing clínico será gerado quando o genossociograma estiver integrado.
+              </p>
+            )}
           </div>
+
 
           {/* Protocols */}
           <div className="mt-5">
