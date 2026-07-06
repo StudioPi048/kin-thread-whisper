@@ -786,8 +786,8 @@ function RealMiniTree({ genogram, session }: { genogram: ClientGenogramDTO; sess
         <circle cx={x} cy={y} r="10" className="fill-cream stroke-border" strokeWidth="1" strokeDasharray="2 2" />
       );
     }
-    const isMasc = person.gender?.toLowerCase().startsWith("m") ?? person.role === "father" || person.role === "grandfather";
-    const isFem = person.gender?.toLowerCase().startsWith("f") ?? person.role === "mother" || person.role === "grandmother";
+    const isMasc = person.gender?.toLowerCase().startsWith("m") ?? (person.role === "father" || person.role === "grandfather");
+    const isFem = person.gender?.toLowerCase().startsWith("f") ?? (person.role === "mother" || person.role === "grandmother");
     const stroke = highlight ? "stroke-gold" : isMasc ? "stroke-plum/60" : isFem ? "stroke-lavender/70" : "stroke-border";
     const fill = highlight ? "fill-gold/25" : isMasc ? "fill-plum/12" : isFem ? "fill-lavender/20" : "fill-cream";
     const sw = highlight ? 2 : 1.5;
