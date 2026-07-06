@@ -245,26 +245,43 @@ function PedigreeEdge({ style, markerEnd, markerStart, interactionWidth, data }:
 
   const unionX = live.union.position.x;
   const unionY = live.union.position.y;
-  const childPoints = live.children.map((n) => ({ x: nodeCenterX(n), y: n.position.y }));
+  const childPoints = live.children.map((n) => ({ x: nodeCenterX(n), y: n.position.y, node: n }));
 
   const xs = childPoints.map((p) => p.x);
   const barLeft = Math.min(...xs, unionX);
   const barRight = Math.max(...xs, unionX);
 
   const minChildTop = Math.min(...childPoints.map((p) => p.y));
-  // Barra de irmãos posicionada entre a união (Y menor, ela vem de baixo em
-  // orientação invertida) e os filhos. Como paciente está no topo, filhos
-  // ficam ACIMA dos pais em Y → sibling bar entre eles.
+  // Barra de irmãos posicionada de forma limpa abaixo dos cards dos filhos:
+  // minChildTop + shapeSize (76) + 12px (gap) + 72px (card) + 24px (gap to line)
+  const shapeSize = 76;
+  const cardHeight = 72;
   const siblingBarY = unionY < minChildTop
-    ? Math.min(unionY + 40, minChildTop - 30)
-    : Math.max(unionY - 40, minChildTop + 30);
+    ? minChildTop - 30
+    : minChildTop + shapeSize + 12 + cardHeight + 24;
 
   let path = "";
   path += `M ${barLeft} ${siblingBarY} L ${barRight} ${siblingBarY} `;
   for (const p of childPoints) {
-    path += `M ${p.x} ${p.y} L ${p.x} ${siblingBarY} `;
+    const childShapeSize = nodeShapeSize(p.node);
+    const safeGap = 20;
+    
+    // Conecta na base/topo do símbolo do filho respeitando os 20px de respiro
+    const childConnY = p.y < siblingBarY
+      ? p.y + childShapeSize + safeGap
+      : p.y - safeGap;
+      
+    path += `M ${p.x} ${childConnY} L ${p.x} ${siblingBarY} `;
   }
-  path += `M ${unionX} ${siblingBarY} L ${unionX} ${unionY}`;
+  
+  // Conecta na união parental respeitando os 20px de respiro do símbolo
+  const safeGap = 20;
+  const unionHalfSize = 6; // UNION_SIZE / 2
+  const unionConnY = unionY < siblingBarY
+    ? unionY + unionHalfSize + safeGap
+    : unionY - unionHalfSize - safeGap;
+    
+  path += `M ${unionX} ${siblingBarY} L ${unionX} ${unionConnY}`;
 
   return (
     <BaseEdge
@@ -297,8 +314,20 @@ function PartnerEdge({ style, interactionWidth, data }: EdgeProps) {
   const py = nodeUnionY(live.person);
   const ux = live.union.position.x;
   const uy = live.union.position.y;
-  // Segmento horizontal do lado da pessoa até a união; puxa o Y para o Y da união
-  const path = `M ${px} ${uy} L ${ux} ${uy} M ${px} ${py} L ${px} ${uy}`;
+  
+  const shapeSize = nodeShapeSize(live.person);
+  const R = shapeSize / 2;
+  const safeGap = 20;
+  
+  let path = "";
+  if (Math.abs(py - uy) < 1) {
+    const startX = px < ux ? px + R + safeGap : px - R - safeGap;
+    path = `M ${startX} ${uy} L ${ux} ${uy}`;
+  } else {
+    const startY = py < uy ? py + R + safeGap : py - R - safeGap;
+    path = `M ${px} ${startY} L ${px} ${uy} L ${ux} ${uy}`;
+  }
+  
   return <BaseEdge path={path} style={style} interactionWidth={interactionWidth} />;
 }
 

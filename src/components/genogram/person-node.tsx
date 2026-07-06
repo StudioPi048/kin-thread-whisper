@@ -77,7 +77,7 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
   return (
     <div
       className={cn("relative flex flex-col items-center group", d.is_proband && "z-20")}
-      style={{ userSelect: "none", width: 160 }}
+      style={{ userSelect: "none", width: 120 }}
     >
 
 
@@ -134,27 +134,31 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
         <Handle id="right" type="target" position={Position.Right} style={{ right: -6 }} className="opacity-0 pointer-events-none" />
       </div>
 
-      {/* ── LABEL — Nome + datas com fundo TRANSPARENTE ── */}
+      {/* ── CARD DE INFORMAÇÃO — Independente e flutuante ── */}
       <div
         className={cn(
-          "mt-2.5 w-full rounded-md px-1 py-1 text-center bg-transparent",
+          "mt-3 w-[120px] h-[72px] bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-sm px-2 py-1.5 flex flex-col justify-center items-center text-center select-none z-10 transition-all",
+          d.is_proband && "border-plum bg-plum/[0.01] shadow-[0_0_0_1px_var(--color-plum)/10]",
+          selected && "ring-1 ring-lavender border-lavender",
         )}
       >
         <p
           className={cn(
-            "font-sans font-bold text-foreground leading-tight break-words",
-            d.is_proband ? "text-[15px]" : "text-[13px]",
+            "font-sans font-bold text-foreground leading-[1.2] break-words line-clamp-2",
+            d.is_proband ? "text-[12px]" : "text-[11px]",
           )}
         >
           {displayName}
         </p>
-        {years && (
-          <p className="mt-0.5 text-[11px] font-semibold text-muted-foreground leading-snug tabular-nums">
+        {years ? (
+          <p className="mt-0.5 text-[10px] font-semibold text-muted-foreground leading-tight tabular-nums">
             {years}
           </p>
+        ) : (
+          <div className="h-3.5" />
         )}
         {d.is_proband && (
-          <span className="mt-1.5 inline-block rounded bg-plum px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.15em] text-white">
+          <span className="mt-0.5 inline-block rounded bg-plum px-1.5 py-0.2 text-[8px] font-black uppercase tracking-[0.1em] text-white">
             Paciente
           </span>
         )}

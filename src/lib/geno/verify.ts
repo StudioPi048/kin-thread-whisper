@@ -1,4 +1,4 @@
-import type { LogicalGraph, Placement } from "./build";
+import { type LogicalGraph, type Placement, NODE_W, NODE_H } from "./build";
 
 type Violation = { rule: string; detail: string; ids: string[] };
 
@@ -16,8 +16,8 @@ export function checkLayoutInvariants(g: LogicalGraph, placement: Placement): Vi
       const un = unionPos.get(uid);
 
       if (a && b && un) {
-        const centerA = a.x + 160 / 2; // NODE_W = 160
-        const centerB = b.x + 160 / 2;
+        const centerA = a.x + NODE_W / 2; // NODE_W = 160
+        const centerB = b.x + NODE_W / 2;
         const expectedCenter = (centerA + centerB) / 2;
 
         if (Math.abs(un.x - expectedCenter) > EPS) {
@@ -39,7 +39,7 @@ export function checkLayoutInvariants(g: LogicalGraph, placement: Placement): Vi
       const un = unionPos.get(uid);
 
       if (childPos && un) {
-        const childCenter = childPos.x + 160 / 2;
+        const childCenter = childPos.x + NODE_W / 2;
         if (Math.abs(childCenter - un.x) > EPS) {
           violations.push({
             rule: 'FILHO_UNICO_DESALINHADO',
@@ -57,8 +57,8 @@ export function checkLayoutInvariants(g: LogicalGraph, placement: Placement): Vi
     for (let j = i + 1; j < nodes.length; j++) {
       const [id1, p1] = nodes[i];
       const [id2, p2] = nodes[j];
-      const w = 160;
-      const h = 180; // Full card height including text
+      const w = NODE_W;
+      const h = NODE_H; // Full card height including text
 
       if (
         Math.abs(p1.x - p2.x) < w - EPS &&

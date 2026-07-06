@@ -22,15 +22,21 @@ type PersonRow = Database["public"]["Tables"]["genogram_persons"]["Row"];
 type RelRow = Database["public"]["Tables"]["genogram_relationships"]["Row"];
 
 // ── Constantes de layout ──────────────────────────────────────
-export const NODE_W = 160;
-export const NODE_H = 210;
+export const NODE_W = 120;
+export const NODE_H = 180;
 export const PERSON_SHAPE = 76;
 export const PROBAND_SHAPE = 84;
-export const GEN_GAP = 250;
+export const GEN_GAP = 320;
 export const COUPLE_GAP = 64; // distância centro-a-centro dentro de um casal
-export const SIBLING_GAP = 28; // distância centro-a-centro entre irmãos diretos
-export const BRANCH_GAP = 140; // folga entre subárvores ancestrais irmãs
-export const BRANCH_SEPARATION = 260; // folga extra paterno vs materno
+export const SIBLING_GAP = 20; // distância centro-a-centro padrão
+export const BRANCH_GAP = 100; // folga entre subárvores ancestrais irmãs
+export const BRANCH_SEPARATION = 160; // folga extra paterno vs materno
+
+export function getSiblingStep(siblingsCount: number): number {
+  if (siblingsCount <= 1) return 110;
+  if (siblingsCount <= 3) return 125;
+  return 140;
+}
 
 // ── Tipos ──────────────────────────────────────────────────────
 export type UnionKind =
@@ -504,9 +510,9 @@ export function layoutGraph(g: LogicalGraph): Placement {
           let direction = 1;
           if (side === "paternal") direction = -1;
           
+          const step = getSiblingStep(siblings.length);
+          const siblingsWidth = siblings.length * step;
           if (side !== "root") {
-            // Cada irmão ocupa o espaço dele mesmo + SIBLING_GAP
-            const siblingsWidth = siblings.length * (NODE_W + SIBLING_GAP);
             if (direction === -1) {
               left = left - siblingsWidth - BRANCH_GAP;
             } else {
@@ -517,8 +523,8 @@ export function layoutGraph(g: LogicalGraph): Placement {
             const sibCount = siblings.length;
             const leftCount = Math.ceil(sibCount / 2);
             const rightCount = Math.floor(sibCount / 2);
-            left = left - leftCount * (NODE_W + SIBLING_GAP) - BRANCH_GAP;
-            right = right + rightCount * (NODE_W + SIBLING_GAP) + BRANCH_GAP;
+            left = left - leftCount * step - BRANCH_GAP;
+            right = right + rightCount * step + BRANCH_GAP;
           }
         }
       }
@@ -591,26 +597,27 @@ export function layoutGraph(g: LogicalGraph): Placement {
         }
       }
 
+      const step = getSiblingStep(siblings.length);
       if (side === "root") {
         let leftIdx = 0;
         let rightIdx = 0;
         siblings.forEach((sibId, i) => {
           if (i % 2 === 0) {
-            placePerson(sibId, cx + parentsLeft - BRANCH_GAP - NODE_W / 2 - leftIdx * (NODE_W + SIBLING_GAP), gen);
+            placePerson(sibId, cx + parentsLeft - BRANCH_GAP - NODE_W / 2 - leftIdx * step, gen);
             leftIdx++;
           } else {
-            placePerson(sibId, cx + parentsRight + BRANCH_GAP + NODE_W / 2 + rightIdx * (NODE_W + SIBLING_GAP), gen);
+            placePerson(sibId, cx + parentsRight + BRANCH_GAP + NODE_W / 2 + rightIdx * step, gen);
             rightIdx++;
           }
         });
       } else {
         if (side === "maternal") {
           siblings.forEach((sibId, i) => {
-            placePerson(sibId, cx + parentsRight + BRANCH_GAP + NODE_W / 2 + i * (NODE_W + SIBLING_GAP), gen);
+            placePerson(sibId, cx + parentsRight + BRANCH_GAP + NODE_W / 2 + i * step, gen);
           });
         } else {
           siblings.forEach((sibId, i) => {
-            placePerson(sibId, cx + parentsLeft - BRANCH_GAP - NODE_W / 2 - i * (NODE_W + SIBLING_GAP), gen);
+            placePerson(sibId, cx + parentsLeft - BRANCH_GAP - NODE_W / 2 - i * step, gen);
           });
         }
       }
