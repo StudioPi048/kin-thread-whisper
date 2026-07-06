@@ -940,43 +940,8 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
         </div>
       )}
 
-      {/* ── LEGENDA — símbolos internacionais ────────────── */}
-      <div className="absolute bottom-4 right-4 z-10 flex flex-wrap items-center gap-5 rounded-xl border border-border/50 bg-white/90 backdrop-blur-sm shadow-md px-4 py-2.5 text-[12px] font-semibold">
-        <span className="text-muted-foreground/60 mr-1 uppercase tracking-[0.15em] text-[10px]">
-          Legenda:
-        </span>
-        <span className="flex items-center gap-2">
-          <span className="inline-block size-4 border-[2.5px] border-plum bg-card" />
-          <span className="text-foreground/80">Masculino</span>
-        </span>
-        <span className="flex items-center gap-2">
-          <span className="inline-block size-4 rounded-full border-[2.5px] border-lavender bg-card" />
-          <span className="text-foreground/80">Feminino</span>
-        </span>
-        <span className="flex items-center gap-2">
-          <span className="inline-block size-4 rotate-45 border-[2.5px] border-gold bg-card" />
-          <span className="text-foreground/80">Não-binário / desconhecido</span>
-        </span>
-        <span className="flex items-center gap-2">
-          <svg
-            viewBox="0 0 10 10"
-            className="size-4"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-          >
-            <polygon points="5,1 9,9 1,9" className="text-foreground/70" />
-          </svg>
-          <span className="text-foreground/80">Aborto</span>
-        </span>
-        <span className="flex items-center gap-2">
-          <span className="text-red-500 text-lg leading-none">✕</span>
-          <span className="text-foreground/80">Falecido</span>
-        </span>
-        <span className="ml-auto text-plum font-bold uppercase tracking-[0.1em] text-[11px]">
-          Paciente destacado em ameixa
-        </span>
-      </div>
+      {/* Legenda movida para o painel lateral "Copiloto Clínico" */}
+
 
       {/* ── CANVAS ──────── */}
       <div
