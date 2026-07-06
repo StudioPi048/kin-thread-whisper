@@ -684,10 +684,21 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
               <Wand2 className="size-4" />
               Preparar sessão
             </Button>
-            <Button variant="ghost" size="lg" className="font-semibold">
-              <FileText className="size-4" />
-              Prontuário
-            </Button>
+            {session.clientId ? (
+              <Link
+                to="/app/paciente/$id"
+                params={{ id: session.clientId }}
+                className="inline-flex items-center gap-2 h-11 px-4 rounded-md text-[14px] font-semibold text-primary/80 hover:text-plum hover:bg-lavender-soft/50 transition-colors"
+              >
+                <FileText className="size-4" />
+                Abrir Dossiê
+              </Link>
+            ) : (
+              <Button variant="ghost" size="lg" className="font-semibold" disabled title="Sessão sem cliente vinculado">
+                <FileText className="size-4" />
+                Prontuário
+              </Button>
+            )}
             <Link
               to="/app/genossociogramas"
               className="inline-flex items-center gap-2 h-11 px-4 rounded-md text-[14px] font-semibold text-primary/80 hover:text-plum hover:bg-lavender-soft/50 transition-colors"
