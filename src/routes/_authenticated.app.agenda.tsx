@@ -820,12 +820,23 @@ function RightPanel({
           <ClipboardList className="size-3.5" /> Pendências
         </p>
         <ul className="space-y-2.5 text-[13px]">
-          <PendingRow label="Prontuários sem evolução" count={1} tone="rose" />
+          <PendingRow label="Prontuários sem evolução" count={prontuariosPendentes} tone="rose" />
           <PendingRow label="Checklists não preenchidos" count={2} tone="gold" />
           <PendingRow label="Genogramas incompletos" count={3} tone="lavender" />
-          <PendingRow label="Clientes sem retorno" count={2} tone="plum" />
+          <PendingRow label="Clientes sem retorno" count={orphanClients.length} tone="plum" />
         </ul>
+        {orphanClients.length > 0 && (
+          <ul className="mt-3 pt-3 border-t border-border/40 space-y-1.5">
+            {orphanClients.slice(0, 3).map((c) => (
+              <li key={c.id} className="flex items-center justify-between text-[12px]">
+                <span className="text-primary/80 font-medium truncate">{c.name}</span>
+                <button className="text-plum font-bold hover:underline">Agendar</button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
+
 
       {/* Receita + tempo */}
       <div className="rounded-2xl bg-white/80 backdrop-blur border border-border/50 shadow-sm p-5">
