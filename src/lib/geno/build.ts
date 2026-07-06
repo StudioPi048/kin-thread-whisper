@@ -170,7 +170,7 @@ interface BuildOptions {
   positions?: NodePositionRow[];
 }
 
-export function buildLogicalGraph({ persons, rels, probandId }: BuildOptions): LogicalGraph {
+export function buildLogicalGraph({ persons, rels, probandId, positions }: BuildOptions): LogicalGraph {
   const g: LogicalGraph = {
     probandId: null,
     persons: new Map(),

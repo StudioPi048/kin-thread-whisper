@@ -441,6 +441,85 @@ export type Database = {
           },
         ]
       }
+      genogram_layouts: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          is_fixed: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          is_fixed?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          is_fixed?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "genogram_layouts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      genogram_node_positions: {
+        Row: {
+          created_at: string
+          id: string
+          layout_id: string
+          layout_mode: string
+          node_id: string
+          node_type: string
+          updated_at: string
+          x: number
+          y: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          layout_id: string
+          layout_mode?: string
+          node_id: string
+          node_type?: string
+          updated_at?: string
+          x?: number
+          y?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          layout_id?: string
+          layout_mode?: string
+          node_id?: string
+          node_type?: string
+          updated_at?: string
+          x?: number
+          y?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "genogram_node_positions_layout_id_fkey"
+            columns: ["layout_id"]
+            isOneToOne: false
+            referencedRelation: "genogram_layouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       genogram_persons: {
         Row: {
           birth_date: string | null
@@ -595,85 +674,6 @@ export type Database = {
             referencedRelation: "genogram_persons"
             referencedColumns: ["id"]
           },
-        ]
-      }
-      genogram_layouts: {
-        Row: {
-          id: string
-          client_id: string
-          name: string
-          viewport: Json | null
-          is_fixed: boolean
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          client_id: string
-          name?: string
-          viewport?: Json | null
-          is_fixed?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          client_id?: string
-          name?: string
-          viewport?: Json | null
-          is_fixed?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "genogram_layouts_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      genogram_node_positions: {
-        Row: {
-          id: string
-          layout_id: string
-          node_id: string
-          node_type: string
-          x: number
-          y: number
-          layout_mode: string
-          collapsed: boolean
-        }
-        Insert: {
-          id?: string
-          layout_id: string
-          node_id: string
-          node_type: string
-          x: number
-          y: number
-          layout_mode?: string
-          collapsed?: boolean
-        }
-        Update: {
-          id?: string
-          layout_id?: string
-          node_id?: string
-          node_type?: string
-          x?: number
-          y?: number
-          layout_mode?: string
-          collapsed?: boolean
-        }
-        Relationships: [
-          {
-            foreignKeyName: "genogram_node_positions_layout_id_fkey"
-            columns: ["layout_id"]
-            isOneToOne: false
-            referencedRelation: "genogram_layouts"
-            referencedColumns: ["id"]
-          }
         ]
       }
       library_entries: {
