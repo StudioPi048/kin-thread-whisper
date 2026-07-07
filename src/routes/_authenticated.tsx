@@ -126,10 +126,10 @@ function AuthenticatedLayout() {
     .join("");
 
   return (
-    <div className="flex min-h-screen bg-background">
-      {/* ── SIDEBAR ────────────────────────────────────── */}
+    <div className="flex min-h-screen bg-[#F8F4EE] texture-paper">
+      {/* ── SIDEBAR (Lombada de Couro do Fichário) ───────────────────── */}
       <aside
-        className={`relative hidden shrink-0 flex-col bg-mahogany text-white transition-all duration-300 md:flex overflow-hidden ${isCollapsed ? "w-[72px]" : "w-72"}`}
+        className={`relative hidden shrink-0 flex-col bg-mahogany text-white shadow-[10px_0_30px_-10px_rgba(0,0,0,0.5)] z-40 transition-all duration-300 md:flex overflow-hidden ${isCollapsed ? "w-[72px]" : "w-72"}`}
       >
         {/* Vetor Dinâmico: Árvore subindo na sidebar */}
         <div className="pointer-events-none absolute bottom-0 left-0 w-full h-[60%] opacity-[0.04] z-0 flex items-end">

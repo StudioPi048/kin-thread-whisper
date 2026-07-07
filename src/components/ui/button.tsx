@@ -4,23 +4,23 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  // Base gráfica: uppercase, tracking largo, sem excesso de border-radius
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-[13px] font-bold uppercase tracking-[0.1em] cursor-pointer transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-40 [&_svg]:pointer-events-none [&_svg]:size-[17px] [&_svg]:shrink-0",
+  // Base gráfica: serif, uppercase, bordas retas (rounded-sm)
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-sm border border-transparent font-serif text-[13px] uppercase tracking-[0.15em] cursor-pointer transition-all duration-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-mahogany focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-40 [&_svg]:pointer-events-none [&_svg]:size-[16px] [&_svg]:shrink-0 [&_svg]:stroke-[1.5]",
   {
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground shadow-md hover:bg-mahogany-mid active:scale-[0.98]",
+          "bg-mahogany text-white shadow-dossier hover:bg-mahogany-mid active:scale-[0.98]",
         destructive:
-          "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90 active:scale-[0.98]",
+          "bg-clinical-critical text-white shadow-dossier hover:opacity-90 active:scale-[0.98]",
         outline:
-          "border-2 border-primary bg-transparent text-primary shadow-sm hover:bg-primary hover:text-primary-foreground active:scale-[0.98]",
-        secondary: "bg-forest-soft text-mahogany hover:bg-forest/20 active:scale-[0.98]",
-        ghost: "hover:bg-secondary hover:text-secondary-foreground active:scale-[0.98]",
-        link: "text-primary underline-offset-4 hover:underline p-0 h-auto normal-case tracking-normal font-semibold text-[15px]",
-        gold: "bg-gold text-[oklch(0.10_0.04_295)] shadow-md hover:bg-gold/90 active:scale-[0.98]",
-        forest: "bg-forest text-white shadow-sm hover:bg-forest-mid active:scale-[0.98]",
-        hero: "bg-gold text-[oklch(0.10_0.04_295)] shadow-xl hover:bg-gold/90 active:scale-[0.97] text-[15px] tracking-[0.12em]",
+          "border border-[#D4C3A3] bg-transparent text-primary shadow-sm hover:bg-[#FAF8F5] active:scale-[0.98]",
+        secondary: "bg-[#EFE9E0] text-mahogany hover:bg-[#D4C3A3] active:scale-[0.98]",
+        ghost: "hover:bg-[#FAF8F5] text-primary active:scale-[0.98]",
+        link: "text-primary hover:text-gold p-0 h-auto normal-case tracking-normal font-serif italic text-[16px]",
+        gold: "bg-gold text-mahogany shadow-dossier hover:bg-gold-soft active:scale-[0.98]",
+        forest: "bg-forest text-white shadow-dossier hover:bg-forest-mid active:scale-[0.98]",
+        hero: "bg-[#1B241C] text-white border border-white/20 shadow-dossier hover:bg-black active:scale-[0.97] text-[14px] tracking-[0.2em]",
       },
       size: {
         default: "h-[52px] px-7 py-3",
