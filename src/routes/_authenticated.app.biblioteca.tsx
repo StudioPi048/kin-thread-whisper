@@ -1641,7 +1641,7 @@ function LeticiaAutoralSection() {
               {LETICIA.bio}
             </p>
           </div>
-          <div className="mt-8 grid grid-cols-3 gap-4 border-t border-mahogany/10 pt-6">
+          <div className="mt-8 grid grid-cols-3 gap-3 border-t border-mahogany/10 pt-6">
             {[
               { n: LETICIA_WORKS.length, l: "Obras" },
               {
@@ -1653,9 +1653,11 @@ function LeticiaAutoralSection() {
                 l: "Citações",
               },
             ].map((s) => (
-              <div key={s.l}>
-                <p className="font-serif text-3xl font-bold text-mahogany">{s.n}</p>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-forest/80 mt-0.5">
+              <div key={s.l} className="min-w-0">
+                <p className="font-serif text-2xl md:text-3xl font-bold text-mahogany leading-none">
+                  {s.n}
+                </p>
+                <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-forest/80 mt-1 truncate">
                   {s.l}
                 </p>
               </div>
