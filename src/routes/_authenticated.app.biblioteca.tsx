@@ -1633,7 +1633,7 @@ function LeticiaAutoralSection() {
             <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-forest">
               Biblioteca Autoral
             </p>
-            <h3 className="font-serif text-3xl md:text-4xl font-bold text-mahogany leading-[1.05]">
+            <h3 className="font-serif text-2xl md:text-3xl font-bold text-mahogany leading-[1.1]">
               Toda a produção científica, clínica e didática da{" "}
               <span className="italic text-forest">fundadora</span> da Academia.
             </h3>
