@@ -1657,7 +1657,7 @@ function LeticiaAutoralSection() {
                 <p className="font-serif text-2xl md:text-3xl font-bold text-mahogany leading-none">
                   {s.n}
                 </p>
-                <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-forest/80 mt-1 truncate">
+                <p className="text-[9px] font-bold uppercase tracking-[0.1em] text-forest/80 mt-1">
                   {s.l}
                 </p>
               </div>
