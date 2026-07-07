@@ -37,14 +37,14 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 const nav = [
-  { to: "/app", label: "Início", icon: Home, exact: true },
-  { to: "/app/clientes", label: "Clientes", icon: Users },
-  { to: "/app/agenda", label: "Agenda", icon: Calendar },
-  { to: "/app/genossociogramas", label: "Genossociogramas", icon: TreePine },
-  { to: "/app/linha-do-tempo", label: "Linha do tempo", icon: History },
-  { to: "/app/biblioteca", label: "Biblioteca", icon: Library },
-  { to: "/app/ia-clinica", label: "IA Clínica", icon: Sparkles },
-  { to: "/app/configuracoes", label: "Configurações", icon: Settings },
+  { to: "/app", label: "Início", shortLabel: "Início", icon: Home, exact: true },
+  { to: "/app/clientes", label: "Clientes", shortLabel: "Clientes", icon: Users },
+  { to: "/app/agenda", label: "Agenda", shortLabel: "Agenda", icon: Calendar },
+  { to: "/app/genossociogramas", label: "Genossociogramas", shortLabel: "Árvores", icon: TreePine },
+  { to: "/app/linha-do-tempo", label: "Linha do tempo", shortLabel: "Tempo", icon: History },
+  { to: "/app/biblioteca", label: "Biblioteca", shortLabel: "Livros", icon: Library },
+  { to: "/app/ia-clinica", label: "IA Clínica", shortLabel: "IA", icon: Sparkles },
+  { to: "/app/configuracoes", label: "Configurações", shortLabel: "Ajustes", icon: Settings },
 ] as const;
 
 function AuthenticatedLayout() {
@@ -304,7 +304,7 @@ function AuthenticatedLayout() {
         </main>
 
         {/* Mobile Bottom Nav */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-sidebar border-t border-sidebar-border flex items-center justify-around z-50 px-2 safe-area-pb">
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-sidebar border-t border-sidebar-border grid grid-cols-8 z-50 safe-area-pb">
           {nav.map((item) => {
             const active =
               "exact" in item && item.exact
@@ -314,12 +314,15 @@ function AuthenticatedLayout() {
               <Link
                 key={item.to}
                 to={item.to as "/app"}
-                className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${
+                aria-label={item.label}
+                className={`flex flex-col items-center justify-center gap-0.5 min-w-0 px-1 ${
                   active ? "text-gold" : "text-sidebar-foreground/60 hover:text-sidebar-foreground"
                 }`}
               >
-                <item.icon className="size-5" />
-                <span className="text-[10px] font-semibold">{item.label}</span>
+                <item.icon className="size-[18px] shrink-0" />
+                <span className="text-[9px] font-semibold leading-none truncate max-w-full">
+                  {item.shortLabel}
+                </span>
               </Link>
             );
           })}
