@@ -37,14 +37,14 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 const nav = [
-  { to: "/app", label: "Início", icon: Home, exact: true },
-  { to: "/app/clientes", label: "Clientes", icon: Users },
-  { to: "/app/agenda", label: "Agenda", icon: Calendar },
-  { to: "/app/genossociogramas", label: "Genossociogramas", icon: TreePine },
-  { to: "/app/linha-do-tempo", label: "Linha do tempo", icon: History },
-  { to: "/app/biblioteca", label: "Biblioteca", icon: Library },
-  { to: "/app/ia-clinica", label: "IA Clínica", icon: Sparkles },
-  { to: "/app/configuracoes", label: "Configurações", icon: Settings },
+  { to: "/app", label: "Início", shortLabel: "Início", icon: Home, exact: true },
+  { to: "/app/clientes", label: "Clientes", shortLabel: "Clientes", icon: Users },
+  { to: "/app/agenda", label: "Agenda", shortLabel: "Agenda", icon: Calendar },
+  { to: "/app/genossociogramas", label: "Genossociogramas", shortLabel: "Árvores", icon: TreePine },
+  { to: "/app/linha-do-tempo", label: "Linha do tempo", shortLabel: "Tempo", icon: History },
+  { to: "/app/biblioteca", label: "Biblioteca", shortLabel: "Livros", icon: Library },
+  { to: "/app/ia-clinica", label: "IA Clínica", shortLabel: "IA", icon: Sparkles },
+  { to: "/app/configuracoes", label: "Configurações", shortLabel: "Ajustes", icon: Settings },
 ] as const;
 
 function AuthenticatedLayout() {
