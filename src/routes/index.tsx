@@ -60,7 +60,7 @@ export default function LandingPage() {
       </header>
 
       {/* ── HERO (Dark / Forest) ────────────────────────────── */}
-      <section className="relative pt-32 pb-48 bg-[#1B241C] text-white overflow-hidden">
+      <section className="relative pt-32 pb-32 lg:pb-40 bg-[#1B241C] text-white overflow-hidden">
         {/* Background gradient instead of solid */}
         <div className="absolute inset-0 bg-gradient-to-b from-[#1B211A] to-[#22271E] pointer-events-none" />
         
@@ -137,7 +137,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── PAINEL FLUTUANTE (Ética e Segurança) ────────────────────────────── */}
-      <section className="relative z-20 -mt-24 px-4">
+      <section className="relative z-30 -mt-20 lg:-mt-32 px-4">
         <div className="container-liz max-w-6xl">
           <div className="bg-[#1A201A]/95 border border-white/5 rounded-xl shadow-[0_30px_60px_rgba(0,0,0,0.4)] overflow-hidden flex flex-col md:flex-row backdrop-blur-md">
             
@@ -168,7 +168,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── SEÇÃO 2 (A leveza de uma...) ────────────────────────────── */}
-      <section className="relative pt-32 pb-32 bg-[#FCF9F4] texture-paper">
+      <section className="relative pt-32 pb-32 bg-[#FCF9F4]">
         <div className="container-liz flex flex-col lg:flex-row items-center gap-16 lg:gap-24 relative">
           
           {/* Esquerda: Texto */}
@@ -227,7 +227,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── SEÇÃO 3 (O fio invisível) - Bloco Escuro Arredondado ────────────────────────────── */}
-      <section className="relative py-16 px-4 bg-[#FCF9F4] texture-paper">
+      <section className="relative py-16 px-4 bg-[#FCF9F4]">
         <div className="container-liz max-w-6xl">
           <div className="bg-[#1B211A] rounded-3xl p-8 md:p-16 flex flex-col lg:flex-row items-center gap-12 lg:gap-20 shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden relative">
             
@@ -268,7 +268,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── QUOTE SECTION (Modular Paper & Pen) ────────────────────────────── */}
-      <section className="py-24 bg-[#FCF9F4] relative flex justify-center overflow-hidden texture-paper">
+      <section className="py-24 bg-[#FCF9F4] relative flex justify-center overflow-hidden">
         <div className="relative z-10 w-full max-w-2xl px-6">
           <div className="bg-[#FAF8F5] border border-[#E6DDD0] p-16 shadow-xl relative rotate-[1deg]">
             {/* Tape at top */}
@@ -289,7 +289,7 @@ export default function LandingPage() {
             </p>
 
             {/* Fountain Pen (Modular Asset) over the paper */}
-            <div className="absolute -bottom-12 -right-8 w-64 z-30 drop-shadow-2xl">
+            <div className="absolute -bottom-16 -right-16 w-56 z-30 drop-shadow-2xl">
                <img src="/assets/objects/pen.jpg" alt="Fountain Pen" className="w-full mix-blend-multiply rotate-[20deg]" />
             </div>
             
