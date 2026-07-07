@@ -617,14 +617,18 @@ function BibliotecaPage() {
         <main className="flex-1 min-w-0 space-y-24">
           {/* ── HERO ───────────────────────────────────────── */}
           <section className="relative pt-6">
-            <span className="section-number absolute -left-3 -top-6 select-none">01</span>
-
-            <div className="relative z-10 space-y-6">
-              <div className="space-y-3">
+            <div className="relative z-10 flex items-start gap-4 md:gap-6">
+              <span
+                aria-hidden
+                className="hidden md:block font-serif text-6xl lg:text-7xl italic font-bold text-forest/25 leading-none select-none shrink-0 pt-2"
+              >
+                01
+              </span>
+              <div className="min-w-0 flex-1 space-y-3">
                 <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-forest">
                   Hub de Inteligência Clínica
                 </p>
-                <h1 className="font-serif text-6xl md:text-7xl font-bold leading-[0.95] text-mahogany">
+                <h1 className="font-serif text-5xl md:text-6xl lg:text-7xl font-bold leading-[0.95] text-mahogany">
                   Biblioteca <span className="italic font-medium text-forest">Clínica</span>
                 </h1>
                 <p className="max-w-2xl text-[16px] leading-relaxed text-foreground/70">
@@ -632,6 +636,8 @@ function BibliotecaPage() {
                   conceitos, protocolos e casos que conversam entre si.
                 </p>
               </div>
+            </div>
+            <div className="relative z-10 space-y-6 mt-8">
 
               <div className="group relative max-w-3xl">
                 <div className="absolute inset-0 rounded-[1.25rem] bg-gradient-to-r from-forest/30 to-gold/20 blur-xl opacity-60 group-focus-within:opacity-100 transition-opacity duration-500" />
