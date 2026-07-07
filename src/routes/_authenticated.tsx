@@ -304,7 +304,7 @@ function AuthenticatedLayout() {
         </main>
 
         {/* Mobile Bottom Nav */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-sidebar border-t border-sidebar-border flex items-center justify-around z-50 px-2 safe-area-pb">
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-sidebar border-t border-sidebar-border grid grid-cols-8 z-50 safe-area-pb">
           {nav.map((item) => {
             const active =
               "exact" in item && item.exact
@@ -314,12 +314,15 @@ function AuthenticatedLayout() {
               <Link
                 key={item.to}
                 to={item.to as "/app"}
-                className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${
+                aria-label={item.label}
+                className={`flex flex-col items-center justify-center gap-0.5 min-w-0 px-1 ${
                   active ? "text-gold" : "text-sidebar-foreground/60 hover:text-sidebar-foreground"
                 }`}
               >
-                <item.icon className="size-5" />
-                <span className="text-[10px] font-semibold">{item.label}</span>
+                <item.icon className="size-[18px] shrink-0" />
+                <span className="text-[9px] font-semibold leading-none truncate max-w-full">
+                  {item.shortLabel}
+                </span>
               </Link>
             );
           })}
