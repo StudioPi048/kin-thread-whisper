@@ -1,10 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import {
-  ArrowRight,
-  Brain,
+  BrainCircuit,
   GitBranch,
-  Library,
+  LibraryBig,
   Mic,
   ScanSearch,
   Sparkles,
@@ -24,76 +23,65 @@ export const Route = createFileRoute("/")({
 const modules = [
   {
     icon: GitBranch,
-    title: "Genossociograma vivo",
+    title: "Genossociograma",
     body: "Árvore interativa onde cada nó é um banco de dados: datas, doenças, profissões, traumas, segredos, mandatos.",
-    color: "forest",
   },
   {
     icon: ScanSearch,
-    title: "Motor de padrões",
+    title: "Motor de Padrões",
     body: "Detecção automática de repetições transgeracionais: síndrome de aniversário, doenças em linha, rupturas afetivas.",
-    color: "gold",
   },
   {
     icon: Mic,
-    title: "Prontuário por voz",
+    title: "Prontuário por Voz",
     body: "Fale ao final da sessão. A plataforma transcreve, estrutura e gera o registro clínico automaticamente.",
-    color: "forest",
   },
   {
-    icon: Library,
-    title: "Biblioteca sistêmica",
+    icon: LibraryBig,
+    title: "Biblioteca Sistêmica",
     body: "Schützenberger, Jodorowsky, Hellinger, Dolto — organizados por tema e ligados ao caso em questão.",
-    color: "gold",
   },
   {
-    icon: Brain,
-    title: "Copiloto clínico",
+    icon: BrainCircuit,
+    title: "Copiloto Clínico",
     body: "IA treinada em psicogenealogia. Sugere hipóteses, nunca diagnostica. Postura de supervisor, não de terapeuta.",
-    color: "forest",
   },
   {
     icon: Sparkles,
-    title: "Memória entre casos",
+    title: "Memória entre Casos",
     body: '"Já atendi alguém parecido?". Busca semântica em toda a sua base clínica, em linguagem natural.',
-    color: "gold",
   },
-];
-
-const comparisons = [
-  { before: "Papel e caneta", after: "Memória estruturada e pesquisável", color: "forest" },
-  { before: "Árvore desenhada à mão", after: "Banco de dados vivo e interativo", color: "gold" },
-  { before: "Memória do terapeuta", after: "IA que lembra, compara e sugere", color: "forest" },
-  { before: "WhatsApp disperso", after: "Formulário adaptativo pré-sessão", color: "gold" },
-  {
-    before: "Word e prontuário manual",
-    after: "Registro por voz, gerado pela IA",
-    color: "forest",
-  },
-  { before: "Livros espalhados na mesa", after: "Biblioteca sistêmica contextual", color: "gold" },
 ];
 
 const ethics = [
-  { n: "01", text: "Criptografia em repouso e em trânsito. Isolamento total entre profissionais." },
-  { n: "02", text: "Consentimento explícito. Direito ao esquecimento e portabilidade de dados." },
-  { n: "03", text: "Nenhum dado é usado para treinar IA sem consentimento granular." },
-  { n: "04", text: "A IA sempre hipotetiza. Nunca diagnostica. Postura de supervisor clínico." },
+  { n: "I", text: "Criptografia ponta a ponta. Isolamento total entre profissionais." },
+  { n: "II", text: "Consentimento explícito. Direito ao esquecimento e portabilidade de dados." },
+  { n: "III", text: "Nenhum dado é usado para treinar IA sem consentimento granular." },
+  { n: "IV", text: "A IA sempre hipotetiza. Nunca diagnostica. Postura de supervisor clínico." },
 ];
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-[#FCF9F4] text-primary relative overflow-hidden selection:bg-mahogany/20">
+      {/* ── TEXTURA DE PAPEL GLOBAL ── */}
+      <div 
+        className="pointer-events-none fixed inset-0 z-0 opacity-[0.03] mix-blend-multiply" 
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`
+        }}
+      />
+
       {/* ── HEADER ──────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 border-b-2 border-primary/10 bg-background/95 backdrop-blur-md">
+      <header className="sticky top-0 z-50 border-b border-mahogany/10 bg-[#FCF9F4]/80 backdrop-blur-xl">
         <div className="container-liz flex h-20 items-center justify-between">
           <Link to="/" className="flex items-center gap-3">
             <LizLogoLockup />
           </Link>
           <div className="flex items-center gap-3">
-            <Button asChild variant="ghost" size="sm" className="font-serif">
+            <Button asChild variant="ghost" size="sm" className="font-serif text-primary hover:bg-mahogany/5">
               <Link to="/auth">Entrar</Link>
             </Button>
-            <Button asChild variant="outline" size="sm" className="border-forest text-forest hover:bg-forest/5 font-serif">
+            <Button asChild variant="outline" size="sm" className="border-mahogany text-mahogany hover:bg-mahogany hover:text-white font-serif transition-colors">
               <Link to="/auth" search={{ mode: "signup" }}>
                 Acesso beta →
               </Link>
@@ -102,237 +90,216 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* ── HERO — full-mahogany ────────────────────────────── */}
-      <section className="block-mahogany relative overflow-hidden">
-        <div className="container-liz relative py-20 md:py-32 flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
-          <div className="flex-1 z-10 relative">
-            {/* Elemento decorativo — número de fundo */}
-            <span
-              aria-hidden
-              className="section-number pointer-events-none absolute left-0 top-0 select-none -translate-x-12 -translate-y-12 opacity-[0.05]"
-            >
-              01
-            </span>
-
-            {/* Badge */}
+      {/* ── HERO — A Mesa do Genealogista ────────────────────────────── */}
+      <section className="relative z-10 overflow-hidden pt-20 pb-32 md:pt-32 md:pb-48">
+        <div className="container-liz relative flex flex-col lg:flex-row items-center gap-16 lg:gap-20">
+          
+          {/* Esquerda: Texto */}
+          <div className="flex-1 relative z-20">
             <motion.div
-              initial={{ opacity: 0, y: 8 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="inline-flex items-center gap-2 rounded border border-gold/40 bg-gold/10 px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.3em] text-gold"
+              transition={{ duration: 0.8, ease: "easeOut" }}
+              className="inline-flex items-center gap-2 rounded-sm border border-mahogany/20 bg-mahogany/5 px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.25em] text-mahogany"
             >
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-gold" />
-              Beta fechado · Psicogenealogistas
+              <span className="h-1.5 w-1.5 rounded-full bg-mahogany/60" />
+              Gabinete de Pesquisa · 2026
             </motion.div>
 
-            {/* Título editorial — quebra intencional de linhas */}
             <motion.h1
-              initial={{ opacity: 0, y: 16 }}
+              initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, delay: 0.08 }}
-              className="mt-8 font-serif text-5xl font-bold leading-[0.95] tracking-tight text-white md:text-7xl lg:text-[85px]"
+              transition={{ duration: 1, delay: 0.1, ease: "easeOut" }}
+              className="mt-8 font-serif text-5xl font-bold leading-[0.9] tracking-tight text-primary md:text-7xl lg:text-[85px]"
             >
               O segundo
               <br />
-              <em className="italic text-gold">cérebro</em>
+              <em className="italic text-mahogany/80">cérebro</em>
               <br />
               do psicogene-
               <br />
               alogista.
             </motion.h1>
 
-            {/* Linha dourada decorativa */}
             <motion.div
               initial={{ width: 0 }}
-              animate={{ width: 96 }}
-              transition={{ duration: 0.8, delay: 0.3 }}
-              className="my-8 h-px bg-gold"
+              animate={{ width: 80 }}
+              transition={{ duration: 1.2, delay: 0.4, ease: "easeInOut" }}
+              className="my-10 h-px bg-mahogany/30"
             />
 
             <motion.p
-              initial={{ opacity: 0, y: 14 }}
+              initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, delay: 0.18 }}
-              className="max-w-lg text-lg leading-relaxed text-white/65 md:text-xl"
+              transition={{ duration: 1, delay: 0.2, ease: "easeOut" }}
+              className="max-w-md text-lg leading-relaxed text-primary/70 md:text-xl font-serif"
             >
-              Não é um CRM. É o sistema operacional onde toda a inteligência clínica{" "}
-              <strong className="text-white">vive, cresce e se retroalimenta.</strong>
+              Combinando arquivos históricos, inteligência clínica e tecnologia contemporânea em um 
+              <strong className="text-primary font-bold"> laboratório vivo da memória familiar.</strong>
             </motion.p>
 
             <motion.div
-              initial={{ opacity: 0, y: 14 }}
+              initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.26 }}
-              className="mt-10 flex flex-wrap gap-4"
+              transition={{ duration: 1, delay: 0.3, ease: "easeOut" }}
+              className="mt-12 flex flex-wrap gap-4"
             >
-              <Button asChild size="xl" variant="hero">
+              <Button asChild size="xl" className="bg-mahogany text-white hover:bg-mahogany-mid rounded-sm px-8 font-serif">
                 <Link to="/auth" search={{ mode: "signup" }}>
-                  Solicitar acesso beta →
+                  Adentrar o arquivo
                 </Link>
-              </Button>
-              <Button
-                asChild
-                size="xl"
-                variant="outline"
-                className="border-white/25 text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold"
-              >
-                <Link to="/auth">Já tenho conta</Link>
               </Button>
             </motion.div>
           </div>
 
+          {/* Direita: A Cena / Colagem */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95, x: 20 }}
             animate={{ opacity: 1, scale: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="flex-1 relative z-10 w-full max-w-[600px] lg:max-w-none mt-10 lg:mt-0"
+            transition={{ duration: 1.2, delay: 0.3, ease: "easeOut" }}
+            className="flex-1 relative z-10 w-full h-[500px] lg:h-[700px] mt-10 lg:mt-0"
           >
-            <div className="aspect-[4/3] lg:aspect-square bg-[#FCF9F4] rounded-sm overflow-hidden border-[12px] border-[#FCF9F4] border-b-[40px] shadow-2xl relative group rotate-[-2deg]">
-              {/* Fallback color and image */}
-              <div className="absolute inset-0 bg-mahogany/50" />
+            {/* Foto principal (Fundo) */}
+            <div className="absolute right-0 top-10 w-[80%] aspect-[3/4] lg:aspect-square bg-white shadow-2xl p-3 border border-[#E6DDD0] rotate-[3deg] z-10">
               <img
                 src={hero1}
-                alt="Psicogenealogista utilizando a plataforma"
-                className="absolute inset-0 w-full h-full object-cover sepia-[.3] contrast-[1.1] saturate-[0.8] transition-transform duration-700 group-hover:scale-105"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src =
-                    "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&q=80&w=1000";
-                }}
+                alt="Pesquisa genealógica"
+                className="w-full h-full object-cover sepia-[.4] contrast-[1.1] saturate-[0.7]"
               />
-              <div className="absolute inset-0 bg-gradient-to-tr from-mahogany/40 via-transparent to-transparent mix-blend-multiply pointer-events-none" />
-              <div className="absolute inset-0 ring-1 ring-inset ring-black/10 rounded-sm pointer-events-none" />
             </div>
+            
+            {/* Polaroid secundária (Frente) */}
+            <div className="absolute left-0 bottom-20 w-[55%] aspect-square bg-[#FAF8F5] shadow-xl p-4 pb-12 border border-[#E6DDD0] rotate-[-5deg] z-20">
+              <img
+                src={hero2}
+                alt="Sessão clínica"
+                className="w-full h-full object-cover sepia-[.3] contrast-[1.1]"
+              />
+              <p className="absolute bottom-4 left-0 right-0 text-center font-serif text-sm italic text-ink/50">
+                Memória viva.
+              </p>
+            </div>
+
+            {/* Fio invisível desenhado no papel */}
+            <svg className="absolute inset-0 w-full h-full pointer-events-none z-30" viewBox="0 0 500 500" fill="none">
+              <path d="M 100 400 Q 250 150 450 300" stroke="#8B3A3A" strokeWidth="1" strokeDasharray="4 4" opacity="0.4" />
+              <circle cx="100" cy="400" r="3" fill="#8B3A3A" opacity="0.6" />
+              <circle cx="450" cy="300" r="3" fill="#8B3A3A" opacity="0.6" />
+            </svg>
           </motion.div>
+
         </div>
       </section>
 
-      {/* ── COMPARATIVOS — fundo branco ─────────────────── */}
-      <section className="bg-white py-24 md:py-32">
+      {/* ── MÓDULOS — "Capítulo I: As Fichas do Arquivo" ───────────────────────── */}
+      <section className="relative z-10 py-24 md:py-32">
         <div className="container-liz">
-          {/* Header com número decorativo */}
-          <div className="relative mb-16 flex items-end gap-6">
-            <span aria-hidden className="section-number leading-none select-none">
-              01
+          <div className="relative mb-20 flex flex-col md:flex-row items-baseline gap-4 md:gap-10">
+            <span aria-hidden className="font-serif text-2xl md:text-3xl text-mahogany/30 italic">
+              Capítulo I.
             </span>
-            <div className="pb-2">
-              <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-forest">
-                O que substitui
-              </p>
-              <h2 className="font-serif text-4xl font-bold text-primary md:text-5xl">
-                Seu consultório,
-                <br />
-                reimaginado.
-              </h2>
-            </div>
+            <h2 className="font-serif text-4xl md:text-5xl font-bold text-primary max-w-2xl leading-[1.1]">
+              A inteligência clínica meticulosamente catalogada.
+            </h2>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {comparisons.map((item, i) => (
-              <motion.div
-                key={item.before}
-                initial={{ opacity: 0, y: 12 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: i * 0.06 }}
-                className="bg-[#FCF9F4] p-6 shadow-sm transition-shadow hover:shadow-md border border-[#E6DDD0] relative"
-              >
-                {/* Cantoneiras vintage */}
-                <div className="absolute -top-[1px] -left-[1px] w-4 h-4 border-t-2 border-l-2 border-[#D4AF37]/50" />
-                <div className="absolute -top-[1px] -right-[1px] w-4 h-4 border-t-2 border-r-2 border-[#D4AF37]/50" />
-                <div className="absolute -bottom-[1px] -left-[1px] w-4 h-4 border-b-2 border-l-2 border-[#D4AF37]/50" />
-                <div className="absolute -bottom-[1px] -right-[1px] w-4 h-4 border-b-2 border-r-2 border-[#D4AF37]/50" />
-                
-                <p className="text-[12px] font-bold uppercase tracking-[0.15em] text-mahogany/80 line-through decoration-mahogany/60 decoration-2">
-                  {item.before}
-                </p>
-                <div className="my-3 h-px w-6 bg-archive-old" />
-                <p className="font-serif text-xl font-semibold text-primary">{item.after}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── MÓDULOS — lavanda soft ───────────────────────── */}
-      <section className="block-forest py-24 md:py-32">
-        <div className="container-liz">
-          <div className="relative mb-16 flex items-end gap-6">
-            <span aria-hidden className="section-number leading-none select-none">
-              02
-            </span>
-            <div className="pb-2">
-              <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-gold">
-                Arquitetura
-              </p>
-              <h2 className="font-serif text-4xl font-bold text-archive md:text-5xl">
-                Cinco camadas.
-                <br />
-                Um fluxo clínico.
-              </h2>
-            </div>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {modules.map((m, i) => (
               <motion.article
                 key={m.title}
-                initial={{ opacity: 0, y: 16 }}
+                initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-40px" }}
-                transition={{ duration: 0.4, delay: i * 0.06 }}
-                className="group bg-[#FCF9F4] p-8 shadow-sm transition-all duration-200 hover:shadow-md border border-[#E6DDD0] hover:border-mahogany/30"
+                transition={{ duration: 0.8, delay: i * 0.1, ease: "easeOut" }}
+                className="group relative bg-white/70 backdrop-blur-sm p-8 shadow-sm transition-all duration-500 hover:shadow-md border border-[#E6DDD0]/70 hover:border-mahogany/30 hover:bg-white"
               >
-                <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-sm bg-[#EFE9E0] border border-[#E6DDD0]">
-                  <m.icon className="size-5 text-mahogany-mid" />
+                {/* Numeração da ficha */}
+                <span className="absolute top-6 right-6 font-mono text-[10px] text-primary/30">
+                  REF-{String(i + 1).padStart(3, '0')}
+                </span>
+                
+                <div className="mb-8 flex h-12 w-12 items-center justify-center rounded-full bg-[#FCF9F4] border border-[#E6DDD0]">
+                  <m.icon className="size-5 text-mahogany/70" strokeWidth={1.2} />
                 </div>
-                <h3 className="font-serif text-2xl font-bold text-primary">{m.title}</h3>
-                <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">{m.body}</p>
+                <h3 className="font-serif text-2xl font-bold text-primary tracking-tight">{m.title}</h3>
+                <p className="mt-4 text-[15px] leading-relaxed text-primary/70">{m.body}</p>
               </motion.article>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── SEÇÃO VISUAL: A SESSÃO ───────────────────────────── */}
-      <section className="bg-white py-24 md:py-32 overflow-hidden">
-        <div className="container-liz flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
+      {/* ── CITAÇÃO COM SCRAPBOOK (Fita Adesiva) ──────────────────────────── */}
+      <section className="relative z-10 py-32 flex justify-center">
+        <div className="container-liz max-w-3xl text-center relative">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 1 }}
+            className="relative inline-block"
+          >
+            {/* Fita adesiva */}
+            <div aria-hidden className="absolute -top-5 left-1/2 -translate-x-1/2 w-24 h-6 bg-[#D4C3A3]/60 mix-blend-multiply rotate-[-2deg] shadow-sm rounded-[1px] z-20" />
+            
+            <div className="bg-[#FAF8F5] p-12 md:p-16 shadow-lg border border-[#E6DDD0] relative z-10 rotate-[1deg]">
+              <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-mahogany-mid/50 mb-8">
+                Nota de Pesquisa
+              </p>
+              <blockquote className="font-serif text-3xl font-bold italic leading-relaxed text-primary md:text-4xl">
+                "O que não pode ser dito,
+                <br />
+                não pode ser esquecido —
+                <br />
+                <span className="text-mahogany/80">apenas repetido."</span>
+              </blockquote>
+              <div className="mt-8 mx-auto h-px w-16 bg-mahogany/20" />
+              <p className="mt-6 text-[14px] font-serif italic text-primary/60">— inspirado em Françoise Dolto</p>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ── SEÇÃO VISUAL: Volume II ───────────────────────────── */}
+      <section className="relative z-10 py-24 md:py-32">
+        <div className="container-liz flex flex-col lg:flex-row items-center gap-16 lg:gap-24">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-            className="flex-1 w-full"
+            transition={{ duration: 1, ease: "easeOut" }}
+            className="flex-1 w-full relative"
           >
-            <div className="aspect-[4/3] bg-[#FCF9F4] rounded-sm overflow-hidden border-[12px] border-[#FCF9F4] border-b-[40px] shadow-2xl relative rotate-[2deg]">
+            <div className="absolute top-4 -left-4 w-full h-full border border-mahogany/10 rotate-[-2deg]" />
+            <div className="aspect-[4/3] bg-white p-3 border border-[#E6DDD0] shadow-xl relative rotate-[1deg]">
               <img
-                src={hero2}
-                alt="Conexão com o paciente"
-                className="absolute inset-0 w-full h-full object-cover sepia-[.2] contrast-[1.1]"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src =
-                    "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&q=80&w=1000";
-                }}
+                src={hero3}
+                alt="Anotações e sistema"
+                className="w-full h-full object-cover sepia-[.2] contrast-[1.05]"
               />
-              <div className="absolute inset-0 ring-1 ring-inset ring-black/10 rounded-sm pointer-events-none" />
             </div>
           </motion.div>
+          
           <div className="flex-1">
-            <h2 className="font-serif text-3xl font-bold text-primary md:text-5xl mb-6 leading-tight">
-              O fio invisível da <span className="text-gold italic">sessão.</span>
+            <span aria-hidden className="font-serif text-xl text-mahogany/30 italic block mb-6">
+              Volume II.
+            </span>
+            <h2 className="font-serif text-3xl font-bold text-primary md:text-5xl mb-8 leading-[1.1]">
+              A <em className="italic text-mahogany/80">leveza</em> de uma <br />
+              gestão impecável.
             </h2>
-            <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
-              Mapeie em tempo real o histórico do seu paciente. Conecte gerações e descubra padrões
-              transgeracionais profundos sem perder o foco visual na pessoa à sua frente.
+            <p className="text-lg text-primary/70 mb-10 leading-relaxed font-serif">
+              O Dossiê Clínico organiza o labirinto de histórias, datas e padrões, permitindo que o psicogenealogista foque na presença terapêutica e na investigação humana.
             </p>
-            <ul className="space-y-4">
+            <ul className="space-y-5">
               {[
-                "Genograma dinâmico gerado no clique.",
-                "Foco absoluto na fala do paciente.",
-                "Menos papel, mais insight estruturado.",
+                "Genograma dinâmico desenhado sem esforço.",
+                "Menos papel disperso, mais memória estruturada.",
+                "Foco absoluto no fio invisível da sessão.",
               ].map((item, i) => (
-                <li key={i} className="flex items-center gap-3">
-                  <div className="flex-shrink-0 size-1.5 rounded-full bg-forest" />
-                  <span className="text-[15px] font-medium text-primary/80">{item}</span>
+                <li key={i} className="flex items-start gap-4">
+                  <div className="mt-1.5 flex-shrink-0 size-1.5 rounded-full bg-mahogany/60" />
+                  <span className="text-[16px] text-primary/80 font-serif leading-relaxed">{item}</span>
                 </li>
               ))}
             </ul>
@@ -340,161 +307,70 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── SEÇÃO VISUAL: A VIDA SIMPLIFICADA ───────────────── */}
-      <section className="block-forest py-24 md:py-32 overflow-hidden">
-        <div className="container-liz flex flex-col lg:flex-row-reverse items-center gap-12 lg:gap-20">
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-            className="flex-1 w-full"
-          >
-            <div className="aspect-[4/3] bg-[#FCF9F4] rounded-sm overflow-hidden border-[12px] border-[#FCF9F4] border-b-[40px] shadow-2xl relative rotate-[-1.5deg]">
-              <img
-                src={hero3}
-                alt="A vida simplificada"
-                className="absolute inset-0 w-full h-full object-cover sepia-[.3] contrast-[1.1] saturate-[0.9]"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src =
-                    "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&q=80&w=1000";
-                }}
-              />
-              <div className="absolute inset-0 ring-1 ring-inset ring-black/10 rounded-sm pointer-events-none" />
-            </div>
-          </motion.div>
-          <div className="flex-1">
-            <h2 className="font-serif text-3xl font-bold text-archive md:text-5xl mb-6 leading-tight">
-              A <span className="text-gold italic">leveza</span> de uma <br />
-              gestão impecável.
-            </h2>
-            <p className="text-lg text-archive/75 mb-8 leading-relaxed">
-              O Dossiê Inteligente cuida da organização dos seus casos, permitindo que você retorne
-              à sua essência terapêutica. Relaxe sabendo que o sistema operacional faz o trabalho
-              pesado.
-            </p>
-            <div className="flex gap-4 items-center mt-10">
-              <Button
-                asChild
-                size="lg"
-                className="bg-primary hover:bg-primary/90 text-white rounded-md"
-              >
-                <Link to="/auth" search={{ mode: "signup" }}>
-                  Começar agora
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── CITAÇÃO — Textura de papel com cantoneiras ──────────────────────────── */}
-      <section className="bg-[#EFE9E0] py-24 md:py-36 relative border-y border-[#E6DDD0]">
-        <div className="container-liz max-w-4xl text-center relative z-10">
-          <p className="text-[11px] font-bold uppercase tracking-[0.4em] text-mahogany-mid/70">
-            Fundamento clínico
-          </p>
-          
-          <div className="mt-8 relative inline-block">
-            {/* Fita adesiva decorativa dourada */}
-            <div aria-hidden className="absolute -top-4 left-8 w-16 h-5 bg-gold/60 rotate-[-6deg] shadow-sm rounded-[1px]" />
-            <div aria-hidden className="absolute -bottom-4 right-8 w-16 h-5 bg-gold/60 rotate-[4deg] shadow-sm rounded-[1px]" />
-            
-            
-            <motion.blockquote
-              initial={{ opacity: 0, y: 16 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-              className="bg-[#FCF9F4] p-10 md:p-14 shadow-md border border-[#E6DDD0] font-serif text-3xl font-bold italic leading-tight text-ink md:text-5xl"
-            >
-              "O que não pode ser dito,
-              <br />
-              não pode ser esquecido —
-              <br />
-              <span className="text-mahogany-mid">apenas repetido."</span>
-            </motion.blockquote>
-          </div>
-          <p className="mt-8 text-[15px] font-sans font-medium text-ink/60">— inspirado em Françoise Dolto</p>
-        </div>
-      </section>
-
-      {/* ── ÉTICA & LGPD — branco ───────────────────────── */}
-      <section className="bg-white py-24 md:py-32">
+      {/* ── ÉTICA & LGPD — "Documento Confidencial" ───────────────────────── */}
+      <section className="relative z-10 py-24 md:py-32 border-t border-mahogany/10 bg-[#FAF8F5]/50">
         <div className="container-liz">
-          <div className="relative mb-16 flex items-end gap-6">
-            <span aria-hidden className="section-number leading-none select-none">
-              03
-            </span>
-            <div className="pb-2">
-              <div className="inline-flex items-center gap-2 rounded border border-forest/30 bg-forest/8 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-forest mb-3">
-                <ShieldCheck className="size-3.5" />
-                Ética & LGPD
-              </div>
-              <h2 className="font-serif text-4xl font-bold text-primary md:text-5xl">
-                Dados clínicos são
-                <br />
-                <em className="italic text-forest">fundação</em>,
-                <br />
-                não feature.
-              </h2>
+          <div className="relative mb-20 flex flex-col items-center text-center">
+            <div className="inline-flex items-center gap-2 rounded-full border border-mahogany/20 px-4 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-mahogany mb-6">
+              <ShieldCheck className="size-3.5" strokeWidth={1.5} />
+              Termo de Ética
             </div>
+            <h2 className="font-serif text-4xl font-bold text-primary md:text-5xl max-w-2xl">
+              Dados clínicos são <em className="italic text-mahogany/80">fundação</em>,
+              não feature.
+            </h2>
           </div>
 
-          <div className="grid gap-5 md:grid-cols-2">
+          <div className="max-w-4xl mx-auto grid gap-x-12 gap-y-8 md:grid-cols-2">
             {ethics.map((item) => (
-              <div key={item.n} className="flex gap-5 border-l-[5px] border-l-forest pl-5 py-2">
-                <span className="font-serif text-4xl font-bold text-forest/20 leading-none shrink-0">
-                  {item.n}
+              <div key={item.n} className="flex gap-6 border-t border-mahogany/10 pt-6">
+                <span className="font-serif text-2xl font-bold text-mahogany/30 italic">
+                  {item.n}.
                 </span>
-                <p className="text-[16px] leading-relaxed text-foreground/80 pt-1">{item.text}</p>
+                <p className="text-[16px] leading-relaxed text-primary/75 font-serif">{item.text}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── CTA FINAL — full-mahogany ───────────────────────── */}
-      <section className="block-mahogany py-28 text-center md:py-40">
-        <div className="container-liz">
+      {/* ── CTA FINAL ───────────────────────── */}
+      <section className="relative z-10 py-32 md:py-48 text-center border-t border-[#E6DDD0]">
+        <div className="container-liz max-w-2xl">
           <motion.div
-            initial={{ opacity: 0, y: 16 }}
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
+            transition={{ duration: 1 }}
           >
-            <p className="text-[11px] font-bold uppercase tracking-[0.4em] text-gold">
-              Beta fechado · 2026
-            </p>
-            <h2 className="mt-6 font-serif text-5xl font-bold text-white md:text-7xl">
-              Pronta para
-              <br />
-              <span className="text-gold">começar?</span>
+            <ShieldCheck className="size-8 mx-auto text-mahogany/30 mb-8" strokeWidth={1} />
+            <h2 className="font-serif text-5xl font-bold text-primary md:text-6xl mb-6">
+              Inicie a <em className="italic text-mahogany/80">pesquisa</em>.
             </h2>
-            <p className="mt-6 text-xl text-white/55">
-              Acesso restrito a psicogenealogistas. Vagas limitadas.
+            <p className="text-xl text-primary/60 font-serif mb-12">
+              Acesso restrito ao laboratório vivo da psicogenealogia.
             </p>
-            <div className="mt-12">
-              <Button asChild size="xl" variant="hero">
-                <Link to="/auth" search={{ mode: "signup" }}>
-                  Solicitar acesso beta →
-                </Link>
-              </Button>
-            </div>
+            <Button asChild size="xl" className="bg-mahogany text-white hover:bg-mahogany-mid rounded-sm px-10 font-serif text-lg">
+              <Link to="/auth" search={{ mode: "signup" }}>
+                Adentrar o arquivo →
+              </Link>
+            </Button>
           </motion.div>
         </div>
       </section>
 
       {/* ── FOOTER ──────────────────────────────────────── */}
-      <footer className="block-mahogany border-t border-sidebar-border">
-        <div className="container-liz flex flex-wrap items-center justify-between gap-4 py-8">
-          <div className="flex items-center gap-3">
-            <LizLogo size={20} />
-            <p className="font-serif text-[14px] text-white/55">
-              Instituto Liz — Plataforma de Psicogenealogia
+      <footer className="relative z-10 border-t border-mahogany/10 bg-[#FAF8F5]">
+        <div className="container-liz flex flex-col md:flex-row items-center justify-between gap-6 py-12">
+          <div className="flex items-center gap-4">
+            <LizLogo size={24} className="text-mahogany opacity-80" />
+            <p className="font-serif text-[15px] text-primary/60 italic">
+              O Gabinete do Genealogista.
             </p>
           </div>
-          <p className="text-[12px] text-white/25">Beta fechado · 2026</p>
+          <p className="text-[12px] uppercase tracking-[0.2em] font-bold text-primary/30">
+            Beta fechado · 2026
+          </p>
         </div>
       </footer>
     </div>
