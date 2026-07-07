@@ -242,7 +242,7 @@ export default function LandingPage() {
                 <div className="absolute -bottom-[1px] -left-[1px] w-4 h-4 border-b-2 border-l-2 border-[#D4AF37]/50" />
                 <div className="absolute -bottom-[1px] -right-[1px] w-4 h-4 border-b-2 border-r-2 border-[#D4AF37]/50" />
                 
-                <p className="text-[12px] font-bold uppercase tracking-[0.15em] text-ink/60 line-through decoration-mahogany-mid/70 decoration-2">
+                <p className="text-[12px] font-bold uppercase tracking-[0.15em] text-mahogany/80 line-through decoration-mahogany/60 decoration-2">
                   {item.before}
                 </p>
                 <div className="my-3 h-px w-6 bg-archive-old" />
