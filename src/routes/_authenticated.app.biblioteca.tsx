@@ -294,19 +294,19 @@ const AUTHORS: Array<{
 ];
 
 const THEMES: Array<{ name: string; count: number; icon: typeof Feather; accent: string }> = [
-  { name: "Traumas", count: 42, icon: HeartCrack, accent: "bg-card text-foreground border border-border" },
-  { name: "Lealdades", count: 28, icon: Link2, accent: "bg-archive-doc text-foreground border border-border/60" },
-  { name: "Doenças", count: 31, icon: Dna, accent: "bg-archive-doc text-foreground border border-border/60" },
-  { name: "Projeto Sentido", count: 19, icon: Target, accent: "bg-card text-archive-doc border border-[#1B211A]/10" },
-  { name: "Nome", count: 12, icon: Fingerprint, accent: "bg-archive-doc text-foreground border border-border/60" },
-  { name: "Empresa Familiar", count: 15, icon: Building2, accent: "bg-archive-doc text-foreground border border-border/60" },
-  { name: "Abandono", count: 24, icon: UserMinus, accent: "bg-archive-doc text-foreground border border-border/60" },
-  { name: "Luto", count: 33, icon: Anchor, accent: "bg-gold text-archive-doc border border-gold/50" },
-  { name: "Exclusão", count: 21, icon: Users, accent: "bg-archive-doc text-foreground border border-border/60" },
-  { name: "Aborto", count: 18, icon: Baby, accent: "bg-archive-doc text-foreground border border-border/60" },
-  { name: "Segredos", count: 26, icon: Lock, accent: "bg-muted text-foreground border-l-4 border-l-gold" },
-  { name: "Epigenética", count: 14, icon: Dna, accent: "bg-archive-doc text-foreground border border-border/60" },
-  { name: "Ordens do Amor", count: 17, icon: Scale, accent: "bg-archive-doc text-foreground border border-border/60" },
+  { name: "Traumas", count: 42, icon: HeartCrack, accent: "bg-mahogany text-white" },
+  { name: "Lealdades", count: 28, icon: Link2, accent: "bg-white text-mahogany border border-mahogany/10" },
+  { name: "Doenças", count: 31, icon: Dna, accent: "bg-white text-mahogany border border-mahogany/10" },
+  { name: "Projeto Sentido", count: 19, icon: Target, accent: "bg-forest text-white" },
+  { name: "Nome", count: 12, icon: Fingerprint, accent: "bg-white text-mahogany border border-mahogany/10" },
+  { name: "Empresa Familiar", count: 15, icon: Building2, accent: "bg-white text-mahogany border border-mahogany/10" },
+  { name: "Abandono", count: 24, icon: UserMinus, accent: "bg-white text-mahogany border border-mahogany/10" },
+  { name: "Luto", count: 33, icon: Anchor, accent: "bg-gold text-mahogany" },
+  { name: "Exclusão", count: 21, icon: Users, accent: "bg-white text-mahogany border border-mahogany/10" },
+  { name: "Aborto", count: 18, icon: Baby, accent: "bg-white text-mahogany border border-mahogany/10" },
+  { name: "Segredos", count: 26, icon: Lock, accent: "bg-mahogany/90 text-white" },
+  { name: "Epigenética", count: 14, icon: Dna, accent: "bg-white text-mahogany border border-mahogany/10" },
+  { name: "Ordens do Amor", count: 17, icon: Scale, accent: "bg-white text-mahogany border border-mahogany/10" },
 ];
 
 const ESSENTIAL_BOOKS: Array<{
@@ -332,7 +332,7 @@ const ESSENTIAL_BOOKS: Array<{
     citations: 42,
     protocols: 8,
     cases: 12,
-    spine: "bg-mahogany text-foreground",
+    spine: "bg-mahogany text-white",
     cover: "https://covers.openlibrary.org/b/isbn/8532303617-L.jpg?default=false",
   },
   {
@@ -345,7 +345,7 @@ const ESSENTIAL_BOOKS: Array<{
     citations: 31,
     protocols: 5,
     cases: 9,
-    spine: "bg-forest text-foreground",
+    spine: "bg-forest text-white",
     cover: "https://covers.openlibrary.org/b/isbn/9782226221315-L.jpg?default=false",
   },
   {
@@ -358,7 +358,7 @@ const ESSENTIAL_BOOKS: Array<{
     citations: 27,
     protocols: 3,
     cases: 7,
-    spine: "bg-mahogany/80 text-foreground",
+    spine: "bg-mahogany/80 text-white",
     cover: "https://covers.openlibrary.org/b/isbn/9782081218918-L.jpg?default=false",
   },
   {
@@ -384,7 +384,7 @@ const ESSENTIAL_BOOKS: Array<{
     citations: 19,
     protocols: 6,
     cases: 11,
-    spine: "bg-mahogany text-foreground",
+    spine: "bg-mahogany text-white",
   },
   {
     title: "O Murmúrio dos Fantasmas",
@@ -396,7 +396,7 @@ const ESSENTIAL_BOOKS: Array<{
     citations: 22,
     protocols: 4,
     cases: 8,
-    spine: "bg-forest/80 text-foreground",
+    spine: "bg-forest/80 text-white",
     cover: "https://covers.openlibrary.org/b/isbn/9782738113610-L.jpg?default=false",
   },
 ];
@@ -612,7 +612,7 @@ function BibliotecaPage() {
 
   return (
     <div className="relative pb-20">
-      <div className="container-archive mt-6 flex gap-8 items-start">
+      <div className="container-liz mt-6 flex gap-8 items-start">
         {/* MAIN */}
         <main className="flex-1 min-w-0 space-y-24">
           {/* ── HERO ───────────────────────────────────────── */}
@@ -620,18 +620,18 @@ function BibliotecaPage() {
             <div className="relative z-10 flex items-start gap-4 md:gap-6">
               <span
                 aria-hidden
-                className="hidden md:block font-serif text-6xl lg:text-7xl italic font-bold text-foreground/5 leading-none select-none shrink-0 pt-2"
+                className="hidden md:block font-serif text-6xl lg:text-7xl italic font-bold text-forest/25 leading-none select-none shrink-0 pt-2"
               >
                 01
               </span>
               <div className="min-w-0 flex-1 space-y-3">
-                <p className="font-sans text-[16px] font-bold uppercase tracking-[0.2em] text-gold">
+                <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-forest">
                   Hub de Inteligência Clínica
                 </p>
-                <h1 className="font-serif text-5xl md:text-6xl lg:text-7xl font-bold leading-[0.95] text-foreground">
-                  Biblioteca <span className="italic font-medium text-gold">Clínica</span>
+                <h1 className="font-serif text-5xl md:text-6xl lg:text-7xl font-bold leading-[0.95] text-mahogany">
+                  Biblioteca <span className="italic font-medium text-forest">Clínica</span>
                 </h1>
-                <p className="max-w-2xl font-serif text-[18px] italic leading-relaxed text-foreground/70">
+                <p className="max-w-2xl text-[16px] leading-relaxed text-foreground/70">
                   Todo o conhecimento da Psicogenealogia conectado em um único lugar. Autores,
                   conceitos, protocolos e casos que conversam entre si.
                 </p>
@@ -640,33 +640,33 @@ function BibliotecaPage() {
             <div className="relative z-10 space-y-6 mt-8">
 
               <div className="group relative max-w-3xl">
-                <div className="absolute inset-0 bg-gold/5 blur-xl opacity-60 group-focus-within:opacity-100 transition-opacity duration-500" />
-                <div className="relative flex items-center gap-3 bg-card border border-border shadow-[0_20px_60px_-30px_rgba(0,0,0,0.8)] p-2 pl-5">
-                  <Search className="size-5 text-gold shrink-0" />
+                <div className="absolute inset-0 rounded-[1.25rem] bg-gradient-to-r from-forest/30 to-gold/20 blur-xl opacity-60 group-focus-within:opacity-100 transition-opacity duration-500" />
+                <div className="relative flex items-center gap-3 rounded-[1.25rem] border border-mahogany/10 bg-white p-2 pl-5 shadow-[0_20px_60px_-30px_oklch(0.25_0.10_295/0.5)]">
+                  <Search className="size-5 text-forest shrink-0" />
                   <input
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
                     placeholder="Pesquise autores, conceitos, doenças, traumas, sobrenomes, sintomas ou protocolos..."
-                    className="flex-1 min-w-0 border-none bg-transparent py-4 font-serif text-[17px] text-foreground placeholder:text-foreground/30 italic focus:outline-none"
+                    className="flex-1 min-w-0 border-none bg-transparent py-4 text-[15px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none"
                   />
-                  <kbd className="hidden md:inline-flex items-center gap-1 border border-white/20 bg-muted px-2 py-1 font-sans text-[16px] font-bold text-foreground/60 uppercase tracking-widest">
+                  <kbd className="hidden md:inline-flex items-center gap-1 rounded-md border border-border/60 bg-muted/50 px-2 py-1 text-[10px] font-mono font-semibold text-muted-foreground">
                     ⌘K
                   </kbd>
-                  <button className="hidden sm:inline-flex items-center gap-2 bg-gold hover:bg-gold/80 px-6 py-4 font-sans text-[16px] font-bold uppercase tracking-widest text-archive-doc transition-colors">
+                  <button className="hidden sm:inline-flex items-center gap-2 rounded-[0.85rem] bg-mahogany px-5 py-3 text-[13px] font-semibold text-white transition-colors hover:bg-forest">
                     Buscar <ArrowRight className="size-4" />
                   </button>
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="font-sans text-[16px] font-bold uppercase tracking-widest text-foreground/50 mr-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/70 mr-1">
                   Sugestões:
                 </span>
                 {QUICK_SUGGESTIONS.map((s) => (
                   <button
                     key={s}
                     onClick={() => setQ(s)}
-                    className="border border-border bg-muted hover:bg-muted/70 px-4 py-2 font-sans text-[16px] font-bold uppercase tracking-widest text-foreground/80 transition-colors shadow-sm"
+                    className="rounded-full border border-mahogany/10 bg-white px-3.5 py-1.5 text-[12px] font-medium text-foreground/80 shadow-sm transition-all hover:-translate-y-0.5 hover:border-forest hover:bg-forest hover:text-white hover:shadow-md"
                   >
                     {s}
                   </button>
@@ -683,82 +683,80 @@ function BibliotecaPage() {
             <SectionHeader number="03" eyebrow="Descoberta diária" title="Hoje na Biblioteca" />
 
 
-            <div className="grid grid-cols-4 gap-5 auto-rows-[minmax(180px,auto)]">
+            <div className="grid grid-cols-4 gap-4 auto-rows-[minmax(180px,auto)]">
               {/* Concept of day — big */}
-              <div className="col-span-4 md:col-span-2 md:row-span-2 relative overflow-hidden border-l-4 border-l-gold bg-card border border-border shadow-xl p-8 flex flex-col justify-between group">
-                <div className="absolute -right-6 -top-2 font-serif text-[180px] italic leading-none text-foreground/5 select-none">
+              <div className="col-span-4 md:col-span-2 md:row-span-2 relative overflow-hidden rounded-[1.25rem] bg-mahogany text-white p-8 flex flex-col justify-between group hover-lift">
+                <div className="absolute -right-6 -top-2 font-serif text-[180px] italic leading-none text-white/[0.05] select-none">
                   {TODAY.concept.title.charAt(0)}
                 </div>
                 <div className="relative space-y-4">
-                  <div className="inline-flex items-center gap-2 bg-muted border border-border px-3 py-1.5 font-sans text-[16px] font-bold uppercase tracking-widest text-gold">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-sm px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-gold">
                     <Sparkles className="size-3" /> {TODAY.concept.label}
                   </div>
-                  <h3 className="font-serif text-4xl md:text-5xl font-bold italic leading-tight text-foreground">
+                  <h3 className="font-serif text-4xl md:text-5xl font-bold italic leading-tight">
                     {TODAY.concept.title}
                   </h3>
-                  <p className="max-w-md font-serif text-[17px] leading-relaxed text-foreground/70 italic">
+                  <p className="max-w-md text-[14px] leading-relaxed text-white/75">
                     {TODAY.concept.body}
                   </p>
                 </div>
-                <div className="relative flex flex-wrap items-center justify-between gap-4 mt-8">
-                  <div className="flex flex-wrap gap-2">
+                <div className="relative flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap gap-1.5">
                     {TODAY.concept.related.map((r) => (
                       <span
                         key={r}
-                        className="bg-muted px-3 py-1.5 font-sans text-[16px] font-bold uppercase tracking-widest text-foreground/60"
+                        className="rounded-md border border-white/15 bg-white/5 px-2 py-1 text-[10px] font-semibold text-white/80"
                       >
                         {r}
                       </span>
                     ))}
                   </div>
-                  <button className="inline-flex items-center gap-2 font-sans text-[16px] font-bold uppercase tracking-widest text-gold hover:gap-3 transition-all">
-                    Aprofundar <ArrowRight className="size-4" />
+                  <button className="inline-flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-widest text-gold hover:gap-3 transition-all">
+                    Aprofundar <ArrowRight className="size-3.5" />
                   </button>
                 </div>
               </div>
 
               {/* Author of week */}
-              <div className="col-span-4 md:col-span-2 bg-card shadow-[0_16px_40px_rgba(0,0,0,0.4)] p-8 flex items-center gap-6">
-                <div className="flex size-24 shrink-0 items-center justify-center bg-card border border-black/10 text-foreground font-serif text-3xl font-bold shadow-xl">
+              <div className="col-span-4 md:col-span-2 rounded-[1.25rem] bg-gold p-6 text-mahogany flex items-center gap-5 hover-lift">
+                <div className="flex size-20 shrink-0 items-center justify-center rounded-full bg-mahogany text-white font-serif text-2xl font-bold shadow-lg">
                   {TODAY.authorOfWeek.initials}
                 </div>
                 <div className="min-w-0">
-                  <p className="font-sans text-[16px] font-bold uppercase tracking-[0.2em] text-archive-doc/50">
+                  <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">
                     Autor da semana
                   </p>
-                  <h4 className="font-serif text-3xl font-bold leading-tight mt-2 text-archive-doc">
+                  <h4 className="font-serif text-2xl font-bold leading-tight mt-1">
                     {TODAY.authorOfWeek.name}
                   </h4>
-                  <p className="font-sans text-[16px] font-bold uppercase tracking-widest text-archive-doc/70 mt-2">
-                    {TODAY.authorOfWeek.field}
-                  </p>
+                  <p className="text-[12px] mt-1 opacity-80">{TODAY.authorOfWeek.field}</p>
                 </div>
               </div>
 
               {/* Recommended book */}
-              <div className="col-span-2 md:col-span-1 bg-card border border-border p-6 flex flex-col justify-between shadow-xl">
+              <div className="col-span-2 md:col-span-1 rounded-[1.25rem] bg-white border border-mahogany/10 p-5 flex flex-col justify-between hover-lift">
                 <div>
-                  <p className="font-sans text-[16px] font-bold uppercase tracking-[0.2em] text-gold">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-forest">
                     Livro recomendado
                   </p>
-                  <h4 className="mt-3 font-serif text-[22px] font-bold text-foreground italic leading-tight">
+                  <h4 className="mt-2 font-serif text-[18px] font-bold text-mahogany italic leading-tight">
                     {TODAY.bookRecommended.title}
                   </h4>
-                  <p className="font-sans text-[16px] font-bold uppercase tracking-widest text-foreground/50 mt-2">
+                  <p className="text-[11px] text-muted-foreground mt-1">
                     {TODAY.bookRecommended.author}
                   </p>
                 </div>
-                <span className="mt-4 self-start bg-muted border border-gold/30 px-3 py-1 font-sans text-[16px] font-bold uppercase tracking-widest text-gold">
+                <span className="mt-3 self-start rounded-full bg-gold/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-mahogany">
                   {TODAY.bookRecommended.tag}
                 </span>
               </div>
 
               {/* Clinical question */}
-              <div className="col-span-2 md:col-span-1 bg-card border border-black/5 shadow-lg p-6 flex flex-col justify-between">
-                <p className="font-sans text-[16px] font-bold uppercase tracking-[0.2em] text-archive-doc/50">
+              <div className="col-span-2 md:col-span-1 rounded-[1.25rem] bg-forest-soft/60 border border-forest/20 p-5 flex flex-col justify-between hover-lift">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-forest">
                   Pergunta clínica
                 </p>
-                <p className="text-[17px] font-serif italic leading-relaxed text-archive-doc mt-4 font-medium">
+                <p className="text-[13px] font-serif italic leading-relaxed text-mahogany">
                   "{TODAY.clinicalQuestion}"
                 </p>
               </div>
@@ -796,9 +794,9 @@ function BibliotecaPage() {
                   >
                     <div className="flex items-start justify-between">
                       <Icon className="size-6 opacity-80 group-hover:opacity-100" />
-                      <span className="font-sans text-[16px] font-bold opacity-60 uppercase tracking-widest">{t.count}</span>
+                      <span className="text-[10px] font-bold opacity-60">{t.count}</span>
                     </div>
-                    <h4 className="mt-6 font-serif text-[18px] font-bold leading-tight">{t.name}</h4>
+                    <h4 className="mt-6 font-serif text-lg font-bold leading-tight">{t.name}</h4>
                     <ChevronRight className="mt-2 size-4 opacity-0 -translate-x-1 group-hover:opacity-70 group-hover:translate-x-0 transition-all" />
                   </button>
                 );
@@ -819,7 +817,7 @@ function BibliotecaPage() {
               {ESSENTIAL_BOOKS.map((b) => (
                 <article
                   key={b.title}
-                  className="group relative flex gap-5 bg-card border border-border p-5 shadow-sm hover:shadow-xl hover:border-white/20 transition-all duration-500 hover:-translate-y-1"
+                  className="group relative flex gap-5 rounded-[1.25rem] bg-white border border-mahogany/10 p-5 shadow-sm hover:shadow-2xl hover:shadow-mahogany/10 transition-all duration-500 hover:-translate-y-1"
                 >
                   {/* Real cover with typographic fallback */}
                   <BookCoverArt book={b} />
@@ -829,45 +827,45 @@ function BibliotecaPage() {
                   <div className="flex-1 min-w-0 flex flex-col">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <h3 className="font-serif text-[22px] font-bold text-foreground leading-tight">
+                        <h3 className="font-serif text-xl font-bold text-mahogany leading-tight">
                           {b.title}
                         </h3>
-                        <p className="font-serif text-[16px] italic text-foreground/50 mt-1 leading-snug">
+                        <p className="text-[12px] italic text-muted-foreground mt-0.5 leading-snug">
                           {b.subtitle}
                         </p>
-                        <p className="font-sans text-[16px] font-bold uppercase tracking-widest text-gold mt-3">
+                        <p className="text-[12px] font-semibold text-forest mt-2">
                           {b.author} · {b.year}
                         </p>
                       </div>
-                      <span className="shrink-0 bg-muted border border-border px-3 py-1.5 font-sans text-[16px] font-bold uppercase tracking-widest text-foreground/70">
+                      <span className="shrink-0 rounded-full bg-gold/15 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-mahogany">
                         {b.level}
                       </span>
                     </div>
 
-                    <div className="mt-4 flex flex-wrap gap-2">
+                    <div className="mt-3 flex flex-wrap gap-1">
                       {b.concepts.map((c) => (
                         <span
                           key={c}
-                          className="bg-muted px-2.5 py-1.5 font-sans text-[16px] font-bold uppercase tracking-widest text-foreground/60"
+                          className="rounded-md bg-cream border border-mahogany/5 px-2 py-0.5 text-[10px] font-semibold text-mahogany/70"
                         >
                           {c}
                         </span>
                       ))}
                     </div>
 
-                    <div className="mt-auto pt-4 border-t border-border flex items-center justify-between">
-                      <div className="flex items-center gap-4 font-sans text-[16px] font-bold uppercase tracking-widest text-foreground/40">
+                    <div className="mt-auto pt-4 border-t border-border/50 flex items-center justify-between">
+                      <div className="flex items-center gap-4 text-[11px] text-muted-foreground">
                         <span>
-                          <strong className="text-foreground/80">{b.citations}</strong> citações
+                          <strong className="text-mahogany">{b.citations}</strong> citações
                         </span>
                         <span>
-                          <strong className="text-foreground/80">{b.protocols}</strong> protocolos
+                          <strong className="text-mahogany">{b.protocols}</strong> protocolos
                         </span>
                         <span>
-                          <strong className="text-foreground/80">{b.cases}</strong> casos
+                          <strong className="text-mahogany">{b.cases}</strong> casos
                         </span>
                       </div>
-                      <button className="inline-flex items-center gap-2 bg-muted/70 px-4 py-2 font-sans text-[16px] font-bold uppercase tracking-widest text-foreground hover:bg-gold hover:text-archive-doc transition-colors">
+                      <button className="inline-flex items-center gap-1.5 rounded-lg bg-mahogany px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-white hover:bg-forest transition-colors">
                         Abrir
                       </button>
                     </div>
@@ -885,20 +883,20 @@ function BibliotecaPage() {
               {QUOTES.map((q, i) => {
                 const bg =
                   q.tone === "mahogany"
-                    ? "bg-card text-archive-doc shadow-[0_16px_40px_rgba(0,0,0,0.4)]"
+                    ? "bg-mahogany text-white"
                     : q.tone === "gold"
-                      ? "bg-gold text-archive-doc"
+                      ? "bg-gold text-mahogany"
                       : q.tone === "forest"
-                        ? "bg-archive-doc text-[#FAFAF8] border border-border"
-                        : "bg-card text-[#FAFAF8] border border-border";
+                        ? "bg-forest/15 text-mahogany border border-forest/30"
+                        : "bg-white text-mahogany border border-mahogany/10";
                 const authorColor =
-                  q.tone === "mahogany" ? "text-[#151A15]/60" : q.tone === "gold" ? "text-[#151A15]/60" : "text-gold";
+                  q.tone === "mahogany" ? "text-gold" : q.tone === "gold" ? "text-mahogany" : "text-forest";
                 const iconColor =
-                  q.tone === "mahogany" ? "text-[#151A15]/10" : q.tone === "gold" ? "text-[#151A15]/20" : "text-foreground/10";
+                  q.tone === "mahogany" ? "text-white/20" : q.tone === "gold" ? "text-mahogany/20" : "text-forest/40";
                 return (
                   <figure
                     key={i}
-                    className={`mb-5 break-inside-avoid p-8 transition-all hover:-translate-y-1 ${bg}`}
+                    className={`mb-5 break-inside-avoid rounded-[1.25rem] p-6 shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 ${bg}`}
                   >
                     <QuoteIcon className={`size-6 mb-3 ${iconColor}`} />
                     <blockquote
@@ -910,12 +908,12 @@ function BibliotecaPage() {
                     </blockquote>
                     <figcaption className="mt-4 flex items-center justify-between gap-2">
                       <div>
-                        <p className={`font-sans text-[16px] font-bold uppercase tracking-widest ${authorColor}`}>
+                        <p className={`text-[11px] font-bold uppercase tracking-wider ${authorColor}`}>
                           {q.author}
                         </p>
                         <p
-                          className={`font-sans text-[16px] uppercase tracking-widest mt-1 ${
-                            q.tone === "mahogany" || q.tone === "gold" ? "text-[#151A15]/40" : "text-foreground/40"
+                          className={`text-[10px] mt-0.5 ${
+                            q.tone === "mahogany" ? "text-white/50" : "text-muted-foreground"
                           }`}
                         >
                           {q.work} · {q.year} · {q.theme}
@@ -962,40 +960,40 @@ function BibliotecaPage() {
               {PROTOCOLS.map((p) => (
                 <article
                   key={p.title}
-                  className={`group bg-card border border-border p-6 shadow-xl transition-all ${p.accent.replace("border-l-gold", "border-l-4 border-l-gold").replace("border-l-forest", "border-l-4 border-l-[#FAFAF8]").replace("border-l-mahogany", "border-l-4 border-l-white/20")}`}
+                  className={`group rounded-[1.25rem] bg-white p-6 border border-mahogany/10 border-l-[5px] shadow-sm hover:shadow-xl transition-all ${p.accent}`}
                 >
                   <div className="flex items-center justify-between mb-4">
-                    <span className="inline-flex items-center gap-2 bg-muted px-3 py-1 font-sans text-[16px] font-bold uppercase tracking-widest text-gold">
+                    <span className="inline-flex items-center gap-1.5 rounded-md bg-cream px-2 py-1 text-[10px] font-bold text-mahogany/70">
                       <Clock className="size-3" /> {p.duration}
                     </span>
-                    <div className="flex gap-1" aria-label={`Complexidade ${p.complexity} de 3`}>
+                    <div className="flex gap-0.5" aria-label={`Complexidade ${p.complexity} de 3`}>
                       {[1, 2, 3].map((n) => (
                         <span
                           key={n}
                           className={`size-1.5 rounded-full ${
-                            n <= p.complexity ? "bg-gold" : "bg-muted/70"
+                            n <= p.complexity ? "bg-mahogany" : "bg-mahogany/15"
                           }`}
                         />
                       ))}
                     </div>
                   </div>
 
-                  <h3 className="font-serif text-[22px] font-bold text-foreground leading-tight">
+                  <h3 className="font-serif text-xl font-bold text-mahogany leading-tight">
                     {p.title}
                   </h3>
-                  <p className="mt-3 font-serif text-[16px] italic text-foreground/70 leading-relaxed">{p.goal}</p>
+                  <p className="mt-2 text-[13px] text-foreground/70 leading-relaxed">{p.goal}</p>
 
-                  <div className="mt-5 border-l border-gold/50 pl-4 py-1">
-                    <p className="font-sans text-[9px] font-bold uppercase tracking-[0.2em] text-gold mb-1">
+                  <div className="mt-4 rounded-lg bg-forest-soft/40 border border-forest/20 p-3">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-forest mb-1">
                       Indicação
                     </p>
-                    <p className="font-serif text-[16px] text-foreground/80">{p.indication}</p>
+                    <p className="text-[12px] text-mahogany/80">{p.indication}</p>
                   </div>
 
-                  <ol className="mt-6 space-y-3">
+                  <ol className="mt-4 space-y-2">
                     {p.steps.map((s, i) => (
-                      <li key={s} className="flex items-start gap-3 text-[16px] text-foreground/80 font-serif">
-                        <span className="mt-1 flex size-5 shrink-0 items-center justify-center border border-white/20 font-sans text-[9px] font-bold text-foreground/60">
+                      <li key={s} className="flex items-start gap-2.5 text-[13px] text-foreground/80">
+                        <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-mahogany text-[10px] font-bold text-white">
                           {i + 1}
                         </span>
                         <span>{s}</span>
@@ -1003,12 +1001,12 @@ function BibliotecaPage() {
                     ))}
                   </ol>
 
-                  <div className="mt-8 flex gap-3 border-t border-border pt-5">
-                    <button className="flex-1 inline-flex items-center justify-center gap-2 bg-gold hover:bg-gold/80 py-3 font-sans text-[16px] font-bold uppercase tracking-widest text-archive-doc transition-colors">
-                      <ScrollText className="size-4" /> Checklist
+                  <div className="mt-6 flex gap-2">
+                    <button className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-mahogany py-2.5 text-[11px] font-bold uppercase tracking-wider text-white hover:bg-forest transition-colors">
+                      <ScrollText className="size-3.5" /> Checklist
                     </button>
-                    <button className="inline-flex items-center justify-center border border-white/20 bg-muted hover:bg-muted/70 px-4 text-foreground transition-colors">
-                      <Play className="size-4" />
+                    <button className="inline-flex items-center justify-center rounded-lg border border-mahogany/15 px-3 text-mahogany hover:bg-mahogany hover:text-white transition-colors">
+                      <Play className="size-3.5" />
                     </button>
                   </div>
                 </article>
@@ -1031,33 +1029,33 @@ function BibliotecaPage() {
                     key={e.id}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-card border border-border p-6 hover:border-white/30 transition-all shadow-lg"
+                    className="rounded-[1.25rem] bg-white border border-mahogany/10 p-5 hover:shadow-lg transition-all"
                   >
                     <div className="flex items-baseline justify-between gap-3">
-                      <h4 className="font-serif text-[18px] font-bold text-foreground">{e.author}</h4>
+                      <h4 className="font-serif text-lg font-bold text-mahogany">{e.author}</h4>
                       {e.school && (
-                        <span className="font-sans text-[16px] font-bold uppercase tracking-widest text-gold">
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60">
                           {e.school}
                         </span>
                       )}
                     </div>
-                    <p className="mt-2 font-serif text-[16px] italic font-semibold text-foreground/80">
+                    <p className="mt-1 text-[13px] font-semibold text-foreground/85">
                       {e.title}
                       {e.topic && (
-                        <span className="font-normal text-foreground/50"> — {e.topic}</span>
+                        <span className="font-normal text-muted-foreground"> — {e.topic}</span>
                       )}
                     </p>
                     {e.summary && (
-                      <p className="mt-3 font-serif text-[16px] leading-relaxed text-foreground/60 line-clamp-3">
+                      <p className="mt-2 text-[12px] leading-relaxed text-muted-foreground line-clamp-3">
                         {e.summary}
                       </p>
                     )}
                     {e.tags && e.tags.length > 0 && (
-                      <div className="mt-4 flex flex-wrap gap-2">
+                      <div className="mt-3 flex flex-wrap gap-1">
                         {e.tags.slice(0, 4).map((t) => (
                           <span
                             key={t}
-                            className="bg-muted px-2.5 py-1 font-sans text-[9px] font-bold uppercase tracking-widest text-foreground/50 border border-border"
+                            className="rounded-md bg-cream border border-mahogany/5 px-2 py-0.5 text-[10px] font-semibold text-mahogany/70"
                           >
                             {t}
                           </span>
@@ -1101,16 +1099,16 @@ function SectionHeader({
   action?: { label: string; onClick: () => void };
 }) {
   return (
-    <div className="flex items-end justify-between gap-4 border-b border-border pb-4">
-      <div className="flex items-end gap-5 min-w-0">
-        <span className="font-serif text-4xl md:text-5xl italic font-bold text-foreground/10 leading-none select-none shrink-0">
+    <div className="flex items-end justify-between gap-4">
+      <div className="flex items-end gap-4 min-w-0">
+        <span className="font-serif text-4xl md:text-5xl italic font-bold text-forest/25 leading-none select-none shrink-0">
           {number}
         </span>
         <div className="min-w-0">
-          <p className="font-sans text-[16px] font-bold uppercase tracking-[0.25em] text-gold">
+          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-forest">
             {eyebrow}
           </p>
-          <h2 className="font-serif text-2xl md:text-3xl font-bold text-foreground leading-tight mt-1">
+          <h2 className="font-serif text-2xl md:text-3xl font-bold text-mahogany leading-tight mt-1">
             {title}
           </h2>
         </div>
@@ -1118,7 +1116,7 @@ function SectionHeader({
       {action && (
         <button
           onClick={action.onClick}
-          className="shrink-0 inline-flex items-center gap-1.5 font-sans text-[16px] font-bold uppercase tracking-widest text-foreground/50 hover:text-foreground transition-colors"
+          className="shrink-0 inline-flex items-center gap-1 text-[12px] font-semibold text-forest hover:text-mahogany transition-colors"
         >
           {action.label} <ArrowRight className="size-3.5" />
         </button>
@@ -1138,17 +1136,17 @@ function GlossaryRow({
   return (
     <button
       onClick={onOpen}
-      className="group w-full text-left flex items-start gap-5 p-5 hover:bg-muted transition-colors border-b border-black/5"
+      className="group w-full text-left flex items-start gap-4 p-5 hover:bg-cream/60 transition-colors"
     >
-      <div className="flex size-12 shrink-0 items-center justify-center bg-card border border-black/10 text-foreground group-hover:bg-gold group-hover:text-archive-doc transition-colors">
+      <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-forest-soft/60 text-forest group-hover:bg-forest group-hover:text-white transition-colors">
         <Icon className="size-5" />
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
-          <h4 className="font-serif text-[18px] font-bold text-archive-doc leading-tight">{item.term}</h4>
-          <ChevronRight className="size-4 text-black/20 group-hover:text-archive-doc group-hover:translate-x-1 transition-all shrink-0" />
+          <h4 className="font-serif text-[16px] font-bold text-mahogany leading-tight">{item.term}</h4>
+          <ChevronRight className="size-4 text-muted-foreground/40 group-hover:text-forest group-hover:translate-x-0.5 transition-all shrink-0" />
         </div>
-        <p className="mt-1 font-serif text-[16px] text-archive-doc/60 italic leading-snug line-clamp-1">
+        <p className="mt-1 text-[12.5px] text-muted-foreground leading-snug line-clamp-1">
           {item.short}
         </p>
       </div>
@@ -1161,30 +1159,30 @@ function GlossaryDetail({ item }: { item: (typeof GLOSSARY)[number] }) {
   return (
     <div>
       <div className="block-mahogany p-8 relative overflow-hidden">
-        <span className="section-number absolute -right-4 -bottom-8 opacity-[0.06] text-foreground select-none">
+        <span className="section-number absolute -right-4 -bottom-8 opacity-[0.06] text-white select-none">
           {item.term.charAt(0)}
         </span>
         <SheetHeader className="relative z-10 space-y-4 p-0">
-          <div className="flex size-12 items-center justify-center rounded-xl bg-muted/70 backdrop-blur-sm text-gold">
+          <div className="flex size-12 items-center justify-center rounded-xl bg-white/10 backdrop-blur-sm text-gold">
             <Icon className="size-6" />
           </div>
-          <p className="text-[16px] font-bold uppercase tracking-widest text-gold">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-gold">
             Verbete clínico
           </p>
-          <SheetTitle className="font-serif text-3xl font-bold italic text-foreground leading-tight text-left">
+          <SheetTitle className="font-serif text-3xl font-bold italic text-white leading-tight text-left">
             {item.term}
           </SheetTitle>
-          <p className="text-[16px] leading-relaxed text-foreground/80 text-left">{item.short}</p>
+          <p className="text-[14px] leading-relaxed text-white/80 text-left">{item.short}</p>
         </SheetHeader>
       </div>
 
       <div className="p-8 space-y-8">
         <DetailBlock label="Definição completa">
-          <p className="text-[16px] leading-relaxed text-foreground/85">{item.full}</p>
+          <p className="text-[14px] leading-relaxed text-foreground/85">{item.full}</p>
         </DetailBlock>
 
         <DetailBlock label="História do conceito">
-          <p className="text-[16px] leading-relaxed text-foreground/70 italic font-serif">
+          <p className="text-[13px] leading-relaxed text-foreground/70 italic font-serif">
             {item.history}
           </p>
         </DetailBlock>
@@ -1194,7 +1192,7 @@ function GlossaryDetail({ item }: { item: (typeof GLOSSARY)[number] }) {
             {item.authors.map((a) => (
               <span
                 key={a}
-                className="rounded-full bg-forest-soft/60 px-3 py-1 text-[16px] font-semibold text-mahogany"
+                className="rounded-full bg-forest-soft/60 px-3 py-1 text-[12px] font-semibold text-mahogany"
               >
                 {a}
               </span>
@@ -1207,7 +1205,7 @@ function GlossaryDetail({ item }: { item: (typeof GLOSSARY)[number] }) {
             {item.related.map((r) => (
               <span
                 key={r}
-                className="inline-flex items-center gap-1 rounded-md border border-mahogany/15 bg-white px-2.5 py-1 text-[16px] font-medium text-mahogany hover:bg-mahogany hover:text-foreground transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1 rounded-md border border-mahogany/15 bg-white px-2.5 py-1 text-[12px] font-medium text-mahogany hover:bg-mahogany hover:text-white transition-colors cursor-pointer"
               >
                 <Link2 className="size-3" /> {r}
               </span>
@@ -1220,7 +1218,7 @@ function GlossaryDetail({ item }: { item: (typeof GLOSSARY)[number] }) {
             {item.books.map((b) => (
               <li
                 key={b}
-                className="flex items-center gap-2.5 text-[16px] text-foreground/80"
+                className="flex items-center gap-2.5 text-[13px] text-foreground/80"
               >
                 <BookOpen className="size-3.5 text-gold shrink-0" />
                 <span className="font-serif italic">{b}</span>
@@ -1229,7 +1227,7 @@ function GlossaryDetail({ item }: { item: (typeof GLOSSARY)[number] }) {
           </ul>
         </DetailBlock>
 
-        <button className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-mahogany py-3 text-[16px] font-bold uppercase tracking-wider text-foreground hover:bg-forest transition-colors">
+        <button className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-mahogany py-3 text-[12px] font-bold uppercase tracking-wider text-white hover:bg-forest transition-colors">
           <Wand2 className="size-4" /> Usar em sessão
         </button>
       </div>
@@ -1240,7 +1238,7 @@ function GlossaryDetail({ item }: { item: (typeof GLOSSARY)[number] }) {
 function DetailBlock({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="text-[16px] font-bold uppercase tracking-[0.2em] text-forest mb-2">
+      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-forest mb-2">
         {label}
       </p>
       {children}
@@ -1259,7 +1257,7 @@ function QuoteActions({
 }) {
   const iconClass =
     tone === "mahogany"
-      ? "text-foreground/40 hover:text-gold"
+      ? "text-white/40 hover:text-gold"
       : tone === "gold"
         ? "text-mahogany/40 hover:text-mahogany"
         : "text-muted-foreground/40 hover:text-forest";
@@ -1271,16 +1269,16 @@ function QuoteActions({
 
   return (
     <div className="flex items-center gap-1 shrink-0">
-      <button onClick={handleCopy} className={`h-11 w-11 flex items-center justify-center rounded-md transition-colors ${iconClass}`} title="Copiar" aria-label="Copiar">
+      <button onClick={handleCopy} className={`p-1.5 rounded-md transition-colors ${iconClass}`} title="Copiar">
         <Copy className="size-3.5" />
       </button>
-      <button className={`h-11 w-11 flex items-center justify-center rounded-md transition-colors ${iconClass}`} title="Salvar" aria-label="Salvar">
+      <button className={`p-1.5 rounded-md transition-colors ${iconClass}`} title="Salvar">
         <Bookmark className="size-3.5" />
       </button>
-      <button className={`h-11 w-11 flex items-center justify-center rounded-md transition-colors ${iconClass}`} title="Adicionar às notas" aria-label="Adicionar às notas">
+      <button className={`p-1.5 rounded-md transition-colors ${iconClass}`} title="Adicionar às notas">
         <StickyNote className="size-3.5" />
       </button>
-      <button className={`h-11 w-11 flex items-center justify-center rounded-md transition-colors ${iconClass}`} title="Usar em sessão" aria-label="Usar em sessão">
+      <button className={`p-1.5 rounded-md transition-colors ${iconClass}`} title="Usar em sessão">
         <Play className="size-3.5" />
       </button>
     </div>
@@ -1307,16 +1305,17 @@ function ClinicalAiRail({ open, onToggle }: { open: boolean; onToggle: () => voi
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
             className="w-[320px] sticky top-6 space-y-5 overflow-hidden"
           >
-            <div className="relative overflow-hidden bg-card border border-white/20 p-6 text-foreground shadow-xl">
-              <div className="absolute -right-6 -top-6 size-32 rounded-full bg-gold/10 blur-3xl" />
+            {/* AI card */}
+            <div className="relative overflow-hidden rounded-[1.25rem] bg-mahogany p-6 text-white shadow-xl">
+              <div className="absolute -right-6 -top-6 size-32 rounded-full bg-forest/25 blur-3xl" />
               <div className="relative">
-                <div className="flex items-center gap-4">
-                  <div className="flex size-10 items-center justify-center border border-gold/50 bg-gold/10">
-                    <BrainCircuit className="size-5 text-gold" />
+                <div className="flex items-center gap-2.5">
+                  <div className="flex size-9 items-center justify-center rounded-lg bg-forest">
+                    <BrainCircuit className="size-5 text-white" />
                   </div>
                   <div>
-                    <h3 className="font-serif text-[18px] font-bold">IA Clínica</h3>
-                    <p className="font-sans text-[9px] uppercase tracking-[0.2em] text-gold font-bold">
+                    <h3 className="font-serif text-lg font-bold">IA Clínica</h3>
+                    <p className="text-[10px] uppercase tracking-widest text-white/50 font-bold">
                       Contextual · viva
                     </p>
                   </div>
@@ -1350,21 +1349,21 @@ function ClinicalAiRail({ open, onToggle }: { open: boolean; onToggle: () => voi
             </div>
 
             {/* Curiosidade histórica */}
-            <div className="bg-archive-doc border border-gold/20 p-6 shadow-md">
-              <p className="font-sans text-[16px] font-bold uppercase tracking-widest text-gold">
+            <div className="rounded-[1.25rem] bg-gold/15 border border-gold/30 p-5">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-mahogany/70">
                 Curiosidade histórica
               </p>
-              <p className="mt-3 text-[16px] leading-relaxed text-foreground/80 italic font-serif">
+              <p className="mt-2 text-[13px] leading-relaxed text-mahogany italic font-serif">
                 {TODAY.historyBite}
               </p>
             </div>
 
             {/* Mini timeline */}
-            <div className="bg-card border border-border p-6 shadow-sm">
-              <p className="font-sans text-[16px] font-bold uppercase tracking-widest text-foreground/50">
+            <div className="rounded-[1.25rem] bg-white border border-mahogany/10 p-5 shadow-sm">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-forest">
                 Linha do tempo
               </p>
-              <ol className="mt-4 space-y-4">
+              <ol className="mt-3 space-y-3">
                 {[
                   { y: "1913", e: "Freud · Totem e Tabu" },
                   { y: "1970", e: "Schützenberger · genossociograma" },
@@ -1372,11 +1371,11 @@ function ClinicalAiRail({ open, onToggle }: { open: boolean; onToggle: () => voi
                   { y: "1990", e: "Hellinger · Ordens do Amor" },
                   { y: "2005", e: "Yehuda · epigenética do trauma" },
                 ].map((t) => (
-                  <li key={t.y} className="flex items-start gap-3 text-[16px]">
-                    <span className="mt-0.5 border border-gold/30 bg-archive-doc px-2 py-0.5 font-sans font-bold text-gold text-[16px]">
+                  <li key={t.y} className="flex items-start gap-3 text-[12px]">
+                    <span className="mt-0.5 rounded-md bg-mahogany px-1.5 py-0.5 font-mono font-bold text-white text-[10px]">
                       {t.y}
                     </span>
-                    <span className="text-foreground/70 leading-snug font-serif italic">{t.e}</span>
+                    <span className="text-foreground/75 leading-snug">{t.e}</span>
                   </li>
                 ))}
               </ol>
@@ -1388,12 +1387,12 @@ function ClinicalAiRail({ open, onToggle }: { open: boolean; onToggle: () => voi
             initial={{ width: 0, opacity: 0 }}
             animate={{ width: 48, opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
-            className="w-12 sticky top-6 flex flex-col items-center gap-4 bg-card border border-border py-6 shadow-sm cursor-pointer"
+            className="w-12 sticky top-6 flex flex-col items-center gap-4 rounded-[1.25rem] bg-white border border-mahogany/10 py-6 shadow-sm cursor-pointer"
             onClick={onToggle}
           >
-            <BrainCircuit className="size-5 text-gold animate-pulse" />
+            <BrainCircuit className="size-5 text-mahogany animate-pulse" />
             <p
-              className="font-sans text-[16px] font-bold uppercase tracking-widest text-gold/80"
+              className="text-[10px] font-bold uppercase tracking-widest text-mahogany/60"
               style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
             >
               IA Clínica
@@ -1407,11 +1406,11 @@ function ClinicalAiRail({ open, onToggle }: { open: boolean; onToggle: () => voi
 
 function AiBlock({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-lg bg-muted border border-border p-3">
-      <p className="text-[9px] font-bold uppercase tracking-widest text-foreground/40 mb-1.5">
+    <div className="rounded-lg bg-white/5 border border-white/10 p-3">
+      <p className="text-[9px] font-bold uppercase tracking-widest text-white/40 mb-1.5">
         {label}
       </p>
-      <p className="text-[16px] leading-relaxed text-foreground/85">{children}</p>
+      <p className="text-[12px] leading-relaxed text-white/85">{children}</p>
     </div>
   );
 }
@@ -1419,12 +1418,12 @@ function AiBlock({ label, children }: { label: string; children: React.ReactNode
 function AiList({ label, items }: { label: string; items: string[] }) {
   return (
     <div>
-      <p className="text-[9px] font-bold uppercase tracking-widest text-foreground/40 mb-2">{label}</p>
+      <p className="text-[9px] font-bold uppercase tracking-widest text-white/40 mb-2">{label}</p>
       <div className="space-y-1.5">
         {items.map((it) => (
           <button
             key={it}
-            className="w-full text-left rounded-lg bg-muted border border-border px-3 py-2 text-[11.5px] text-foreground/85 hover:bg-forest hover:border-forest transition-colors flex items-center justify-between group"
+            className="w-full text-left rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-[11.5px] text-white/85 hover:bg-forest hover:border-forest transition-colors flex items-center justify-between group"
           >
             <span className="min-w-0 truncate pr-2">{it}</span>
             <ArrowRight className="size-3 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -1474,8 +1473,8 @@ function AuthorPortraitCard({
   featured: boolean;
 }) {
   return (
-    <button className="group text-left">
-      <div className="relative aspect-[4/5] overflow-hidden bg-card">
+    <button className="group text-left space-y-3">
+      <div className="relative aspect-[4/5] overflow-hidden rounded-[1.1rem] border border-mahogany/10 shadow-[0_10px_30px_-15px_oklch(0.25_0.10_295/0.35)] bg-gradient-to-br from-[#e8dfd0] via-[#d8ccb6] to-[#b89e7f] group-hover:shadow-[0_20px_50px_-15px_oklch(0.25_0.10_295/0.5)] transition-all duration-500">
         {/* Museum paper grain */}
         <div
           aria-hidden
@@ -1494,7 +1493,7 @@ function AuthorPortraitCard({
           fallback={
             <div className="absolute inset-0 flex items-center justify-center">
               <span
-                className="font-serif text-[68px] font-black italic text-archive-doc/20 select-none"
+                className="font-serif text-[68px] font-black italic text-mahogany/25 select-none"
                 style={{ letterSpacing: "-0.04em" }}
               >
                 {author.initials}
@@ -1503,30 +1502,30 @@ function AuthorPortraitCard({
           }
         />
         {/* Editorial vignette */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#151A15] via-[#151A15]/10 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-mahogany/70 via-mahogany/10 to-transparent" />
         {/* Bottom caption strip */}
         <div className="absolute inset-x-0 bottom-0 p-3">
           {author.years && (
-            <p className="font-sans text-[9px] font-bold uppercase tracking-[0.25em] text-gold">
+            <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-gold/90">
               {author.years}
             </p>
           )}
-          <p className="mt-0.5 font-sans text-[16px] text-foreground/50 font-bold uppercase tracking-widest">{author.nationality ?? ""}</p>
+          <p className="mt-0.5 text-[10px] text-white/70">{author.nationality ?? ""}</p>
         </div>
         {featured && (
-          <span className="absolute top-3 right-3 bg-gold px-2 py-0.5 font-sans text-[8px] font-black uppercase tracking-widest text-archive-doc shadow-md">
+          <span className="absolute top-2.5 right-2.5 rounded-full bg-gold px-2 py-0.5 text-[8px] font-black uppercase tracking-widest text-mahogany shadow-md">
             Semana
           </span>
         )}
       </div>
       <div>
-        <h4 className="font-serif text-[17px] font-bold text-foreground leading-tight">
+        <h4 className="font-serif text-[15px] font-bold text-mahogany leading-tight">
           {author.name}
         </h4>
-        <p className="mt-1 font-sans text-[16px] uppercase tracking-widest text-gold font-bold">
+        <p className="mt-0.5 text-[10px] uppercase tracking-wider text-forest font-semibold">
           {author.field}
         </p>
-        <p className="mt-1 font-sans text-[16px] text-foreground/40 uppercase tracking-widest font-bold">
+        <p className="mt-1 text-[10px] text-muted-foreground/60">
           {author.works} obras · {author.concepts} conceitos
         </p>
       </div>
@@ -1551,7 +1550,7 @@ function BookCoverArt({ book }: { book: (typeof ESSENTIAL_BOOKS)[number] }) {
                 {book.year}
               </span>
               <div>
-                <p className="font-serif text-[16px] font-bold italic leading-tight">
+                <p className="font-serif text-[13px] font-bold italic leading-tight">
                   {book.title}
                 </p>
                 <div className="mt-1.5 h-px w-6 bg-current opacity-40" />
@@ -1574,8 +1573,8 @@ function BookCoverArt({ book }: { book: (typeof ESSENTIAL_BOOKS)[number] }) {
 
 function LeticiaAutoralSection() {
   const accentMap = {
-    mahogany: "bg-mahogany text-foreground",
-    forest: "bg-forest text-foreground",
+    mahogany: "bg-mahogany text-white",
+    forest: "bg-forest text-white",
     gold: "bg-gold text-mahogany",
     cream: "bg-cream text-mahogany border border-mahogany/10",
   } as const;
@@ -1585,7 +1584,7 @@ function LeticiaAutoralSection() {
       {/* Ambient glow */}
       <div
         aria-hidden
-        className="absolute -inset-x-8 -top-8 -bottom-8 -z-10 rounded-[2rem] bg-gradient-to-br from-[#151A15] via-transparent to-transparent blur-2xl"
+        className="absolute -inset-x-8 -top-8 -bottom-8 -z-10 rounded-[2rem] bg-gradient-to-br from-mahogany/[0.03] via-gold/[0.05] to-forest/[0.06] blur-2xl"
       />
 
       <SectionHeader
@@ -1598,7 +1597,7 @@ function LeticiaAutoralSection() {
       <div className="relative grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-8 items-stretch">
         {/* Portrait */}
         <div className="relative">
-          <div className="relative aspect-[4/5] overflow-hidden border border-black/30 shadow-[0_30px_80px_rgba(0,0,0,0.8)] ring-1 ring-white/10 bg-card">
+          <div className="relative aspect-[4/5] overflow-hidden rounded-[1.5rem] shadow-[0_30px_80px_-30px_oklch(0.25_0.10_295/0.55)] ring-1 ring-mahogany/10">
             <img
               src={LETICIA.photo}
               alt={LETICIA.name}
@@ -1614,35 +1613,35 @@ function LeticiaAutoralSection() {
                 backgroundSize: "3px 3px, 5px 5px",
               }}
             />
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#151A15] via-[#151A15]/70 to-transparent p-6">
-              <p className="font-sans text-[9px] font-bold uppercase tracking-[0.3em] text-gold">
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-mahogany via-mahogany/70 to-transparent p-6">
+              <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-gold">
                 Fundadora · Instituto Liz
               </p>
-              <h3 className="mt-2 font-serif text-[22px] font-bold italic text-foreground leading-tight">
+              <h3 className="mt-2 font-serif text-[22px] font-bold italic text-white leading-tight">
                 Letícia Kuchockowolec Baccin
               </h3>
             </div>
-            <span className="absolute top-4 left-4 inline-flex items-center gap-1.5 bg-gold px-3 py-1 font-sans text-[9px] font-black uppercase tracking-widest text-archive-doc shadow-md">
-              <Sparkles className="size-3 text-archive-doc" /> Coleção autoral
+            <span className="absolute top-4 left-4 inline-flex items-center gap-1.5 rounded-full bg-white/90 backdrop-blur px-3 py-1 text-[9px] font-black uppercase tracking-widest text-mahogany shadow-md">
+              <Sparkles className="size-3 text-gold" /> Coleção autoral
             </span>
           </div>
         </div>
 
         {/* Bio + counters */}
-        <div className="flex flex-col justify-between bg-card border border-border p-8 shadow-xl">
+        <div className="flex flex-col justify-between rounded-[1.5rem] bg-white/70 backdrop-blur-sm border border-mahogany/10 p-8 shadow-sm">
           <div className="space-y-5">
-            <p className="font-sans text-[16px] font-bold uppercase tracking-[0.28em] text-gold">
+            <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-forest">
               Biblioteca Autoral
             </p>
-            <h3 className="font-serif text-2xl md:text-3xl font-bold text-foreground leading-[1.1]">
+            <h3 className="font-serif text-2xl md:text-3xl font-bold text-mahogany leading-[1.1]">
               Toda a produção científica, clínica e didática da{" "}
-              <span className="italic text-gold">fundadora</span> da Academia.
+              <span className="italic text-forest">fundadora</span> da Academia.
             </h3>
-            <p className="font-serif text-[16px] leading-relaxed text-foreground/70 max-w-xl">
+            <p className="text-[15px] leading-relaxed text-foreground/75 max-w-xl">
               {LETICIA.bio}
             </p>
           </div>
-          <div className="mt-8 grid grid-cols-3 gap-3 border-t border-border pt-6">
+          <div className="mt-8 grid grid-cols-3 gap-3 border-t border-mahogany/10 pt-6">
             {[
               { n: LETICIA_WORKS.length, l: "Obras" },
               {
@@ -1655,10 +1654,10 @@ function LeticiaAutoralSection() {
               },
             ].map((s) => (
               <div key={s.l} className="min-w-0">
-                <p className="font-serif text-2xl md:text-3xl font-bold text-foreground leading-none">
+                <p className="font-serif text-2xl md:text-3xl font-bold text-mahogany leading-none">
                   {s.n}
                 </p>
-                <p className="font-sans text-[16px] font-bold uppercase tracking-[0.1em] text-foreground/40 mt-2">
+                <p className="text-[9px] font-bold uppercase tracking-[0.1em] text-forest/80 mt-1">
                   {s.l}
                 </p>
               </div>
@@ -1672,14 +1671,14 @@ function LeticiaAutoralSection() {
         {LETICIA_WORKS.map((w) => (
           <article
             key={w.title}
-            className="group relative overflow-hidden bg-card border border-border shadow-lg hover:shadow-2xl hover:border-gold/50 hover:-translate-y-1 transition-all duration-500"
+            className="group relative overflow-hidden rounded-[1.25rem] bg-white border border-mahogany/10 shadow-sm hover:shadow-2xl hover:shadow-mahogany/10 hover:-translate-y-1 transition-all duration-500"
           >
             {/* Cover panel */}
             <div
-              className={`relative h-44 flex items-center justify-center overflow-hidden bg-archive-doc text-foreground`}
+              className={`relative h-44 flex items-center justify-center overflow-hidden ${accentMap[w.accent]}`}
             >
               {/* Letícia portrait medallion */}
-              <div className="absolute -bottom-6 -right-6 size-32 rounded-full overflow-hidden border-4 border-border opacity-30 group-hover:opacity-60 transition-opacity">
+              <div className="absolute -bottom-6 -right-6 size-32 rounded-full overflow-hidden border-4 border-white/20 opacity-30 group-hover:opacity-60 transition-opacity">
                 <img
                   src={LETICIA.photo}
                   alt=""
@@ -1691,32 +1690,32 @@ function LeticiaAutoralSection() {
               {/* Paper grain */}
               <div
                 aria-hidden
-                className="absolute inset-0 opacity-[0.25] mix-blend-overlay pointer-events-none"
+                className="absolute inset-0 opacity-[0.15] mix-blend-overlay pointer-events-none"
                 style={{
                   backgroundImage:
-                    "radial-gradient(circle at 30% 20%, rgba(255,255,255,0.1) 0.5px, transparent 1px)",
+                    "radial-gradient(circle at 30% 20%, rgba(0,0,0,0.3) 0.5px, transparent 1px)",
                   backgroundSize: "4px 4px",
                 }}
               />
               <div className="relative z-10 text-center px-6">
-                <p className="font-sans text-[16px] font-bold uppercase tracking-[0.3em] opacity-70 text-gold">
+                <p className="text-[9px] font-bold uppercase tracking-[0.3em] opacity-70">
                   {w.kind}
                 </p>
-                <h4 className="mt-2 font-serif text-2xl font-bold italic leading-tight">
+                <h4 className="mt-2 font-serif text-xl font-bold italic leading-tight">
                   {w.title}
                 </h4>
-                <div className="mt-3 h-px w-12 mx-auto bg-white/20" />
+                <div className="mt-2 h-px w-8 mx-auto bg-current opacity-40" />
               </div>
               {/* Badge */}
               <span
-                className={`absolute top-3 left-3 px-3 py-1 font-sans text-[9px] font-black uppercase tracking-widest shadow border border-gold/30 ${
+                className={`absolute top-3 left-3 rounded-full px-2 py-0.5 text-[8px] font-black uppercase tracking-widest shadow ${
                   w.badge === "Novo"
-                    ? "bg-gold text-archive-doc"
+                    ? "bg-gold text-mahogany"
                     : w.badge === "Exclusivo"
-                      ? "bg-card text-gold"
+                      ? "bg-mahogany text-gold border border-gold/40"
                       : w.badge === "Mais estudado"
-                        ? "bg-card text-archive-doc"
-                        : "bg-muted/70 text-foreground"
+                        ? "bg-white text-mahogany"
+                        : "bg-forest text-white"
                 }`}
               >
                 {w.badge}
@@ -1724,23 +1723,23 @@ function LeticiaAutoralSection() {
             </div>
 
             {/* Meta */}
-            <div className="p-6 space-y-4 bg-archive-doc">
-              <p className="font-serif text-[16px] italic text-foreground/70 leading-snug">
+            <div className="p-4 space-y-3">
+              <p className="text-[12px] italic text-muted-foreground leading-snug">
                 {w.subtitle}
               </p>
-              <div className="flex items-center justify-between font-sans text-[16px] font-bold uppercase tracking-widest text-foreground/50 border-t border-border pt-4">
+              <div className="flex items-center justify-between text-[11px] text-muted-foreground border-t border-border/40 pt-3">
                 <span>
-                  <strong className="text-foreground">{w.concepts}</strong> conceitos
+                  <strong className="text-mahogany">{w.concepts}</strong> conceitos
                 </span>
                 <span>
-                  <strong className="text-foreground">{w.protocols}</strong> protocolos
+                  <strong className="text-mahogany">{w.protocols}</strong> protocolos
                 </span>
                 <span>
-                  <strong className="text-foreground">{w.citations}</strong> citações
+                  <strong className="text-mahogany">{w.citations}</strong> citações
                 </span>
               </div>
-              <button className="w-full inline-flex items-center justify-center gap-2 border border-gold py-3 font-sans text-[16px] font-bold uppercase tracking-widest text-gold hover:bg-gold hover:text-archive-doc transition-colors">
-                <Play className="size-4" /> Explorar
+              <button className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-mahogany py-2 text-[11px] font-bold uppercase tracking-wider text-white hover:bg-forest transition-colors">
+                <Play className="size-3 fill-current" /> Explorar
               </button>
             </div>
           </article>

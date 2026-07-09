@@ -134,14 +134,14 @@
   --input:  oklch(0.93 0.03 295);
   --ring:   oklch(0.65 0.20 295);
 
-  /* Sidebar: Arquivo Vivo Escuro (Verde Musgo Premium) */
-  --sidebar:                    var(--forest);
+  /* Sidebar: Couro / Fichário escuro */
+  --sidebar:                    var(--mahogany);
   --sidebar-foreground:         var(--archive);
-  --sidebar-primary:            var(--mahogany);
+  --sidebar-primary:            var(--forest);
   --sidebar-primary-foreground: var(--archive);
-  --sidebar-accent:             var(--forest-mid);
-  --sidebar-accent-foreground:  var(--gold-soft);
-  --sidebar-border:             var(--forest-soft);
+  --sidebar-accent:             var(--mahogany-mid);
+  --sidebar-accent-foreground:  var(--archive-doc);
+  --sidebar-border:             var(--mahogany-soft);
   --sidebar-ring:               var(--gold);
 }
 
@@ -192,13 +192,13 @@
   --input:  oklch(0.24 0.07 295);
   --ring:   oklch(0.65 0.20 295);
 
-  --sidebar:                    var(--forest);
+  --sidebar:                    var(--mahogany);
   --sidebar-foreground:         var(--archive);
-  --sidebar-primary:            var(--mahogany);
+  --sidebar-primary:            var(--forest);
   --sidebar-primary-foreground: var(--archive);
-  --sidebar-accent:             var(--forest-mid);
-  --sidebar-accent-foreground:  var(--gold-soft);
-  --sidebar-border:             var(--forest-soft);
+  --sidebar-accent:             var(--mahogany-mid);
+  --sidebar-accent-foreground:  var(--archive-doc);
+  --sidebar-border:             var(--mahogany-soft);
   --sidebar-ring:               var(--gold);
 }
 
@@ -251,22 +251,6 @@
   margin-inline: auto;
   padding-inline: 1.5rem;
   max-width: 100rem;
-}
-
-/* Master Grid — Arquivo Vivo Interno */
-@utility container-archive {
-  width: 100%;
-  margin-inline: auto;
-  padding-inline: 64px;
-  max-width: 1440px;
-}
-
-/* Ritmo vertical padronizado */
-@utility section-spacing {
-  margin-bottom: 80px;
-}
-@utility section-gap {
-  gap: 80px;
 }
 
 /* Números decorativos gigantes — elemento gráfico editorial */
@@ -392,8 +376,8 @@
   background: var(--color-card) !important;
   border-bottom: 1px solid var(--color-border) !important;
   color: var(--color-foreground) !important;
-  width: 44px !important;
-  height: 44px !important;
+  width: 36px !important;
+  height: 36px !important;
 }
 .react-flow__controls-button:hover {
   background: var(--color-secondary) !important;

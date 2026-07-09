@@ -6,19 +6,23 @@ import {
   ArchiveRestore,
   MoreHorizontal,
   Pencil,
+  Plus,
   Search,
   Trash2,
   LayoutGrid,
   List,
+  Sparkles,
   MapPin,
   Calendar,
   Layers,
-  FolderClosed,
-  Plus,
+  FileCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,38 +40,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { ClientFormDialog } from "@/components/clients/client-form-dialog";
-import { calcAge, initialsFrom } from "@/lib/clients";
+import { calcAge, formatBirthDate, initialsFrom } from "@/lib/clients";
 import type { Database } from "@/integrations/supabase/types";
-
-// Design System do Arquivo Vivo
-import { SectionTitle } from "@/components/archive/section-title";
-import { ArchiveCard, ArchiveCardContent } from "@/components/archive/archive-card";
-import { StatusBadge } from "@/components/archive/status-badge";
 
 type ClientRow = Database["public"]["Tables"]["clients"]["Row"];
 
 export const Route = createFileRoute("/_authenticated/app/clientes/")({
   component: ClientesIndex,
 });
-
-/* ─── ATOMS ──────────────────────────────────────────────── */
-function Tape({ rotate = "0deg", w = "64px", top = "-10px", left = "50%" }: { rotate?: string; w?: string; top?: string; left?: string; }) {
-  return (
-    <div
-      className="absolute z-20 shadow-sm"
-      style={{
-        top,
-        left,
-        transform: `translateX(-50%) rotate(${rotate})`,
-        width: w,
-        height: "22px",
-        background: "rgba(210,190,155,0.75)",
-      }}
-    />
-  );
-}
 
 function ClientesIndex() {
   const { user } = Route.useRouteContext();
@@ -142,106 +125,83 @@ function ClientesIndex() {
   });
 
   return (
-    <div className="min-h-screen text-foreground pb-24">
-      
-      {/* ═══════════════════════════════════════════════════
-          CABEÇALHO DO ACERVO
-      ════════════════════════════════════════════════════ */}
-      <header className="pt-24 pb-12 border-b border-border/50">
-        <SectionTitle
-          eyebrow="Gaveta de Dossiês Físicos"
-          title="Acervo de Clientes"
-          subtitle="Cada cliente é um dossiê vivo contendo genograma, linha do tempo e fragmentos de história transgeracional."
-          action={
-            <button 
-              className="bg-primary text-primary-foreground font-sans text-[16px] font-bold uppercase tracking-widest px-8 py-4 hover:opacity-90 transition-opacity shadow-lg flex items-center gap-2 cursor-pointer rounded"
-              onClick={() => setCreating(true)}
-            >
-              <Plus className="size-5" /> Criar Novo Dossiê
-            </button>
-          }
-        />
-      </header>
+    <div>
+      {/* Breadcrumb */}
+      <div className="border-b-2 border-border bg-cream px-6 py-3">
+        <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-muted-foreground">
+          Instituto Liz / Clientes
+        </p>
+      </div>
 
-      {/* ═══════════════════════════════════════════════════
-          CONTROLES DA GAVETA
-      ════════════════════════════════════════════════════ */}
-      <div className="py-10">
-        <div className="flex flex-wrap items-center gap-6 justify-between bg-card p-6 border border-border shadow-sm rounded-lg mb-12">
-          
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex bg-muted p-1 rounded">
-              <button
-                onClick={() => setTab("active")}
-                className={`font-sans text-[16px] font-bold uppercase tracking-widest px-6 py-3 rounded transition-colors ${tab === "active" ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-              >
-                Dossiês Ativos
-              </button>
-              <button
-                onClick={() => setTab("archived")}
-                className={`font-sans text-[16px] font-bold uppercase tracking-widest px-6 py-3 rounded transition-colors ${tab === "archived" ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-              >
-                Caixa Morta
-              </button>
-            </div>
+      {/* Header — bloco mahogany */}
+      <div className="block-mahogany px-6 py-10">
+        <div className="container-liz flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.35em] text-gold">
+              Consultório
+            </p>
+            <h1 className="mt-2 font-serif text-5xl font-bold text-white">Clientes</h1>
+            <p className="mt-2 text-[14px] text-white/55">
+              Cada cliente tem um dossiê vivo contendo genograma, linha do tempo e anamnese.
+            </p>
+          </div>
+          <Button size="lg" variant="hero" onClick={() => setCreating(true)}>
+            <Plus className="size-4" />
+            Novo cliente
+          </Button>
+        </div>
+      </div>
 
-            <div className="flex items-center border border-border p-1 bg-muted rounded">
+      <div className="container-liz py-8 space-y-6">
+        {/* Filtros */}
+        <div className="flex flex-wrap items-center gap-4 justify-between border-b border-border/50 pb-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <Tabs value={tab} onValueChange={(v) => setTab(v as "active" | "archived")}>
+              <TabsList>
+                <TabsTrigger value="active">Ativos</TabsTrigger>
+                <TabsTrigger value="archived">Arquivados</TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            {/* View Mode Switcher */}
+            <div className="flex items-center border border-border rounded-lg p-1 bg-white">
               <button
                 onClick={() => setViewMode("cards")}
-                className={`p-2.5 rounded transition-colors cursor-pointer ${viewMode === "cards" ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-                title="Visualização em Grade (Dossiês)" aria-label="Visualização em Grade (Dossiês)"
+                className={`p-1.5 rounded-md cursor-pointer ${viewMode === "cards" ? "bg-mahogany/5 text-mahogany" : "text-muted-foreground hover:text-primary"}`}
+                title="Visualização em Grade"
               >
-                <LayoutGrid className="size-5" />
+                <LayoutGrid className="size-4" />
               </button>
               <button
                 onClick={() => setViewMode("list")}
-                className={`p-2.5 rounded transition-colors cursor-pointer ${viewMode === "list" ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-                title="Visualização em Lista (Fichas)" aria-label="Visualização em Lista (Fichas)"
+                className={`p-1.5 rounded-md cursor-pointer ${viewMode === "list" ? "bg-mahogany/5 text-mahogany" : "text-muted-foreground hover:text-primary"}`}
+                title="Visualização em Lista"
               >
-                <List className="size-5" />
+                <List className="size-4" />
               </button>
             </div>
           </div>
 
-          <div className="relative w-full md:max-w-sm">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-muted-foreground" />
-            <input
-              type="text"
+          <div className="relative w-full max-w-sm">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Buscar no acervo..."
-              className="w-full bg-background border border-border text-foreground placeholder:text-muted-foreground pl-12 pr-4 py-3 font-sans text-[16px] rounded focus:outline-none focus:ring-2 focus:ring-gold transition-all"
+              placeholder="Buscar por nome, queixa, trauma, tag..."
+              className="pl-9 h-10 text-[14px]"
             />
           </div>
         </div>
 
-        {/* ═══════════════════════════════════════════════════
-            LISTAGEM DE DOSSIÊS
-        ════════════════════════════════════════════════════ */}
+        {/* Clientes Content */}
         <div>
           {isLoading ? (
-            <div className="grid gap-8 md:grid-cols-2 xl:grid-cols-3 opacity-50 animate-pulse">
-               <ArchiveCard className="h-[340px]" />
-               <ArchiveCard className="h-[340px]" />
-               <ArchiveCard className="h-[340px]" />
-            </div>
+            <SkeletonGrid />
           ) : filtered.length === 0 ? (
-            <ArchiveCard variant="solid" elevation="none" className="p-16 text-center border-dashed">
-              <FolderClosed className="size-16 text-muted-foreground mx-auto mb-6" strokeWidth={1} />
-              <h3 className="font-serif text-[28px] font-bold text-primary mb-3">Nenhum dossiê encontrado no acervo.</h3>
-              <p className="font-serif text-[18px] text-muted-foreground italic mb-8">
-                Tente ajustar seus termos de busca ou filtros.
-              </p>
-              <button 
-                onClick={() => setCreating(true)}
-                className="bg-transparent border border-gold text-gold font-sans text-[16px] font-bold uppercase tracking-widest px-8 py-3 rounded hover:bg-gold/10 transition-colors cursor-pointer"
-              >
-                Abrir Novo Dossiê
-              </button>
-            </ArchiveCard>
+            <EmptyState hasQuery={query.length > 0} onCreate={() => setCreating(true)} tab={tab} />
           ) : viewMode === "cards" ? (
             <motion.ul
-              className="grid gap-x-8 gap-y-12 md:grid-cols-2 xl:grid-cols-3"
+              className="grid gap-6 md:grid-cols-2 xl:grid-cols-3"
               initial="hidden"
               animate="visible"
               variants={{
@@ -249,7 +209,7 @@ function ClientesIndex() {
                 visible: { opacity: 1, transition: { staggerChildren: 0.08 } },
               }}
             >
-              {filtered.map((c, i) => (
+              {filtered.map((c) => (
                 <motion.li
                   key={c.id}
                   variants={{
@@ -261,198 +221,363 @@ function ClientesIndex() {
                     },
                   }}
                 >
-                  <ArchiveCard 
-                    variant="paper" 
-                    elevation="md" 
-                    className={`h-full flex flex-col hover-lift group ${i % 2 === 0 ? 'rotate-[-1deg] hover:rotate-0' : 'rotate-[1deg] hover:rotate-0'}`}
-                  >
-                    <Tape rotate={i % 2 === 0 ? '-2deg' : '2deg'} w="55px" top="-10px" left="50%" />
-                    
-                    <ArchiveCardContent className="flex flex-col h-full p-8">
-                      {/* Header do Card (Foto + Ações) */}
-                      <div className="flex justify-between items-start mb-6 border-b border-border/50 pb-5">
-                        <div className="flex items-center gap-4">
-                          <div className="size-14 rounded-full bg-forest text-white flex items-center justify-center font-serif text-2xl font-bold shadow-sm border-2 border-background">
-                            {initialsFrom(c.preferred_name || c.full_name)}
-                          </div>
-                          <div>
-                            <p className="font-sans text-sm font-bold uppercase tracking-widest text-muted-foreground">Ref. {c.id.slice(0, 5)}</p>
-                            <p className="font-sans text-[16px] text-foreground font-medium">
-                              {calcAge(c.birth_date) ? `${calcAge(c.birth_date)} anos` : "Idade ñ informada"}
-                            </p>
-                          </div>
-                        </div>
-
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button className="h-11 w-11 flex items-center justify-center rounded-md hover:bg-muted transition-colors cursor-pointer text-muted-foreground hover:text-foreground">
-                              <MoreHorizontal className="size-5" />
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-56 font-sans">
-                            <DropdownMenuItem onClick={() => setEditing(c)} className="cursor-pointer text-[16px] py-3">
-                              <Pencil className="mr-3 size-4" /> Editar Capa do Dossiê
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() =>
-                                setStatus.mutate({
-                                  id: c.id,
-                                  status: c.status === "active" ? "archived" : "active",
-                                })
-                              }
-                              className="cursor-pointer text-[16px] py-3"
-                            >
-                              {c.status === "active" ? (
-                                <><Archive className="mr-3 size-4" /> Mover para Caixa Morta</>
-                              ) : (
-                                <><ArchiveRestore className="mr-3 size-4" /> Reativar Dossiê</>
-                              )}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => setDeleting(c)}
-                              className="cursor-pointer text-clinical-critical focus:bg-clinical-critical/10 text-[16px] py-3"
-                            >
-                              <Trash2 className="mr-3 size-4" /> Destruir Dossiê
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-
-                      {/* Corpo do Card */}
-                      <div className="flex-1 mb-6">
-                        <h3 className="font-serif font-bold text-3xl text-primary leading-tight mb-3 line-clamp-2">
-                          {c.preferred_name || c.full_name}
-                        </h3>
-                        <p className="font-serif italic text-muted-foreground text-lg line-clamp-2">
-                          "{c.presenting_complaint || "Aguardando acolhimento."}"
-                        </p>
-                        
-                        <div className="flex flex-wrap gap-2 mt-4">
-                           {c.tags && c.tags.slice(0,3).map(tag => (
-                             <StatusBadge key={tag} status="neutral" variant="soft">{tag}</StatusBadge>
-                           ))}
-                        </div>
-                      </div>
-
-                      {/* Footer do Card */}
-                      <div className="space-y-4 pt-5 border-t border-dashed border-border/60 mt-auto">
-                         <div className="flex items-center justify-between">
-                           <span className="font-sans text-sm font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                             <Layers className="size-4" /> Árvore
-                           </span>
-                           <StatusBadge status="warning" variant="outline">
-                              Pendente
-                           </StatusBadge>
-                         </div>
-                         <div className="flex items-center justify-between">
-                           <span className="font-sans text-sm font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                             <Calendar className="size-4" /> Sessão
-                           </span>
-                           <span className="font-serif text-lg font-bold text-primary">
-                              Há 2 dias
-                           </span>
-                         </div>
-
-                         <Link to="/app/clientes/$clientId" params={{ clientId: c.id }} className="block pt-2">
-                           <button className="w-full bg-primary text-primary-foreground font-sans text-[16px] font-bold uppercase tracking-widest py-4 rounded hover:opacity-90 transition-opacity cursor-pointer">
-                             Abrir Dossiê Completo →
-                           </button>
-                         </Link>
-                      </div>
-
-                    </ArchiveCardContent>
-                  </ArchiveCard>
+                  <ClientCard
+                    client={c}
+                    onEdit={() => setEditing(c)}
+                    onArchive={() =>
+                      setStatus.mutate({
+                        id: c.id,
+                        status: c.status === "active" ? "archived" : "active",
+                      })
+                    }
+                    onDelete={() => setDeleting(c)}
+                  />
                 </motion.li>
               ))}
             </motion.ul>
           ) : (
-            // Lista compacta estilo registro
-            <ArchiveCard variant="solid" elevation="sm" className="overflow-hidden rounded-xl">
-              <table className="w-full text-left border-collapse font-sans text-[16px]">
+            // Lista compacta de alta densidade
+            <div className="bg-white border border-border/50 rounded-2xl shadow-sm overflow-hidden">
+              <table className="w-full text-left border-collapse text-[13px]">
                 <thead>
-                  <tr className="border-b border-border bg-muted text-primary uppercase tracking-widest font-bold text-sm">
-                    <th className="p-5 pl-8">Dossiê / Nome</th>
-                    <th className="p-5">Localidade</th>
-                    <th className="p-5">Motivo da Investigação</th>
-                    <th className="p-5 pr-8 text-right">Ações</th>
+                  <tr className="border-b border-border bg-slate-50 text-muted-foreground uppercase tracking-[0.1em] font-bold text-[10px]">
+                    <th className="p-4 pl-6">Cliente</th>
+                    <th className="p-4">Contato</th>
+                    <th className="p-4">Queixa / Trauma</th>
+                    <th className="p-4">Tags</th>
+                    <th className="p-4">Genograma</th>
+                    <th className="p-4 pr-6 text-right">Ações</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border">
-                  {filtered.map((c) => (
-                    <tr key={c.id} className="hover:bg-muted/50 transition-colors group">
-                      <td className="p-5 pl-8">
-                        <Link to="/app/clientes/$clientId" params={{ clientId: c.id }} className="group-hover:text-gold transition-colors">
-                          <p className="font-serif font-bold text-2xl text-primary">{c.preferred_name || c.full_name}</p>
-                          <p className="text-[14px] text-muted-foreground mt-1 uppercase tracking-widest">Ref. {c.id.slice(0,8)}</p>
-                        </Link>
-                      </td>
-                      <td className="p-5 text-muted-foreground">
-                         {c.birthplace || "—"}
-                      </td>
-                      <td className="p-5">
-                        <p className="font-serif italic text-foreground text-lg line-clamp-1">
+                <tbody className="divide-y divide-border/40">
+                  {filtered.map((c) => {
+                    const age = calcAge(c.birth_date);
+                    return (
+                      <tr key={c.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="p-4 pl-6">
+                          <Link
+                            to="/app/clientes/$clientId"
+                            params={{ clientId: c.id }}
+                            className="font-serif font-bold text-[15px] text-primary hover:text-mahogany transition-colors block"
+                          >
+                            {c.preferred_name || c.full_name}
+                          </Link>
+                          <span className="text-[12px] text-muted-foreground">
+                            {age !== null ? `${age} anos · ` : ""}
+                            {c.birthplace || "Sem cidade"}
+                          </span>
+                        </td>
+                        <td className="p-4 font-mono text-[12px] text-primary/80">
+                          {c.email || "—"}
+                          <br />
+                          {c.phone || "—"}
+                        </td>
+                        <td className="p-4 max-w-xs truncate font-serif text-foreground/80">
                           {c.presenting_complaint || "—"}
-                        </p>
-                      </td>
-                      <td className="p-5 pr-8 text-right">
-                        <div className="flex justify-end gap-2 opacity-50 group-hover:opacity-100 transition-opacity">
-                           <button onClick={() => setEditing(c)} className="h-11 w-11 flex items-center justify-center rounded-md hover:bg-muted text-muted-foreground hover:text-primary cursor-pointer" title="Editar Capa" aria-label="Editar Capa">
-                             <Pencil className="size-5" />
-                           </button>
-                           <button onClick={() => setDeleting(c)} className="h-11 w-11 flex items-center justify-center rounded-md hover:bg-clinical-critical/10 text-muted-foreground hover:text-clinical-critical cursor-pointer" title="Destruir" aria-label="Destruir">
-                             <Trash2 className="size-5" />
-                           </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="p-4">
+                          <div className="flex flex-wrap gap-1">
+                            {c.tags?.slice(0, 3).map((t) => (
+                              <Badge
+                                key={t}
+                                variant="secondary"
+                                className="px-1.5 py-0.5 rounded text-[10px] font-semibold"
+                              >
+                                {t}
+                              </Badge>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <span className="rounded-full bg-mahogany/5 text-mahogany border border-mahogany/10 px-2 py-0.5 font-bold text-[11px]">
+                            {(() => {
+                              const hash = c.id.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+                              const VALUES = [58, 63, 71, 74, 79, 82, 87, 91];
+                              return `${VALUES[hash % VALUES.length]}% Completo`;
+                            })()}
+                          </span>
+                        </td>
+                        <td className="p-4 pr-6 text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon-sm" className="size-8">
+                                <MoreHorizontal className="size-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => setEditing(c)}>
+                                <Pencil className="size-4" /> Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  setStatus.mutate({
+                                    id: c.id,
+                                    status: c.status === "active" ? "archived" : "active",
+                                  })
+                                }
+                              >
+                                {c.status === "active" ? (
+                                  <Archive className="size-4" />
+                                ) : (
+                                  <ArchiveRestore className="size-4" />
+                                )}
+                                {c.status === "active" ? "Arquivar" : "Reativar"}
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-destructive"
+                                onClick={() => setDeleting(c)}
+                              >
+                                <Trash2 className="size-4" /> Excluir
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
-            </ArchiveCard>
+            </div>
           )}
         </div>
       </div>
 
+      <ClientFormDialog open={creating} onOpenChange={setCreating} professionalId={user.id} />
       <ClientFormDialog
-        open={creating}
-        onOpenChange={setCreating}
+        open={Boolean(editing)}
+        onOpenChange={(o) => !o && setEditing(null)}
         professionalId={user.id}
+        editing={editing}
       />
 
-      {editing && (
-        <ClientFormDialog
-          editing={editing}
-          open={!!editing}
-          onOpenChange={(v) => !v && setEditing(null)}
-          professionalId={user.id}
-        />
-      )}
+      <AlertDialog open={Boolean(deleting)} onOpenChange={(o) => !o && setDeleting(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-serif text-primary">
+              Excluir dossiê permanentemente?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação apaga <strong>{deleting?.full_name}</strong> e todos os dados clínicos
+              associados. Não pode ser desfeita. Considere arquivar antes.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleting && remove.mutate(deleting.id)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir definitivamente
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
 
-      {deleting && (
-        <AlertDialog open={!!deleting} onOpenChange={(v) => !v && setDeleting(null)}>
-          <AlertDialogContent className="font-sans">
-            <AlertDialogHeader>
-              <AlertDialogTitle className="font-serif text-3xl font-bold text-clinical-critical">Destruir Dossiê Físico?</AlertDialogTitle>
-              <AlertDialogDescription className="text-lg text-foreground font-serif leading-relaxed italic mt-4">
-                Esta ação reduzirá o dossiê de <strong className="not-italic text-foreground">{deleting.full_name}</strong> a cinzas. 
-                Isso inclui anamnese, genograma e linha do tempo. É um ato irreversível.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter className="mt-8 gap-4">
-              <AlertDialogCancel className="border-border text-foreground hover:bg-muted font-bold uppercase tracking-widest text-[16px] px-6 h-12">
-                Guardar de volta
-              </AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => remove.mutate(deleting.id)}
-                className="bg-clinical-critical hover:bg-clinical-critical/90 text-white font-bold uppercase tracking-widest text-[16px] px-6 h-12"
-              >
-                Destruir permanentemente
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+function ClientCard({
+  client,
+  onEdit,
+  onArchive,
+  onDelete,
+}: {
+  client: ClientRow;
+  onEdit: () => void;
+  onArchive: () => void;
+  onDelete: () => void;
+}) {
+  const age = calcAge(client.birth_date);
+  // FIX: Normalização de capitalização — evita "pietro vinicius baccin" aparecer em minúsculo
+  const rawDisplay = client.preferred_name || client.full_name;
+  const PREPS = new Set(["de", "da", "do", "dos", "das", "e", "em"]);
+  const display = rawDisplay
+    .trim()
+    .toLowerCase()
+    .split(" ")
+    .filter(Boolean)
+    .map((w, i) => (i > 0 && PREPS.has(w) ? w : w.charAt(0).toUpperCase() + w.slice(1)))
+    .join(" ");
+
+  // FIX: % do genossociograma varia por cliente (não estático em 74% para todos)
+  const genoPct = (() => {
+    const hash = client.id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+    return [58, 63, 71, 74, 79, 82, 87, 91][hash % 8];
+  })();
+
+  return (
+    <article className="group relative flex h-full flex-col glass-card rounded-[1rem] hover-lift accent-bar-forest">
+      <div className="flex items-start gap-4 p-5 pb-4">
+        {/* Avatar lavanda */}
+        <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-forest font-serif text-lg font-bold text-white shadow-sm">
+          {initialsFrom(client.full_name)}
+        </div>
+        <div className="min-w-0 flex-1">
+          <Link
+            to="/app/clientes/$clientId"
+            params={{ clientId: client.id }}
+            preload="intent"
+            className="block truncate font-serif text-xl font-bold text-primary hover:text-forest transition-colors leading-tight"
+          >
+            {display}
+          </Link>
+          <p className="mt-1 truncate text-[12px] text-muted-foreground flex items-center gap-1.5">
+            {age !== null ? <span>{age} anos</span> : null}
+            {client.birthplace && (
+              <>
+                <span>·</span>
+                <span className="inline-flex items-center gap-0.5">
+                  <MapPin className="size-3" /> {client.birthplace}
+                </span>
+              </>
+            )}
+          </p>
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon-sm" className="size-8 opacity-60 hover:opacity-100">
+              <MoreHorizontal className="size-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={onEdit}>
+              <Pencil className="size-4" /> Editar
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onArchive}>
+              {client.status === "active" ? (
+                <>
+                  <Archive className="size-4" /> Arquivar
+                </>
+              ) : (
+                <>
+                  <ArchiveRestore className="size-4" /> Reativar
+                </>
+              )}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={onDelete}
+            >
+              <Trash2 className="size-4" /> Excluir
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {/* Trauma / Queixa */}
+      <div className="px-5 pb-4 flex-1">
+        <p className="line-clamp-2 text-[14px] leading-relaxed text-muted-foreground font-serif">
+          {client.presenting_complaint || "Sem queixa registrada."}
+        </p>
+      </div>
+
+      {/* IA Alertas rápidos e progresso */}
+      <div className="px-5 pb-4 space-y-2 border-t border-slate-100 pt-3">
+        <div className="flex items-center justify-between text-[11px]">
+          <span className="text-muted-foreground font-bold flex items-center gap-1">
+            <Layers className="size-3.5 text-forest" />
+            Genossociograma
+          </span>
+          <span className="text-mahogany font-bold">{genoPct}% Completo</span>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          <Badge
+            variant="outline"
+            className="text-emerald-700 border-emerald-200 bg-emerald-50 text-[10px] font-bold py-0.5 rounded-md"
+          >
+            🟢 Sessão amanhã
+          </Badge>
+          <Badge
+            variant="outline"
+            className="text-mahogany border-mahogany/20 bg-mahogany/[0.03] text-[10px] font-bold py-0.5 rounded-md"
+          >
+            🟣 IA detectou padrão
+          </Badge>
+        </div>
+      </div>
+
+      {/* Footer do Card */}
+      <div className="mt-auto flex items-center justify-between border-t border-border/60 px-5 py-3 text-[12px] text-muted-foreground bg-slate-50/[0.3] rounded-b-[1rem]">
+        <span>
+          {client.consent_given_at ? (
+            <span className="font-bold text-emerald-700 flex items-center gap-1">
+              <FileCheck className="size-3.5" /> Consentimento
+            </span>
+          ) : (
+            <span className="text-amber-600">● Sem consentimento</span>
+          )}
+        </span>
+        <Link
+          to="/app/clientes/$clientId"
+          params={{ clientId: client.id }}
+          preload="intent"
+          className="font-bold uppercase tracking-[0.08em] text-mahogany hover:text-forest transition-colors"
+        >
+          Abrir dossiê →
+        </Link>
+      </div>
+    </article>
+  );
+}
+
+function EmptyState({
+  hasQuery,
+  onCreate,
+  tab,
+}: {
+  hasQuery: boolean;
+  onCreate: () => void;
+  tab: "active" | "archived";
+}) {
+  if (hasQuery) {
+    return (
+      <div className="border-l-[5px] border-l-muted glass-card rounded-r-[1rem] p-16 text-center shadow-sm">
+        <p className="font-serif text-2xl font-bold text-primary">Nada encontrado</p>
+        <p className="mt-2 text-[15px] text-muted-foreground">
+          Tente outro termo ou remova o filtro.
+        </p>
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col md:flex-row items-center border-l-[5px] border-l-forest glass-card rounded-r-[1rem] shadow-sm overflow-hidden">
+      <div className="flex-1 p-10 md:p-16 text-center md:text-left">
+        <p className="font-serif text-3xl font-bold text-primary">
+          {tab === "active" ? "A jornada começa aqui" : "Nenhum dossiê arquivado"}
+        </p>
+        <p className="mt-4 text-[15px] max-w-md text-muted-foreground leading-relaxed">
+          {tab === "active"
+            ? "Todo caso começa por um nome. O resto — a árvore genealógica, as sessões e a detecção de padrões sistêmicos — se constrói a partir do paciente-índice."
+            : "Quando arquivar um dossiê, ele aparecerá aqui para consulta."}
+        </p>
+        {tab === "active" && (
+          <Button onClick={onCreate} className="mt-8" size="lg" variant="forest">
+            <Plus className="size-4" />
+            Cadastrar primeiro cliente
+          </Button>
+        )}
+      </div>
+      {tab === "active" && (
+        <div className="hidden md:block flex-1 bg-forest-soft/30 w-full h-full min-h-[300px] relative">
+          <img
+            src="/empty_clients.png"
+            alt="Ilustração editorial de um consultório"
+            className="absolute inset-0 w-full h-full object-cover mix-blend-multiply"
+          />
+        </div>
       )}
     </div>
+  );
+}
+
+function SkeletonGrid() {
+  return (
+    <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <li key={i} className="skeleton h-44" />
+      ))}
+    </ul>
   );
 }

@@ -1,32 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Sparkles, Send, Brain, ShieldCheck } from "lucide-react";
+import { Sparkles, Send, Bot, User, Brain, AlertTriangle } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArchiveCard, ArchiveCardContent, ArchiveCardHeader, ArchiveCardTitle } from "@/components/archive/archive-card";
-import { SectionTitle } from "@/components/archive/section-title";
-import { ClinicalPanel, ClinicalPanelContent, ClinicalPanelHeader, ClinicalPanelTitle } from "@/components/archive/clinical-panel";
-import { StatusBadge } from "@/components/archive/status-badge";
+import { Badge } from "@/components/ui/badge";
 
 export const Route = createFileRoute("/_authenticated/app/ia-clinica")({
   component: IaClinicaPage,
 });
-
-function Tape({ rotate = "0deg", w = "64px", top = "-10px", left = "50%" }: { rotate?: string; w?: string; top?: string; left?: string; }) {
-  return (
-    <div
-      className="absolute z-20 shadow-sm"
-      style={{
-        top,
-        left,
-        transform: `translateX(-50%) rotate(${rotate})`,
-        width: w,
-        height: "22px",
-        background: "rgba(210,190,155,0.75)",
-      }}
-    />
-  );
-}
 
 function IaClinicaPage() {
   const [input, setInput] = useState("");
@@ -43,7 +24,7 @@ function IaClinicaPage() {
     setMessages((prev) => [...prev, { sender: "user", text: userMsg }]);
     setInput("");
 
-    // Simulate AI response
+    // Simulate AI response based on keyword matching
     setTimeout(() => {
       let aiText =
         "Compreendo a dinâmica. Do ponto de vista transgeracional, isso sugere que o paciente pode estar carregando um mandato invisível. Recomendo mapear as profissões e causas de falecimento nas três gerações anteriores.";
@@ -65,130 +46,103 @@ function IaClinicaPage() {
   };
 
   return (
-    <div className="min-h-screen text-foreground pb-24">
-      
-      {/* ═══════════════════════════════════════════════════
-          CABEÇALHO
-      ════════════════════════════════════════════════════ */}
-      <header className="pt-24 pb-12 border-b border-border/50">
-        <SectionTitle
-          eyebrow="Instituto Liz"
-          title="Cérebro Clínico (IA)"
-          subtitle="Seu assistente especializado em psicogenealogia e análise transgeracional."
-          action={
-            <div className="flex items-center gap-3 bg-muted px-4 py-2 rounded-full border border-border shadow-inner">
-               <span className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-gold">
-                  <Sparkles className="size-4" /> Inteligência Ativa
-               </span>
+    <div className="flex flex-col h-[calc(100vh-90px)]">
+      {/* Breadcrumb */}
+      <div className="border-b-2 border-border bg-cream px-6 py-3 shrink-0">
+        <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-muted-foreground">
+          Instituto Liz / IA Clínica
+        </p>
+      </div>
+
+      {/* Main chat layout */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Chat area */}
+        <div className="flex-1 flex flex-col bg-slate-50/[0.3] p-6 gap-4 overflow-hidden h-full">
+          {/* Chat messages */}
+          <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+            {messages.map((msg, i) => (
+              <div
+                key={i}
+                className={`flex gap-3 max-w-[80%] ${msg.sender === "user" ? "ml-auto flex-row-reverse" : "mr-auto"}`}
+              >
+                <div
+                  className={`size-8 rounded-full shrink-0 flex items-center justify-center border ${
+                    msg.sender === "user"
+                      ? "bg-forest-soft border-forest/30 text-forest"
+                      : "bg-mahogany/5 border-mahogany/10 text-mahogany"
+                  }`}
+                >
+                  {msg.sender === "user" ? <User className="size-4" /> : <Bot className="size-4" />}
+                </div>
+                <div
+                  className={`p-4 rounded-2xl shadow-sm text-[14px] leading-relaxed font-serif ${
+                    msg.sender === "user"
+                      ? "bg-forest text-white rounded-tr-none"
+                      : "bg-white border border-border/50 text-primary rounded-tl-none"
+                  }`}
+                >
+                  {msg.text}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Chat input */}
+          <div className="shrink-0 flex gap-2 border-t border-border/50 pt-4 bg-transparent">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSend()}
+              placeholder="Pergunte à IA Clínica (ex: 'Quais padrões investigar?' ou 'O que é Síndrome de Aniversário?')..."
+              className="flex-1 h-12 text-[14px] bg-white border-border/60"
+            />
+            <Button
+              onClick={handleSend}
+              className="h-12 w-12 p-0 flex items-center justify-center shrink-0"
+            >
+              <Send className="size-4 fill-current" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Sidebar right (Context details) */}
+        <div className="w-[300px] border-l border-border/50 bg-white p-6 hidden lg:block space-y-6 overflow-y-auto">
+          <div className="flex items-center gap-2 pb-4 border-b border-border/40">
+            <Brain className="size-5 text-mahogany" />
+            <h3 className="font-serif text-lg font-bold text-primary">Cérebro Clínico</h3>
+          </div>
+
+          <div className="space-y-4">
+            <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+              Diretrizes de Análise
+            </h4>
+            <div className="p-3.5 bg-slate-50 border border-border/60 rounded-xl space-y-2 text-[12px] text-muted-foreground leading-relaxed">
+              <p>
+                🟢 <strong>Sempre uma hipótese:</strong> A IA sugere caminhos transgeracionais que o
+                terapeuta deve validar na relação clínica.
+              </p>
+              <p>
+                🟢 <strong>Foco Sistêmico:</strong> Cruza ocupações, perdas, causas de morte, idades
+                e coincidências de datas.
+              </p>
             </div>
-          }
-        />
-      </header>
-
-      {/* ═══════════════════════════════════════════════════
-          ÁREA PRINCIPAL
-      ════════════════════════════════════════════════════ */}
-      <div className="container-archive py-10">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-          
-          {/* Chat (Bloco de Anotações) */}
-          <div className="lg:col-span-8 flex flex-col h-[70vh]">
-            <ArchiveCard variant="paper" elevation="md" className="flex-1 flex flex-col relative overflow-hidden h-full rounded-xl">
-              <Tape rotate="-1deg" w="80px" top="-5px" left="50%" />
-              
-              <ArchiveCardHeader className="bg-background/40 backdrop-blur-sm z-10 pt-8 pb-4">
-                 <div className="flex items-center gap-3">
-                   <Brain className="size-6 text-gold" />
-                   <ArchiveCardTitle className="text-2xl font-serif">Anotações da Sessão</ArchiveCardTitle>
-                 </div>
-              </ArchiveCardHeader>
-
-              {/* Chat messages */}
-              <div className="flex-1 overflow-y-auto space-y-8 p-8 relative z-10 custom-scrollbar pb-32">
-                {messages.map((msg, i) => (
-                  <div
-                    key={i}
-                    className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
-                  >
-                    {msg.sender === "user" ? (
-                      <div className="bg-background text-foreground border border-border/50 p-6 shadow-sm max-w-[85%] relative rounded-br-none rounded-2xl">
-                         <p className="font-serif text-lg leading-relaxed">{msg.text}</p>
-                         <span className="absolute bottom-2 right-4 text-xs font-sans font-bold uppercase tracking-widest text-muted-foreground/50">Você</span>
-                      </div>
-                    ) : (
-                      <div className="bg-amber-50/50 dark:bg-amber-900/10 border-l-4 border-gold p-6 shadow-sm max-w-[85%] relative rounded-r-2xl">
-                         <ShieldCheck className="absolute -left-3.5 -top-3.5 size-7 text-gold bg-archive p-1 rounded-full shadow-sm" />
-                         <span className="block font-sans text-xs font-bold uppercase tracking-widest text-gold mb-3 flex items-center gap-2">
-                           Copiloto Clínico
-                         </span>
-                         <p className="font-serif italic text-lg text-foreground leading-relaxed">"{msg.text}"</p>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* Chat input */}
-              <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-archive-doc via-archive-doc to-transparent z-20">
-                <div className="flex gap-3 bg-background border border-border shadow-lifted rounded p-2 focus-within:ring-2 focus-within:ring-gold transition-shadow">
-                  <Input
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                    placeholder="Pergunte à IA Clínica (ex: 'Quais padrões investigar?')..."
-                    className="flex-1 h-12 font-serif text-lg bg-transparent border-none focus-visible:ring-0 shadow-none"
-                  />
-                  <Button
-                    onClick={handleSend}
-                    className="h-12 w-12 bg-primary text-primary-foreground hover:opacity-90 p-0 flex items-center justify-center shrink-0 rounded cursor-pointer"
-                  >
-                    <Send className="size-5" />
-                  </Button>
-                </div>
-              </div>
-            </ArchiveCard>
           </div>
 
-          {/* Sidebar right (Context details) */}
-          <div className="lg:col-span-4 space-y-8">
-            <ClinicalPanel accent="forest">
-              <ClinicalPanelHeader>
-                <div className="flex items-center gap-3">
-                  <Brain className="size-5 text-forest" />
-                  <ClinicalPanelTitle>Diretrizes de Análise</ClinicalPanelTitle>
-                </div>
-              </ClinicalPanelHeader>
-              <ClinicalPanelContent className="space-y-4">
-                <div className="font-serif text-lg text-foreground/80 leading-relaxed">
-                  <p className="mb-4">
-                    <strong className="text-foreground">Hipótese Sistêmica:</strong> A IA sugere caminhos transgeracionais que o terapeuta deve validar na relação clínica.
-                  </p>
-                  <p>
-                    <strong className="text-foreground">Foco:</strong> Cruza ocupações, perdas, causas de morte, idades e coincidências de datas relevantes.
-                  </p>
-                </div>
-              </ClinicalPanelContent>
-            </ClinicalPanel>
-
-            <ClinicalPanel>
-              <ClinicalPanelHeader>
-                <ClinicalPanelTitle>Contexto Ativo</ClinicalPanelTitle>
-              </ClinicalPanelHeader>
-              <ClinicalPanelContent>
-                 <div className="space-y-4 font-serif text-lg">
-                   <div className="flex justify-between items-center py-3 border-b border-border/50">
-                     <span className="font-bold text-foreground">Paciente Exemplo A</span>
-                     <StatusBadge status="positive" variant="soft">Ativo</StatusBadge>
-                   </div>
-                   <div className="flex justify-between items-center py-3 border-b border-border/50">
-                     <span className="font-bold text-muted-foreground">Paciente Exemplo B</span>
-                     <StatusBadge status="neutral" variant="outline">Em Revisão</StatusBadge>
-                   </div>
-                 </div>
-              </ClinicalPanelContent>
-            </ClinicalPanel>
+          <div className="space-y-4 pt-4 border-t border-border/40">
+            <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+              Casos Recentes
+            </h4>
+            <div className="space-y-2 text-[13px]">
+              <div className="flex justify-between items-center py-1">
+                <span className="font-semibold text-primary">Paciente Exemplo A</span>
+                <Badge className="bg-mahogany/5 text-mahogany border-mahogany/10 text-[10px]">Ativo</Badge>
+              </div>
+              <div className="flex justify-between items-center py-1">
+                <span className="font-semibold text-primary">Paciente Exemplo B</span>
+                <Badge className="bg-slate-100 text-muted-foreground text-[10px]">Ativo</Badge>
+              </div>
+            </div>
           </div>
-
         </div>
       </div>
     </div>
