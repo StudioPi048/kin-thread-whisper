@@ -5,21 +5,38 @@ import {
   History,
   AlertCircle,
   FileText,
-  Mail,
   Stamp,
   FolderOpen,
-  PenTool,
-  Bookmark,
-  Library,
-  Paperclip
+  Paperclip,
+  ShieldCheck,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_authenticated/app/")({
   component: AppHome,
 });
+
+/* ─── ATOMS ──────────────────────────────────────────────── */
+
+/** Fita adesiva CSS pura para simular documentos colados */
+function Tape({ rotate = "0deg", w = "64px", top = "-10px", left = "50%" }: { rotate?: string; w?: string; top?: string; left?: string; }) {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        top,
+        left,
+        transform: `translateX(-50%) rotate(${rotate})`,
+        width: w,
+        height: "22px",
+        background: "rgba(210,190,155,0.75)",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
+        zIndex: 20,
+      }}
+    />
+  );
+}
 
 function AppHome() {
   const { user } = Route.useRouteContext();
@@ -65,152 +82,233 @@ function AppHome() {
   const lastActiveClient = clients[0] ?? null;
 
   return (
-    <div className="min-h-screen bg-transparent pb-20 font-serif text-ink selection:bg-gold-soft">
-      {/* 1. O Cabeçalho (Mesa do Pesquisador) */}
-      <header className="pt-16 pb-12 relative">
-        <div className="container-liz relative z-10 space-y-10">
-          <div className="max-w-3xl space-y-2 border-b-2 border-archive-old pb-6">
-            <h1 className="font-serif text-5xl font-bold tracking-tight text-ink leading-tight">
-              Bom dia, <span className="italic text-mahogany-mid">{firstName}</span>.
-            </h1>
-            <p className="text-lg text-ink/70 font-medium font-sans">
-              Você tem <strong className="text-mahogany-mid">3 arquivos abertos</strong> sobre a mesa hoje.
-            </p>
+    <div className="min-h-screen bg-[#1B211A] pb-24 font-serif text-white selection:bg-gold-soft relative overflow-x-hidden">
+      
+      {/* ═══════════════════════════════════════════════════
+          FUNDO E TEXTURAS
+      ════════════════════════════════════════════════════ */}
+      <div className="absolute right-0 top-0 w-[80%] h-[700px] opacity-10 pointer-events-none">
+        <img src="/assets/photos/section2_botanicals.jpg" alt="" className="w-full h-full object-cover mix-blend-screen" />
+      </div>
+      <div className="absolute left-0 bottom-0 w-[50%] h-[500px] opacity-[0.03] pointer-events-none rotate-180">
+        <img src="/assets/photos/section2_botanicals.jpg" alt="" className="w-full h-full object-cover mix-blend-screen" />
+      </div>
+
+      {/* ═══════════════════════════════════════════════════
+          CABEÇALHO DA MESA
+      ════════════════════════════════════════════════════ */}
+      <header className="pt-24 pb-16 relative z-10">
+        <div className="container-liz">
+          <p className="font-sans text-[13px] font-bold tracking-[0.2em] text-[#D4AF37] uppercase mb-4">
+            Mesa de Investigação
+          </p>
+          <h1 className="font-serif text-5xl md:text-6xl font-bold tracking-tight text-white leading-tight mb-4">
+            Bom dia, <em className="italic text-[#D4AF37]">{firstName}</em>.
+          </h1>
+          <p className="text-xl text-white/60 font-serif italic max-w-xl leading-relaxed">
+            Você tem <strong className="text-[#D4AF37] font-semibold not-italic">{clients.length} arquivos ativos</strong> no seu acervo. 
+            Os padrões aguardam para serem descobertos.
+          </p>
+        </div>
+      </header>
+
+      {/* ═══════════════════════════════════════════════════
+          DOSSIÊ EM DESTAQUE (PAPEL SOBRE A MESA)
+      ════════════════════════════════════════════════════ */}
+      <div className="container-liz relative z-20 mb-20">
+        
+        {/* Documento Físico */}
+        <div className="relative bg-[#FCF9F4] text-[#3B2F2F] p-10 md:p-14 shadow-[0_32px_80px_rgba(0,0,0,0.6)] rotate-[-0.5deg] border border-[#E6DDD0]">
+          
+          <Tape rotate="-1deg" w="80px" />
+          
+          {/* Caneta Fotorrealista sobre o papel */}
+          <div className="absolute -right-8 top-16 w-[280px] z-30 pointer-events-none hidden xl:block">
+            <img src="/assets/objects/pen_clean.jpg" alt="" className="w-full mix-blend-multiply rotate-[22deg] drop-shadow-2xl" />
           </div>
 
-          {/* Dossiê em Destaque (Missão do Dia) */}
-          <div className="bg-white border border-[#E6DDD0] rounded-sm p-6 md:p-8 flex flex-col xl:flex-row gap-8 items-start xl:items-center shadow-[0_12px_40px_rgba(59,47,47,0.06),0_1px_3px_rgba(0,0,0,0.02)] relative z-20 before:absolute before:top-0 before:left-0 before:w-1 before:h-full before:bg-mahogany-mid before:rounded-l-sm">
+          <div className="flex flex-col lg:flex-row gap-12 relative z-10">
             
-            <div className="flex-1 space-y-6">
-              <div className="flex items-center gap-3">
-                <span className="flex items-center justify-center border border-mahogany-mid text-mahogany-mid text-[10px] font-bold uppercase tracking-widest px-3 py-1 bg-archive-old">
-                  Ficha de Investigação
+            {/* Esquerda: Dados do Paciente e IA */}
+            <div className="flex-1 space-y-8">
+              <div className="flex flex-wrap items-center justify-between border-b border-[#E6DDD0] pb-4">
+                <div className="flex items-center gap-3">
+                  <span className="font-sans text-[11px] font-bold tracking-[0.2em] uppercase text-[#8B7355]">
+                    Ficha Principal
+                  </span>
+                </div>
+                <span className="font-sans text-[13px] text-[#8B7355]/70 italic flex items-center gap-1.5 mt-2 sm:mt-0">
+                  <Paperclip className="size-4" /> Anexado recentemente
                 </span>
-                <span className="text-ink/50 text-sm font-sans italic flex items-center gap-1">
-                  <Paperclip className="size-3" /> Anexado hoje
-                </span>
-              </div>
-              
-              <h2 className="text-3xl font-serif font-bold text-ink border-b border-dashed border-archive-old pb-2 inline-block">
-                {lastActiveClient?.preferred_name || lastActiveClient?.full_name || "Paciente Exemplo"}
-              </h2>
-              
-              <div className="bg-archive-old/50 rounded-sm p-5 border border-[#E6DDD0] text-sm md:text-base text-ink/80 font-serif leading-relaxed italic">
-                <strong className="text-mahogany font-bold block mb-1 font-sans not-italic text-xs uppercase tracking-widest">Anotação da IA Clínica:</strong>
-                "Investigar a relação entre a data de nascimento e o falecimento do avô paterno. Há indícios de lealdades invisíveis e repetição no Projeto Sentido."
               </div>
 
-              <div className="pt-2">
+              <div>
+                <h2 className="text-4xl md:text-5xl font-bold font-serif text-[#2B2018] mb-3">
+                  {lastActiveClient?.preferred_name || lastActiveClient?.full_name || "Nenhum dossiê ativo"}
+                </h2>
+                <p className="text-[19px] text-[#5A4A3A] font-serif leading-relaxed">
+                  Iniciando investigação transgeracional de padrões de repetição e lealdades invisíveis.
+                </p>
+              </div>
+
+              {/* Anotação Marginal da IA */}
+              <div className="relative bg-[#F5F0E8] p-6 border-l-2 border-[#D4AF37] italic font-serif text-[#4A3B3B] text-lg leading-relaxed shadow-sm">
+                <ShieldCheck className="absolute -left-3.5 -top-3.5 size-7 text-[#D4AF37] bg-[#FCF9F4] p-1 rounded-full shadow-sm" />
+                <span className="block font-sans text-[11px] font-bold uppercase tracking-widest text-[#D4AF37] not-italic mb-2">
+                  Nota do Supervisor Clínico
+                </span>
+                "Fique atento às datas de aniversário. A repetição de eventos traumáticos pode estar espelhada na terceira geração."
+              </div>
+
+              <div className="pt-6">
                 {lastActiveClient ? (
-                   <Link to="/app/clientes/$clientId" params={{ clientId: lastActiveClient.id }}>
-                     <Button variant="outline" className="h-12 px-6 text-sm font-serif border-mahogany-mid hover:bg-mahogany-mid text-mahogany-mid hover:text-white group rounded-sm shadow-sm transition-all">
-                       <FolderOpen className="size-4 mr-2 group-hover:scale-110 transition-transform" />
-                       Abrir Dossiê
-                     </Button>
-                   </Link>
+                  <Link to="/app/clientes/$clientId" params={{ clientId: lastActiveClient.id }}>
+                    <button className="bg-[#1B211A] text-white font-sans text-[13px] font-bold uppercase tracking-widest px-8 py-5 rounded-none hover:bg-[#2B312A] transition-colors shadow-lg cursor-pointer">
+                      Abrir Dossiê Físico →
+                    </button>
+                  </Link>
                 ) : (
-                   <Link to="/app/clientes">
-                     <Button variant="outline" className="h-12 px-6 text-sm font-serif border-mahogany-mid hover:bg-mahogany-mid text-mahogany-mid hover:text-white group rounded-sm shadow-sm transition-all">
-                       <FolderOpen className="size-4 mr-2 group-hover:scale-110 transition-transform" />
-                       Ver Arquivos
-                     </Button>
-                   </Link>
+                  <Link to="/app/clientes">
+                    <button className="bg-[#1B211A] text-white font-sans text-[13px] font-bold uppercase tracking-widest px-8 py-5 rounded-none hover:bg-[#2B312A] transition-colors shadow-lg cursor-pointer">
+                      Acessar Arquivo →
+                    </button>
+                  </Link>
                 )}
               </div>
             </div>
 
-            <div className="w-full xl:w-80 bg-archive-old/80 rounded-sm p-6 border border-[#E6DDD0] space-y-4 shrink-0 shadow-inner">
-              <h3 className="text-[11px] font-bold text-ink/60 uppercase tracking-widest flex items-center gap-2 font-sans border-b border-archive-doc pb-2">
-                <BookOpen className="size-4" />
-                Referência Bibliográfica
-              </h3>
-              <div className="font-serif">
-                <p className="font-bold text-ink text-lg leading-tight">"Ai, meus ancestrais!"</p>
-                <p className="text-ink/70 text-sm italic mt-1">Anne Ancelin Schützenberger</p>
-              </div>
-              <div className="pt-3 border-t border-archive-doc flex flex-col gap-1 text-sm font-sans">
-                <div className="flex justify-between items-center">
-                  <span className="text-ink/80">Tópico:</span>
-                  <span className="text-ink font-bold">Síndrome de Aniversário</span>
+            {/* Direita: Referência e Selo */}
+            <div className="lg:w-[320px] shrink-0 border-l border-dashed border-[#E6DDD0] pl-10 flex flex-col justify-between">
+              <div className="space-y-6">
+                <h3 className="font-sans text-[11px] font-bold uppercase tracking-[0.2em] text-[#8B7355]">
+                  Referência Bibliográfica
+                </h3>
+                <div>
+                  <p className="font-serif font-bold text-[26px] text-[#2B2018] leading-tight">
+                    "Ai, meus ancestrais!"
+                  </p>
+                  <p className="font-serif italic text-[#5A4A3A] mt-2 text-[18px]">
+                    Anne A. Schützenberger
+                  </p>
+                </div>
+                <div className="pt-5 border-t border-[#E6DDD0]">
+                  <span className="block font-sans text-[11px] uppercase tracking-widest text-[#8B7355] mb-1.5">Tópico Ativo</span>
+                  <span className="font-serif font-bold text-[#2B2018] text-[20px]">Síndrome de Aniversário</span>
                 </div>
               </div>
+              
+              <div className="mt-12 self-center opacity-85 hover:opacity-100 transition-opacity">
+                <img src="/assets/objects/wax_seal_tree.jpg" alt="" className="size-24 rounded-full mix-blend-multiply filter contrast-125 sepia-[0.3]" />
+              </div>
             </div>
+
           </div>
         </div>
-      </header>
+      </div>
 
-      {/* 2. Grid Principal da Mesa */}
-      <main className="container-liz grid grid-cols-1 lg:grid-cols-12 gap-8">
+      {/* ═══════════════════════════════════════════════════
+          MESA SECUNDÁRIA (RADAR E AGENDA)
+      ════════════════════════════════════════════════════ */}
+      <main className="container-liz grid grid-cols-1 lg:grid-cols-12 gap-12 relative z-10">
         
-        {/* Coluna Esquerda: Documentos e Histórico (8 colunas) */}
-        <div className="lg:col-span-8 space-y-8">
+        {/* Esquerda: Radar Sistêmico e Registro */}
+        <div className="lg:col-span-8 space-y-16">
           
-          {/* Radar Sistêmico */}
-          <section className="space-y-4">
-            <SectionHeader title="Radar Sistêmico Global" icon={<Search className="size-5 text-ink/70" />} />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <RadarCard 
-                title="Padrão de Exclusão" 
-                desc="Detectado em 3 linhagens ativas." 
-                icon={<FolderOpen className="size-5 text-mahogany-mid" />} 
-              />
-              <RadarCard 
-                title="Repetição de Nomes" 
-                desc="Conflitos de identidade identificados." 
-                icon={<BookOpen className="size-5 text-gold" />} 
-              />
+          <section>
+            <div className="flex items-center gap-3 mb-8">
+              <Search className="size-6 text-[#D4AF37]" />
+              <h3 className="font-serif text-[28px] font-bold text-white">Radar Sistêmico Global</h3>
             </div>
-          </section>
-
-          {/* Registro de Atividades (Linha do Tempo Documental) */}
-          <section className="space-y-4">
-            <SectionHeader title="Registro de Arquivo" icon={<History className="size-5 text-ink/70" />} />
             
-            <div className="bg-archive-doc rounded-sm border border-[#E6DDD0] shadow-sm p-6 relative">
-              <div className="absolute left-[39px] top-6 bottom-6 w-px bg-archive-old"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-[#151A15] border border-white/10 p-8 shadow-xl relative overflow-hidden group cursor-default">
+                <div className="absolute top-0 left-0 w-1 h-full bg-[#D4AF37] opacity-40 group-hover:opacity-100 transition-opacity" />
+                <FolderOpen className="size-7 text-[#D4AF37] mb-5" strokeWidth={1.5} />
+                <h4 className="font-serif font-bold text-white text-[22px] mb-2">Padrão de Exclusão</h4>
+                <p className="font-sans text-white/50 text-[15px] leading-relaxed">
+                  Detectado em 3 linhagens ativas atualmente no acervo da clínica.
+                </p>
+              </div>
               
-              <div className="space-y-8 relative z-10">
-                <div className="space-y-6">
-                  <h4 className="text-[11px] font-bold font-sans uppercase tracking-widest text-ink/70 bg-archive-doc inline-block pr-4">Hoje, 12 de Outubro</h4>
-                  
-                  <FeedItem time="09:10" action="Anexou documento para" target="Paciente A" icon={<FileText className="size-4 text-ink/80 stroke-2" />} />
-                  <FeedItem time="10:45" action="Carimbou conclusão de sessão" target="Paciente B" icon={<Stamp className="size-4 text-ink/80 stroke-2" />} />
-                  <FeedItem time="11:00" action="Anotação transcrita para" target="Paciente B" icon={<PenTool className="size-4 text-ink/80 stroke-2" />} />
-                </div>
-                
-                <div className="space-y-6 pt-2">
-                  <h4 className="text-[11px] font-bold font-sans uppercase tracking-widest text-ink/70 bg-archive-doc inline-block pr-4">Ontem</h4>
-                  
-                  <FeedItem time="18:42" action="Gerou hipótese investigativa para" target="Paciente C" icon={<Search className="size-4 text-ink/60" />} />
-                  <FeedItem time="15:30" action="Descobriu vínculo oculto em" target="Paciente D" icon={<Bookmark className="size-4 text-ink/60" />} />
-                </div>
+              <div className="bg-[#151A15] border border-white/10 p-8 shadow-xl relative overflow-hidden group cursor-default">
+                <div className="absolute top-0 left-0 w-1 h-full bg-[#D4AF37] opacity-40 group-hover:opacity-100 transition-opacity" />
+                <BookOpen className="size-7 text-[#D4AF37] mb-5" strokeWidth={1.5} />
+                <h4 className="font-serif font-bold text-white text-[22px] mb-2">Repetição de Nomes</h4>
+                <p className="font-sans text-white/50 text-[15px] leading-relaxed">
+                  Conflitos de identidade identificados em 2 casos recentes abertos.
+                </p>
               </div>
             </div>
           </section>
+
+          <section>
+            <div className="flex items-center gap-3 mb-8">
+              <History className="size-6 text-[#D4AF37]" />
+              <h3 className="font-serif text-[28px] font-bold text-white">Registro do Acervo</h3>
+            </div>
+
+            <div className="bg-[#151A15] border border-white/10 p-8 shadow-xl">
+              <div className="space-y-10 relative before:absolute before:inset-0 before:ml-[1.4rem] before:-translate-x-px before:h-full before:w-px before:bg-white/10">
+                
+                <div>
+                  <h4 className="font-sans text-[12px] font-bold uppercase tracking-widest text-[#D4AF37] bg-[#151A15] inline-block pr-5 relative z-10 mb-8">
+                    Hoje
+                  </h4>
+                  <div className="space-y-8">
+                    <FeedItem time="09:10" action="Anexou documento a" target="Dossiê 001" icon={<FileText className="size-5 text-white/80" />} />
+                    <FeedItem time="10:45" action="Sessão registrada" target="Dossiê 042" icon={<Stamp className="size-5 text-white/80" />} />
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <h4 className="font-sans text-[12px] font-bold uppercase tracking-widest text-[#D4AF37] bg-[#151A15] inline-block pr-5 relative z-10 mb-8">
+                    Ontem
+                  </h4>
+                  <div className="space-y-8">
+                    <FeedItem time="18:42" action="Gerou hipótese sistêmica para" target="Dossiê 023" icon={<Search className="size-5 text-white/80" />} />
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </section>
+
         </div>
 
-        {/* Coluna Direita: Fichas Críticas e Agenda (4 colunas) */}
-        <div className="lg:col-span-4 space-y-8">
+        {/* Direita: Fichas Pendentes e Agenda */}
+        <div className="lg:col-span-4 space-y-16">
           
-          {/* Fichas de Atenção */}
-          <section className="space-y-4">
-            <SectionHeader title="Fichas Pendentes" icon={<AlertCircle className="size-5 text-ink/70" />} />
-            <div className="bg-archive-doc rounded-sm border border-[#E6DDD0] shadow-sm p-6 space-y-3">
-              <ActionItem type="warning" label="Árvore sem avós" patient="Paciente A" />
-              <ActionItem type="urgent" label="Prontuário ausente" patient="Paciente B" />
-              <ActionItem type="info" label="Revisar anotações" patient="Paciente C" />
+          <section>
+            <div className="flex items-center gap-3 mb-8">
+              <AlertCircle className="size-6 text-[#D4AF37]" />
+              <h3 className="font-serif text-[28px] font-bold text-white">Fichas Soltas</h3>
+            </div>
+            
+            <div className="space-y-6 flex flex-col items-center sm:items-stretch">
+              {/* Cartões como bilhetes físicos */}
+              <div className="bg-[#FAF8F5] p-6 shadow-xl rotate-[2deg] relative border border-[#E6DDD0] w-full max-w-sm self-center sm:self-auto hover:rotate-[0deg] hover:z-10 transition-transform">
+                <Tape rotate="4deg" w="45px" top="-10px" left="50%" />
+                <p className="font-serif text-[#8B3A3A] font-bold text-[22px] mb-1">Árvore sem avós</p>
+                <p className="font-serif italic text-[#5A4A3A] text-[16px]">Sinalizado no Dossiê A</p>
+              </div>
+              <div className="bg-[#FAF8F5] p-6 shadow-xl rotate-[-2deg] relative border border-[#E6DDD0] w-full max-w-sm self-center sm:self-auto hover:rotate-[0deg] hover:z-10 transition-transform">
+                <Tape rotate="-3deg" w="45px" top="-10px" left="50%" />
+                <p className="font-serif text-[#B8860B] font-bold text-[22px] mb-1">Prontuário incompleto</p>
+                <p className="font-serif italic text-[#5A4A3A] text-[16px]">Sinalizado no Dossiê B</p>
+              </div>
             </div>
           </section>
 
-          {/* Agenda de Pesquisa */}
-          <section className="space-y-4">
-            <SectionHeader title="Sessões Agendadas" icon={<History className="size-5 text-ink/70" />} />
-            <div className="bg-archive-doc rounded-sm border border-[#E6DDD0] shadow-sm p-6">
-              <div className="space-y-6 relative before:absolute before:inset-0 before:ml-[1.2rem] before:-translate-x-px before:h-full before:w-px before:bg-[#E6DDD0]">
-                 <AgendaVisualItem time="09:00" name="Paciente E" state="past" />
-                 <AgendaVisualItem time="11:30" name="Paciente B" state="current" />
-                 <AgendaVisualItem time="15:00" name="Paciente D" state="future" />
-              </div>
+          <section>
+            <div className="flex items-center gap-3 mb-8">
+              <History className="size-6 text-[#D4AF37]" />
+              <h3 className="font-serif text-[28px] font-bold text-white">Agenda do Dia</h3>
+            </div>
+
+            <div className="bg-[#151A15] border border-white/10 p-8 shadow-xl space-y-8">
+              <AgendaItem time="09:00" name="Dossiê 015" state="past" />
+              <AgendaItem time="14:30" name={lastActiveClient?.preferred_name || "Dossiê 042"} state="current" />
+              <AgendaItem time="17:00" name="Dossiê 088" state="future" />
             </div>
           </section>
 
@@ -221,89 +319,44 @@ function AppHome() {
 }
 
 // ────────────────────────────────────────────────────────────
-// COMPONENTES AUXILIARES (Design: Arquivo Vivo)
+// COMPONENTES AUXILIARES
 // ────────────────────────────────────────────────────────────
-
-function IndicatorBadge({ icon, text }: { icon: React.ReactNode, text: string }) {
-  return (
-    <div className="flex items-center gap-2 bg-archive-doc border border-[#E6DDD0] px-3 py-1.5 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-      {icon}
-      <span className="text-xs font-sans font-medium text-ink/80">{text}</span>
-    </div>
-  );
-}
-
-function SectionHeader({ title, icon }: { title: string, icon: React.ReactNode }) {
-  return (
-    <div className="flex items-center gap-2 border-b border-[#E6DDD0] pb-2">
-      {icon}
-      <h3 className="text-lg font-serif font-bold text-ink">{title}</h3>
-    </div>
-  );
-}
-
-function RadarCard({ title, desc, icon }: { title: string, desc: string, icon: React.ReactNode }) {
-  return (
-    <div className="bg-archive-old border border-mahogany/10 p-5 hover:bg-archive-doc transition-colors cursor-pointer group shadow-[inset_0_1px_3px_rgba(0,0,0,0.02)] flex flex-col gap-3">
-      <div className="bg-archive-doc p-2 w-fit border border-[#E6DDD0] group-hover:bg-archive-old transition-colors">
-        {icon}
-      </div>
-      <div>
-        <h4 className="font-serif font-bold text-ink text-lg">{title}</h4>
-        <p className="text-sm font-sans text-ink/80 mt-1">{desc}</p>
-      </div>
-    </div>
-  );
-}
 
 function FeedItem({ time, action, target, icon }: { time: string, action: string, target: string, icon: React.ReactNode }) {
   return (
-    <div className="flex items-start gap-4 group">
-      <div className="mt-1 bg-archive-doc border-2 border-archive-old p-1.5 z-10 group-hover:border-mahogany-mid transition-colors">
+    <div className="flex items-start gap-5 relative z-10">
+      <div className="mt-1 bg-[#1A201A] border border-white/20 p-2.5 rounded-full shadow-md">
         {icon}
       </div>
-      <div className="flex-1 bg-transparent pt-1.5">
-        <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-2">
-          <span className="text-sm font-sans font-medium text-ink/80">{action}</span>
-          <span className="text-sm font-serif font-bold text-mahogany-mid underline decoration-mahogany-mid/30 underline-offset-2">{target}</span>
+      <div>
+        <div className="flex flex-col xl:flex-row xl:items-baseline gap-1 xl:gap-2">
+          <span className="font-sans text-[15px] text-white/70">{action}</span>
+          <span className="font-serif font-bold text-white text-[20px] border-b border-[#D4AF37]/40 pb-0.5">{target}</span>
         </div>
-        <span className="text-xs font-sans text-ink/40 mt-1 block">{time}</span>
+        <span className="font-sans text-[13px] text-white/40 mt-1.5 block">{time}</span>
       </div>
     </div>
   );
 }
 
-function ActionItem({ type, label, patient }: { type: "urgent" | "warning" | "info", label: string, patient: string }) {
-  const colors = {
-    urgent: "border-l-4 border-l-clinical-critical bg-clinical-critical/5 text-ink",
-    warning: "border-l-4 border-l-clinical-warning bg-clinical-warning/5 text-ink",
-    info: "border-l-4 border-l-clinical-positive bg-clinical-positive/5 text-ink",
-  };
-
-  return (
-    <div className={`p-3 border border-[#E6DDD0] ${colors[type]} flex justify-between items-center`}>
-      <span className="text-sm font-sans font-medium text-ink">{label}</span>
-      <span className="text-xs font-serif italic text-ink/60">{patient}</span>
-    </div>
-  );
-}
-
-function AgendaVisualItem({ time, name, state }: { time: string, name: string, state: "past" | "current" | "future" }) {
+function AgendaItem({ time, name, state }: { time: string, name: string, state: "past" | "current" | "future" }) {
   const isCurrent = state === "current";
   const isPast = state === "past";
   
   return (
-    <div className={`flex items-start gap-4 relative z-10 ${isPast ? 'opacity-50' : 'opacity-100'}`}>
-      <div className="flex flex-col items-center mt-1">
-        <div className={`w-3.5 h-3.5 border-2 ${isCurrent ? 'border-clinical-positive bg-clinical-positive' : isPast ? 'border-archive-old bg-transparent' : 'border-mahogany-mid bg-transparent'} rounded-full`}></div>
+    <div className={`flex items-start gap-5 ${isPast ? 'opacity-40' : 'opacity-100'}`}>
+      <div className="flex flex-col items-center mt-2">
+        <div className={`w-3.5 h-3.5 rounded-full ${isCurrent ? 'bg-[#D4AF37] shadow-[0_0_15px_rgba(212,175,55,0.8)]' : 'border border-white/30 bg-transparent'}`} />
       </div>
-      <div className="flex-1 pb-4 border-b border-[#E6DDD0] border-dashed last:border-0 last:pb-0">
+      <div className="flex-1 pb-6 border-b border-white/10 last:border-0 last:pb-0">
         <div className="flex justify-between items-baseline">
-          <span className={`text-lg font-serif font-bold ${isCurrent ? 'text-clinical-positive' : 'text-ink'}`}>{name}</span>
-          <span className="text-sm font-sans text-ink/50">{time}</span>
+          <span className={`font-serif font-bold text-[22px] ${isCurrent ? 'text-[#D4AF37]' : 'text-white'}`}>{name}</span>
+          <span className="font-sans text-[14px] text-white/50 tracking-wider">{time}</span>
         </div>
         {isCurrent && (
-          <span className="text-[10px] uppercase font-sans tracking-widest text-mahogany-mid font-bold mt-1 block">Em andamento</span>
+          <span className="font-sans text-[11px] font-bold uppercase tracking-widest text-[#D4AF37] mt-1.5 block">
+            Em Sessão
+          </span>
         )}
       </div>
     </div>
