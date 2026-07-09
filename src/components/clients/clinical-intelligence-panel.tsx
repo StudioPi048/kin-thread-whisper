@@ -242,7 +242,7 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
       {/* Toggle button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="absolute -left-3 top-20 z-50 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-white text-mahogany shadow-md transition-transform hover:scale-105 hover:bg-slate-50 cursor-pointer"
+        className="absolute -left-3 top-20 z-50 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-white text-forest shadow-md transition-transform hover:scale-105 hover:bg-slate-50 cursor-pointer"
       >
         {isOpen ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}
       </button>
@@ -258,8 +258,8 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
           >
             {/* Header */}
             <div className="flex items-center gap-2 pb-4 border-b border-border/40">
-              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-mahogany/5">
-                <Sparkles className="size-4 text-mahogany" />
+              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-forest/5">
+                <Sparkles className="size-4 text-forest" />
               </div>
               <div>
                 <h3 className="font-serif text-lg font-bold text-primary">Copiloto Clínico</h3>
@@ -285,7 +285,7 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
                     <Badge
                       key={p.id}
                       variant="secondary"
-                      className="bg-mahogany/5 text-mahogany hover:bg-mahogany/10 text-[14px] font-medium border border-mahogany/10 py-1 px-2.5 rounded-full"
+                      className="bg-forest/5 text-forest hover:bg-forest/10 text-[14px] font-medium border border-forest/10 py-1 px-2.5 rounded-full"
                     >
                       {p.title}
                     </Badge>
@@ -339,12 +339,12 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
             {/* Perguntas Recomendadas */}
             <div className="space-y-3">
               <h4 className="text-[14px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                <QuestionIcon className="size-3.5 text-mahogany" />
+                <QuestionIcon className="size-3.5 text-forest" />
                 Perguntas para Próxima Sessão
               </h4>
               <div className="space-y-2.5">
                 {suggestedQuestions.map((q, i) => (
-                  <div key={i} className="p-3 bg-mahogany/[0.02] border border-mahogany/5 rounded-xl">
+                  <div key={i} className="p-3 bg-forest/[0.02] border border-forest/5 rounded-xl">
                     <p className="text-[16px] leading-relaxed text-foreground/90 font-serif italic">
                       "{q}"
                     </p>
@@ -356,13 +356,13 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
             {/* Linha do Tempo Inteligente */}
             {smartTimeline.length > 0 && (
               <div className="space-y-4">
-                <h4 className="text-[16px] font-bold uppercase tracking-widest text-mahogany-soft flex items-center gap-2">
+                <h4 className="text-[16px] font-bold uppercase tracking-widest text-forest-soft flex items-center gap-2">
                   <Clock className="size-4" />
                   Linha do Tempo Inteligente
                 </h4>
                 <div className="space-y-3">
                   {smartTimeline.map((item, i) => (
-                    <div key={i} className="p-3 bg-mahogany/5 border-l-2 border-mahogany-soft rounded-r-xl">
+                    <div key={i} className="p-3 bg-forest/5 border-l-2 border-forest-soft rounded-r-xl">
                       <p className="text-[16px] leading-relaxed text-ink font-serif">
                         {item}
                       </p>
@@ -432,12 +432,12 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
             {/* Legenda do Mapa */}
             <div className="space-y-3 pt-4 border-t border-border/40">
               <h4 className="text-[14px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                <Layers className="size-3.5 text-mahogany" />
+                <Layers className="size-3.5 text-forest" />
                 Legenda do Mapa
               </h4>
               <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-[16px]">
                 <span className="flex items-center gap-2">
-                  <span className="inline-block size-3.5 border-[2px] border-mahogany bg-white" />
+                  <span className="inline-block size-3.5 border-[2px] border-forest bg-white" />
                   <span className="text-foreground/80">Masculino</span>
                 </span>
                 <span className="flex items-center gap-2">
@@ -461,7 +461,7 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
                   <span className="text-foreground/80">Falecido</span>
                 </span>
                 <span className="flex items-center gap-2">
-                  <span className="inline-block size-3.5 border-[2px] border-mahogany bg-mahogany/20" />
+                  <span className="inline-block size-3.5 border-[2px] border-forest bg-forest/20" />
                   <span className="text-foreground/80">Paciente-índice</span>
                 </span>
               </div>
@@ -476,9 +476,9 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
             className="w-12 h-[350px] bg-white border border-border/50 rounded-2xl flex flex-col items-center py-6 gap-6 shadow-sm cursor-pointer hover:bg-slate-50/50"
             onClick={() => setIsOpen(true)}
           >
-            <Sparkles className="size-4 text-mahogany animate-pulse" />
+            <Sparkles className="size-4 text-forest animate-pulse" />
             <div className="flex-1 flex items-center justify-center">
-              <p className="text-[14px] font-bold text-mahogany uppercase tracking-widest vertical-text select-none">
+              <p className="text-[14px] font-bold text-forest uppercase tracking-widest vertical-text select-none">
                 Copiloto Clínico
               </p>
             </div>

@@ -208,7 +208,7 @@ export function SessionsPanel({ clientId }: Props) {
   return (
     <div className="space-y-8">
       {/* Recorder Panel - Editorial Style */}
-      <section className="rounded-sm border-2 border-mahogany bg-mahogany text-white shadow-lg relative overflow-hidden">
+      <section className="rounded-sm border-2 border-forest bg-forest text-white shadow-lg relative overflow-hidden">
         <span className="section-number absolute -right-4 -bottom-10 opacity-[0.05] text-white">
           🎙️
         </span>
@@ -355,7 +355,7 @@ function SessionCard({
       : "bg-emerald-600 text-white";
 
   return (
-    <article className="rounded-sm border border-border bg-white shadow-sm overflow-hidden accent-bar-mahogany transition-shadow hover:shadow-md">
+    <article className="rounded-sm border border-border bg-white shadow-sm overflow-hidden accent-bar-forest transition-shadow hover:shadow-md">
       {/* Header */}
       <div className="border-b border-border/40 bg-background/50 px-6 py-4 flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -388,7 +388,7 @@ function SessionCard({
                 title="Reprocessar áudio"
               >
                 <RefreshCw
-                  className={`h-4 w-4 text-muted-foreground hover:text-mahogany ${reprocessing ? "animate-spin" : ""}`}
+                  className={`h-4 w-4 text-muted-foreground hover:text-forest ${reprocessing ? "animate-spin" : ""}`}
                 />
               </Button>
             )}

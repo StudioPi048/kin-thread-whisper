@@ -5,20 +5,20 @@ import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
   // Base gráfica: serif, uppercase, bordas retas (rounded-sm)
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-sm border border-transparent font-serif text-[16px] uppercase tracking-[0.15em] cursor-pointer transition-all duration-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-mahogany focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-40 [&_svg]:pointer-events-none [&_svg]:size-[16px] [&_svg]:shrink-0 [&_svg]:stroke-[1.5]",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-sm border border-transparent font-serif text-[16px] uppercase tracking-[0.15em] cursor-pointer transition-all duration-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-forest focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-40 [&_svg]:pointer-events-none [&_svg]:size-[16px] [&_svg]:shrink-0 [&_svg]:stroke-[1.5]",
   {
     variants: {
       variant: {
         default:
-          "bg-mahogany text-white shadow-dossier hover:bg-mahogany-mid active:scale-[0.98]",
+          "bg-forest text-white shadow-dossier hover:bg-forest-mid active:scale-[0.98]",
         destructive:
           "bg-clinical-critical text-white shadow-dossier hover:opacity-90 active:scale-[0.98]",
         outline:
           "border border-[#D4C3A3] bg-transparent text-primary shadow-sm hover:bg-[#FAF8F5] active:scale-[0.98]",
-        secondary: "bg-[#EFE9E0] text-mahogany hover:bg-[#D4C3A3] active:scale-[0.98]",
+        secondary: "bg-[#EFE9E0] text-forest hover:bg-[#D4C3A3] active:scale-[0.98]",
         ghost: "hover:bg-[#FAF8F5] text-primary active:scale-[0.98]",
         link: "text-primary hover:text-gold p-0 h-auto normal-case tracking-normal font-serif italic text-[16px]",
-        gold: "bg-gold text-mahogany shadow-dossier hover:bg-gold-soft active:scale-[0.98]",
+        gold: "bg-gold text-forest shadow-dossier hover:bg-gold-soft active:scale-[0.98]",
         forest: "bg-forest text-white shadow-dossier hover:bg-forest-mid active:scale-[0.98]",
         hero: "bg-[#1B241C] text-white border border-white/20 shadow-dossier hover:bg-black active:scale-[0.97] text-[14px] tracking-[0.2em]",
       },

@@ -487,7 +487,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
             size="sm"
             onClick={() => fileInputRef.current?.click()}
             disabled={isImporting}
-            className="font-bold border-mahogany/20 text-mahogany hover:bg-mahogany/5"
+            className="font-bold border-forest/20 text-forest hover:bg-forest/5"
           >
             {isImporting ? (
               <Loader2 className="size-4 mr-2 animate-spin" />
@@ -593,7 +593,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
 
           <div className="overflow-x-auto rounded-sm border-2 border-border/80 bg-white shadow-sm">
             <table className="w-full min-w-[1500px] border-collapse text-[16px]">
-              <thead className="bg-forest-soft/40 text-[14px] font-bold uppercase tracking-[0.15em] text-mahogany border-b-2 border-border/80">
+              <thead className="bg-forest-soft/40 text-[14px] font-bold uppercase tracking-[0.15em] text-forest border-b-2 border-border/80">
                 <tr>
                   <Th w="w-11">#</Th>
                   <Th w="min-w-[180px]">Nome</Th>

@@ -20,7 +20,7 @@ export const LETICIA_WORKS: Array<{
   concepts: number;
   protocols: number;
   citations: number;
-  accent: "mahogany" | "forest" | "gold" | "cream";
+  accent: "forest" | "forest" | "gold" | "cream";
 }> = [
   {
     title: "O Código Sagrado dos Dentes",
@@ -30,7 +30,7 @@ export const LETICIA_WORKS: Array<{
     concepts: 120,
     protocols: 48,
     citations: 312,
-    accent: "mahogany",
+    accent: "forest",
   },
   {
     title: "Manual da Psicogenealogia",
@@ -70,7 +70,7 @@ export const LETICIA_WORKS: Array<{
     concepts: 240,
     protocols: 72,
     citations: 480,
-    accent: "mahogany",
+    accent: "forest",
   },
   {
     title: "Protocolo do Clã",
@@ -286,7 +286,7 @@ export const ESSENTIAL_BOOKS: Array<{
     citations: 42,
     protocols: 8,
     cases: 12,
-    spine: "bg-mahogany text-white",
+    spine: "bg-forest text-white",
     cover: "https://covers.openlibrary.org/b/isbn/8532303617-L.jpg?default=false",
   },
   {
@@ -312,7 +312,7 @@ export const ESSENTIAL_BOOKS: Array<{
     citations: 27,
     protocols: 3,
     cases: 7,
-    spine: "bg-mahogany/80 text-white",
+    spine: "bg-forest/80 text-white",
     cover: "https://covers.openlibrary.org/b/isbn/9782081218918-L.jpg?default=false",
   },
   {
@@ -325,7 +325,7 @@ export const ESSENTIAL_BOOKS: Array<{
     citations: 55,
     protocols: 12,
     cases: 18,
-    spine: "bg-gold text-mahogany",
+    spine: "bg-gold text-forest",
     cover: "https://covers.openlibrary.org/b/isbn/8531608872-L.jpg?default=false",
   },
   {
@@ -338,7 +338,7 @@ export const ESSENTIAL_BOOKS: Array<{
     citations: 19,
     protocols: 6,
     cases: 11,
-    spine: "bg-mahogany text-white",
+    spine: "bg-forest text-white",
   },
   {
     title: "O Murmúrio dos Fantasmas",
@@ -370,7 +370,7 @@ export const QUOTES = [
     work: "Metagenealogia",
     year: 2011,
     theme: "Sentido",
-    tone: "mahogany",
+    tone: "forest",
   },
   {
     text: "O que não é dito em voz alta é vivido na carne.",
@@ -525,7 +525,7 @@ export const PROTOCOLS = [
     duration: "60 min",
     complexity: 3,
     steps: ["O que não é falado?", "Quem desapareceu da história?", "O que o corpo expressa?", "Ritual de nomeação"],
-    accent: "border-l-mahogany",
+    accent: "border-l-forest",
   },
 ];
 

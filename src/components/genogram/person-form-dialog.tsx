@@ -217,30 +217,30 @@ export function PersonFormDialog({
         className="flex flex-col gap-0 p-0 sm:max-w-xl w-full border-l-0 shadow-2xl rounded-l-3xl overflow-hidden"
       >
         {/* Header Magazine Style */}
-        <div className="bg-forest-soft px-8 py-10 relative shrink-0 border-b border-mahogany/10">
-          <span className="section-number absolute right-4 top-4 opacity-5 text-mahogany">
+        <div className="bg-forest-soft px-8 py-10 relative shrink-0 border-b border-forest/10">
+          <span className="section-number absolute right-4 top-4 opacity-5 text-forest">
             {initials}
           </span>
           <SheetHeader className="relative z-10">
             <div className="flex items-center gap-4 mb-4">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-2xl font-serif font-bold text-mahogany shadow-sm">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-2xl font-serif font-bold text-forest shadow-sm">
                 {initials}
               </div>
               <div>
-                <p className="text-[14px] font-bold uppercase tracking-[0.3em] text-mahogany">
+                <p className="text-[14px] font-bold uppercase tracking-[0.3em] text-forest">
                   Dossiê
                 </p>
-                <SheetTitle className="font-serif text-3xl font-bold text-mahogany">
+                <SheetTitle className="font-serif text-3xl font-bold text-forest">
                   {editing ? "Editar Dossiê" : "Nova Adição"}
                 </SheetTitle>
               </div>
             </div>
             {!v.is_proband && v.relationship_to_proband && (
-              <span className="mt-2 inline-block rounded-full bg-mahogany/10 px-3 py-1 text-sm font-bold uppercase tracking-wider text-mahogany">
+              <span className="mt-2 inline-block rounded-full bg-forest/10 px-3 py-1 text-sm font-bold uppercase tracking-wider text-forest">
                 Contexto: {v.relationship_to_proband}
               </span>
             )}
-            <SheetDescription className="mt-2 font-sans text-[16px] text-mahogany/70">
+            <SheetDescription className="mt-2 font-sans text-[16px] text-forest/70">
               Preencha os dados do {editing ? "dossiê selecionado" : "novo integrante da árvore"}.
             </SheetDescription>
           </SheetHeader>

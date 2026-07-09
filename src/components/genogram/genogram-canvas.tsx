@@ -62,7 +62,7 @@ const UnionNodeComponent = ({ data }: NodeProps) => {
     >
       {d.label && (
         <div
-          className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-card/95 px-1.5 py-0.5 text-[14px] font-bold uppercase tracking-[0.08em] text-mahogany shadow-sm"
+          className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-card/95 px-1.5 py-0.5 text-[14px] font-bold uppercase tracking-[0.08em] text-forest shadow-sm"
           style={{ top: -22 }}
         >
           {d.label}
@@ -99,7 +99,7 @@ function GenerationBandNode({ data }: NodeProps) {
   return (
     <div
       style={{ width: 15000, height: GENERATION_GAP, pointerEvents: "none" }}
-      className={`border-b border-dashed border-mahogany/20 ${isEven ? "bg-mahogany/[0.02]" : "bg-transparent"}`}
+      className={`border-b border-dashed border-forest/20 ${isEven ? "bg-forest/[0.02]" : "bg-transparent"}`}
     />
   );
 }
@@ -345,7 +345,7 @@ function isParentEdge(edge: Edge): boolean {
 
 function GenerationRuler() {
   return (
-    <div className="w-[154px] overflow-hidden rounded-md border border-mahogany/25 bg-card/92 shadow-sm backdrop-blur">
+    <div className="w-[154px] overflow-hidden rounded-md border border-forest/25 bg-card/92 shadow-sm backdrop-blur">
       {[
         ["Paciente", "ponto de partida"],
         ["Geração 1", "pais e tios"],
@@ -353,7 +353,7 @@ function GenerationRuler() {
         ["Geração 3", "bisavós"],
       ].map(([label, subtitle]) => (
         <div key={label} className="border-b border-border/60 px-2.5 py-2 last:border-b-0">
-          <p className="font-serif text-[14px] font-bold leading-tight text-mahogany">{label}</p>
+          <p className="font-serif text-[14px] font-bold leading-tight text-forest">{label}</p>
           <p className="mt-0.5 text-[9px] font-bold uppercase leading-snug tracking-[0.08em] text-muted-foreground">
             {subtitle}
           </p>
@@ -365,10 +365,10 @@ function GenerationRuler() {
 
 function ShortcutsLegend() {
   return (
-    <div className="w-[168px] overflow-hidden rounded-lg border border-mahogany/25 bg-white/95 shadow-lg backdrop-blur-md ring-1 ring-black/5">
+    <div className="w-[168px] overflow-hidden rounded-lg border border-forest/25 bg-white/95 shadow-lg backdrop-blur-md ring-1 ring-black/5">
 
-      <div className="bg-mahogany/5 px-2.5 py-1.5 border-b border-mahogany/20">
-        <p className="font-serif text-[16px] font-bold leading-tight text-mahogany">Atalhos</p>
+      <div className="bg-forest/5 px-2.5 py-1.5 border-b border-forest/20">
+        <p className="font-serif text-[16px] font-bold leading-tight text-forest">Atalhos</p>
       </div>
       <div className="px-3 py-2.5 flex flex-col gap-2.5">
         <div className="flex flex-col gap-0.5">
@@ -532,7 +532,7 @@ function buildRenderGraph(
       sourceHandle: "bottom",
       targetHandle: "top-target",
       type: "pedigree",
-      style: { stroke: "var(--color-mahogany)", strokeWidth: 2 },
+      style: { stroke: "var(--color-forest)", strokeWidth: 2 },
       data: { unionId: uid, childIds: union.children },
       zIndex: 2,
     });
@@ -911,7 +911,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
       {/* ── CONTÊINER SUPERIOR (BARRA DE AÇÕES + LEGENDA) ── */}
       <div className="absolute top-4 left-4 z-10 flex flex-col gap-2.5 pointer-events-none max-w-[calc(100%-32px)]">
         {/* BARRA DE AÇÕES */}
-        <div className="pointer-events-auto flex flex-wrap items-center gap-2 px-4 py-3 rounded-xl bg-mahogany shadow-xl border border-white/10">
+        <div className="pointer-events-auto flex flex-wrap items-center gap-2 px-4 py-3 rounded-xl bg-forest shadow-xl border border-white/10">
           <div className="flex items-center gap-2 mr-3">
             <TreePine className="size-4 text-gold" />
             <span className="text-[14px] font-bold uppercase tracking-[0.2em] text-white">
@@ -1071,7 +1071,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
             proOptions={{ hideAttribution: true }}
             defaultEdgeOptions={{
               type: "step",
-              style: { strokeWidth: 2, stroke: "var(--color-mahogany)" },
+              style: { strokeWidth: 2, stroke: "var(--color-forest)" },
             }}
             fitView
             fitViewOptions={{ padding: 0.2 }}
@@ -1084,7 +1084,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
               style={{ opacity: 0.5 }}
             />
             <Controls
-              className="bg-white border-none shadow-xl overflow-hidden rounded-xl [&>button]:border-b [&>button]:border-slate-100 [&>button]:hover:bg-slate-50 [&>button]:text-mahogany"
+              className="bg-white border-none shadow-xl overflow-hidden rounded-xl [&>button]:border-b [&>button]:border-slate-100 [&>button]:hover:bg-slate-50 [&>button]:text-forest"
               showInteractive={false}
             />
           </ReactFlow>
@@ -1169,7 +1169,7 @@ function relToEdge(r: RelRow): Edge {
     labelStyle: {
       fontSize: 12,
       fontWeight: 600,
-      fill: isUnion ? "var(--color-mahogany)" : "var(--color-muted-foreground)",
+      fill: isUnion ? "var(--color-forest)" : "var(--color-muted-foreground)",
       fontFamily: "var(--font-sans)",
     },
     labelBgStyle: { fill: "var(--color-card)", fillOpacity: 0.98, rx: 3, ry: 3 },
@@ -1185,7 +1185,7 @@ function relToEdge(r: RelRow): Edge {
 }
 
 function colorFor(r: RelRow): string {
-  if (r.relationship_type === "parent") return "var(--color-mahogany)";
+  if (r.relationship_type === "parent") return "var(--color-forest)";
   if (r.relationship_type === "sibling") return "var(--color-forest)";
   if (r.relationship_type === "union") return "var(--color-foreground)";
   switch (r.qualifier) {

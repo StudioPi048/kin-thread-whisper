@@ -69,7 +69,7 @@ function IaClinicaPage() {
                   className={`size-8 rounded-full shrink-0 flex items-center justify-center border ${
                     msg.sender === "user"
                       ? "bg-forest-soft border-forest/30 text-forest"
-                      : "bg-mahogany/5 border-mahogany/10 text-mahogany"
+                      : "bg-forest/5 border-forest/10 text-forest"
                   }`}
                 >
                   {msg.sender === "user" ? <User className="size-4" /> : <Bot className="size-4" />}
@@ -108,7 +108,7 @@ function IaClinicaPage() {
         {/* Sidebar right (Context details) */}
         <div className="w-[300px] border-l border-border/50 bg-white p-6 hidden lg:block space-y-6 overflow-y-auto">
           <div className="flex items-center gap-2 pb-4 border-b border-border/40">
-            <Brain className="size-5 text-mahogany" />
+            <Brain className="size-5 text-forest" />
             <h3 className="font-serif text-lg font-bold text-primary">Cérebro Clínico</h3>
           </div>
 
@@ -135,7 +135,7 @@ function IaClinicaPage() {
             <div className="space-y-2 text-[13px]">
               <div className="flex justify-between items-center py-1">
                 <span className="font-semibold text-primary">Paciente Exemplo A</span>
-                <Badge className="bg-mahogany/5 text-mahogany border-mahogany/10 text-[10px]">Ativo</Badge>
+                <Badge className="bg-forest/5 text-forest border-forest/10 text-[10px]">Ativo</Badge>
               </div>
               <div className="flex justify-between items-center py-1">
                 <span className="font-semibold text-primary">Paciente Exemplo B</span>

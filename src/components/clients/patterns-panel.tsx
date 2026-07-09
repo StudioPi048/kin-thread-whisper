@@ -105,8 +105,8 @@ export function PatternsPanel({ clientId }: Props) {
         >
           {patterns.map((p) => {
             const isHigh = p.severity === "critical";
-            const borderAccent = isHigh ? "accent-bar-mahogany" : "accent-bar-forest";
-            const badgeClass = isHigh ? "bg-mahogany text-white" : "bg-forest text-white";
+            const borderAccent = isHigh ? "accent-bar-forest" : "accent-bar-forest";
+            const badgeClass = isHigh ? "bg-forest text-white" : "bg-forest text-white";
 
             return (
               <motion.li

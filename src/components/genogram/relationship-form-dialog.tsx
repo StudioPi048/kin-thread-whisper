@@ -169,11 +169,11 @@ export function RelationshipFormDialog({
         className="flex flex-col gap-0 p-0 sm:max-w-lg w-full border-l-[5px] border-l-gold"
       >
         {/* Header Magazine Style */}
-        <div className="bg-mahogany px-8 py-10 relative overflow-hidden shrink-0">
+        <div className="bg-forest px-8 py-10 relative overflow-hidden shrink-0">
           <span className="section-number absolute right-4 top-4 opacity-10 text-white">∞</span>
           <SheetHeader className="relative z-10">
             <div className="flex items-center gap-4 mb-4">
-              <div className="flex h-16 w-16 items-center justify-center rounded-md bg-gold text-2xl font-bold text-mahogany shadow-md">
+              <div className="flex h-16 w-16 items-center justify-center rounded-md bg-gold text-2xl font-bold text-forest shadow-md">
                 <Link2 className="size-8" />
               </div>
               <div>

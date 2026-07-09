@@ -73,7 +73,7 @@ function TabSuspense({ children }: { children: React.ReactNode }) {
     <Suspense
       fallback={
         <div className="flex h-64 items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-mahogany border-r-transparent"></div>
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-forest border-r-transparent"></div>
         </div>
       }
     >
@@ -208,8 +208,8 @@ function ClientDossierPage() {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pb-12">
-      {/* Editorial CRM-Style Mahogany Header */}
-      <div className="block-mahogany pb-6 pt-4 px-6 relative overflow-hidden">
+      {/* Editorial CRM-Style Forest Header */}
+      <div className="block-forest pb-6 pt-4 px-6 relative overflow-hidden">
         {/* Giant decorative initial */}
         <span className="section-number absolute -right-4 -bottom-10 opacity-[0.03] text-white select-none">
           {initials}
@@ -339,43 +339,43 @@ function ClientDossierPage() {
               <TabsList className="w-fit justify-start h-auto p-1 bg-white shadow-md rounded-full flex gap-1 border border-border/40">
                 <TabsTrigger
                   value="overview"
-                  className="flex items-center gap-1.5 py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-mahogany data-[state=state]:bg-mahogany data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
+                  className="flex items-center gap-1.5 py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-forest data-[state=state]:bg-forest data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
                 >
                   <FileText className="size-3.5" /> Visão geral
                 </TabsTrigger>
                 <TabsTrigger
                   value="genogram"
-                  className="flex items-center gap-1.5 py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-mahogany data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
+                  className="flex items-center gap-1.5 py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-forest data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
                 >
                   <TreePine className="size-3.5" /> Genossociograma
                 </TabsTrigger>
                 <TabsTrigger
                   value="timeline"
-                  className="flex items-center gap-1.5 py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-mahogany data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
+                  className="flex items-center gap-1.5 py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-forest data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
                 >
                   <History className="size-3.5" /> Linha do tempo
                 </TabsTrigger>
                 <TabsTrigger
                   value="patterns"
-                  className="flex items-center gap-1.5 py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-mahogany data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
+                  className="flex items-center gap-1.5 py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-forest data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
                 >
                   <Activity className="size-3.5" /> Padrões
                 </TabsTrigger>
                 <TabsTrigger
                   value="intake"
-                  className="py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-mahogany data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
+                  className="py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-forest data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
                 >
                   Anamnese
                 </TabsTrigger>
                 <TabsTrigger
                   value="sessions"
-                  className="py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-mahogany data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
+                  className="py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-forest data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
                 >
                   Sessões
                 </TabsTrigger>
                 <TabsTrigger
                   value="clan"
-                  className="py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-mahogany data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
+                  className="py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-forest data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
                 >
                   Planilha
                 </TabsTrigger>
@@ -390,8 +390,8 @@ function ClientDossierPage() {
                     {/* Bloco 2: Resumo IA Clínico */}
                     <Panel
                       title="Análise IA: Resumo Sistêmico"
-                      accent="mahogany"
-                      icon={<Sparkles className="size-4 text-mahogany" />}
+                      accent="forest"
+                      icon={<Sparkles className="size-4 text-forest" />}
                     >
                       <p className="text-[14px] leading-relaxed text-foreground font-serif">
                         O clã de <strong>{display}</strong> exibe repetições notáveis de queixas de
@@ -589,7 +589,7 @@ function Panel({
 }: {
   title: string;
   icon?: React.ReactNode;
-  accent?: "forest" | "gold" | "mahogany";
+  accent?: "forest" | "gold" | "forest";
   children: React.ReactNode;
 }) {
   const accentClass =
@@ -597,8 +597,8 @@ function Panel({
       ? "accent-bar-forest"
       : accent === "gold"
         ? "accent-bar-gold"
-        : accent === "mahogany"
-          ? "accent-bar-mahogany"
+        : accent === "forest"
+          ? "accent-bar-forest"
           : "";
 
   return (

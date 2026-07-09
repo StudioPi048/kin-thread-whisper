@@ -48,7 +48,7 @@ function GenogramsPage() {
       </div>
 
       {/* Header */}
-      <div className="block-mahogany px-6 py-10">
+      <div className="block-forest px-6 py-10">
         <div className="container-liz flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.35em] text-forest-mid">
@@ -104,7 +104,7 @@ function GenogramsPage() {
                     </h3>
                     <Badge
                       variant="outline"
-                      className="text-mahogany border-mahogany bg-mahogany/5 text-[10px] font-bold"
+                      className="text-forest border-forest bg-forest/5 text-[10px] font-bold"
                     >
                       74% completo
                     </Badge>
@@ -131,7 +131,7 @@ function GenogramsPage() {
                   <Link
                     to="/app/clientes/$clientId"
                     params={{ clientId: c.id }}
-                    className="font-bold text-[12px] uppercase tracking-wider text-mahogany hover:text-forest flex items-center gap-1"
+                    className="font-bold text-[12px] uppercase tracking-wider text-forest hover:text-forest flex items-center gap-1"
                   >
                     Ver Árvore <ArrowRight className="size-3.5" />
                   </Link>

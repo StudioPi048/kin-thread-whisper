@@ -73,7 +73,7 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
 
   const shapeSize = d.is_proband ? 84 : 76;
 
-  const borderColor = isMale ? "border-mahogany" : isFemale ? "border-forest" : "border-gold";
+  const borderColor = isMale ? "border-forest" : isFemale ? "border-forest" : "border-gold";
 
   const displayName = d.preferred_name || d.full_name || "—";
   // Nome em duas linhas se necessário, sem cortar — o container é largo.
@@ -109,7 +109,7 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
               isMale && "rounded-2xl",
               isFemale && "rounded-full",
               isDiamond && "rotate-45 rounded-2xl",
-              d.is_proband && "shadow-[0_0_0_3px_var(--color-mahogany)] ring-1 ring-mahogany/30",
+              d.is_proband && "shadow-[0_0_0_3px_var(--color-forest)] ring-1 ring-forest/30",
               selected && "ring-2 ring-forest ring-offset-2 ring-offset-background",
             )}
           />
@@ -201,7 +201,7 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
         className={cn(
           "mt-3 w-[140px] min-h-[72px] h-auto bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-sm px-2 py-1.5 flex flex-col justify-center items-center text-center select-none z-10 transition-all pb-2",
           d.is_proband &&
-            "border-mahogany bg-white dark:bg-zinc-900 shadow-[0_0_0_1px_rgba(110,20,60,0.15)]",
+            "border-forest bg-white dark:bg-zinc-900 shadow-[0_0_0_1px_rgba(110,20,60,0.15)]",
           selected && "ring-1 ring-forest border-forest",
         )}
       >
@@ -221,7 +221,7 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
           <div className="h-3.5" />
         )}
         {d.is_proband && (
-          <span className="mt-0.5 inline-block rounded bg-mahogany px-1.5 py-0.2 text-[8px] font-black uppercase tracking-[0.1em] text-white">
+          <span className="mt-0.5 inline-block rounded bg-forest px-1.5 py-0.2 text-[8px] font-black uppercase tracking-[0.1em] text-white">
             Paciente
           </span>
         )}
@@ -233,7 +233,7 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
           id="visual-connect"
           type="source"
           position={Position.Bottom}
-          className="!w-7 !h-7 !bg-mahogany !border-2 !border-white flex items-center justify-center cursor-crosshair !rounded-full shadow-lg z-50 !relative !transform-none !left-0 !top-0"
+          className="!w-7 !h-7 !bg-forest !border-2 !border-white flex items-center justify-center cursor-crosshair !rounded-full shadow-lg z-50 !relative !transform-none !left-0 !top-0"
         >
           <Plus className="w-4 h-4 text-white pointer-events-none" />
         </Handle>

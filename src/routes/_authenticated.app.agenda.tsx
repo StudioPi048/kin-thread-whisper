@@ -58,7 +58,7 @@ type Seal =
 
 const SEAL_META: Record<Seal, { label: string; className: string; Icon: typeof CircleDot }> = {
   primeira: { label: "Primeira consulta", className: "bg-forest/10 text-forest border-forest/25", Icon: Sunrise },
-  retorno: { label: "Retorno", className: "bg-mahogany/8 text-mahogany border-mahogany/20", Icon: TimerReset },
+  retorno: { label: "Retorno", className: "bg-forest/8 text-forest border-forest/20", Icon: TimerReset },
   crianca: { label: "Criança", className: "bg-amber-100/60 text-amber-700 border-amber-300/60", Icon: Baby },
   prioridade: { label: "Alta prioridade", className: "bg-rose-100/60 text-rose-700 border-rose-300/60", Icon: Flame },
   luto: { label: "Luto", className: "bg-slate-200/60 text-slate-700 border-slate-300/70", Icon: Moon },
@@ -82,7 +82,7 @@ type Session = {
   aiAlerts: string[];
   protocols: string[];
   status: "upcoming" | "next" | "later";
-  accent: "mahogany" | "forest" | "gold";
+  accent: "forest" | "forest" | "gold";
 };
 
 const FALLBACK_SESSIONS: Session[] = [
@@ -105,7 +105,7 @@ const FALLBACK_SESSIONS: Session[] = [
     ],
     protocols: ["Mapa de Segredos", "Lealidade Invisível", "Entrevista Transgeracional"],
     status: "next",
-    accent: "mahogany",
+    accent: "forest",
   },
   {
     id: "s2",
@@ -250,7 +250,7 @@ function AgendaPage() {
           Instituto Liz / Centro de Comando Clínico
         </p>
         {query.isLoading && (
-          <span className="text-[10px] font-bold uppercase tracking-widest text-mahogany/70 flex items-center gap-1.5 whitespace-nowrap">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-forest/70 flex items-center gap-1.5 whitespace-nowrap">
             <Loader2 className="size-3 animate-spin" /> Carregando agenda
           </span>
         )}
@@ -275,7 +275,7 @@ function AgendaPage() {
           {QUICK_ACTIONS.map((a) => (
             <button
               key={a.label}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl text-[12px] font-semibold text-primary/80 hover:text-mahogany hover:bg-forest-soft/50 transition-colors"
+              className="flex items-center gap-2 px-3 py-2 rounded-xl text-[12px] font-semibold text-primary/80 hover:text-forest hover:bg-forest-soft/50 transition-colors"
             >
               <a.icon className="size-3.5" />
               {a.label}
@@ -332,7 +332,7 @@ function EmptyCenter() {
 function ContextualHeader({ stats }: { stats: { total: number; primeira: number; retornos: number; aniversarios: number; ocupado: string; livre: string } }) {
   return (
     <div className="relative overflow-hidden">
-      <div className="block-mahogany px-6 pt-10 pb-16 relative">
+      <div className="block-forest px-6 pt-10 pb-16 relative">
         {/* subtle grain */}
         <div
           aria-hidden
@@ -448,7 +448,7 @@ function TimelineColumn({
                   className={`group w-full text-left flex items-start gap-3 rounded-xl px-2 py-2 transition-all ${
                     isSession
                       ? isSelected
-                        ? "bg-mahogany/[0.06] ring-1 ring-mahogany/20"
+                        ? "bg-forest/[0.06] ring-1 ring-forest/20"
                         : "hover:bg-forest-soft/40 cursor-pointer"
                       : "opacity-70"
                   }`}
@@ -460,8 +460,8 @@ function TimelineColumn({
                     className={`size-6 rounded-full flex items-center justify-center shrink-0 border ${
                       isSession
                         ? isSelected
-                          ? "bg-mahogany text-white border-mahogany"
-                          : "bg-white border-mahogany/30 text-mahogany"
+                          ? "bg-forest text-white border-forest"
+                          : "bg-white border-forest/30 text-forest"
                         : "bg-cream border-border text-muted-foreground/70"
                     }`}
                   >
@@ -507,14 +507,14 @@ function TimelineColumn({
             <div
               key={d.n}
               className={`aspect-square rounded-lg flex flex-col items-center justify-center text-center ${
-                d.active ? "bg-mahogany text-white" : "bg-cream text-primary"
+                d.active ? "bg-forest text-white" : "bg-cream text-primary"
               }`}
             >
               <span className="text-[9px] font-bold opacity-70">{d.d}</span>
               <span className="font-serif text-sm font-bold">{d.n}</span>
               <div className="flex gap-0.5 mt-0.5">
                 {Array.from({ length: d.load }).map((_, i) => (
-                  <span key={i} className={`size-1 rounded-full ${d.active ? "bg-white/70" : "bg-mahogany/40"}`} />
+                  <span key={i} className={`size-1 rounded-full ${d.active ? "bg-white/70" : "bg-forest/40"}`} />
                 ))}
               </div>
             </div>
@@ -544,13 +544,13 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
   ];
 
   const accentBar = {
-    mahogany: "bg-gradient-to-b from-mahogany to-forest",
-    forest: "bg-gradient-to-b from-forest to-mahogany",
+    forest: "bg-gradient-to-b from-forest to-forest",
+    forest: "bg-gradient-to-b from-forest to-forest",
     gold: "bg-gradient-to-b from-gold to-gold/50",
   }[session.accent];
 
   const initialsBg = {
-    mahogany: "bg-mahogany text-white",
+    forest: "bg-forest text-white",
     forest: "bg-forest text-white",
     gold: "bg-gold text-primary",
   }[session.accent];
@@ -572,7 +572,7 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
                 <span className="text-2xl font-semibold text-muted-foreground tabular-nums">{session.end}</span>
               </div>
               {session.status === "next" && (
-                <Badge className="bg-mahogany text-white border-transparent text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full animate-pulse">
+                <Badge className="bg-forest text-white border-transparent text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full animate-pulse">
                   Próxima sessão
                 </Badge>
               )}
@@ -600,7 +600,7 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
             >
               {session.initials}
               <div className="absolute -bottom-1 -right-1 size-6 rounded-full bg-white border-2 border-cream flex items-center justify-center">
-                <CircleDot className="size-3 text-mahogany" />
+                <CircleDot className="size-3 text-forest" />
               </div>
             </div>
 
@@ -630,16 +630,16 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
           </div>
 
           {/* AI alerts */}
-          <div className="mt-6 rounded-2xl border border-mahogany/15 bg-gradient-to-br from-mahogany/[0.03] to-forest/[0.05] p-4">
+          <div className="mt-6 rounded-2xl border border-forest/15 bg-gradient-to-br from-forest/[0.03] to-forest/[0.05] p-4">
             <div className="flex items-center gap-2 mb-3">
-              <div className="size-6 rounded-full bg-mahogany/10 flex items-center justify-center">
-                <Sparkles className="size-3 text-mahogany" />
+              <div className="size-6 rounded-full bg-forest/10 flex items-center justify-center">
+                <Sparkles className="size-3 text-forest" />
               </div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-mahogany">
+              <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-forest">
                 IA Clínica detectou
               </p>
               {genogramQuery.isLoading && session.clientId && (
-                <Loader2 className="size-3 animate-spin text-mahogany/60 ml-1" />
+                <Loader2 className="size-3 animate-spin text-forest/60 ml-1" />
               )}
             </div>
             {mergedAlerts.length > 0 ? (
@@ -670,7 +670,7 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
               {session.protocols.map((p) => (
                 <button
                   key={p}
-                  className="group inline-flex items-center gap-2 rounded-full border border-forest/30 bg-forest-soft/40 px-3.5 py-1.5 text-[12.5px] font-semibold text-mahogany hover:bg-forest/15 hover:border-forest/50 transition-all"
+                  className="group inline-flex items-center gap-2 rounded-full border border-forest/30 bg-forest-soft/40 px-3.5 py-1.5 text-[12.5px] font-semibold text-forest hover:bg-forest/15 hover:border-forest/50 transition-all"
                 >
                   <ClipboardList className="size-3.5" />
                   {p}
@@ -694,7 +694,7 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
               <Link
                 to="/app/paciente/$id"
                 params={{ id: session.clientId }}
-                className="inline-flex items-center gap-2 h-11 px-4 rounded-md text-[14px] font-semibold text-primary/80 hover:text-mahogany hover:bg-forest-soft/50 transition-colors"
+                className="inline-flex items-center gap-2 h-11 px-4 rounded-md text-[14px] font-semibold text-primary/80 hover:text-forest hover:bg-forest-soft/50 transition-colors"
               >
                 <FileText className="size-4" />
                 Abrir Dossiê
@@ -707,7 +707,7 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
             )}
             <Link
               to="/app/genossociogramas"
-              className="inline-flex items-center gap-2 h-11 px-4 rounded-md text-[14px] font-semibold text-primary/80 hover:text-mahogany hover:bg-forest-soft/50 transition-colors"
+              className="inline-flex items-center gap-2 h-11 px-4 rounded-md text-[14px] font-semibold text-primary/80 hover:text-forest hover:bg-forest-soft/50 transition-colors"
             >
               <GitBranch className="size-4" />
               Genossociograma
@@ -764,12 +764,12 @@ function MiniTreePreview({ session, genogram, isLoading }: { session: Session; g
       <div className="mt-3 flex items-center justify-between text-[11px]">
         <div className="flex items-center gap-3 text-muted-foreground">
           <span className="flex items-center gap-1"><Circle className="size-2 fill-gold text-gold" /> Paciente</span>
-          <span className="flex items-center gap-1"><Circle className="size-2 fill-mahogany text-mahogany" /> Masc.</span>
+          <span className="flex items-center gap-1"><Circle className="size-2 fill-forest text-forest" /> Masc.</span>
           <span className="flex items-center gap-1"><Circle className="size-2 fill-forest text-forest" /> Fem.</span>
         </div>
         <Link
           to="/app/genossociogramas"
-          className="text-mahogany font-bold hover:underline flex items-center gap-1"
+          className="text-forest font-bold hover:underline flex items-center gap-1"
         >
           Abrir <ChevronRight className="size-3" />
         </Link>
@@ -805,8 +805,8 @@ function RealMiniTree({ genogram, session }: { genogram: ClientGenogramDTO; sess
     }
     const isMasc = person.gender?.toLowerCase().startsWith("m") ?? (person.role === "father" || person.role === "grandfather");
     const isFem = person.gender?.toLowerCase().startsWith("f") ?? (person.role === "mother" || person.role === "grandmother");
-    const stroke = highlight ? "stroke-gold" : isMasc ? "stroke-mahogany/60" : isFem ? "stroke-forest/70" : "stroke-border";
-    const fill = highlight ? "fill-gold/25" : isMasc ? "fill-mahogany/12" : isFem ? "fill-forest/20" : "fill-cream";
+    const stroke = highlight ? "stroke-gold" : isMasc ? "stroke-forest/60" : isFem ? "stroke-forest/70" : "stroke-border";
+    const fill = highlight ? "fill-gold/25" : isMasc ? "fill-forest/12" : isFem ? "fill-forest/20" : "fill-cream";
     const sw = highlight ? 2 : 1.5;
     const commonProps = { className: `${fill} ${stroke}`, strokeWidth: sw } as const;
     return isFem && !isMasc ? (
@@ -923,7 +923,7 @@ function RightPanel({
   return (
     <aside className="grid gap-4 md:grid-cols-2 2xl:grid-cols-1">
       {/* IA Clínica briefing */}
-      <div className="rounded-2xl bg-gradient-to-br from-mahogany via-mahogany to-mahogany/90 text-white p-5 shadow-lg relative overflow-hidden">
+      <div className="rounded-2xl bg-gradient-to-br from-forest via-forest to-forest/90 text-white p-5 shadow-lg relative overflow-hidden">
         <div
           aria-hidden
           className="absolute -top-10 -right-10 size-40 rounded-full bg-gold/20 blur-3xl pointer-events-none"
@@ -970,14 +970,14 @@ function RightPanel({
           <PendingRow label="Prontuários sem evolução" count={prontuariosPendentes} tone="rose" />
           <PendingRow label="Checklists não preenchidos" count={2} tone="gold" />
           <PendingRow label="Genogramas incompletos" count={3} tone="forest" />
-          <PendingRow label="Clientes sem retorno" count={orphanClients.length} tone="mahogany" />
+          <PendingRow label="Clientes sem retorno" count={orphanClients.length} tone="forest" />
         </ul>
         {orphanClients.length > 0 && (
           <ul className="mt-3 pt-3 border-t border-border/40 space-y-1.5">
             {orphanClients.slice(0, 3).map((c) => (
               <li key={c.id} className="flex items-center justify-between text-[12px]">
                 <span className="text-primary/80 font-medium truncate">{c.name}</span>
-                <button className="text-mahogany font-bold hover:underline">Agendar</button>
+                <button className="text-forest font-bold hover:underline">Agendar</button>
               </li>
             ))}
           </ul>
@@ -999,7 +999,7 @@ function RightPanel({
           </div>
           <div className="flex items-center justify-between">
             <span className="flex items-center gap-2 text-[12px] text-primary/80 font-semibold">
-              <Clock className="size-3.5 text-mahogany" /> Ocupado
+              <Clock className="size-3.5 text-forest" /> Ocupado
             </span>
             <span className="font-mono text-sm font-bold text-primary">4h 00m</span>
           </div>
@@ -1010,7 +1010,7 @@ function RightPanel({
             <span className="font-mono text-sm font-bold text-emerald-700">2h 40m</span>
           </div>
           <div className="h-1.5 bg-cream rounded-full overflow-hidden mt-2">
-            <div className="h-full w-[60%] bg-gradient-to-r from-mahogany to-forest rounded-full" />
+            <div className="h-full w-[60%] bg-gradient-to-r from-forest to-forest rounded-full" />
           </div>
         </div>
       </div>
@@ -1029,12 +1029,12 @@ function RightPanel({
   );
 }
 
-function PendingRow({ label, count, tone }: { label: string; count: number; tone: "rose" | "gold" | "forest" | "mahogany" }) {
+function PendingRow({ label, count, tone }: { label: string; count: number; tone: "rose" | "gold" | "forest" | "forest" }) {
   const toneClass = {
     rose: "bg-rose-100 text-rose-700",
     gold: "bg-amber-100 text-amber-700",
     forest: "bg-forest/15 text-forest",
-    mahogany: "bg-mahogany/10 text-mahogany",
+    forest: "bg-forest/10 text-forest",
   }[tone];
   return (
     <li className="flex items-center justify-between group cursor-pointer hover:bg-cream/50 -mx-2 px-2 py-1 rounded-lg transition-colors">
@@ -1049,7 +1049,7 @@ function PendingRow({ label, count, tone }: { label: string; count: number; tone
 /* ---------------------------- DTO → UI Mapping ---------------------------- */
 
 function mapDtosToSessions(dtos: AgendaSessionDTO[]): Session[] {
-  const accents: Session["accent"][] = ["mahogany", "forest", "gold"];
+  const accents: Session["accent"][] = ["forest", "forest", "gold"];
   const now = Date.now();
   return dtos.map((d, i) => {
     const seals: Seal[] = [];

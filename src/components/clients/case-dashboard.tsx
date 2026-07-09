@@ -57,7 +57,7 @@ export function CaseDashboard({ clientId }: Props) {
 
   const pieData = [
     { name: "Mulheres", value: female, color: "oklch(0.65 0.20 295)" }, // Forest
-    { name: "Homens", value: male, color: "oklch(0.25 0.10 295)" }, // Mahogany mid
+    { name: "Homens", value: male, color: "oklch(0.25 0.10 295)" }, // Forest mid
   ];
   if (unknown > 0)
     pieData.push({ name: "Outros/S/N", value: unknown, color: "oklch(0.95 0.03 295)" });
@@ -101,7 +101,7 @@ export function CaseDashboard({ clientId }: Props) {
                     fontFamily: "var(--font-sans)",
                     fontWeight: 500,
                   }}
-                  itemStyle={{ color: "var(--color-mahogany)" }}
+                  itemStyle={{ color: "var(--color-forest)" }}
                 />
               </PieChart>
             </ResponsiveContainer>

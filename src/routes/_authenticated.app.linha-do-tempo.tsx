@@ -40,7 +40,7 @@ function TimelinesPage() {
       </div>
 
       {/* Header */}
-      <div className="block-mahogany px-6 py-10">
+      <div className="block-forest px-6 py-10">
         <div className="container-liz flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.35em] text-forest-mid">
@@ -109,7 +109,7 @@ function TimelinesPage() {
                       <span>12 marcos históricos registrados</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Sparkles className="size-4 text-mahogany shrink-0" />
+                      <Sparkles className="size-4 text-forest shrink-0" />
                       <span>2 traumas principais mapeados</span>
                     </div>
                   </div>
@@ -124,7 +124,7 @@ function TimelinesPage() {
                   <Link
                     to="/app/clientes/$clientId"
                     params={{ clientId: c.id }}
-                    className="font-bold text-[12px] uppercase tracking-wider text-mahogany hover:text-forest flex items-center gap-1"
+                    className="font-bold text-[12px] uppercase tracking-wider text-forest hover:text-forest flex items-center gap-1"
                   >
                     Ver Linha do Tempo <ArrowRight className="size-3.5" />
                   </Link>

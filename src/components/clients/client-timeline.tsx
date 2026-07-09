@@ -58,7 +58,7 @@ export function ClientTimeline({ clientId }: Props) {
   return (
     <div className="relative pt-6 pb-12">
       {/* Editorial subtle timeline gradient line */}
-      <div className="pointer-events-none absolute inset-y-0 left-[8rem] w-px bg-gradient-to-b from-mahogany/50 via-forest/30 to-transparent" />
+      <div className="pointer-events-none absolute inset-y-0 left-[8rem] w-px bg-gradient-to-b from-forest/50 via-forest/30 to-transparent" />
 
       <motion.ol
         className="space-y-12"
@@ -84,11 +84,11 @@ export function ClientTimeline({ clientId }: Props) {
           >
             {/* Year Column */}
             <div className="pt-0.5 text-right relative pr-4">
-              <span className="font-serif text-4xl font-bold text-mahogany/90">{year || "?"}</span>
+              <span className="font-serif text-4xl font-bold text-forest/90">{year || "?"}</span>
             </div>
 
             {/* Timeline Dot */}
-            <div className="relative mt-3.5 z-10 flex size-3.5 items-center justify-center rounded-full bg-white border-[3px] border-mahogany shadow-sm" />
+            <div className="relative mt-3.5 z-10 flex size-3.5 items-center justify-center rounded-full bg-white border-[3px] border-forest shadow-sm" />
 
             {/* Cards Column */}
             <div className="space-y-4 pt-1">
@@ -110,12 +110,12 @@ function TimelineCard({ item }: { item: TimelineItem }) {
 
   // Editorial tones based on event
   const accentClass = isDeath
-    ? "accent-bar-mahogany bg-white"
+    ? "accent-bar-forest bg-white"
     : isBirth
       ? "accent-bar-gold bg-white"
       : "accent-bar-forest bg-forest-soft/20";
 
-  const iconColor = isDeath ? "text-mahogany" : isBirth ? "text-gold" : "text-forest";
+  const iconColor = isDeath ? "text-forest" : isBirth ? "text-gold" : "text-forest";
 
   return (
     <div
@@ -145,7 +145,7 @@ function TimelineCard({ item }: { item: TimelineItem }) {
       {item.meta && (
         <div className="mt-3 pt-3 border-t border-border/50">
           <p className="flex items-start gap-2 text-[14px] leading-relaxed text-foreground/80 font-serif">
-            {isDeath && <HeartPulse className="size-4 text-mahogany mt-0.5 shrink-0" />}
+            {isDeath && <HeartPulse className="size-4 text-forest mt-0.5 shrink-0" />}
             {item.meta}
           </p>
         </div>

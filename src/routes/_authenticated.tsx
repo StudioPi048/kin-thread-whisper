@@ -126,10 +126,10 @@ function AuthenticatedLayout() {
     .join("");
 
   return (
-    <div className="flex min-h-screen bg-[#F8F4EE] texture-paper">
+    <div className="flex min-h-screen bg-[#F8F4EE] ">
       {/* ── SIDEBAR (Lombada de Couro do Fichário) ───────────────────── */}
       <aside
-        className={`relative hidden shrink-0 flex-col bg-mahogany text-white shadow-[10px_0_30px_-10px_rgba(0,0,0,0.5)] z-40 transition-all duration-300 md:flex overflow-hidden ${isCollapsed ? "w-[72px]" : "w-72"}`}
+        className={`relative hidden shrink-0 flex-col bg-forest text-white shadow-[10px_0_30px_-10px_rgba(0,0,0,0.5)] z-40 transition-all duration-300 md:flex overflow-hidden ${isCollapsed ? "w-[72px]" : "w-72"}`}
       >
         {/* Vetor Dinâmico: Árvore subindo na sidebar */}
         <div className="pointer-events-none absolute bottom-0 left-0 w-full h-[60%] opacity-[0.04] z-0 flex items-end">
@@ -272,7 +272,7 @@ function AuthenticatedLayout() {
         
         {/* Vetor Dinâmico Global: Formas orgânicas / Topografia de papel */}
         <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden opacity-[0.03]">
-          <svg viewBox="0 0 800 800" className="w-[150%] h-[150%] max-w-none -ml-[20%] -mt-[10%] stroke-mahogany fill-none" strokeWidth="0.5">
+          <svg viewBox="0 0 800 800" className="w-[150%] h-[150%] max-w-none -ml-[20%] -mt-[10%] stroke-forest fill-none" strokeWidth="0.5">
             <path d="M-200,400 Q100,200 400,400 T1000,400" />
             <path d="M-200,450 Q100,250 400,450 T1000,450" />
             <path d="M-200,500 Q100,300 400,500 T1000,500" />

@@ -103,7 +103,7 @@ function AuthPage() {
   return (
     <div className="grid min-h-screen md:grid-cols-[1fr_1fr]">
       {/* ── PAINEL ESQUERDO — Manifesto editorial ───────── */}
-      <aside className="block-mahogany hidden md:flex md:flex-col md:justify-between md:p-12">
+      <aside className="block-forest hidden md:flex md:flex-col md:justify-between md:p-12">
         <Link to="/" className="flex items-center gap-3">
           <LizLogoLockup variant="light" />
         </Link>
@@ -279,7 +279,7 @@ function AuthPage() {
                 Não tem conta?{" "}
                 <button
                   type="button"
-                  className="font-bold text-forest hover:text-mahogany transition-colors underline-offset-4 hover:underline"
+                  className="font-bold text-forest hover:text-forest transition-colors underline-offset-4 hover:underline"
                   onClick={() => setMode("signup")}
                 >
                   Solicitar acesso
@@ -290,7 +290,7 @@ function AuthPage() {
                 Já tem conta?{" "}
                 <button
                   type="button"
-                  className="font-bold text-forest hover:text-mahogany transition-colors underline-offset-4 hover:underline"
+                  className="font-bold text-forest hover:text-forest transition-colors underline-offset-4 hover:underline"
                   onClick={() => setMode("signin")}
                 >
                   Entrar

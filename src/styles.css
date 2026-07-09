@@ -12,8 +12,8 @@
 
 /*
  * Instituto Liz — Design System Gráfico Editorial
- * Paleta: Ameixa profunda (#1E0A3C) + Lavanda vibrante + Dourado
- * Estética: Monocle Magazine meets clinical platform
+ * Paleta: Verde Profundo + Amarelo/Bege Claro
+ * Estética: Moderna, Clínica e Limpa
  * Acessibilidade: 40+ — texto ≥16px, alvos ≥52px, foco visível sempre
  */
 
@@ -46,10 +46,7 @@
   --color-input:         var(--input);
   --color-ring:          var(--ring);
 
-  /* Tokens de marca (Arquivo Vivo) */
-  --color-mahogany:      var(--mahogany);
-  --color-mahogany-mid:  var(--mahogany-mid);
-  --color-mahogany-soft: var(--mahogany-soft);
+  /* Tokens de marca */
   --color-forest:        var(--forest);
   --color-forest-mid:    var(--forest-mid);
   --color-forest-soft:   var(--forest-soft);
@@ -80,29 +77,24 @@
 :root {
   --radius: 1rem; /* Bordas arredondadas e acolhedoras */
 
-  /* ─── MARROM / COURO (MAHOGANY) ──────────────── */
-  --mahogany:        #3B2F2F;
-  --mahogany-mid:    #4A3B3B;
-  --mahogany-soft:   #5C4D4D;
+  /* ─── VERDE MODERNO (FOREST) ───────────────────── */
+  --forest:          #163326;
+  --forest-mid:      #214A38;
+  --forest-soft:     #2D604A;
 
-  /* ─── VERDE MUSGO (FOREST) ───────────────────── */
-  --forest:          #2F3E2F;
-  --forest-mid:      #3B4A3B;
-  --forest-soft:     #4D5C4D;
+  /* ─── AMARELO / BEGE CLARO (HIGHLIGHTS) ────────── */
+  --gold:      #E5C365;
+  --gold-soft: #EFD692;
 
-  /* ─── OURO ENVELHECIDO ───────────────────────── */
-  --gold:      #C8A951;
-  --gold-soft: #D4B96A;
-
-  /* ─── PAPÉIS HISTÓRICOS (O ARQUIVO VIVO) ─────── */
-  --archive:     #F8F4EE; /* Fundo global */
-  --archive-old: #F2ECE2; /* Painéis fundos */
-  --archive-doc: #FCF9F4; /* Documentos sobre a mesa */
+  /* ─── FUNDOS LIMPOS (ARQUIVO) ──────────────────── */
+  --archive:     #FDFCF9; /* Fundo global translúcido/limpo */
+  --archive-old: #F6F4EF; /* Fundo secundário suave */
+  --archive-doc: #FFFFFF; /* Brancos puros para documentos/cards */
 
   /* ─── SISTEMA SEMÂNTICO CLÍNICO ──────────────── */
   --clinical-critical: #8B3A3A; /* Vermelho/Erro/Óbito */
   --clinical-warning:  #B8860B; /* Âmbar/Incompleto */
-  --clinical-positive: #4A5D23; /* Verde/Saudável */
+  --clinical-positive: #214A38; /* Verde/Saudável */
 
   /* ─── FUNDO — arquivo vivo ───────────────────── */
   --background: var(--archive);
@@ -115,17 +107,17 @@
   --popover:            oklch(1.00 0.0 0);
   --popover-foreground: oklch(0.14 0.06 295);
 
-  --primary:            var(--mahogany);
+  --primary:            var(--forest);
   --primary-foreground: var(--archive);
 
-  --secondary:            var(--forest);
+  --secondary:            var(--forest-soft);
   --secondary-foreground: var(--archive);
 
   --muted:            var(--archive-old);
-  --muted-foreground: var(--mahogany-soft);
+  --muted-foreground: var(--forest-soft);
 
   --accent:            var(--archive-doc);
-  --accent-foreground: var(--mahogany);
+  --accent-foreground: var(--forest);
 
   --destructive:            oklch(0.55 0.19 25);
   --destructive-foreground: oklch(0.98 0.01 25);
@@ -134,14 +126,14 @@
   --input:  oklch(0.93 0.03 295);
   --ring:   oklch(0.65 0.20 295);
 
-  /* Sidebar: Couro / Fichário escuro */
-  --sidebar:                    var(--mahogany);
+  /* Sidebar: Verde Escuro e Ícones Claros */
+  --sidebar:                    var(--forest);
   --sidebar-foreground:         var(--archive);
-  --sidebar-primary:            var(--forest);
-  --sidebar-primary-foreground: var(--archive);
-  --sidebar-accent:             var(--mahogany-mid);
+  --sidebar-primary:            var(--gold);
+  --sidebar-primary-foreground: var(--forest);
+  --sidebar-accent:             var(--forest-mid);
   --sidebar-accent-foreground:  var(--archive-doc);
-  --sidebar-border:             var(--mahogany-soft);
+  --sidebar-border:             var(--forest-soft);
   --sidebar-ring:               var(--gold);
 }
 
@@ -169,21 +161,21 @@
   --primary:            var(--forest);
   --primary-foreground: var(--archive);
 
-  --secondary:            var(--mahogany);
+  --secondary:            var(--forest-soft);
   --secondary-foreground: var(--archive);
 
   --muted:            var(--archive-old);
   --muted-foreground: var(--forest-soft);
 
-  --accent:            var(--mahogany-mid);
+  --accent:            var(--forest-mid);
   --accent-foreground: var(--archive-doc);
 
-  --gold:      #C8A951;
-  --gold-soft: #D4B96A;
+  --gold:      #E5C365;
+  --gold-soft: #EFD692;
 
-  --mahogany:        #3B2F2F;
-  --mahogany-mid:    #4A3B3B;
-  --mahogany-soft:   #5C4D4D;
+  --forest:          #163326;
+  --forest-mid:      #214A38;
+  --forest-soft:     #2D604A;
 
   --destructive:            oklch(0.58 0.18 22);
   --destructive-foreground: oklch(0.97 0.01 22);
@@ -192,13 +184,13 @@
   --input:  oklch(0.24 0.07 295);
   --ring:   oklch(0.65 0.20 295);
 
-  --sidebar:                    var(--mahogany);
+  --sidebar:                    var(--forest);
   --sidebar-foreground:         var(--archive);
-  --sidebar-primary:            var(--forest);
-  --sidebar-primary-foreground: var(--archive);
-  --sidebar-accent:             var(--mahogany-mid);
+  --sidebar-primary:            var(--gold);
+  --sidebar-primary-foreground: var(--forest);
+  --sidebar-accent:             var(--forest-mid);
   --sidebar-accent-foreground:  var(--archive-doc);
-  --sidebar-border:             var(--mahogany-soft);
+  --sidebar-border:             var(--forest-soft);
   --sidebar-ring:               var(--gold);
 }
 
@@ -216,7 +208,7 @@
   }
   body {
     background-color: var(--archive);
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.06'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.02'/%3E%3C/svg%3E");
     color: var(--ink);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -272,15 +264,8 @@
 @utility accent-bar-gold {
   border-left: 5px solid var(--color-gold);
 }
-@utility accent-bar-mahogany {
-  border-left: 5px solid var(--color-mahogany);
-}
 
 /* Blocos de cor full-section */
-@utility block-mahogany {
-  background-color: var(--color-mahogany);
-  color: var(--color-archive);
-}
 @utility block-forest {
   background-color: var(--color-forest);
   color: var(--color-archive);
@@ -299,9 +284,9 @@
   &:hover {
     transform: translateY(-6px);
     box-shadow:
-      0 20px 40px -18px oklch(0.25 0.10 295 / 0.28),
-      0 8px 16px -8px oklch(0.25 0.10 295 / 0.12),
-      0 0 0 1px oklch(0.65 0.20 295 / 0.15) inset;
+      0 20px 40px -18px oklch(0.25 0.10 295 / 0.18),
+      0 8px 16px -8px oklch(0.25 0.10 295 / 0.08),
+      0 0 0 1px oklch(0.65 0.20 295 / 0.08) inset;
     border-color: var(--color-forest-mid);
   }
 }
@@ -310,16 +295,16 @@
 @utility glass-card {
   background: linear-gradient(
     145deg,
-    oklch(1 0 0 / 0.72) 0%,
-    oklch(0.985 0.005 80 / 0.55) 100%
+    oklch(1 0 0 / 0.82) 0%,
+    oklch(0.985 0.005 80 / 0.75) 100%
   );
   backdrop-filter: blur(22px) saturate(140%);
-  border: 1px solid oklch(1 0 0 / 0.6);
+  border: 1px solid oklch(1 0 0 / 0.8);
   border-radius: 1.25rem;
   box-shadow:
-    0 10px 32px -14px oklch(0.25 0.10 295 / 0.18),
-    0 2px 6px -2px oklch(0.25 0.10 295 / 0.08),
-    0 0 0 1px oklch(1 0 0 / 0.5) inset;
+    0 10px 32px -14px oklch(0.25 0.10 295 / 0.12),
+    0 2px 6px -2px oklch(0.25 0.10 295 / 0.04),
+    0 0 0 1px oklch(1 0 0 / 0.7) inset;
 }
 .dark .glass-card,
 .dark [class~="glass-card"] {
@@ -344,17 +329,17 @@
   border: 1px solid oklch(0.96 0.02 295);
   border-radius: 1.5rem;
   box-shadow:
-    0 24px 48px -24px oklch(0.25 0.10 295 / 0.22),
-    0 6px 12px -6px oklch(0.25 0.10 295 / 0.08),
+    0 24px 48px -24px oklch(0.25 0.10 295 / 0.12),
+    0 6px 12px -6px oklch(0.25 0.10 295 / 0.05),
     0 1px 0 oklch(1 0 0 / 0.9) inset;
 }
 
 /* Halo suave para elementos destacados (avatar, KPIs) */
 @utility soft-halo {
   box-shadow:
-    0 0 0 6px oklch(1 0 0 / 0.7),
-    0 20px 40px -20px oklch(0.65 0.20 295 / 0.5),
-    0 8px 20px -10px oklch(0.25 0.10 295 / 0.25);
+    0 0 0 6px oklch(1 0 0 / 0.8),
+    0 20px 40px -20px oklch(0.65 0.20 295 / 0.3),
+    0 8px 20px -10px oklch(0.25 0.10 295 / 0.15);
 }
 
 /* ────────────────────────────────────────────────────────────
@@ -463,7 +448,7 @@
 }
 
 /* ────────────────────────────────────────────────────────────
-   ARQUIVO VIVO: UTILITÁRIOS (SKEUOMORFISMO)
+   ARQUIVO VIVO: UTILITÁRIOS (SKEUOMORFISMO) - MANTIDOS PARA NÃO QUEBRAR COMPONENTES ANTIGOS
    ──────────────────────────────────────────────────────────── */
 .texture-paper {
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
@@ -472,18 +457,18 @@
 
 .shadow-dossier {
   box-shadow: 
-    0 1px 2px rgba(0, 0, 0, 0.05),
-    0 4px 12px rgba(0, 0, 0, 0.05),
-    0 12px 24px -10px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5),
-    inset 0 0 10px rgba(0, 0, 0, 0.02);
+    0 1px 2px rgba(0, 0, 0, 0.03),
+    0 4px 12px rgba(0, 0, 0, 0.03),
+    0 12px 24px -10px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    inset 0 0 10px rgba(0, 0, 0, 0.01);
 }
 
 .shadow-lifted {
   box-shadow: 
-    0 20px 40px -20px rgba(0, 0, 0, 0.15),
-    0 4px 6px -2px rgba(0, 0, 0, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    0 20px 40px -20px rgba(0, 0, 0, 0.10),
+    0 4px 6px -2px rgba(0, 0, 0, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 .border-torn {

@@ -133,8 +133,8 @@ function ClientesIndex() {
         </p>
       </div>
 
-      {/* Header — bloco mahogany */}
-      <div className="block-mahogany px-6 py-10">
+      {/* Header — bloco forest */}
+      <div className="block-forest px-6 py-10">
         <div className="container-liz flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.35em] text-gold">
@@ -167,14 +167,14 @@ function ClientesIndex() {
             <div className="flex items-center border border-border rounded-lg p-1 bg-white">
               <button
                 onClick={() => setViewMode("cards")}
-                className={`p-1.5 rounded-md cursor-pointer ${viewMode === "cards" ? "bg-mahogany/5 text-mahogany" : "text-muted-foreground hover:text-primary"}`}
+                className={`p-1.5 rounded-md cursor-pointer ${viewMode === "cards" ? "bg-forest/5 text-forest" : "text-muted-foreground hover:text-primary"}`}
                 title="Visualização em Grade"
               >
                 <LayoutGrid className="size-4" />
               </button>
               <button
                 onClick={() => setViewMode("list")}
-                className={`p-1.5 rounded-md cursor-pointer ${viewMode === "list" ? "bg-mahogany/5 text-mahogany" : "text-muted-foreground hover:text-primary"}`}
+                className={`p-1.5 rounded-md cursor-pointer ${viewMode === "list" ? "bg-forest/5 text-forest" : "text-muted-foreground hover:text-primary"}`}
                 title="Visualização em Lista"
               >
                 <List className="size-4" />
@@ -258,7 +258,7 @@ function ClientesIndex() {
                           <Link
                             to="/app/clientes/$clientId"
                             params={{ clientId: c.id }}
-                            className="font-serif font-bold text-[15px] text-primary hover:text-mahogany transition-colors block"
+                            className="font-serif font-bold text-[15px] text-primary hover:text-forest transition-colors block"
                           >
                             {c.preferred_name || c.full_name}
                           </Link>
@@ -289,7 +289,7 @@ function ClientesIndex() {
                           </div>
                         </td>
                         <td className="p-4">
-                          <span className="rounded-full bg-mahogany/5 text-mahogany border border-mahogany/10 px-2 py-0.5 font-bold text-[11px]">
+                          <span className="rounded-full bg-forest/5 text-forest border border-forest/10 px-2 py-0.5 font-bold text-[11px]">
                             {(() => {
                               const hash = c.id.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
                               const VALUES = [58, 63, 71, 74, 79, 82, 87, 91];
@@ -480,7 +480,7 @@ function ClientCard({
             <Layers className="size-3.5 text-forest" />
             Genossociograma
           </span>
-          <span className="text-mahogany font-bold">{genoPct}% Completo</span>
+          <span className="text-forest font-bold">{genoPct}% Completo</span>
         </div>
         <div className="flex flex-wrap gap-1.5">
           <Badge
@@ -491,7 +491,7 @@ function ClientCard({
           </Badge>
           <Badge
             variant="outline"
-            className="text-mahogany border-mahogany/20 bg-mahogany/[0.03] text-[10px] font-bold py-0.5 rounded-md"
+            className="text-forest border-forest/20 bg-forest/[0.03] text-[10px] font-bold py-0.5 rounded-md"
           >
             🟣 IA detectou padrão
           </Badge>
@@ -513,7 +513,7 @@ function ClientCard({
           to="/app/clientes/$clientId"
           params={{ clientId: client.id }}
           preload="intent"
-          className="font-bold uppercase tracking-[0.08em] text-mahogany hover:text-forest transition-colors"
+          className="font-bold uppercase tracking-[0.08em] text-forest hover:text-forest transition-colors"
         >
           Abrir dossiê →
         </Link>
