@@ -253,6 +253,22 @@
   max-width: 100rem;
 }
 
+/* Master Grid — Arquivo Vivo Interno */
+@utility container-archive {
+  width: 100%;
+  margin-inline: auto;
+  padding-inline: 64px;
+  max-width: 1440px;
+}
+
+/* Ritmo vertical padronizado */
+@utility section-spacing {
+  margin-bottom: 80px;
+}
+@utility section-gap {
+  gap: 80px;
+}
+
 /* Números decorativos gigantes — elemento gráfico editorial */
 @utility section-number {
   font-family: var(--font-serif);

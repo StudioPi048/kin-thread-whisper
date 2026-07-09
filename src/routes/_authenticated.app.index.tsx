@@ -13,26 +13,28 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+// Importando o novo Design System
+import { SectionTitle } from "@/components/archive/section-title";
+import { ArchiveCard, ArchiveCardContent, ArchiveCardHeader, ArchiveCardTitle, ArchiveCardDescription } from "@/components/archive/archive-card";
+import { ClinicalPanel, ClinicalPanelContent, ClinicalPanelHeader, ClinicalPanelTitle } from "@/components/archive/clinical-panel";
+import { StatusBadge } from "@/components/archive/status-badge";
+
 export const Route = createFileRoute("/_authenticated/app/")({
   component: AppHome,
 });
 
 /* ─── ATOMS ──────────────────────────────────────────────── */
-
-/** Fita adesiva CSS pura para simular documentos colados */
 function Tape({ rotate = "0deg", w = "64px", top = "-10px", left = "50%" }: { rotate?: string; w?: string; top?: string; left?: string; }) {
   return (
     <div
+      className="absolute z-20 shadow-sm"
       style={{
-        position: "absolute",
         top,
         left,
         transform: `translateX(-50%) rotate(${rotate})`,
         width: w,
         height: "22px",
         background: "rgba(210,190,155,0.75)",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
-        zIndex: 20,
       }}
     />
   );
@@ -62,17 +64,8 @@ function AppHome() {
         .eq("status", "active")
         .order("updated_at", { ascending: false });
 
-      const activeClients = clientsRes ?? [];
-
-      const { data: sessionsRes } = await supabase
-        .from("clinical_sessions")
-        .select("*, clients(full_name, preferred_name)")
-        .order("session_date", { ascending: false })
-        .limit(10);
-
       return {
-        clients: activeClients,
-        sessions: sessionsRes ?? [],
+        clients: clientsRes ?? [],
       };
     },
   });
@@ -82,91 +75,71 @@ function AppHome() {
   const lastActiveClient = clients[0] ?? null;
 
   return (
-    <div className="min-h-screen bg-[#1B211A] pb-24 font-serif text-white selection:bg-gold-soft relative overflow-x-hidden">
+    <div className="min-h-screen text-foreground pb-24">
       
       {/* ═══════════════════════════════════════════════════
-          FUNDO E TEXTURAS
+          CABEÇALHO
       ════════════════════════════════════════════════════ */}
-      <div className="absolute right-0 top-0 w-[80%] h-[700px] opacity-10 pointer-events-none">
-        <img src="/assets/photos/section2_botanicals.jpg" alt="" className="w-full h-full object-cover mix-blend-screen" />
-      </div>
-      <div className="absolute left-0 bottom-0 w-[50%] h-[500px] opacity-[0.03] pointer-events-none rotate-180">
-        <img src="/assets/photos/section2_botanicals.jpg" alt="" className="w-full h-full object-cover mix-blend-screen" />
-      </div>
-
-      {/* ═══════════════════════════════════════════════════
-          CABEÇALHO DA MESA
-      ════════════════════════════════════════════════════ */}
-      <header className="pt-24 pb-16 relative z-10">
-        <div className="container-liz">
-          <p className="font-sans text-[16px] font-bold tracking-[0.2em] text-[#D4AF37] uppercase mb-4">
-            Mesa de Investigação
-          </p>
-          <h1 className="font-serif text-5xl md:text-6xl font-bold tracking-tight text-white leading-tight mb-4">
-            Bom dia, <em className="italic text-[#D4AF37]">{firstName}</em>.
-          </h1>
-          <p className="text-xl text-white/60 font-serif italic max-w-xl leading-relaxed">
-            Você tem <strong className="text-[#D4AF37] font-semibold not-italic">{clients.length} arquivos ativos</strong> no seu acervo. 
-            Os padrões aguardam para serem descobertos.
-          </p>
-        </div>
+      <header className="pt-24 pb-12">
+        <SectionTitle
+          eyebrow="Mesa de Investigação"
+          title={`Bom dia, ${firstName}.`}
+          subtitle={`Você tem ${clients.length} arquivos ativos no seu acervo. Os padrões aguardam para serem descobertos.`}
+        />
       </header>
 
       {/* ═══════════════════════════════════════════════════
-          DOSSIÊ EM DESTAQUE (PAPEL SOBRE A MESA)
+          DOSSIÊ EM DESTAQUE (Workspace Ativo)
       ════════════════════════════════════════════════════ */}
-      <div className="container-liz relative z-20 mb-20">
-        
-        {/* Documento Físico */}
-        <div className="relative bg-[#151A15] text-white p-10 md:p-14 shadow-[0_32px_80px_rgba(0,0,0,0.6)] rotate-[-0.5deg] border border-white/10">
-          
+      <section className="mb-20">
+        <ArchiveCard variant="paper" elevation="lg" className="rotate-[-0.5deg] border-border mx-auto relative overflow-hidden">
           <Tape rotate="-1deg" w="80px" />
           
-          {/* Caneta removida */}
-
-          <div className="flex flex-col lg:flex-row gap-12 relative z-10">
+          <ArchiveCardContent className="p-10 md:p-14 flex flex-col lg:flex-row gap-12">
             
-            {/* Esquerda: Dados do Paciente e IA */}
+            {/* Esquerda: Resumo do Paciente e Ações */}
             <div className="flex-1 space-y-8">
-              <div className="flex flex-wrap items-center justify-between border-b border-white/10 pb-4">
-                <div className="flex items-center gap-3">
-                  <span className="font-sans text-[16px] font-bold tracking-[0.2em] uppercase text-white">
-                    Ficha Principal
-                  </span>
-                </div>
-                <span className="font-sans text-[16px] text-white/70 italic flex items-center gap-1.5 mt-2 sm:mt-0">
+              <div className="flex flex-wrap items-center justify-between border-b border-border/50 pb-4">
+                <span className="font-sans text-sm font-bold tracking-widest uppercase text-muted-foreground">
+                  Ficha Principal
+                </span>
+                <span className="font-sans text-sm text-muted-foreground italic flex items-center gap-1.5">
                   <Paperclip className="size-4" /> Anexado recentemente
                 </span>
               </div>
 
               <div>
-                <h2 className="text-4xl md:text-5xl font-bold font-serif text-white mb-3">
+                <h2 className="text-4xl md:text-5xl font-bold font-serif text-primary mb-3">
                   {lastActiveClient?.preferred_name || lastActiveClient?.full_name || "Nenhum dossiê ativo"}
                 </h2>
-                <p className="text-[19px] text-white font-serif leading-relaxed">
-                  Iniciando investigação transgeracional de padrões de repetição e lealdades invisíveis.
+                <p className="text-lg text-muted-foreground font-serif leading-relaxed">
+                  Investigação transgeracional de padrões de repetição e lealdades invisíveis.
                 </p>
               </div>
 
-              {/* Anotação Marginal da IA */}
-              <div className="relative bg-[#151A15] p-6 border-l-2 border-[#D4AF37] italic font-serif text-white text-xl leading-relaxed shadow-sm">
-                <ShieldCheck className="absolute -left-3.5 -top-3.5 size-7 text-[#D4AF37] bg-[#151A15] p-1 rounded-full shadow-sm" />
-                <span className="block font-sans text-[16px] font-bold uppercase tracking-widest text-[#D4AF37] not-italic mb-2">
-                  Nota do Supervisor Clínico
-                </span>
-                "Fique atento às datas de aniversário. A repetição de eventos traumáticos pode estar espelhada na terceira geração."
-              </div>
+              {/* Anotação Marginal da IA (Estilo Nota Clínica) */}
+              <ClinicalPanel accent="gold" className="bg-amber-50/50 dark:bg-amber-900/10 border-gold/30">
+                <ClinicalPanelContent className="p-6 relative">
+                  <ShieldCheck className="absolute -left-3.5 -top-3.5 size-7 text-gold bg-archive p-1 rounded-full shadow-sm" />
+                  <span className="block font-sans text-sm font-bold uppercase tracking-widest text-gold mb-2">
+                    Nota do Copiloto
+                  </span>
+                  <p className="font-serif italic text-lg leading-relaxed text-foreground">
+                    "Fique atento às datas de aniversário. A repetição de eventos traumáticos pode estar espelhada na terceira geração."
+                  </p>
+                </ClinicalPanelContent>
+              </ClinicalPanel>
 
               <div className="pt-6">
                 {lastActiveClient ? (
                   <Link to="/app/clientes/$clientId" params={{ clientId: lastActiveClient.id }}>
-                    <button className="bg-[#1B211A] text-white font-sans text-[16px] font-bold uppercase tracking-widest px-8 py-5 rounded-none hover:bg-[#2B312A] transition-colors shadow-lg cursor-pointer">
+                    <button className="bg-primary text-primary-foreground font-sans text-sm font-bold uppercase tracking-widest px-8 py-5 rounded hover:opacity-90 transition-opacity shadow-md cursor-pointer">
                       Abrir Dossiê Físico →
                     </button>
                   </Link>
                 ) : (
                   <Link to="/app/clientes">
-                    <button className="bg-[#1B211A] text-white font-sans text-[16px] font-bold uppercase tracking-widest px-8 py-5 rounded-none hover:bg-[#2B312A] transition-colors shadow-lg cursor-pointer">
+                    <button className="bg-primary text-primary-foreground font-sans text-sm font-bold uppercase tracking-widest px-8 py-5 rounded hover:opacity-90 transition-opacity shadow-md cursor-pointer">
                       Acessar Arquivo →
                     </button>
                   </Link>
@@ -174,98 +147,100 @@ function AppHome() {
               </div>
             </div>
 
-            {/* Direita: Referência e Selo */}
-            <div className="lg:w-[320px] shrink-0 border-l border-dashed border-white/10 pl-10 flex flex-col justify-between">
+            {/* Direita: Referências e Contexto */}
+            <div className="lg:w-[320px] shrink-0 border-l border-dashed border-border pl-10 flex flex-col justify-between">
               <div className="space-y-6">
-                <h3 className="font-sans text-[16px] font-bold uppercase tracking-[0.2em] text-white">
+                <h3 className="font-sans text-sm font-bold uppercase tracking-widest text-muted-foreground">
                   Referência Bibliográfica
                 </h3>
                 <div>
-                  <p className="font-serif font-bold text-[28px] text-white leading-tight">
+                  <p className="font-serif font-bold text-2xl text-primary leading-tight">
                     "Ai, meus ancestrais!"
                   </p>
-                  <p className="font-serif italic text-white mt-2 text-[20px]">
+                  <p className="font-serif italic text-muted-foreground mt-2 text-lg">
                     Anne A. Schützenberger
                   </p>
                 </div>
-                <div className="pt-5 border-t border-white/10">
-                  <span className="block font-sans text-[16px] uppercase tracking-widest text-white mb-1.5 font-bold">Tópico Ativo</span>
-                  <span className="font-serif font-bold text-white text-[22px]">Síndrome de Aniversário</span>
+                <div className="pt-5 border-t border-border">
+                  <span className="block font-sans text-sm uppercase tracking-widest text-muted-foreground mb-1.5 font-bold">
+                    Tópico Ativo
+                  </span>
+                  <StatusBadge status="warning" variant="outline">Síndrome de Aniversário</StatusBadge>
                 </div>
               </div>
-              
-              {/* Selo removido */}
             </div>
 
-          </div>
-        </div>
-      </div>
+          </ArchiveCardContent>
+        </ArchiveCard>
+      </section>
 
       {/* ═══════════════════════════════════════════════════
           MESA SECUNDÁRIA (RADAR E AGENDA)
       ════════════════════════════════════════════════════ */}
-      <main className="container-liz grid grid-cols-1 lg:grid-cols-12 gap-12 relative z-10">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
         
         {/* Esquerda: Radar Sistêmico e Registro */}
         <div className="lg:col-span-8 space-y-16">
           
           <section>
-            <div className="flex items-center gap-3 mb-8">
-              <Search className="size-6 text-[#D4AF37]" />
-              <h3 className="font-serif text-[28px] font-bold text-white">Radar Sistêmico Global</h3>
-            </div>
+            <SectionTitle 
+              title="Radar Sistêmico Global" 
+              action={<Search className="size-6 text-gold" />}
+            />
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-[#151A15] border border-white/10 p-8 shadow-xl relative overflow-hidden group cursor-default">
-                <div className="absolute top-0 left-0 w-1 h-full bg-[#D4AF37] opacity-40 group-hover:opacity-100 transition-opacity" />
-                <FolderOpen className="size-7 text-[#D4AF37] mb-5" strokeWidth={1.5} />
-                <h4 className="font-serif font-bold text-white text-[22px] mb-2">Padrão de Exclusão</h4>
-                <p className="font-sans text-white/50 text-[16px] leading-relaxed">
-                  Detectado em 3 linhagens ativas atualmente no acervo da clínica.
-                </p>
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+              <ArchiveCard variant="solid" elevation="sm" className="hover-lift cursor-default border-l-4 border-l-gold">
+                <ArchiveCardContent className="p-8">
+                  <FolderOpen className="size-7 text-gold mb-5" strokeWidth={1.5} />
+                  <ArchiveCardTitle className="text-xl mb-2">Padrão de Exclusão</ArchiveCardTitle>
+                  <ArchiveCardDescription>
+                    Detectado em 3 linhagens ativas atualmente no acervo da clínica.
+                  </ArchiveCardDescription>
+                </ArchiveCardContent>
+              </ArchiveCard>
               
-              <div className="bg-[#151A15] border border-white/10 p-8 shadow-xl relative overflow-hidden group cursor-default">
-                <div className="absolute top-0 left-0 w-1 h-full bg-[#D4AF37] opacity-40 group-hover:opacity-100 transition-opacity" />
-                <BookOpen className="size-7 text-[#D4AF37] mb-5" strokeWidth={1.5} />
-                <h4 className="font-serif font-bold text-white text-[22px] mb-2">Repetição de Nomes</h4>
-                <p className="font-sans text-white/50 text-[16px] leading-relaxed">
-                  Conflitos de identidade identificados em 2 casos recentes abertos.
-                </p>
-              </div>
+              <ArchiveCard variant="solid" elevation="sm" className="hover-lift cursor-default border-l-4 border-l-gold">
+                <ArchiveCardContent className="p-8">
+                  <BookOpen className="size-7 text-gold mb-5" strokeWidth={1.5} />
+                  <ArchiveCardTitle className="text-xl mb-2">Repetição de Nomes</ArchiveCardTitle>
+                  <ArchiveCardDescription>
+                    Conflitos de identidade identificados em 2 casos recentes abertos.
+                  </ArchiveCardDescription>
+                </ArchiveCardContent>
+              </ArchiveCard>
             </div>
           </section>
 
           <section>
-            <div className="flex items-center gap-3 mb-8">
-              <History className="size-6 text-[#D4AF37]" />
-              <h3 className="font-serif text-[28px] font-bold text-white">Registro do Acervo</h3>
-            </div>
+            <SectionTitle 
+              title="Registro do Acervo" 
+              action={<History className="size-6 text-gold" />}
+            />
 
-            <div className="bg-[#151A15] border border-white/10 p-8 shadow-xl">
-              <div className="space-y-10 relative before:absolute before:inset-0 before:ml-[1.4rem] before:-translate-x-px before:h-full before:w-px before:bg-white/10">
+            <ArchiveCard variant="solid" elevation="none" className="mt-8 bg-transparent border-none">
+              <div className="space-y-10 relative before:absolute before:inset-0 before:ml-[1.4rem] before:-translate-x-px before:h-full before:w-px before:bg-border">
                 
                 <div>
-                  <h4 className="font-sans text-[16px] font-bold uppercase tracking-widest text-[#D4AF37] bg-[#151A15] inline-block pr-5 relative z-10 mb-8">
+                  <StatusBadge status="neutral" variant="outline" className="bg-archive relative z-10 mb-6">
                     Hoje
-                  </h4>
+                  </StatusBadge>
                   <div className="space-y-8">
-                    <FeedItem time="09:10" action="Anexou documento a" target="Dossiê 001" icon={<FileText className="size-5 text-white/80" />} />
-                    <FeedItem time="10:45" action="Sessão registrada" target="Dossiê 042" icon={<Stamp className="size-5 text-white/80" />} />
+                    <FeedItem time="09:10" action="Anexou documento a" target="Dossiê 001" icon={<FileText className="size-5 text-muted-foreground" />} />
+                    <FeedItem time="10:45" action="Sessão registrada" target="Dossiê 042" icon={<Stamp className="size-5 text-muted-foreground" />} />
                   </div>
                 </div>
 
                 <div className="pt-2">
-                  <h4 className="font-sans text-[16px] font-bold uppercase tracking-widest text-[#D4AF37] bg-[#151A15] inline-block pr-5 relative z-10 mb-8">
+                  <StatusBadge status="neutral" variant="outline" className="bg-archive relative z-10 mb-6">
                     Ontem
-                  </h4>
+                  </StatusBadge>
                   <div className="space-y-8">
-                    <FeedItem time="18:42" action="Gerou hipótese sistêmica para" target="Dossiê 023" icon={<Search className="size-5 text-white/80" />} />
+                    <FeedItem time="18:42" action="Gerou hipótese sistêmica para" target="Dossiê 023" icon={<Search className="size-5 text-muted-foreground" />} />
                   </div>
                 </div>
 
               </div>
-            </div>
+            </ArchiveCard>
           </section>
 
         </div>
@@ -274,61 +249,64 @@ function AppHome() {
         <div className="lg:col-span-4 space-y-16">
           
           <section>
-            <div className="flex items-center gap-3 mb-8">
-              <AlertCircle className="size-6 text-[#D4AF37]" />
-              <h3 className="font-serif text-[28px] font-bold text-white">Fichas Soltas</h3>
-            </div>
+            <SectionTitle 
+              title="Fichas Soltas" 
+              action={<AlertCircle className="size-6 text-gold" />}
+            />
             
-            <div className="space-y-6 flex flex-col items-center sm:items-stretch">
+            <div className="space-y-6 mt-8 flex flex-col items-center sm:items-stretch">
               {/* Cartões como bilhetes físicos */}
-              <div className="bg-[#FAF8F5] p-6 shadow-xl rotate-[2deg] relative border border-white/10 w-full max-w-sm self-center sm:self-auto hover:rotate-[0deg] hover:z-10 transition-transform">
+              <ArchiveCard variant="paper" elevation="md" className="rotate-[2deg] hover:rotate-[0deg] hover:z-10 transition-transform w-full max-w-sm self-center sm:self-auto p-6 bg-[#FAF8F5] dark:bg-[#1C201B]">
                 <Tape rotate="4deg" w="45px" top="-10px" left="50%" />
-                <p className="font-serif text-[#8B3A3A] font-bold text-[22px] mb-1">Árvore sem avós</p>
-                <p className="font-serif italic text-white text-[16px]">Sinalizado no Dossiê A</p>
-              </div>
-              <div className="bg-[#FAF8F5] p-6 shadow-xl rotate-[-2deg] relative border border-white/10 w-full max-w-sm self-center sm:self-auto hover:rotate-[0deg] hover:z-10 transition-transform">
+                <p className="font-serif text-clinical-critical font-bold text-xl mb-1">Árvore sem avós</p>
+                <p className="font-serif italic text-muted-foreground text-md">Sinalizado no Dossiê A</p>
+              </ArchiveCard>
+              
+              <ArchiveCard variant="paper" elevation="md" className="rotate-[-2deg] hover:rotate-[0deg] hover:z-10 transition-transform w-full max-w-sm self-center sm:self-auto p-6 bg-[#FAF8F5] dark:bg-[#1C201B]">
                 <Tape rotate="-3deg" w="45px" top="-10px" left="50%" />
-                <p className="font-serif text-[#B8860B] font-bold text-[22px] mb-1">Prontuário incompleto</p>
-                <p className="font-serif italic text-white text-[16px]">Sinalizado no Dossiê B</p>
-              </div>
+                <p className="font-serif text-clinical-warning font-bold text-xl mb-1">Prontuário incompleto</p>
+                <p className="font-serif italic text-muted-foreground text-md">Sinalizado no Dossiê B</p>
+              </ArchiveCard>
             </div>
           </section>
 
           <section>
-            <div className="flex items-center gap-3 mb-8">
-              <History className="size-6 text-[#D4AF37]" />
-              <h3 className="font-serif text-[28px] font-bold text-white">Agenda do Dia</h3>
-            </div>
+            <SectionTitle 
+              title="Agenda do Dia" 
+              action={<History className="size-6 text-gold" />}
+            />
 
-            <div className="bg-[#151A15] border border-white/10 p-8 shadow-xl space-y-8">
-              <AgendaItem time="09:00" name="Dossiê 015" state="past" />
-              <AgendaItem time="14:30" name={lastActiveClient?.preferred_name || "Dossiê 042"} state="current" />
-              <AgendaItem time="17:00" name="Dossiê 088" state="future" />
-            </div>
+            <ClinicalPanel accent="forest" className="mt-8">
+              <ClinicalPanelContent className="space-y-8 p-8">
+                <AgendaItem time="09:00" name="Dossiê 015" state="past" />
+                <AgendaItem time="14:30" name={lastActiveClient?.preferred_name || "Dossiê 042"} state="current" />
+                <AgendaItem time="17:00" name="Dossiê 088" state="future" />
+              </ClinicalPanelContent>
+            </ClinicalPanel>
           </section>
 
         </div>
-      </main>
+      </div>
     </div>
   );
 }
 
 // ────────────────────────────────────────────────────────────
-// COMPONENTES AUXILIARES
+// COMPONENTES AUXILIARES LOCAIS
 // ────────────────────────────────────────────────────────────
 
 function FeedItem({ time, action, target, icon }: { time: string, action: string, target: string, icon: React.ReactNode }) {
   return (
     <div className="flex items-start gap-5 relative z-10">
-      <div className="mt-1 bg-[#1A201A] border border-white/20 p-2.5 rounded-full shadow-md">
+      <div className="mt-1 bg-card border border-border p-2.5 rounded-full shadow-sm">
         {icon}
       </div>
       <div>
         <div className="flex flex-col xl:flex-row xl:items-baseline gap-1 xl:gap-2">
-          <span className="font-sans text-[16px] text-white/70">{action}</span>
-          <span className="font-serif font-bold text-white text-[20px] border-b border-[#D4AF37]/40 pb-0.5">{target}</span>
+          <span className="font-sans text-[16px] text-muted-foreground">{action}</span>
+          <span className="font-serif font-bold text-primary text-[20px] border-b border-gold/40 pb-0.5">{target}</span>
         </div>
-        <span className="font-sans text-[16px] text-white/40 mt-1.5 block">{time}</span>
+        <span className="font-sans text-[16px] text-muted-foreground/60 mt-1.5 block">{time}</span>
       </div>
     </div>
   );
@@ -341,17 +319,17 @@ function AgendaItem({ time, name, state }: { time: string, name: string, state: 
   return (
     <div className={`flex items-start gap-5 ${isPast ? 'opacity-40' : 'opacity-100'}`}>
       <div className="flex flex-col items-center mt-2">
-        <div className={`w-3.5 h-3.5 rounded-full ${isCurrent ? 'bg-[#D4AF37] shadow-[0_0_15px_rgba(212,175,55,0.8)]' : 'border border-white/30 bg-transparent'}`} />
+        <div className={`w-3.5 h-3.5 rounded-full ${isCurrent ? 'bg-gold shadow-[0_0_15px_rgba(212,175,55,0.8)]' : 'border border-border bg-transparent'}`} />
       </div>
-      <div className="flex-1 pb-6 border-b border-white/10 last:border-0 last:pb-0">
+      <div className="flex-1 pb-6 border-b border-border/50 last:border-0 last:pb-0">
         <div className="flex justify-between items-baseline">
-          <span className={`font-serif font-bold text-[24px] ${isCurrent ? 'text-[#D4AF37]' : 'text-white'}`}>{name}</span>
-          <span className="font-sans text-[16px] font-bold text-white/50 tracking-wider">{time}</span>
+          <span className={`font-serif font-bold text-2xl ${isCurrent ? 'text-gold' : 'text-primary'}`}>{name}</span>
+          <span className="font-sans text-[16px] font-bold text-muted-foreground tracking-wider">{time}</span>
         </div>
         {isCurrent && (
-          <span className="font-sans text-[16px] font-bold uppercase tracking-widest text-[#D4AF37] mt-1.5 block">
+          <StatusBadge status="warning" variant="soft" className="mt-2">
             Em Sessão
-          </span>
+          </StatusBadge>
         )}
       </div>
     </div>

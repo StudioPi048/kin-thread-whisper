@@ -723,7 +723,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
                           if (confirm(`Remover ${r.full_name || "pessoa sem nome"}?`))
                             removePerson.mutate(r.id);
                         }}
-                        className="rounded p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                        className="rounded h-11 w-11 flex items-center justify-center text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                         title="Remover"
                       >
                         <Trash2 className="size-4" />

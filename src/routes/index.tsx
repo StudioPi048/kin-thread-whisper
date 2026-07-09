@@ -70,7 +70,7 @@ export default function LandingPage() {
             <Link
               to="/auth"
               style={{ fontFamily: "'Outfit', sans-serif", fontSize: "15px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#3B2F2F", textDecoration: "none" }}
-              onMouseEnter={e => (e.currentTarget.style.color = "#D4AF37")}
+              onMouseEnter={e => (e.currentTarget.style.color = "#846221")}
               onMouseLeave={e => (e.currentTarget.style.color = "#3B2F2F")}
             >
               Entrar
@@ -212,8 +212,8 @@ export default function LandingPage() {
               {ETHICS.map(({ Icon, n, text }) => (
                 <div key={n} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                   <Icon style={{ width: "28px", height: "28px", color: "rgba(212,175,55,0.65)", flexShrink: 0 }} strokeWidth={1} />
-                  <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: "15px", fontWeight: 700, letterSpacing: "0.18em", color: "rgba(255,255,255,0.4)" }}>{n}</span>
-                  <p style={{ fontSize: "18px", lineHeight: 1.7, color: "rgba(255,255,255,0.7)", margin: 0 }}>{text}</p>
+                  <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: "15px", fontWeight: 700, letterSpacing: "0.18em", color: "rgba(255,255,255,0.65)" }}>{n}</span>
+                  <p style={{ fontSize: "18px", lineHeight: 1.7, color: "rgba(255,255,255,0.85)", margin: 0 }}>{text}</p>
                 </div>
               ))}
             </div>
@@ -236,13 +236,13 @@ export default function LandingPage() {
 
           {/* Coluna Texto */}
           <div style={{ flex: "0 0 26%", minWidth: 0 }}>
-            <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: "16px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#8B7355", marginBottom: "18px" }}>
+            <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: "16px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#6B563D", marginBottom: "18px" }}>
               A leveza de uma
             </p>
             <h2 style={{ fontSize: "clamp(2.1rem, 3.5vw, 2.9rem)", fontWeight: 700, color: "#2B2018", lineHeight: 1.1, marginBottom: "20px" }}>
               Gestão <br />
               impecável <br />
-              para{" "}<em style={{ fontStyle: "italic", color: "#C8A640" }}>histórias</em><br />
+              para{" "}<em style={{ fontStyle: "italic", color: "#846221" }}>histórias</em><br />
               complexas.
             </h2>
             <p style={{ fontSize: "20px", lineHeight: 1.8, color: "#5A4A3A", marginBottom: "32px", maxWidth: "260px" }}>
@@ -299,7 +299,7 @@ export default function LandingPage() {
                       borderBottom: i < FEATURES.length - 1 ? "1px solid rgba(224,213,197,0.7)" : "none",
                     }}
                   >
-                    <Icon style={{ width: "20px", height: "20px", color: "#C8A640", flexShrink: 0 }} strokeWidth={1.2} />
+                    <Icon style={{ width: "20px", height: "20px", color: "#846221", flexShrink: 0 }} strokeWidth={1.2} />
                     <span style={{ fontSize: "19px", color: "#3B2F2F", lineHeight: 1.4 }}>{label}</span>
                   </div>
                 ))}
@@ -413,7 +413,7 @@ export default function LandingPage() {
                 não pode ser esquecido —<br />
                 apenas repetido."
               </p>
-              <footer style={{ fontSize: "17px", fontStyle: "italic", color: "rgba(59,47,31,0.5)", textAlign: "center" }}>
+              <footer style={{ fontSize: "17px", fontStyle: "italic", color: "rgba(59,47,31,0.7)", textAlign: "center" }}>
                 — inspirado em Françoise Dolto
               </footer>
             </blockquote>
@@ -467,7 +467,7 @@ export default function LandingPage() {
             <LizLogoLockup className="invert scale-75 origin-left" />
             <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: "12px", fontWeight: 600, letterSpacing: "0.1em", color: "white" }}>— Plataforma de Psicogenealogia</span>
           </div>
-          <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: "12px", fontWeight: 600, letterSpacing: "0.1em", color: "rgba(255,255,255,0.35)", textTransform: "uppercase" }}>
+          <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: "12px", fontWeight: 600, letterSpacing: "0.1em", color: "rgba(255,255,255,0.65)", textTransform: "uppercase" }}>
             Beta fechado · 2026
           </span>
         </div>

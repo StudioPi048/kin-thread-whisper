@@ -637,7 +637,7 @@ function AiBriefing({ briefing }: { briefing: BriefingDTO }) {
           </div>
           <button
             disabled
-            title="Em breve — IA generativa"
+            title="Em breve — IA generativa" aria-label="Em breve — IA generativa"
             className="rounded-full bg-white/10 border border-white/15 px-3 py-1.5 text-[10.5px] font-bold uppercase tracking-wider text-white/60 cursor-not-allowed flex items-center gap-1.5"
           >
             <Wand2 className="size-3" /> Gerar briefing IA

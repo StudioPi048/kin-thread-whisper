@@ -127,9 +127,9 @@ function AuthenticatedLayout() {
 
   return (
     <div className="flex min-h-screen bg-[#1B211A] text-white selection:bg-gold-soft relative overflow-x-hidden">
-      {/* ── SIDEBAR (Lombada de Couro do Fichário) ───────────────────── */}
+      {/* ── SIDEBAR (Estante de Arquivo Histórico) ───────────────────── */}
       <aside
-        className={`relative hidden shrink-0 flex-col bg-sidebar text-white shadow-[10px_0_30px_-10px_rgba(0,0,0,0.5)] z-40 transition-all duration-300 md:flex overflow-hidden ${isCollapsed ? "w-[72px]" : "w-72"}`}
+        className={`relative hidden shrink-0 flex-col bg-sidebar text-white shadow-[10px_0_30px_-10px_rgba(0,0,0,0.5)] z-40 transition-all duration-300 md:flex overflow-hidden ${isCollapsed ? "w-[72px]" : "w-[280px]"}`}
       >
         {/* Vetor Dinâmico: Árvore subindo na sidebar */}
         <div className="pointer-events-none absolute bottom-0 left-0 w-full h-[60%] opacity-[0.04] z-0 flex items-end">
@@ -158,8 +158,8 @@ function AuthenticatedLayout() {
           )}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="shrink-0 rounded p-1.5 text-white/50 hover:bg-white/10 hover:text-gold transition-colors"
-            title={isCollapsed ? "Expandir menu" : "Recolher menu"}
+            className="shrink-0 rounded h-11 w-11 flex items-center justify-center text-white/50 hover:bg-white/10 hover:text-gold transition-colors"
+            title={isCollapsed ? "Expandir menu" : "Recolher menu"} aria-label={isCollapsed ? "Expandir menu" : "Recolher menu"}
           >
             {isCollapsed ? (
               <PanelLeftOpen className="size-5" />
@@ -193,7 +193,7 @@ function AuthenticatedLayout() {
             <button
               onClick={() => setIsSearchOpen(true)}
               className="flex h-10 w-10 items-center justify-center rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition-colors mb-2 cursor-pointer"
-              title="Busca rápida (⌘K)"
+              title="Busca rápida (⌘K)" aria-label="Busca rápida"
             >
               <Search className="size-5" />
             </button>
@@ -231,26 +231,26 @@ function AuthenticatedLayout() {
           })}
         </nav>
 
-        {/* Usuário */}
-        <div className="relative z-10 border-t-2 border-sidebar-border p-4 shrink-0">
+        {/* Ficha Catalográfica do Usuário (Rodapé) */}
+        <div className="relative z-10 border-t-2 border-sidebar-border p-4 shrink-0 bg-sidebar-primary/20">
           <div
-            className={`flex items-center gap-3 rounded-md bg-sidebar-accent/60 ${isCollapsed ? "justify-center p-2" : "p-3"}`}
+            className={`flex items-center gap-3 rounded-md bg-archive-doc/10 border border-white/10 shadow-dossier ${isCollapsed ? "justify-center p-2" : "p-3"}`}
           >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-forest text-[16px] font-bold text-white">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-forest-mid text-[16px] font-bold text-white shadow-lifted border border-white/20">
               {initials || "?"}
             </div>
             {!isCollapsed && (
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[16px] font-bold text-sidebar-foreground">
+                <p className="truncate text-[15px] font-bold text-white font-serif uppercase tracking-widest leading-tight">
                   {displayName}
                 </p>
-                <p className="truncate text-[16px] text-sidebar-foreground/45">{user.email}</p>
+                <p className="truncate text-[13px] text-white/50 font-serif italic">Psicogenealogista</p>
               </div>
             )}
             <button
               onClick={handleSignOut}
-              className={`shrink-0 rounded p-1.5 text-sidebar-foreground/40 transition-colors hover:bg-sidebar-border hover:text-sidebar-foreground ${isCollapsed && "hidden"}`}
-              title="Sair da plataforma"
+              className={`shrink-0 rounded h-11 w-11 flex items-center justify-center text-sidebar-foreground/40 transition-colors hover:bg-destructive/20 hover:text-red-400 ${isCollapsed && "hidden"}`}
+              title="Sair da plataforma" aria-label="Sair da plataforma"
             >
               <LogOut className="size-4" />
             </button>
@@ -259,7 +259,7 @@ function AuthenticatedLayout() {
             <button
               onClick={handleSignOut}
               className="w-full mt-2 flex justify-center rounded p-2 text-sidebar-foreground/40 transition-colors hover:bg-sidebar-border hover:text-red-400"
-              title="Sair da plataforma"
+              title="Sair da plataforma" aria-label="Sair da plataforma"
             >
               <LogOut className="size-4" />
             </button>
@@ -299,7 +299,7 @@ function AuthenticatedLayout() {
           </button>
         </header>
 
-        <main className="relative z-10 flex-1 overflow-y-auto pb-16 md:pb-0">
+        <main className="relative z-10 flex-1 overflow-y-auto pb-16 md:pb-0 container-archive py-10">
           <Outlet />
         </main>
 

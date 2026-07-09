@@ -245,17 +245,17 @@ function AgendaPage() {
   return (
     <div className="min-h-[calc(100vh-64px)] bg-transparent">
       {/* Breadcrumb */}
-      <div className="border-b border-white/10 bg-[#151A15] px-6 py-3 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-[16px] font-bold uppercase tracking-[0.25em] text-white/40">
+      <div className="border-b border-border bg-card px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-[16px] font-bold uppercase tracking-[0.25em] text-muted-foreground">
           Instituto Liz / Centro de Comando Clínico
         </p>
         {query.isLoading && (
-          <span className="text-[16px] font-bold uppercase tracking-widest text-[#D4AF37] flex items-center gap-1.5 whitespace-nowrap">
+          <span className="text-[16px] font-bold uppercase tracking-widest text-gold flex items-center gap-1.5 whitespace-nowrap">
             <Loader2 className="size-3 animate-spin" /> Carregando agenda
           </span>
         )}
         {!query.isLoading && isFallback && (
-          <span className="max-w-full text-[16px] font-bold uppercase tracking-[0.15em] text-[#D4AF37] bg-[#D4AF37]/10 border border-[#D4AF37]/30 px-3 py-1 rounded-none whitespace-nowrap">
+          <span className="max-w-full text-[16px] font-bold uppercase tracking-[0.15em] text-gold bg-gold/10 border border-gold/30 px-3 py-1 rounded-none whitespace-nowrap">
             Dados de exemplo — nenhuma sessão hoje
           </span>
         )}
@@ -270,12 +270,12 @@ function AgendaPage() {
       <ContextualHeader stats={stats} />
 
       {/* Quick Actions Bar */}
-      <div className="container-liz -mt-6 relative z-10">
-        <div className="border border-white/10 bg-[#151A15] shadow-[0_10px_40px_-20px_rgba(0,0,0,0.5)] px-4 py-3 flex flex-wrap gap-2">
+      <div className="container-archive -mt-6 relative z-10">
+        <div className="border border-border bg-card shadow-[0_10px_40px_-20px_rgba(0,0,0,0.5)] px-4 py-3 flex flex-wrap gap-2">
           {QUICK_ACTIONS.map((a) => (
             <button
               key={a.label}
-              className="flex items-center gap-2 px-3 py-2 text-[16px] font-bold uppercase tracking-widest text-white/60 hover:text-[#D4AF37] hover:bg-white/5 transition-colors cursor-pointer"
+              className="flex items-center gap-2 px-3 py-2 text-[16px] font-bold uppercase tracking-widest text-muted-foreground hover:text-gold hover:bg-muted transition-colors cursor-pointer"
             >
               <a.icon className="size-4" />
               {a.label}
@@ -285,7 +285,7 @@ function AgendaPage() {
       </div>
 
       {/* Three-column workspace */}
-      <div className="container-liz py-6 grid gap-5 2xl:grid-cols-[260px_minmax(0,1fr)_320px] lg:grid-cols-[240px_minmax(0,1fr)] grid-cols-1">
+      <div className="container-archive py-6 grid gap-5 2xl:grid-cols-[260px_minmax(0,1fr)_320px] lg:grid-cols-[240px_minmax(0,1fr)] grid-cols-1">
         {/* LEFT — Timeline */}
         <TimelineColumn
           timeline={timeline}
@@ -316,10 +316,10 @@ function AgendaPage() {
 
 function EmptyCenter() {
   return (
-    <div className="bg-[#151A15] border border-white/10 shadow-xl p-16 text-center flex flex-col justify-center items-center">
-      <CalendarIcon className="size-12 text-white/20 mx-auto mb-6" strokeWidth={1} />
-      <h3 className="font-serif text-[28px] font-bold text-white mb-3">Nenhuma sessão agendada</h3>
-      <p className="font-serif text-[18px] text-white/50 italic max-w-md mx-auto">
+    <div className="bg-card border border-border shadow-xl p-16 text-center flex flex-col justify-center items-center">
+      <CalendarIcon className="size-12 text-muted-foreground/30 mx-auto mb-6" strokeWidth={1} />
+      <h3 className="font-serif text-[28px] font-bold text-foreground mb-3">Nenhuma sessão agendada</h3>
+      <p className="font-serif text-[18px] text-muted-foreground italic max-w-md mx-auto">
         Quando você criar uma nova sessão, ela aparecerá aqui com todos os detalhes clínicos.
       </p>
     </div>
@@ -332,32 +332,32 @@ function EmptyCenter() {
 function ContextualHeader({ stats }: { stats: { total: number; primeira: number; retornos: number; aniversarios: number; ocupado: string; livre: string } }) {
   return (
     <div className="relative overflow-hidden">
-      <div className="pt-16 pb-20 relative border-b border-white/10">
-        <div className="container-liz relative">
+      <div className="pt-16 pb-20 relative border-b border-border">
+        <div className="container-archive relative">
           <div className="flex flex-wrap items-start justify-between gap-6">
             <div className="max-w-2xl">
-              <div className="flex items-center gap-2 text-[#D4AF37]">
+              <div className="flex items-center gap-2 text-gold">
                 <Sunrise className="size-5" />
                 <p className="font-sans text-[16px] font-bold uppercase tracking-[0.35em]">
                   Segunda-feira · 6 de julho
                 </p>
               </div>
-              <h1 className="mt-4 font-serif text-5xl md:text-6xl font-bold text-white leading-tight">
-                Bom dia, <span className="text-[#D4AF37] italic">Letícia</span>.
+              <h1 className="mt-4 font-serif text-5xl md:text-6xl font-bold text-foreground leading-tight">
+                Bom dia, <span className="text-gold italic">Letícia</span>.
               </h1>
-              <p className="mt-4 text-[19px] font-serif text-white/60 italic leading-relaxed">
-                Hoje você acompanhará <strong className="text-white not-italic">3 histórias familiares</strong>.
-                Um dos pacientes está em <strong className="text-[#D4AF37] not-italic">data ativa de Síndrome de Aniversário</strong> —
+              <p className="mt-4 text-[19px] font-serif text-muted-foreground italic leading-relaxed">
+                Hoje você acompanhará <strong className="text-foreground not-italic">3 histórias familiares</strong>.
+                Um dos pacientes está em <strong className="text-gold not-italic">data ativa de Síndrome de Aniversário</strong> —
                 preparei hipóteses, protocolos e leituras para você.
               </p>
             </div>
 
             <div className="flex flex-col items-end gap-4">
-              <div className="flex items-center gap-2 text-[16px] text-white/60 font-sans font-bold uppercase tracking-widest">
-                <Sparkles className="size-4 text-[#D4AF37]" />
+              <div className="flex items-center gap-2 text-[16px] text-muted-foreground font-sans font-bold uppercase tracking-widest">
+                <Sparkles className="size-4 text-gold" />
                 IA Clínica ativa
               </div>
-              <button className="bg-[#D4AF37] hover:bg-[#E8C65A] text-[#1B211A] font-sans font-bold uppercase tracking-widest text-[16px] px-8 py-4 flex items-center gap-3 transition-colors cursor-pointer shadow-[0_4px_15px_rgba(212,175,55,0.2)]">
+              <button className="bg-gold hover:bg-[#E8C65A] text-archive-doc font-sans font-bold uppercase tracking-widest text-[16px] px-8 py-4 flex items-center gap-3 transition-colors cursor-pointer shadow-[0_4px_15px_rgba(212,175,55,0.2)]">
                 <Play className="size-4 fill-current" />
                 Iniciar dia
               </button>
@@ -381,17 +381,17 @@ function ContextualHeader({ stats }: { stats: { total: number; primeira: number;
 
 function HeaderStat({ icon: Icon, label, value, accent }: { icon: typeof Clock; label: string; value: string; accent: "forest" | "gold" | "rose" }) {
   const accentClass = {
-    forest: "text-white/60",
-    gold: "text-[#D4AF37]",
+    forest: "text-muted-foreground",
+    gold: "text-gold",
     rose: "text-rose-400",
   }[accent];
   return (
-    <div className="bg-[#151A15] border border-white/10 p-5 shadow-lg">
+    <div className="bg-card border border-border p-5 shadow-lg">
       <div className={`flex items-center gap-2 ${accentClass}`}>
         <Icon className="size-4" />
         <p className="font-sans text-[16px] font-bold uppercase tracking-[0.15em]">{label}</p>
       </div>
-      <p className="mt-3 font-serif text-3xl font-bold text-white">{value}</p>
+      <p className="mt-3 font-serif text-3xl font-bold text-foreground">{value}</p>
     </div>
   );
 }
@@ -412,15 +412,15 @@ function TimelineColumn({
   return (
     <aside className="space-y-4">
       <div className="flex items-center justify-between px-1">
-        <h2 className="font-sans text-[16px] font-bold uppercase tracking-[0.2em] text-[#D4AF37] flex items-center gap-2">
+        <h2 className="font-sans text-[16px] font-bold uppercase tracking-[0.2em] text-gold flex items-center gap-2">
           <CalendarIcon className="size-4" /> Timeline do dia
         </h2>
-        <span className="font-sans text-[16px] font-bold uppercase tracking-widest text-white/40">Hoje</span>
+        <span className="font-sans text-[16px] font-bold uppercase tracking-widest text-muted-foreground">Hoje</span>
       </div>
 
-      <div className="relative bg-[#151A15] border border-white/10 shadow-xl p-6">
+      <div className="relative bg-card border border-border shadow-xl p-6">
         {/* vertical line */}
-        <div className="absolute left-[46px] top-8 bottom-8 w-px bg-white/10" />
+        <div className="absolute left-[46px] top-8 bottom-8 w-px bg-muted/70" />
 
         <ul className="space-y-3 relative">
           {timeline.map((item, i) => {
@@ -438,21 +438,21 @@ function TimelineColumn({
                   className={`group w-full text-left flex items-start gap-4 p-3 transition-colors ${
                     isSession
                       ? isSelected
-                        ? "bg-white/10 border-l-2 border-[#D4AF37]"
-                        : "hover:bg-white/5 cursor-pointer border-l-2 border-transparent"
+                        ? "bg-muted/70 border-l-2 border-gold"
+                        : "hover:bg-muted cursor-pointer border-l-2 border-transparent"
                       : "opacity-60 border-l-2 border-transparent"
                   }`}
                 >
-                  <span className="font-sans text-[16px] font-bold tabular-nums text-white/50 w-10 pt-1 shrink-0">
+                  <span className="font-sans text-[16px] font-bold tabular-nums text-muted-foreground w-10 pt-1 shrink-0">
                     {item.time}
                   </span>
                   <span
                     className={`size-7 flex items-center justify-center shrink-0 border ${
                       isSession
                         ? isSelected
-                          ? "bg-[#D4AF37] text-[#1B211A] border-[#D4AF37]"
-                          : "bg-[#1B211A] border-white/20 text-[#D4AF37]"
-                        : "bg-transparent border-white/10 text-white/30"
+                          ? "bg-gold text-archive-doc border-gold"
+                          : "bg-archive-doc border-white/20 text-gold"
+                        : "bg-transparent border-border text-muted-foreground/50"
                     }`}
                   >
                     <Icon className="size-3.5" />
@@ -461,14 +461,14 @@ function TimelineColumn({
                     <p
                       className={`font-serif text-[18px] leading-tight truncate ${
                         isSession
-                          ? "font-bold text-white"
-                          : "italic text-white/50"
+                          ? "font-bold text-foreground"
+                          : "italic text-muted-foreground"
                       }`}
                     >
                       {item.label}
                     </p>
                     {isSession && session && (
-                      <p className="font-sans text-[16px] font-bold uppercase tracking-widest text-white/40 mt-1 truncate">
+                      <p className="font-sans text-[16px] font-bold uppercase tracking-widest text-muted-foreground mt-1 truncate">
                         {session.type}
                         {session.sessionNumber ? ` · ${session.sessionNumber}` : ""}
                       </p>
@@ -482,8 +482,8 @@ function TimelineColumn({
       </div>
 
       {/* Mini weekly overview */}
-      <div className="bg-[#151A15] border border-white/10 shadow-xl p-5">
-        <p className="font-sans text-[16px] font-bold uppercase tracking-[0.2em] text-[#D4AF37] mb-4">
+      <div className="bg-card border border-border shadow-xl p-5">
+        <p className="font-sans text-[16px] font-bold uppercase tracking-[0.2em] text-gold mb-4">
           Semana
         </p>
         <div className="grid grid-cols-5 gap-2">
@@ -497,14 +497,14 @@ function TimelineColumn({
             <div
               key={d.n}
               className={`aspect-square flex flex-col items-center justify-center text-center ${
-                d.active ? "bg-[#D4AF37] text-[#1B211A]" : "bg-white/5 text-white/60"
+                d.active ? "bg-gold text-archive-doc" : "bg-muted text-muted-foreground"
               }`}
             >
               <span className="font-sans text-[16px] font-bold uppercase tracking-widest opacity-80">{d.d}</span>
               <span className="font-serif text-xl font-bold">{d.n}</span>
               <div className="flex gap-1 mt-1">
                 {Array.from({ length: d.load }).map((_, i) => (
-                  <span key={i} className={`size-1.5 rounded-none ${d.active ? "bg-[#1B211A]/50" : "bg-white/20"}`} />
+                  <span key={i} className={`size-1.5 rounded-none ${d.active ? "bg-archive-doc/50" : "bg-white/20"}`} />
                 ))}
               </div>
             </div>
@@ -540,15 +540,15 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
   }[session.accent];
 
   const initialsBg = {
-    mahogany: "bg-mahogany text-white",
-    forest: "bg-forest text-white",
+    mahogany: "bg-mahogany text-foreground",
+    forest: "bg-forest text-foreground",
     gold: "bg-gold text-primary",
   }[session.accent];
 
   return (
     <main className="space-y-6">
       {/* Rich patient card */}
-      <article className="relative bg-[#151A15] shadow-[0_16px_40px_rgba(0,0,0,0.4)] overflow-hidden">
+      <article className="relative bg-card shadow-[0_16px_40px_rgba(0,0,0,0.4)] overflow-hidden">
         {/* accent bar */}
         <div className={`absolute left-0 top-0 bottom-0 w-2 ${accentBar}`} />
 
@@ -556,13 +556,13 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
           {/* Top row: time + status */}
           <div className="flex items-center justify-between flex-wrap gap-3 mb-8">
             <div className="flex items-center gap-3">
-              <div className="flex items-baseline gap-1 font-serif text-[#1B211A]">
+              <div className="flex items-baseline gap-1 font-serif text-archive-doc">
                 <span className="text-4xl font-bold tabular-nums">{session.start}</span>
                 <span className="text-black/40 text-lg">—</span>
                 <span className="text-3xl font-semibold text-black/60 tabular-nums">{session.end}</span>
               </div>
               {session.status === "next" && (
-                <Badge className="bg-rose-700 text-white border-transparent text-[16px] font-black uppercase tracking-widest px-3 py-1.5 rounded-none animate-pulse">
+                <Badge className="bg-rose-700 text-foreground border-transparent text-[16px] font-black uppercase tracking-widest px-3 py-1.5 rounded-none animate-pulse">
                   Próxima sessão
                 </Badge>
               )}
@@ -589,13 +589,13 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
               className={`size-24 md:size-28 rounded-none ${initialsBg} flex items-center justify-center font-serif text-3xl md:text-4xl font-bold shadow-lg shrink-0 relative`}
             >
               {session.initials}
-              <div className="absolute -bottom-1 -right-1 size-7 rounded-full bg-[#151A15] border-4 border-[#FAFAF8] flex items-center justify-center">
+              <div className="absolute -bottom-1 -right-1 size-7 rounded-full bg-card border-4 border-[#FAFAF8] flex items-center justify-center">
                 <CircleDot className="size-4 text-rose-700" />
               </div>
             </div>
 
             <div className="flex-1 min-w-0">
-              <h2 className="font-serif text-3xl md:text-4xl font-bold text-[#1B211A] leading-tight">
+              <h2 className="font-serif text-3xl md:text-4xl font-bold text-archive-doc leading-tight">
                 {session.patient}
               </h2>
               <p className="mt-2 font-sans text-[16px] text-black/60 font-bold uppercase tracking-widest">
@@ -607,11 +607,11 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
               </p>
 
               {session.lastEvolution && (
-                <div className="mt-5 bg-[#151A15] border border-black/5 p-5">
+                <div className="mt-5 bg-card border border-black/5 p-5">
                   <p className="font-sans text-[16px] font-bold uppercase tracking-[0.2em] text-black/40 mb-2">
                     Última evolução
                   </p>
-                  <p className="font-serif italic text-[17px] text-[#1B211A] leading-relaxed">
+                  <p className="font-serif italic text-[17px] text-archive-doc leading-relaxed">
                     "{session.lastEvolution}"
                   </p>
                 </div>
@@ -623,7 +623,7 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
           <div className="mt-8 border border-rose-700/20 bg-rose-50/50 p-5 relative overflow-hidden">
             <div className="flex items-center gap-2 mb-4 relative z-10">
               <div className="size-8 bg-rose-700 flex items-center justify-center">
-                <Sparkles className="size-4 text-white" />
+                <Sparkles className="size-4 text-foreground" />
               </div>
               <p className="font-sans text-[16px] font-bold uppercase tracking-[0.2em] text-rose-700">
                 IA Clínica detectou
@@ -635,7 +635,7 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
             {mergedAlerts.length > 0 ? (
               <ul className="space-y-3 relative z-10">
                 {mergedAlerts.map((alert, i) => (
-                  <li key={i} className="flex items-start gap-3 font-serif text-[16px] text-[#1B211A] leading-relaxed italic">
+                  <li key={i} className="flex items-start gap-3 font-serif text-[16px] text-archive-doc leading-relaxed italic">
                     <AlertTriangle className="size-4 text-rose-700 shrink-0 mt-1" />
                     <span>{alert}</span>
                   </li>
@@ -660,7 +660,7 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
               {session.protocols.map((p) => (
                 <button
                   key={p}
-                  className="group inline-flex items-center gap-2 border border-black/10 bg-white px-4 py-2 font-sans text-[16px] font-bold text-[#1B211A] hover:bg-[#151A15] hover:border-black/30 transition-all shadow-sm"
+                  className="group inline-flex items-center gap-2 border border-black/10 bg-white px-4 py-2 font-sans text-[16px] font-bold text-archive-doc hover:bg-card hover:border-black/30 transition-all shadow-sm"
                 >
                   <ClipboardList className="size-4" />
                   {p}
@@ -672,11 +672,11 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
 
           {/* Actions */}
           <div className="mt-10 flex flex-wrap gap-3 pt-6 border-t border-black/10">
-            <button className="bg-rose-700 hover:bg-rose-800 text-white font-sans font-bold uppercase tracking-widest text-[16px] px-8 py-4 flex items-center gap-3 transition-colors cursor-pointer shadow-lg">
+            <button className="bg-rose-700 hover:bg-rose-800 text-foreground font-sans font-bold uppercase tracking-widest text-[16px] px-8 py-4 flex items-center gap-3 transition-colors cursor-pointer shadow-lg">
               <Play className="size-4 fill-current" />
               Iniciar sala
             </button>
-            <button className="border-2 border-[#1B211A] text-[#1B211A] hover:bg-[#1B211A] hover:text-white font-sans font-bold uppercase tracking-widest text-[16px] px-8 py-4 flex items-center gap-3 transition-colors cursor-pointer shadow-lg">
+            <button className="border-2 border-[#1B211A] text-archive-doc hover:bg-archive-doc hover:text-foreground font-sans font-bold uppercase tracking-widest text-[16px] px-8 py-4 flex items-center gap-3 transition-colors cursor-pointer shadow-lg">
               <Wand2 className="size-4" />
               Preparar sessão
             </button>
@@ -684,7 +684,7 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
               <Link
                 to="/app/paciente/$id"
                 params={{ id: session.clientId }}
-                className="inline-flex items-center justify-center gap-2 px-6 h-[52px] font-sans text-[16px] font-bold uppercase tracking-widest text-black/60 hover:text-[#1B211A] hover:bg-black/5 transition-colors"
+                className="inline-flex items-center justify-center gap-2 px-6 h-[52px] font-sans text-[16px] font-bold uppercase tracking-widest text-black/60 hover:text-archive-doc hover:bg-black/5 transition-colors"
               >
                 <FileText className="size-4" />
                 Abrir Dossiê
@@ -697,7 +697,7 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
             )}
             <Link
               to="/app/genossociogramas"
-              className="inline-flex items-center justify-center gap-2 px-6 h-[52px] font-sans text-[16px] font-bold uppercase tracking-widest text-black/60 hover:text-[#1B211A] hover:bg-black/5 transition-colors"
+              className="inline-flex items-center justify-center gap-2 px-6 h-[52px] font-sans text-[16px] font-bold uppercase tracking-widest text-black/60 hover:text-archive-doc hover:bg-black/5 transition-colors"
             >
               <GitBranch className="size-4" />
               Genograma
@@ -724,7 +724,7 @@ function MiniTreePreview({ session, genogram, isLoading }: { session: Session; g
   const totalPersons = genogram?.totalPersons ?? 0;
 
   return (
-    <div className="bg-[#151A15] shadow-[0_16px_40px_rgba(0,0,0,0.4)] p-6">
+    <div className="bg-card shadow-[0_16px_40px_rgba(0,0,0,0.4)] p-6">
       <div className="flex items-center justify-between mb-4">
         <p className="font-sans text-[16px] font-bold uppercase tracking-[0.2em] text-black/40 flex items-center gap-2">
           <GitBranch className="size-4" /> Genograma Atual
@@ -753,13 +753,13 @@ function MiniTreePreview({ session, genogram, isLoading }: { session: Session; g
 
       <div className="mt-5 flex items-center justify-between text-[16px] font-sans font-bold uppercase tracking-widest">
         <div className="flex items-center gap-4 text-black/50">
-          <span className="flex items-center gap-1.5"><Circle className="size-2 fill-[#D4AF37] text-[#D4AF37]" /> Paciente</span>
-          <span className="flex items-center gap-1.5"><Circle className="size-2 fill-[#1B211A] text-[#1B211A]" /> Masc.</span>
+          <span className="flex items-center gap-1.5"><Circle className="size-2 fill-[#D4AF37] text-gold" /> Paciente</span>
+          <span className="flex items-center gap-1.5"><Circle className="size-2 fill-[#1B211A] text-archive-doc" /> Masc.</span>
           <span className="flex items-center gap-1.5"><Circle className="size-2 fill-emerald-800 text-emerald-800" /> Fem.</span>
         </div>
         <Link
           to="/app/genossociogramas"
-          className="text-[#1B211A] font-bold hover:underline flex items-center gap-1"
+          className="text-archive-doc font-bold hover:underline flex items-center gap-1"
         >
           Expandir <ChevronRight className="size-4" />
         </Link>
@@ -855,24 +855,24 @@ function UpcomingList({ currentId, sessions }: { currentId: string; sessions: Se
   const others = sessions.filter((s) => s.id !== currentId);
 
   return (
-    <div className="bg-[#151A15] border border-white/10 shadow-xl p-6">
-      <p className="font-sans text-[16px] font-bold uppercase tracking-[0.2em] text-[#D4AF37] mb-5 flex items-center gap-2">
+    <div className="bg-card border border-border shadow-xl p-6">
+      <p className="font-sans text-[16px] font-bold uppercase tracking-[0.2em] text-gold mb-5 flex items-center gap-2">
         <Clock className="size-4" /> Próximas hoje
       </p>
       <ul className="space-y-4">
         {others.map((s) => {
           const inner = (
             <>
-              <div className="size-12 bg-white/5 border border-white/10 flex items-center justify-center font-serif font-bold text-white text-lg shrink-0">
+              <div className="size-12 bg-muted border border-border flex items-center justify-center font-serif font-bold text-foreground text-lg shrink-0">
                 {s.initials}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-serif text-[17px] font-bold text-white truncate">{s.patient}</p>
-                <p className="font-sans text-[16px] font-bold uppercase tracking-widest text-white/40 mt-1">
+                <p className="font-serif text-[17px] font-bold text-foreground truncate">{s.patient}</p>
+                <p className="font-sans text-[16px] font-bold uppercase tracking-widest text-muted-foreground mt-1">
                   {s.start} · {s.type}
                 </p>
               </div>
-              <ChevronRight className="size-4 text-white/30" />
+              <ChevronRight className="size-4 text-muted-foreground/50" />
             </>
           );
           return (
@@ -881,7 +881,7 @@ function UpcomingList({ currentId, sessions }: { currentId: string; sessions: Se
                 <Link
                   to="/app/paciente/$id"
                   params={{ id: s.clientId }}
-                  className="flex items-center gap-4 py-2 hover:bg-white/5 transition-colors -mx-2 px-2"
+                  className="flex items-center gap-4 py-2 hover:bg-muted transition-colors -mx-2 px-2"
                 >
                   {inner}
                 </Link>
@@ -913,38 +913,38 @@ function RightPanel({
   return (
     <aside className="grid gap-5 md:grid-cols-2 2xl:grid-cols-1">
       {/* IA Clínica briefing */}
-      <div className="bg-[#151A15] border-t-2 border-[#D4AF37] p-6 shadow-xl relative overflow-hidden">
+      <div className="bg-card border-t-2 border-gold p-6 shadow-xl relative overflow-hidden">
         <div
           aria-hidden
-          className="absolute -top-10 -right-10 size-40 rounded-full bg-[#D4AF37]/10 blur-3xl pointer-events-none"
+          className="absolute -top-10 -right-10 size-40 rounded-full bg-gold/10 blur-3xl pointer-events-none"
         />
         <div className="relative">
           <div className="flex items-center gap-3 mb-5">
-            <div className="size-10 bg-white/5 flex items-center justify-center">
-              <Brain className="size-5 text-[#D4AF37]" />
+            <div className="size-10 bg-muted flex items-center justify-center">
+              <Brain className="size-5 text-gold" />
             </div>
             <div>
-              <p className="font-sans text-[16px] font-black uppercase tracking-[0.2em] text-[#D4AF37]">IA Clínica</p>
-              <p className="font-sans text-[16px] font-bold uppercase tracking-widest text-white/50">Briefing do dia</p>
+              <p className="font-sans text-[16px] font-black uppercase tracking-[0.2em] text-gold">IA Clínica</p>
+              <p className="font-sans text-[16px] font-bold uppercase tracking-widest text-muted-foreground">Briefing do dia</p>
             </div>
           </div>
 
-          <p className="font-serif text-[17px] leading-relaxed text-white/80 italic">
-            Preparei <strong className="text-[#D4AF37] not-italic">3 hipóteses clínicas</strong> para o atendimento das 09h com {session.patient.split(" ")[0]}. Há uma possível <strong className="text-[#D4AF37] not-italic">coincidência de datas</strong> a investigar com a linhagem paterna.
+          <p className="font-serif text-[17px] leading-relaxed text-foreground/80 italic">
+            Preparei <strong className="text-gold not-italic">3 hipóteses clínicas</strong> para o atendimento das 09h com {session.patient.split(" ")[0]}. Há uma possível <strong className="text-gold not-italic">coincidência de datas</strong> a investigar com a linhagem paterna.
           </p>
 
-          <div className="mt-5 pt-5 border-t border-white/10 space-y-3 font-sans text-[16px] text-white/70">
+          <div className="mt-5 pt-5 border-t border-border space-y-3 font-sans text-[16px] text-muted-foreground">
             <div className="flex items-start gap-3">
-              <CheckCircle2 className="size-4 text-[#D4AF37] shrink-0 mt-0.5" />
-              <span>Sugerido: <em className="text-white">Mapa de Segredos</em> antes da 4ª sessão.</span>
+              <CheckCircle2 className="size-4 text-gold shrink-0 mt-0.5" />
+              <span>Sugerido: <em className="text-foreground">Mapa de Segredos</em> antes da 4ª sessão.</span>
             </div>
             <div className="flex items-start gap-3">
-              <CheckCircle2 className="size-4 text-[#D4AF37] shrink-0 mt-0.5" />
+              <CheckCircle2 className="size-4 text-gold shrink-0 mt-0.5" />
               <span>2 clientes sem próxima sessão agendada.</span>
             </div>
           </div>
 
-          <button className="mt-6 w-full border border-white/10 bg-white/5 hover:bg-white/10 text-white font-sans font-bold uppercase tracking-widest text-[16px] py-3 flex items-center justify-center gap-2 transition-colors">
+          <button className="mt-6 w-full border border-border bg-muted hover:bg-muted/70 text-foreground font-sans font-bold uppercase tracking-widest text-[16px] py-3 flex items-center justify-center gap-2 transition-colors">
             <Wand2 className="size-4" />
             Ver briefing completo
           </button>
@@ -952,8 +952,8 @@ function RightPanel({
       </div>
 
       {/* Pendências */}
-      <div className="bg-[#151A15] shadow-[0_16px_40px_rgba(0,0,0,0.4)] p-6">
-        <p className="font-sans text-[16px] font-bold uppercase tracking-[0.2em] text-[#1B211A]/60 mb-5 flex items-center gap-2">
+      <div className="bg-card shadow-[0_16px_40px_rgba(0,0,0,0.4)] p-6">
+        <p className="font-sans text-[16px] font-bold uppercase tracking-[0.2em] text-archive-doc/60 mb-5 flex items-center gap-2">
           <ClipboardList className="size-4" /> Pendências
         </p>
         <ul className="space-y-3">
@@ -966,7 +966,7 @@ function RightPanel({
           <ul className="mt-5 pt-5 border-t border-black/10 space-y-2">
             {orphanClients.slice(0, 3).map((c) => (
               <li key={c.id} className="flex items-center justify-between font-serif text-[16px]">
-                <span className="text-[#1B211A] font-medium truncate">{c.name}</span>
+                <span className="text-archive-doc font-medium truncate">{c.name}</span>
                 <button className="text-rose-700 font-sans font-bold text-[16px] uppercase tracking-widest hover:underline">Agendar</button>
               </li>
             ))}
@@ -976,43 +976,43 @@ function RightPanel({
 
 
       {/* Receita + tempo */}
-      <div className="bg-[#151A15] border border-white/10 shadow-xl p-6">
-        <p className="font-sans text-[16px] font-bold uppercase tracking-[0.2em] text-[#D4AF37] mb-5">
+      <div className="bg-card border border-border shadow-xl p-6">
+        <p className="font-sans text-[16px] font-bold uppercase tracking-[0.2em] text-gold mb-5">
           Balanço do dia
         </p>
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <span className="flex items-center gap-3 font-sans text-[16px] text-white/60 font-bold uppercase tracking-widest">
+            <span className="flex items-center gap-3 font-sans text-[16px] text-muted-foreground font-bold uppercase tracking-widest">
               <DollarSign className="size-4 text-emerald-500" /> Receita prevista
             </span>
-            <span className="font-serif text-2xl font-bold text-white">R$ 1.350</span>
+            <span className="font-serif text-2xl font-bold text-foreground">R$ 1.350</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="flex items-center gap-3 font-sans text-[16px] text-white/60 font-bold uppercase tracking-widest">
+            <span className="flex items-center gap-3 font-sans text-[16px] text-muted-foreground font-bold uppercase tracking-widest">
               <Clock className="size-4 text-rose-400" /> Ocupado
             </span>
-            <span className="font-sans text-[16px] font-bold text-white tabular-nums">4h 00m</span>
+            <span className="font-sans text-[16px] font-bold text-foreground tabular-nums">4h 00m</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="flex items-center gap-3 font-sans text-[16px] text-white/60 font-bold uppercase tracking-widest">
+            <span className="flex items-center gap-3 font-sans text-[16px] text-muted-foreground font-bold uppercase tracking-widest">
               <Leaf className="size-4 text-emerald-500" /> Tempo livre
             </span>
-            <span className="font-sans text-[16px] font-bold text-[#D4AF37] tabular-nums">2h 40m</span>
+            <span className="font-sans text-[16px] font-bold text-gold tabular-nums">2h 40m</span>
           </div>
-          <div className="h-2 bg-white/5 overflow-hidden mt-3">
-            <div className="h-full w-[60%] bg-[#D4AF37]" />
+          <div className="h-2 bg-muted overflow-hidden mt-3">
+            <div className="h-full w-[60%] bg-gold" />
           </div>
         </div>
       </div>
 
       {/* Notas rápidas */}
-      <div className="bg-[#151A15] border border-black/5 shadow-lg p-6">
-        <p className="font-sans text-[16px] font-bold uppercase tracking-[0.2em] text-[#1B211A]/50 mb-4 flex items-center gap-2">
+      <div className="bg-card border border-black/5 shadow-lg p-6">
+        <p className="font-sans text-[16px] font-bold uppercase tracking-[0.2em] text-archive-doc/50 mb-4 flex items-center gap-2">
           <FileText className="size-4" /> Nota rápida
         </p>
         <textarea
           placeholder="Uma linha, uma intuição, uma hipótese..."
-          className="w-full bg-transparent font-serif text-[17px] text-[#1B211A] placeholder:text-[#1B211A]/30 italic resize-none focus:outline-none min-h-[80px]"
+          className="w-full bg-transparent font-serif text-[17px] text-archive-doc placeholder:text-archive-doc/30 italic resize-none focus:outline-none min-h-[80px]"
         />
       </div>
     </aside>
@@ -1022,13 +1022,13 @@ function RightPanel({
 function PendingRow({ label, count, tone }: { label: string; count: number; tone: "rose" | "gold" | "forest" | "mahogany" }) {
   const toneClass = {
     rose: "bg-rose-100 text-rose-800",
-    gold: "bg-[#D4AF37]/20 text-[#1B211A]",
+    gold: "bg-gold/20 text-archive-doc",
     forest: "bg-emerald-100 text-emerald-800",
-    mahogany: "bg-[#1B211A]/10 text-[#1B211A]",
+    mahogany: "bg-archive-doc/10 text-archive-doc",
   }[tone];
   return (
     <li className="flex items-center justify-between group cursor-pointer hover:bg-black/5 -mx-3 px-3 py-2 transition-colors">
-      <span className="font-sans text-[16px] font-bold uppercase tracking-widest text-[#1B211A]/80">{label}</span>
+      <span className="font-sans text-[16px] font-bold uppercase tracking-widest text-archive-doc/80">{label}</span>
       <span className={`inline-flex items-center justify-center min-w-[32px] h-7 px-2 font-sans text-[16px] font-black ${toneClass}`}>
         {count}
       </span>
