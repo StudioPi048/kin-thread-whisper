@@ -70,7 +70,7 @@ function GenogramsPage() {
       <header className="pt-24 pb-12 relative z-10 border-b border-white/10">
         <div className="container-liz flex flex-wrap items-end justify-between gap-6">
           <div>
-            <p className="font-sans text-[14px] font-bold tracking-[0.2em] text-[#D4AF37] uppercase mb-4 flex items-center gap-2">
+            <p className="font-sans text-[16px] font-bold tracking-[0.2em] text-[#D4AF37] uppercase mb-4 flex items-center gap-2">
               <TreePine className="size-5" /> Prancheta de Árvores
             </p>
             <h1 className="font-serif text-5xl md:text-6xl font-bold tracking-tight text-white leading-tight">
@@ -96,7 +96,7 @@ function GenogramsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar por cliente na prancheta..."
-              className="w-full bg-[#1B211A] border border-white/20 text-white placeholder:text-white/30 pl-11 pr-4 py-3 font-sans text-[14px] focus:outline-none focus:border-[#D4AF37] transition-colors"
+              className="w-full bg-[#1B211A] border border-white/20 text-white placeholder:text-white/30 pl-11 pr-4 py-3 font-sans text-[16px] focus:outline-none focus:border-[#D4AF37] transition-colors"
             />
           </div>
         </div>
@@ -142,22 +142,22 @@ function GenogramsPage() {
                   }}
                 >
                   {/* Cartão Estilo Prancheta/Papel Vegetal */}
-                  <div className={`relative bg-[#F5F0E8] p-8 shadow-[0_16px_40px_rgba(0,0,0,0.4)] border border-[#E6DDD0] text-[#3B2F2F] group transition-transform duration-300 hover:rotate-0 hover:z-10 ${i % 2 === 0 ? 'rotate-[1deg]' : 'rotate-[-1deg]'}`}>
+                  <div className={`relative bg-[#151A15] p-8 shadow-[0_16px_40px_rgba(0,0,0,0.4)] border border-white/10 text-white group transition-transform duration-300 hover:rotate-0 hover:z-10 ${i % 2 === 0 ? 'rotate-[1deg]' : 'rotate-[-1deg]'}`}>
                     
                     <Tape rotate={i % 2 === 0 ? '2deg' : '-2deg'} w="50px" top="-10px" left="50%" />
                     
-                    <div className="flex justify-between items-start gap-4 mb-6 border-b border-[#E6DDD0] pb-4">
-                      <h3 className="font-serif font-bold text-[24px] text-[#2B2018] leading-tight truncate">
+                    <div className="flex justify-between items-start gap-4 mb-6 border-b border-white/10 pb-4">
+                      <h3 className="font-serif font-bold text-[24px] text-white leading-tight truncate">
                         {c.preferred_name || c.full_name}
                       </h3>
-                      <span className="shrink-0 bg-[#3B2F2F] text-[#F5F0E8] px-2 py-1 font-sans text-[10px] font-bold uppercase tracking-widest">
+                      <span className="shrink-0 bg-[#1B211A] text-[#F5F0E8] px-2 py-1 font-sans text-[16px] font-bold uppercase tracking-widest">
                         74% Map
                       </span>
                     </div>
 
-                    <div className="space-y-3 font-serif italic text-[#5A4A3A] text-[16px] mb-8">
+                    <div className="space-y-3 font-serif italic text-white text-[16px] mb-8">
                       <div className="flex items-center gap-3">
-                        <GitBranch className="size-4 text-[#8B7355] shrink-0" />
+                        <GitBranch className="size-4 text-white shrink-0" />
                         <span>3 gerações traçadas na prancheta</span>
                       </div>
                       <div className="flex items-center gap-3">
@@ -166,8 +166,8 @@ function GenogramsPage() {
                       </div>
                     </div>
 
-                    <div className="mt-6 pt-4 border-t border-dashed border-[#E6DDD0] flex justify-between items-center">
-                      <span className="text-[11px] text-[#8B7355] font-sans font-bold uppercase tracking-widest flex items-center gap-1.5">
+                    <div className="mt-6 pt-4 border-t border-dashed border-white/10 flex justify-between items-center">
+                      <span className="text-[16px] text-white font-sans font-bold uppercase tracking-widest flex items-center gap-1.5">
                         <CheckCircle2 className="size-3.5" />
                         Consistente
                       </span>
@@ -176,7 +176,7 @@ function GenogramsPage() {
                         to="/app/clientes/$clientId"
                         params={{ clientId: c.id }}
                         search={{ tab: "genograma" }}
-                        className="font-sans font-bold text-[11px] uppercase tracking-widest text-[#2B2018] hover:text-[#D4AF37] flex items-center gap-1 transition-colors"
+                        className="font-sans font-bold text-[16px] uppercase tracking-widest text-white hover:text-[#D4AF37] flex items-center gap-1 transition-colors"
                       >
                         Abrir Mapa <ArrowRight className="size-3.5" />
                       </Link>

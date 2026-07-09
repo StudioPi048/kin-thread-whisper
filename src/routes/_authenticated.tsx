@@ -126,7 +126,7 @@ function AuthenticatedLayout() {
     .join("");
 
   return (
-    <div className="flex min-h-screen bg-[#F8F4EE] texture-paper">
+    <div className="flex min-h-screen bg-[#1B211A] text-white selection:bg-gold-soft relative overflow-x-hidden">
       {/* ── SIDEBAR (Lombada de Couro do Fichário) ───────────────────── */}
       <aside
         className={`relative hidden shrink-0 flex-col bg-sidebar text-white shadow-[10px_0_30px_-10px_rgba(0,0,0,0.5)] z-40 transition-all duration-300 md:flex overflow-hidden ${isCollapsed ? "w-[72px]" : "w-72"}`}
@@ -171,18 +171,18 @@ function AuthenticatedLayout() {
 
         {/* Busca Rápida */}
         <div className={`relative z-10 px-6 pt-6 pb-2 ${isCollapsed ? "opacity-0 hidden" : "opacity-100"}`}>
-          <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-sidebar-foreground/40 mb-3">
+          <p className="text-[16px] font-bold uppercase tracking-[0.35em] text-sidebar-foreground/40 mb-3">
             Menu Principal
           </p>
           <button
             onClick={() => setIsSearchOpen(true)}
-            className="flex items-center justify-between w-full rounded-lg border border-sidebar-foreground/10 bg-sidebar-foreground/5 hover:bg-sidebar-foreground/10 transition-colors px-3 py-2 text-[13px] text-sidebar-foreground/50 font-medium cursor-pointer"
+            className="flex items-center justify-between w-full rounded-lg border border-sidebar-foreground/10 bg-sidebar-foreground/5 hover:bg-sidebar-foreground/10 transition-colors px-3 py-2 text-[16px] text-sidebar-foreground/50 font-medium cursor-pointer"
           >
             <span className="flex items-center gap-2">
               <Search className="size-4" />
               <span>Busca rápida...</span>
             </span>
-            <kbd className="hidden sm:inline-block rounded bg-sidebar-foreground/10 border border-sidebar-foreground/10 px-1.5 py-0.5 text-[10px] font-mono">
+            <kbd className="hidden sm:inline-block rounded bg-sidebar-foreground/10 border border-sidebar-foreground/10 px-1.5 py-0.5 text-[16px] font-mono">
               ⌘K
             </kbd>
           </button>
@@ -213,7 +213,7 @@ function AuthenticatedLayout() {
                 to={item.to as "/app"}
                 title={isCollapsed ? item.label : undefined}
                 className={
-                  `group relative flex items-center gap-4 py-3.5 text-[14px] font-semibold transition-all duration-150 overflow-hidden rounded-md mx-2 ${isCollapsed ? "px-0 justify-center" : "px-4"} ` +
+                  `group relative flex items-center gap-4 py-3.5 text-[16px] font-semibold transition-all duration-150 overflow-hidden rounded-md mx-2 ${isCollapsed ? "px-0 justify-center" : "px-4"} ` +
                   (active
                     ? "text-sidebar-primary-foreground bg-sidebar-primary before:absolute before:-left-2 before:top-2 before:bottom-2 before:w-1 before:rounded-r-full before:bg-sidebar-ring"
                     : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-foreground/5")
@@ -236,15 +236,15 @@ function AuthenticatedLayout() {
           <div
             className={`flex items-center gap-3 rounded-md bg-sidebar-accent/60 ${isCollapsed ? "justify-center p-2" : "p-3"}`}
           >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-forest text-[12px] font-bold text-white">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-forest text-[16px] font-bold text-white">
               {initials || "?"}
             </div>
             {!isCollapsed && (
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[13px] font-bold text-sidebar-foreground">
+                <p className="truncate text-[16px] font-bold text-sidebar-foreground">
                   {displayName}
                 </p>
-                <p className="truncate text-[11px] text-sidebar-foreground/45">{user.email}</p>
+                <p className="truncate text-[16px] text-sidebar-foreground/45">{user.email}</p>
               </div>
             )}
             <button
@@ -348,14 +348,14 @@ function AuthenticatedLayout() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Busque clientes por nome, sintoma, trauma, profissão, tag..."
-                className="w-full h-12 pl-11 pr-4 bg-transparent border-b border-border text-[14px] text-primary focus:outline-none focus:ring-0 placeholder:text-muted-foreground/60"
+                className="w-full h-12 pl-11 pr-4 bg-transparent border-b border-border text-[16px] text-primary focus:outline-none focus:ring-0 placeholder:text-muted-foreground/60"
               />
             </div>
 
             {/* Results */}
             <div className="flex-1 overflow-y-auto p-2 space-y-1 min-h-[100px] max-h-[300px]">
               {searchResults.length === 0 ? (
-                <div className="p-8 text-center text-[13px] text-muted-foreground font-serif">
+                <div className="p-8 text-center text-[16px] text-muted-foreground font-serif">
                   Nenhum cliente correspondente encontrado.
                 </div>
               ) : (
@@ -367,11 +367,11 @@ function AuthenticatedLayout() {
                     onClick={() => setIsSearchOpen(false)}
                     className="flex flex-col p-3.5 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer text-left"
                   >
-                    <span className="font-serif font-bold text-primary text-[15px]">
+                    <span className="font-serif font-bold text-primary text-[16px]">
                       {c.preferred_name || c.full_name}
                     </span>
                     {c.presenting_complaint && (
-                      <span className="text-[12px] text-muted-foreground truncate font-serif mt-0.5">
+                      <span className="text-[16px] text-muted-foreground truncate font-serif mt-0.5">
                         {c.presenting_complaint}
                       </span>
                     )}
@@ -393,7 +393,7 @@ function AuthenticatedLayout() {
             </div>
 
             {/* Footer tips */}
-            <div className="shrink-0 border-t border-border px-4 py-2.5 flex items-center justify-between text-[11px] text-muted-foreground bg-slate-50">
+            <div className="shrink-0 border-t border-border px-4 py-2.5 flex items-center justify-between text-[16px] text-muted-foreground bg-slate-50">
               <span>Navegue com o mouse e clique para abrir dossiê</span>
               <kbd className="rounded bg-white border border-border px-1.5 py-0.5 font-mono text-[9px]">
                 Esc para fechar

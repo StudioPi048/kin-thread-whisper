@@ -62,7 +62,7 @@ function TimelinesPage() {
       <header className="pt-24 pb-12 relative z-10 border-b border-white/10">
         <div className="container-liz flex flex-wrap items-end justify-between gap-6">
           <div>
-            <p className="font-sans text-[14px] font-bold tracking-[0.2em] text-[#D4AF37] uppercase mb-4 flex items-center gap-2">
+            <p className="font-sans text-[16px] font-bold tracking-[0.2em] text-[#D4AF37] uppercase mb-4 flex items-center gap-2">
               <History className="size-5" /> Arquivo de Acontecimentos
             </p>
             <h1 className="font-serif text-5xl md:text-6xl font-bold tracking-tight text-white leading-tight">
@@ -88,7 +88,7 @@ function TimelinesPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar por cliente no arquivo cronológico..."
-              className="w-full bg-[#1B211A] border border-white/20 text-white placeholder:text-white/30 pl-11 pr-4 py-3 font-sans text-[14px] focus:outline-none focus:border-[#D4AF37] transition-colors"
+              className="w-full bg-[#1B211A] border border-white/20 text-white placeholder:text-white/30 pl-11 pr-4 py-3 font-sans text-[16px] focus:outline-none focus:border-[#D4AF37] transition-colors"
             />
           </div>
         </div>
@@ -134,7 +134,7 @@ function TimelinesPage() {
                   }}
                 >
                   {/* Cartão de Ficha Pautada Antiga */}
-                  <div className={`relative bg-[#FAFAF8] p-8 shadow-[0_16px_40px_rgba(0,0,0,0.4)] border border-[#E6DDD0] text-[#3B2F2F] group transition-transform duration-300 hover:rotate-0 hover:z-10 ${i % 2 === 0 ? 'rotate-[-1deg]' : 'rotate-[1deg]'}`}>
+                  <div className={`relative bg-[#151A15] p-8 shadow-[0_16px_40px_rgba(0,0,0,0.4)] border border-white/10 text-white group transition-transform duration-300 hover:rotate-0 hover:z-10 ${i % 2 === 0 ? 'rotate-[-1deg]' : 'rotate-[1deg]'}`}>
                     
                     {/* Textura de Pautas */}
                     <div className="absolute inset-0 pointer-events-none opacity-20" style={{ backgroundImage: "linear-gradient(#E6DDD0 1px, transparent 1px)", backgroundSize: "100% 24px", backgroundPosition: "0 40px" }} />
@@ -142,17 +142,17 @@ function TimelinesPage() {
                     <Tape rotate={i % 2 === 0 ? '-2deg' : '2deg'} w="45px" top="-10px" left="50%" />
                     
                     <div className="relative flex justify-between items-start gap-4 mb-6 border-b-2 border-[#8B3A3A] pb-4">
-                      <h3 className="font-serif font-bold text-[24px] text-[#2B2018] leading-tight truncate">
+                      <h3 className="font-serif font-bold text-[24px] text-white leading-tight truncate">
                         {c.preferred_name || c.full_name}
                       </h3>
-                      <span className="shrink-0 bg-[#E6DDD0] text-[#3B2F2F] px-2 py-1 font-sans text-[10px] font-bold uppercase tracking-widest border border-[#C5B39A]">
+                      <span className="shrink-0 bg-[#E6DDD0] text-white px-2 py-1 font-sans text-[16px] font-bold uppercase tracking-widest border border-white/10">
                         60% Vol
                       </span>
                     </div>
 
-                    <div className="relative space-y-3 font-serif italic text-[#5A4A3A] text-[16px] mb-8 bg-white/50 p-4 border border-[#E6DDD0]/50 backdrop-blur-sm">
+                    <div className="relative space-y-3 font-serif italic text-white text-[16px] mb-8 bg-white/50 p-4 border border-white/10/50 backdrop-blur-sm">
                       <div className="flex items-center gap-3">
-                        <Calendar className="size-4 text-[#8B7355] shrink-0" />
+                        <Calendar className="size-4 text-white shrink-0" />
                         <span>12 marcos históricos registrados</span>
                       </div>
                       <div className="flex items-center gap-3">
@@ -161,8 +161,8 @@ function TimelinesPage() {
                       </div>
                     </div>
 
-                    <div className="relative mt-6 pt-4 border-t border-[#E6DDD0] flex justify-between items-center">
-                      <span className="text-[11px] text-[#8B3A3A] font-sans font-bold uppercase tracking-widest flex items-center gap-1.5">
+                    <div className="relative mt-6 pt-4 border-t border-white/10 flex justify-between items-center">
+                      <span className="text-[16px] text-[#8B3A3A] font-sans font-bold uppercase tracking-widest flex items-center gap-1.5">
                         <AlertCircle className="size-3.5" />
                         Pendente revisão
                       </span>
@@ -171,9 +171,9 @@ function TimelinesPage() {
                         to="/app/clientes/$clientId"
                         params={{ clientId: c.id }}
                         search={{ tab: "linha-do-tempo" }}
-                        className="font-sans font-bold text-[11px] uppercase tracking-widest text-[#2B2018] hover:text-[#D4AF37] flex items-center gap-1 transition-colors"
+                        className="font-sans font-bold text-[16px] uppercase tracking-widest text-white hover:text-[#D4AF37] flex items-center gap-1 transition-colors"
                       >
-                        Abrir Arquivo Cronológico <ArrowRight className="size-3.5" />
+                        Abrir Arquivo <ArrowRight className="size-3.5" />
                       </Link>
                     </div>
 

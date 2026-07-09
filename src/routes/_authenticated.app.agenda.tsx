@@ -245,22 +245,22 @@ function AgendaPage() {
   return (
     <div className="min-h-[calc(100vh-64px)] bg-transparent">
       {/* Breadcrumb */}
-      <div className="border-b border-border/60 bg-white/60 backdrop-blur-sm px-6 py-3 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-muted-foreground">
+      <div className="border-b border-white/10 bg-[#151A15] px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-[16px] font-bold uppercase tracking-[0.25em] text-white/40">
           Instituto Liz / Centro de Comando Clínico
         </p>
         {query.isLoading && (
-          <span className="text-[10px] font-bold uppercase tracking-widest text-mahogany/70 flex items-center gap-1.5 whitespace-nowrap">
+          <span className="text-[16px] font-bold uppercase tracking-widest text-[#D4AF37] flex items-center gap-1.5 whitespace-nowrap">
             <Loader2 className="size-3 animate-spin" /> Carregando agenda
           </span>
         )}
         {!query.isLoading && isFallback && (
-          <span className="max-w-full text-[10px] font-bold uppercase tracking-[0.15em] text-amber-800 bg-amber-100 border border-amber-300 px-2.5 py-0.5 rounded-full whitespace-nowrap">
+          <span className="max-w-full text-[16px] font-bold uppercase tracking-[0.15em] text-[#D4AF37] bg-[#D4AF37]/10 border border-[#D4AF37]/30 px-3 py-1 rounded-none whitespace-nowrap">
             Dados de exemplo — nenhuma sessão hoje
           </span>
         )}
         {query.isError && (
-          <span className="max-w-full text-[10px] font-bold uppercase tracking-[0.15em] text-rose-800 bg-rose-100 border border-rose-300 px-2.5 py-0.5 rounded-full whitespace-nowrap">
+          <span className="max-w-full text-[16px] font-bold uppercase tracking-[0.15em] text-rose-500 bg-rose-500/10 border border-rose-500/30 px-3 py-1 rounded-none whitespace-nowrap">
             Falha ao carregar — exibindo exemplo
           </span>
         )}
@@ -271,13 +271,13 @@ function AgendaPage() {
 
       {/* Quick Actions Bar */}
       <div className="container-liz -mt-6 relative z-10">
-        <div className="rounded-2xl border border-border/50 bg-white/90 backdrop-blur shadow-[0_10px_40px_-20px_rgba(60,20,80,0.25)] px-3 py-2 flex flex-wrap gap-1">
+        <div className="border border-white/10 bg-[#151A15] shadow-[0_10px_40px_-20px_rgba(0,0,0,0.5)] px-4 py-3 flex flex-wrap gap-2">
           {QUICK_ACTIONS.map((a) => (
             <button
               key={a.label}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl text-[12px] font-semibold text-primary/80 hover:text-mahogany hover:bg-forest-soft/50 transition-colors"
+              className="flex items-center gap-2 px-3 py-2 text-[16px] font-bold uppercase tracking-widest text-white/60 hover:text-[#D4AF37] hover:bg-white/5 transition-colors cursor-pointer"
             >
-              <a.icon className="size-3.5" />
+              <a.icon className="size-4" />
               {a.label}
             </button>
           ))}
@@ -316,10 +316,10 @@ function AgendaPage() {
 
 function EmptyCenter() {
   return (
-    <div className="rounded-3xl bg-white/70 border border-dashed border-border/60 p-12 text-center">
-      <CalendarIcon className="size-10 text-muted-foreground/40 mx-auto mb-3" />
-      <h3 className="font-serif text-xl font-bold text-primary">Nenhuma sessão agendada</h3>
-      <p className="text-sm text-muted-foreground mt-2">
+    <div className="bg-[#151A15] border border-white/10 shadow-xl p-16 text-center flex flex-col justify-center items-center">
+      <CalendarIcon className="size-12 text-white/20 mx-auto mb-6" strokeWidth={1} />
+      <h3 className="font-serif text-[28px] font-bold text-white mb-3">Nenhuma sessão agendada</h3>
+      <p className="font-serif text-[18px] text-white/50 italic max-w-md mx-auto">
         Quando você criar uma nova sessão, ela aparecerá aqui com todos os detalhes clínicos.
       </p>
     </div>
@@ -332,45 +332,35 @@ function EmptyCenter() {
 function ContextualHeader({ stats }: { stats: { total: number; primeira: number; retornos: number; aniversarios: number; ocupado: string; livre: string } }) {
   return (
     <div className="relative overflow-hidden">
-      <div className="block-mahogany px-6 pt-10 pb-16 relative">
-        {/* subtle grain */}
-        <div
-          aria-hidden
-          className="absolute inset-0 opacity-[0.05] mix-blend-overlay pointer-events-none"
-          style={{
-            backgroundImage:
-              "radial-gradient(circle at 1px 1px, white 1px, transparent 0)",
-            backgroundSize: "3px 3px",
-          }}
-        />
+      <div className="pt-16 pb-20 relative border-b border-white/10">
         <div className="container-liz relative">
           <div className="flex flex-wrap items-start justify-between gap-6">
             <div className="max-w-2xl">
-              <div className="flex items-center gap-2 text-gold">
-                <Sunrise className="size-4" />
-                <p className="text-[11px] font-bold uppercase tracking-[0.35em]">
+              <div className="flex items-center gap-2 text-[#D4AF37]">
+                <Sunrise className="size-5" />
+                <p className="font-sans text-[16px] font-bold uppercase tracking-[0.35em]">
                   Segunda-feira · 6 de julho
                 </p>
               </div>
-              <h1 className="mt-3 font-serif text-4xl md:text-5xl font-bold text-archive leading-tight">
-                Bom dia, <span className="text-gold">Letícia</span>.
+              <h1 className="mt-4 font-serif text-5xl md:text-6xl font-bold text-white leading-tight">
+                Bom dia, <span className="text-[#D4AF37] italic">Letícia</span>.
               </h1>
-              <p className="mt-3 text-[15px] text-archive/70 leading-relaxed">
-                Hoje você acompanhará <strong className="text-archive">3 histórias familiares</strong>.
-                Um dos pacientes está em <strong className="text-gold">data ativa de Síndrome de Aniversário</strong> —
+              <p className="mt-4 text-[19px] font-serif text-white/60 italic leading-relaxed">
+                Hoje você acompanhará <strong className="text-white not-italic">3 histórias familiares</strong>.
+                Um dos pacientes está em <strong className="text-[#D4AF37] not-italic">data ativa de Síndrome de Aniversário</strong> —
                 preparei hipóteses, protocolos e leituras para você.
               </p>
             </div>
 
-            <div className="flex flex-col items-end gap-3">
-              <div className="flex items-center gap-2 text-[12px] text-white/60 font-semibold">
-                <Sparkles className="size-4 text-gold" />
+            <div className="flex flex-col items-end gap-4">
+              <div className="flex items-center gap-2 text-[16px] text-white/60 font-sans font-bold uppercase tracking-widest">
+                <Sparkles className="size-4 text-[#D4AF37]" />
                 IA Clínica ativa
               </div>
-              <Button size="lg" variant="hero" className="shadow-xl">
+              <button className="bg-[#D4AF37] hover:bg-[#E8C65A] text-[#1B211A] font-sans font-bold uppercase tracking-widest text-[16px] px-8 py-4 flex items-center gap-3 transition-colors cursor-pointer shadow-[0_4px_15px_rgba(212,175,55,0.2)]">
                 <Play className="size-4 fill-current" />
                 Iniciar dia
-              </Button>
+              </button>
             </div>
           </div>
 
@@ -391,17 +381,17 @@ function ContextualHeader({ stats }: { stats: { total: number; primeira: number;
 
 function HeaderStat({ icon: Icon, label, value, accent }: { icon: typeof Clock; label: string; value: string; accent: "forest" | "gold" | "rose" }) {
   const accentClass = {
-    forest: "text-archive/70",
-    gold: "text-gold",
-    rose: "text-rose-300",
+    forest: "text-white/60",
+    gold: "text-[#D4AF37]",
+    rose: "text-rose-400",
   }[accent];
   return (
-    <div className="rounded-xl bg-white/[0.06] backdrop-blur-sm border border-white/10 px-4 py-3 shadow-inner">
-      <div className={`flex items-center gap-1.5 ${accentClass}`}>
-        <Icon className="size-3.5" />
-        <p className="text-[10px] font-bold uppercase tracking-[0.15em]">{label}</p>
+    <div className="bg-[#151A15] border border-white/10 p-5 shadow-lg">
+      <div className={`flex items-center gap-2 ${accentClass}`}>
+        <Icon className="size-4" />
+        <p className="font-sans text-[16px] font-bold uppercase tracking-[0.15em]">{label}</p>
       </div>
-      <p className="mt-2 font-serif text-2xl font-bold text-archive">{value}</p>
+      <p className="mt-3 font-serif text-3xl font-bold text-white">{value}</p>
     </div>
   );
 }
@@ -420,17 +410,17 @@ function TimelineColumn({
   onSelect: (id: string) => void;
 }) {
   return (
-    <aside className="space-y-3">
+    <aside className="space-y-4">
       <div className="flex items-center justify-between px-1">
-        <h2 className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
-          <CalendarIcon className="size-3.5" /> Timeline do dia
+        <h2 className="font-sans text-[16px] font-bold uppercase tracking-[0.2em] text-[#D4AF37] flex items-center gap-2">
+          <CalendarIcon className="size-4" /> Timeline do dia
         </h2>
-        <span className="text-[10px] text-muted-foreground/70 font-semibold">Hoje</span>
+        <span className="font-sans text-[16px] font-bold uppercase tracking-widest text-white/40">Hoje</span>
       </div>
 
-      <div className="relative rounded-2xl bg-white/70 backdrop-blur border border-border/50 shadow-sm p-4">
+      <div className="relative bg-[#151A15] border border-white/10 shadow-xl p-6">
         {/* vertical line */}
-        <div className="absolute left-[38px] top-6 bottom-6 w-px bg-gradient-to-b from-transparent via-border to-transparent" />
+        <div className="absolute left-[46px] top-8 bottom-8 w-px bg-white/10" />
 
         <ul className="space-y-3 relative">
           {timeline.map((item, i) => {
@@ -445,40 +435,40 @@ function TimelineColumn({
                 <button
                   disabled={!isSession}
                   onClick={() => session && onSelect(session.id)}
-                  className={`group w-full text-left flex items-start gap-3 rounded-xl px-2 py-2 transition-all ${
+                  className={`group w-full text-left flex items-start gap-4 p-3 transition-colors ${
                     isSession
                       ? isSelected
-                        ? "bg-mahogany/[0.06] ring-1 ring-mahogany/20"
-                        : "hover:bg-forest-soft/40 cursor-pointer"
-                      : "opacity-70"
+                        ? "bg-white/10 border-l-2 border-[#D4AF37]"
+                        : "hover:bg-white/5 cursor-pointer border-l-2 border-transparent"
+                      : "opacity-60 border-l-2 border-transparent"
                   }`}
                 >
-                  <span className="text-[10px] font-black tabular-nums text-muted-foreground w-8 pt-1 shrink-0">
+                  <span className="font-sans text-[16px] font-bold tabular-nums text-white/50 w-10 pt-1 shrink-0">
                     {item.time}
                   </span>
                   <span
-                    className={`size-6 rounded-full flex items-center justify-center shrink-0 border ${
+                    className={`size-7 flex items-center justify-center shrink-0 border ${
                       isSession
                         ? isSelected
-                          ? "bg-mahogany text-white border-mahogany"
-                          : "bg-white border-mahogany/30 text-mahogany"
-                        : "bg-cream border-border text-muted-foreground/70"
+                          ? "bg-[#D4AF37] text-[#1B211A] border-[#D4AF37]"
+                          : "bg-[#1B211A] border-white/20 text-[#D4AF37]"
+                        : "bg-transparent border-white/10 text-white/30"
                     }`}
                   >
-                    <Icon className="size-3" />
+                    <Icon className="size-3.5" />
                   </span>
                   <div className="flex-1 min-w-0 pt-0.5">
                     <p
-                      className={`text-[13px] leading-tight truncate ${
+                      className={`font-serif text-[18px] leading-tight truncate ${
                         isSession
-                          ? "font-bold text-primary"
-                          : "font-medium text-muted-foreground italic"
+                          ? "font-bold text-white"
+                          : "italic text-white/50"
                       }`}
                     >
                       {item.label}
                     </p>
                     {isSession && session && (
-                      <p className="text-[10.5px] text-muted-foreground mt-0.5 truncate">
+                      <p className="font-sans text-[16px] font-bold uppercase tracking-widest text-white/40 mt-1 truncate">
                         {session.type}
                         {session.sessionNumber ? ` · ${session.sessionNumber}` : ""}
                       </p>
@@ -492,11 +482,11 @@ function TimelineColumn({
       </div>
 
       {/* Mini weekly overview */}
-      <div className="rounded-2xl bg-white/70 backdrop-blur border border-border/50 shadow-sm p-4">
-        <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">
+      <div className="bg-[#151A15] border border-white/10 shadow-xl p-5">
+        <p className="font-sans text-[16px] font-bold uppercase tracking-[0.2em] text-[#D4AF37] mb-4">
           Semana
         </p>
-        <div className="grid grid-cols-5 gap-1">
+        <div className="grid grid-cols-5 gap-2">
           {[
             { d: "S", n: 6, active: true, load: 3 },
             { d: "T", n: 7, load: 2 },
@@ -506,15 +496,15 @@ function TimelineColumn({
           ].map((d) => (
             <div
               key={d.n}
-              className={`aspect-square rounded-lg flex flex-col items-center justify-center text-center ${
-                d.active ? "bg-mahogany text-white" : "bg-cream text-primary"
+              className={`aspect-square flex flex-col items-center justify-center text-center ${
+                d.active ? "bg-[#D4AF37] text-[#1B211A]" : "bg-white/5 text-white/60"
               }`}
             >
-              <span className="text-[9px] font-bold opacity-70">{d.d}</span>
-              <span className="font-serif text-sm font-bold">{d.n}</span>
-              <div className="flex gap-0.5 mt-0.5">
+              <span className="font-sans text-[16px] font-bold uppercase tracking-widest opacity-80">{d.d}</span>
+              <span className="font-serif text-xl font-bold">{d.n}</span>
+              <div className="flex gap-1 mt-1">
                 {Array.from({ length: d.load }).map((_, i) => (
-                  <span key={i} className={`size-1 rounded-full ${d.active ? "bg-white/70" : "bg-mahogany/40"}`} />
+                  <span key={i} className={`size-1.5 rounded-none ${d.active ? "bg-[#1B211A]/50" : "bg-white/20"}`} />
                 ))}
               </div>
             </div>
@@ -556,23 +546,23 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
   }[session.accent];
 
   return (
-    <main className="space-y-5">
+    <main className="space-y-6">
       {/* Rich patient card */}
-      <article className="relative rounded-3xl bg-white border border-border/60 shadow-[0_20px_60px_-30px_rgba(60,20,80,0.35)] overflow-hidden">
+      <article className="relative bg-[#151A15] shadow-[0_16px_40px_rgba(0,0,0,0.4)] overflow-hidden">
         {/* accent bar */}
-        <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${accentBar}`} />
+        <div className={`absolute left-0 top-0 bottom-0 w-2 ${accentBar}`} />
 
         <div className="p-6 md:p-8 pl-8 md:pl-10">
           {/* Top row: time + status */}
-          <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
+          <div className="flex items-center justify-between flex-wrap gap-3 mb-8">
             <div className="flex items-center gap-3">
-              <div className="flex items-baseline gap-1 font-serif">
-                <span className="text-3xl font-bold text-primary tabular-nums">{session.start}</span>
-                <span className="text-muted-foreground text-sm">—</span>
-                <span className="text-2xl font-semibold text-muted-foreground tabular-nums">{session.end}</span>
+              <div className="flex items-baseline gap-1 font-serif text-[#1B211A]">
+                <span className="text-4xl font-bold tabular-nums">{session.start}</span>
+                <span className="text-black/40 text-lg">—</span>
+                <span className="text-3xl font-semibold text-black/60 tabular-nums">{session.end}</span>
               </div>
               {session.status === "next" && (
-                <Badge className="bg-mahogany text-white border-transparent text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full animate-pulse">
+                <Badge className="bg-rose-700 text-white border-transparent text-[16px] font-black uppercase tracking-widest px-3 py-1.5 rounded-none animate-pulse">
                   Próxima sessão
                 </Badge>
               )}
@@ -583,7 +573,7 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
                 return (
                   <span
                     key={s}
-                    className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold ${meta.className}`}
+                    className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[16px] font-bold ${meta.className}`}
                   >
                     <meta.Icon className="size-2.5" />
                     {meta.label}
@@ -596,19 +586,19 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
           {/* Patient identity */}
           <div className="flex items-start gap-5">
             <div
-              className={`size-20 md:size-24 rounded-2xl ${initialsBg} flex items-center justify-center font-serif text-2xl md:text-3xl font-bold shadow-lg shrink-0 relative`}
+              className={`size-24 md:size-28 rounded-none ${initialsBg} flex items-center justify-center font-serif text-3xl md:text-4xl font-bold shadow-lg shrink-0 relative`}
             >
               {session.initials}
-              <div className="absolute -bottom-1 -right-1 size-6 rounded-full bg-white border-2 border-cream flex items-center justify-center">
-                <CircleDot className="size-3 text-mahogany" />
+              <div className="absolute -bottom-1 -right-1 size-7 rounded-full bg-[#151A15] border-4 border-[#FAFAF8] flex items-center justify-center">
+                <CircleDot className="size-4 text-rose-700" />
               </div>
             </div>
 
             <div className="flex-1 min-w-0">
-              <h2 className="font-serif text-2xl md:text-3xl font-bold text-primary leading-tight">
+              <h2 className="font-serif text-3xl md:text-4xl font-bold text-[#1B211A] leading-tight">
                 {session.patient}
               </h2>
-              <p className="mt-1 text-[13px] text-muted-foreground font-semibold">
+              <p className="mt-2 font-sans text-[16px] text-black/60 font-bold uppercase tracking-widest">
                 {session.type}
                 {session.sessionNumber && <> · {session.sessionNumber}</>}
                 {session.daysSinceFirst !== undefined && (
@@ -617,11 +607,11 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
               </p>
 
               {session.lastEvolution && (
-                <div className="mt-4 rounded-xl bg-cream/70 border border-border/40 p-3.5">
-                  <p className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground mb-1">
+                <div className="mt-5 bg-[#151A15] border border-black/5 p-5">
+                  <p className="font-sans text-[16px] font-bold uppercase tracking-[0.2em] text-black/40 mb-2">
                     Última evolução
                   </p>
-                  <p className="font-serif italic text-[14px] text-primary/90 leading-relaxed">
+                  <p className="font-serif italic text-[17px] text-[#1B211A] leading-relaxed">
                     "{session.lastEvolution}"
                   </p>
                 </div>
@@ -630,31 +620,31 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
           </div>
 
           {/* AI alerts */}
-          <div className="mt-6 rounded-2xl border border-mahogany/15 bg-gradient-to-br from-mahogany/[0.03] to-forest/[0.05] p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="size-6 rounded-full bg-mahogany/10 flex items-center justify-center">
-                <Sparkles className="size-3 text-mahogany" />
+          <div className="mt-8 border border-rose-700/20 bg-rose-50/50 p-5 relative overflow-hidden">
+            <div className="flex items-center gap-2 mb-4 relative z-10">
+              <div className="size-8 bg-rose-700 flex items-center justify-center">
+                <Sparkles className="size-4 text-white" />
               </div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-mahogany">
+              <p className="font-sans text-[16px] font-bold uppercase tracking-[0.2em] text-rose-700">
                 IA Clínica detectou
               </p>
               {genogramQuery.isLoading && session.clientId && (
-                <Loader2 className="size-3 animate-spin text-mahogany/60 ml-1" />
+                <Loader2 className="size-4 animate-spin text-rose-700/60 ml-2" />
               )}
             </div>
             {mergedAlerts.length > 0 ? (
-              <ul className="space-y-2">
+              <ul className="space-y-3 relative z-10">
                 {mergedAlerts.map((alert, i) => (
-                  <li key={i} className="flex items-start gap-2.5 text-[13px] text-primary/85 leading-relaxed">
-                    <AlertTriangle className="size-3.5 text-gold shrink-0 mt-1" />
+                  <li key={i} className="flex items-start gap-3 font-serif text-[16px] text-[#1B211A] leading-relaxed italic">
+                    <AlertTriangle className="size-4 text-rose-700 shrink-0 mt-1" />
                     <span>{alert}</span>
                   </li>
                 ))}
               </ul>
             ) : genogramQuery.isLoading ? (
-              <p className="text-[12px] text-muted-foreground italic">Analisando genossociograma…</p>
+              <p className="text-[16px] text-muted-foreground italic">Analisando genossociograma…</p>
             ) : (
-              <p className="text-[12px] text-muted-foreground italic">
+              <p className="text-[16px] text-muted-foreground italic">
                 Nenhum padrão detectado — genossociograma completo e sem alertas por regra.
               </p>
             )}
@@ -662,55 +652,55 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
 
 
           {/* Protocols */}
-          <div className="mt-5">
-            <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-2.5">
+          <div className="mt-8">
+            <p className="font-sans text-[16px] font-bold uppercase tracking-[0.2em] text-black/40 mb-3">
               Protocolos sugeridos
             </p>
             <div className="flex flex-wrap gap-2">
               {session.protocols.map((p) => (
                 <button
                   key={p}
-                  className="group inline-flex items-center gap-2 rounded-full border border-forest/30 bg-forest-soft/40 px-3.5 py-1.5 text-[12.5px] font-semibold text-mahogany hover:bg-forest/15 hover:border-forest/50 transition-all"
+                  className="group inline-flex items-center gap-2 border border-black/10 bg-white px-4 py-2 font-sans text-[16px] font-bold text-[#1B211A] hover:bg-[#151A15] hover:border-black/30 transition-all shadow-sm"
                 >
-                  <ClipboardList className="size-3.5" />
+                  <ClipboardList className="size-4" />
                   {p}
-                  <ChevronRight className="size-3 opacity-0 -ml-1 group-hover:opacity-100 group-hover:ml-0 transition-all" />
+                  <ChevronRight className="size-4 opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all" />
                 </button>
               ))}
             </div>
           </div>
 
           {/* Actions */}
-          <div className="mt-7 flex flex-wrap gap-2 pt-5 border-t border-border/40">
-            <Button size="lg" className="font-bold shadow-md">
+          <div className="mt-10 flex flex-wrap gap-3 pt-6 border-t border-black/10">
+            <button className="bg-rose-700 hover:bg-rose-800 text-white font-sans font-bold uppercase tracking-widest text-[16px] px-8 py-4 flex items-center gap-3 transition-colors cursor-pointer shadow-lg">
               <Play className="size-4 fill-current" />
               Iniciar sala
-            </Button>
-            <Button variant="outline" size="lg" className="font-bold">
+            </button>
+            <button className="border-2 border-[#1B211A] text-[#1B211A] hover:bg-[#1B211A] hover:text-white font-sans font-bold uppercase tracking-widest text-[16px] px-8 py-4 flex items-center gap-3 transition-colors cursor-pointer shadow-lg">
               <Wand2 className="size-4" />
               Preparar sessão
-            </Button>
+            </button>
             {session.clientId ? (
               <Link
                 to="/app/paciente/$id"
                 params={{ id: session.clientId }}
-                className="inline-flex items-center gap-2 h-11 px-4 rounded-md text-[14px] font-semibold text-primary/80 hover:text-mahogany hover:bg-forest-soft/50 transition-colors"
+                className="inline-flex items-center justify-center gap-2 px-6 h-[52px] font-sans text-[16px] font-bold uppercase tracking-widest text-black/60 hover:text-[#1B211A] hover:bg-black/5 transition-colors"
               >
                 <FileText className="size-4" />
                 Abrir Dossiê
               </Link>
             ) : (
-              <Button variant="ghost" size="lg" className="font-semibold" disabled title="Sessão sem cliente vinculado">
+              <button disabled className="inline-flex items-center justify-center gap-2 px-6 h-[52px] font-sans text-[16px] font-bold uppercase tracking-widest text-black/30 opacity-50 cursor-not-allowed">
                 <FileText className="size-4" />
                 Prontuário
-              </Button>
+              </button>
             )}
             <Link
               to="/app/genossociogramas"
-              className="inline-flex items-center gap-2 h-11 px-4 rounded-md text-[14px] font-semibold text-primary/80 hover:text-mahogany hover:bg-forest-soft/50 transition-colors"
+              className="inline-flex items-center justify-center gap-2 px-6 h-[52px] font-sans text-[16px] font-bold uppercase tracking-widest text-black/60 hover:text-[#1B211A] hover:bg-black/5 transition-colors"
             >
               <GitBranch className="size-4" />
-              Genossociograma
+              Genograma
             </Link>
             <Button variant="ghost" size="lg" className="font-semibold">
               <ArrowRight className="size-4" />
@@ -734,12 +724,12 @@ function MiniTreePreview({ session, genogram, isLoading }: { session: Session; g
   const totalPersons = genogram?.totalPersons ?? 0;
 
   return (
-    <div className="rounded-2xl bg-white/80 backdrop-blur border border-border/50 shadow-sm p-5">
+    <div className="bg-[#151A15] shadow-[0_16px_40px_rgba(0,0,0,0.4)] p-6">
       <div className="flex items-center justify-between mb-4">
-        <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground flex items-center gap-2">
-          <GitBranch className="size-3.5" /> Genossociograma
+        <p className="font-sans text-[16px] font-bold uppercase tracking-[0.2em] text-black/40 flex items-center gap-2">
+          <GitBranch className="size-4" /> Genograma Atual
         </p>
-        <span className="text-[10px] text-muted-foreground">
+        <span className="font-sans text-[16px] font-bold text-black/60 uppercase tracking-widest">
           {hasData ? `${totalPersons} pessoas` : isLoading ? "carregando…" : "sem dados"}
         </span>
       </div>
@@ -761,17 +751,17 @@ function MiniTreePreview({ session, genogram, isLoading }: { session: Session; g
         </div>
       )}
 
-      <div className="mt-3 flex items-center justify-between text-[11px]">
-        <div className="flex items-center gap-3 text-muted-foreground">
-          <span className="flex items-center gap-1"><Circle className="size-2 fill-gold text-gold" /> Paciente</span>
-          <span className="flex items-center gap-1"><Circle className="size-2 fill-mahogany text-mahogany" /> Masc.</span>
-          <span className="flex items-center gap-1"><Circle className="size-2 fill-forest text-forest" /> Fem.</span>
+      <div className="mt-5 flex items-center justify-between text-[16px] font-sans font-bold uppercase tracking-widest">
+        <div className="flex items-center gap-4 text-black/50">
+          <span className="flex items-center gap-1.5"><Circle className="size-2 fill-[#D4AF37] text-[#D4AF37]" /> Paciente</span>
+          <span className="flex items-center gap-1.5"><Circle className="size-2 fill-[#1B211A] text-[#1B211A]" /> Masc.</span>
+          <span className="flex items-center gap-1.5"><Circle className="size-2 fill-emerald-800 text-emerald-800" /> Fem.</span>
         </div>
         <Link
           to="/app/genossociogramas"
-          className="text-mahogany font-bold hover:underline flex items-center gap-1"
+          className="text-[#1B211A] font-bold hover:underline flex items-center gap-1"
         >
-          Abrir <ChevronRight className="size-3" />
+          Expandir <ChevronRight className="size-4" />
         </Link>
       </div>
     </div>
@@ -865,38 +855,38 @@ function UpcomingList({ currentId, sessions }: { currentId: string; sessions: Se
   const others = sessions.filter((s) => s.id !== currentId);
 
   return (
-    <div className="rounded-2xl bg-white/80 backdrop-blur border border-border/50 shadow-sm p-5">
-      <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4 flex items-center gap-2">
-        <Clock className="size-3.5" /> Próximas hoje
+    <div className="bg-[#151A15] border border-white/10 shadow-xl p-6">
+      <p className="font-sans text-[16px] font-bold uppercase tracking-[0.2em] text-[#D4AF37] mb-5 flex items-center gap-2">
+        <Clock className="size-4" /> Próximas hoje
       </p>
-      <ul className="space-y-3">
+      <ul className="space-y-4">
         {others.map((s) => {
           const inner = (
             <>
-              <div className="size-10 rounded-xl bg-cream border border-border/40 flex items-center justify-center font-serif font-bold text-primary text-sm shrink-0">
+              <div className="size-12 bg-white/5 border border-white/10 flex items-center justify-center font-serif font-bold text-white text-lg shrink-0">
                 {s.initials}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-bold text-primary text-[13px] truncate">{s.patient}</p>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="font-serif text-[17px] font-bold text-white truncate">{s.patient}</p>
+                <p className="font-sans text-[16px] font-bold uppercase tracking-widest text-white/40 mt-1">
                   {s.start} · {s.type}
                 </p>
               </div>
-              <ChevronRight className="size-4 text-muted-foreground/50" />
+              <ChevronRight className="size-4 text-white/30" />
             </>
           );
           return (
-            <li key={s.id} className="border-b border-border/30 last:border-0">
+            <li key={s.id} className="border-b border-white/5 last:border-0 pb-3 last:pb-0">
               {s.clientId ? (
                 <Link
                   to="/app/paciente/$id"
                   params={{ id: s.clientId }}
-                  className="flex items-center gap-3 py-2 rounded-lg hover:bg-forest-soft/40 transition-colors -mx-1 px-1"
+                  className="flex items-center gap-4 py-2 hover:bg-white/5 transition-colors -mx-2 px-2"
                 >
                   {inner}
                 </Link>
               ) : (
-                <div className="flex items-center gap-3 py-2 opacity-70 cursor-not-allowed" title="Sessão sem cliente vinculado">
+                <div className="flex items-center gap-4 py-2 opacity-50 cursor-not-allowed" title="Sessão sem cliente vinculado">
                   {inner}
                 </div>
               )}
@@ -921,63 +911,63 @@ function RightPanel({
 }) {
 
   return (
-    <aside className="grid gap-4 md:grid-cols-2 2xl:grid-cols-1">
+    <aside className="grid gap-5 md:grid-cols-2 2xl:grid-cols-1">
       {/* IA Clínica briefing */}
-      <div className="rounded-2xl bg-gradient-to-br from-mahogany via-mahogany to-mahogany/90 text-white p-5 shadow-lg relative overflow-hidden">
+      <div className="bg-[#151A15] border-t-2 border-[#D4AF37] p-6 shadow-xl relative overflow-hidden">
         <div
           aria-hidden
-          className="absolute -top-10 -right-10 size-40 rounded-full bg-gold/20 blur-3xl pointer-events-none"
+          className="absolute -top-10 -right-10 size-40 rounded-full bg-[#D4AF37]/10 blur-3xl pointer-events-none"
         />
         <div className="relative">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="size-8 rounded-full bg-white/10 backdrop-blur flex items-center justify-center">
-              <Brain className="size-4 text-gold" />
+          <div className="flex items-center gap-3 mb-5">
+            <div className="size-10 bg-white/5 flex items-center justify-center">
+              <Brain className="size-5 text-[#D4AF37]" />
             </div>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gold">IA Clínica</p>
-              <p className="text-[11px] text-white/70">Briefing do dia</p>
+              <p className="font-sans text-[16px] font-black uppercase tracking-[0.2em] text-[#D4AF37]">IA Clínica</p>
+              <p className="font-sans text-[16px] font-bold uppercase tracking-widest text-white/50">Briefing do dia</p>
             </div>
           </div>
 
-          <p className="font-serif text-[14px] leading-relaxed text-white/90">
-            Preparei <strong className="text-gold">3 hipóteses clínicas</strong> para o atendimento das 09h com {session.patient.split(" ")[0]}. Há uma possível <strong className="text-gold">coincidência de datas</strong> a investigar com a linhagem paterna.
+          <p className="font-serif text-[17px] leading-relaxed text-white/80 italic">
+            Preparei <strong className="text-[#D4AF37] not-italic">3 hipóteses clínicas</strong> para o atendimento das 09h com {session.patient.split(" ")[0]}. Há uma possível <strong className="text-[#D4AF37] not-italic">coincidência de datas</strong> a investigar com a linhagem paterna.
           </p>
 
-          <div className="mt-4 pt-4 border-t border-white/10 space-y-2 text-[12px] text-white/80">
-            <div className="flex items-start gap-2">
-              <CheckCircle2 className="size-3.5 text-gold shrink-0 mt-0.5" />
-              <span>Sugerido: <em>Mapa de Segredos</em> antes da 4ª sessão.</span>
+          <div className="mt-5 pt-5 border-t border-white/10 space-y-3 font-sans text-[16px] text-white/70">
+            <div className="flex items-start gap-3">
+              <CheckCircle2 className="size-4 text-[#D4AF37] shrink-0 mt-0.5" />
+              <span>Sugerido: <em className="text-white">Mapa de Segredos</em> antes da 4ª sessão.</span>
             </div>
-            <div className="flex items-start gap-2">
-              <CheckCircle2 className="size-3.5 text-gold shrink-0 mt-0.5" />
+            <div className="flex items-start gap-3">
+              <CheckCircle2 className="size-4 text-[#D4AF37] shrink-0 mt-0.5" />
               <span>2 clientes sem próxima sessão agendada.</span>
             </div>
           </div>
 
-          <Button variant="hero" size="sm" className="mt-4 w-full font-bold">
-            <Wand2 className="size-3.5" />
+          <button className="mt-6 w-full border border-white/10 bg-white/5 hover:bg-white/10 text-white font-sans font-bold uppercase tracking-widest text-[16px] py-3 flex items-center justify-center gap-2 transition-colors">
+            <Wand2 className="size-4" />
             Ver briefing completo
-          </Button>
+          </button>
         </div>
       </div>
 
       {/* Pendências */}
-      <div className="rounded-2xl bg-white/80 backdrop-blur border border-border/50 shadow-sm p-5">
-        <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3 flex items-center gap-2">
-          <ClipboardList className="size-3.5" /> Pendências
+      <div className="bg-[#151A15] shadow-[0_16px_40px_rgba(0,0,0,0.4)] p-6">
+        <p className="font-sans text-[16px] font-bold uppercase tracking-[0.2em] text-[#1B211A]/60 mb-5 flex items-center gap-2">
+          <ClipboardList className="size-4" /> Pendências
         </p>
-        <ul className="space-y-2.5 text-[13px]">
+        <ul className="space-y-3">
           <PendingRow label="Prontuários sem evolução" count={prontuariosPendentes} tone="rose" />
           <PendingRow label="Checklists não preenchidos" count={2} tone="gold" />
           <PendingRow label="Genogramas incompletos" count={3} tone="forest" />
           <PendingRow label="Clientes sem retorno" count={orphanClients.length} tone="mahogany" />
         </ul>
         {orphanClients.length > 0 && (
-          <ul className="mt-3 pt-3 border-t border-border/40 space-y-1.5">
+          <ul className="mt-5 pt-5 border-t border-black/10 space-y-2">
             {orphanClients.slice(0, 3).map((c) => (
-              <li key={c.id} className="flex items-center justify-between text-[12px]">
-                <span className="text-primary/80 font-medium truncate">{c.name}</span>
-                <button className="text-mahogany font-bold hover:underline">Agendar</button>
+              <li key={c.id} className="flex items-center justify-between font-serif text-[16px]">
+                <span className="text-[#1B211A] font-medium truncate">{c.name}</span>
+                <button className="text-rose-700 font-sans font-bold text-[16px] uppercase tracking-widest hover:underline">Agendar</button>
               </li>
             ))}
           </ul>
@@ -986,43 +976,43 @@ function RightPanel({
 
 
       {/* Receita + tempo */}
-      <div className="rounded-2xl bg-white/80 backdrop-blur border border-border/50 shadow-sm p-5">
-        <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">
+      <div className="bg-[#151A15] border border-white/10 shadow-xl p-6">
+        <p className="font-sans text-[16px] font-bold uppercase tracking-[0.2em] text-[#D4AF37] mb-5">
           Balanço do dia
         </p>
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <span className="flex items-center gap-2 text-[12px] text-primary/80 font-semibold">
-              <DollarSign className="size-3.5 text-emerald-600" /> Receita prevista
+            <span className="flex items-center gap-3 font-sans text-[16px] text-white/60 font-bold uppercase tracking-widest">
+              <DollarSign className="size-4 text-emerald-500" /> Receita prevista
             </span>
-            <span className="font-serif text-lg font-bold text-primary">R$ 1.350</span>
+            <span className="font-serif text-2xl font-bold text-white">R$ 1.350</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="flex items-center gap-2 text-[12px] text-primary/80 font-semibold">
-              <Clock className="size-3.5 text-mahogany" /> Ocupado
+            <span className="flex items-center gap-3 font-sans text-[16px] text-white/60 font-bold uppercase tracking-widest">
+              <Clock className="size-4 text-rose-400" /> Ocupado
             </span>
-            <span className="font-mono text-sm font-bold text-primary">4h 00m</span>
+            <span className="font-sans text-[16px] font-bold text-white tabular-nums">4h 00m</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="flex items-center gap-2 text-[12px] text-primary/80 font-semibold">
-              <Leaf className="size-3.5 text-emerald-600" /> Tempo livre
+            <span className="flex items-center gap-3 font-sans text-[16px] text-white/60 font-bold uppercase tracking-widest">
+              <Leaf className="size-4 text-emerald-500" /> Tempo livre
             </span>
-            <span className="font-mono text-sm font-bold text-emerald-700">2h 40m</span>
+            <span className="font-sans text-[16px] font-bold text-[#D4AF37] tabular-nums">2h 40m</span>
           </div>
-          <div className="h-1.5 bg-cream rounded-full overflow-hidden mt-2">
-            <div className="h-full w-[60%] bg-gradient-to-r from-mahogany to-forest rounded-full" />
+          <div className="h-2 bg-white/5 overflow-hidden mt-3">
+            <div className="h-full w-[60%] bg-[#D4AF37]" />
           </div>
         </div>
       </div>
 
       {/* Notas rápidas */}
-      <div className="rounded-2xl bg-gradient-to-br from-cream to-white border border-border/50 shadow-sm p-5">
-        <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-2 flex items-center gap-2">
-          <FileText className="size-3.5" /> Nota rápida
+      <div className="bg-[#151A15] border border-black/5 shadow-lg p-6">
+        <p className="font-sans text-[16px] font-bold uppercase tracking-[0.2em] text-[#1B211A]/50 mb-4 flex items-center gap-2">
+          <FileText className="size-4" /> Nota rápida
         </p>
         <textarea
           placeholder="Uma linha, uma intuição, uma hipótese..."
-          className="w-full bg-transparent text-[13px] font-serif text-primary/90 placeholder:text-muted-foreground/60 resize-none focus:outline-none min-h-[60px]"
+          className="w-full bg-transparent font-serif text-[17px] text-[#1B211A] placeholder:text-[#1B211A]/30 italic resize-none focus:outline-none min-h-[80px]"
         />
       </div>
     </aside>
@@ -1031,15 +1021,15 @@ function RightPanel({
 
 function PendingRow({ label, count, tone }: { label: string; count: number; tone: "rose" | "gold" | "forest" | "mahogany" }) {
   const toneClass = {
-    rose: "bg-rose-100 text-rose-700",
-    gold: "bg-amber-100 text-amber-700",
-    forest: "bg-forest/15 text-forest",
-    mahogany: "bg-mahogany/10 text-mahogany",
+    rose: "bg-rose-100 text-rose-800",
+    gold: "bg-[#D4AF37]/20 text-[#1B211A]",
+    forest: "bg-emerald-100 text-emerald-800",
+    mahogany: "bg-[#1B211A]/10 text-[#1B211A]",
   }[tone];
   return (
-    <li className="flex items-center justify-between group cursor-pointer hover:bg-cream/50 -mx-2 px-2 py-1 rounded-lg transition-colors">
-      <span className="text-primary/85 font-medium">{label}</span>
-      <span className={`inline-flex items-center justify-center min-w-[26px] h-6 px-2 rounded-full text-[11px] font-black ${toneClass}`}>
+    <li className="flex items-center justify-between group cursor-pointer hover:bg-black/5 -mx-3 px-3 py-2 transition-colors">
+      <span className="font-sans text-[16px] font-bold uppercase tracking-widest text-[#1B211A]/80">{label}</span>
+      <span className={`inline-flex items-center justify-center min-w-[32px] h-7 px-2 font-sans text-[16px] font-black ${toneClass}`}>
         {count}
       </span>
     </li>

@@ -99,7 +99,7 @@ function AppHome() {
       ════════════════════════════════════════════════════ */}
       <header className="pt-24 pb-16 relative z-10">
         <div className="container-liz">
-          <p className="font-sans text-[13px] font-bold tracking-[0.2em] text-[#D4AF37] uppercase mb-4">
+          <p className="font-sans text-[16px] font-bold tracking-[0.2em] text-[#D4AF37] uppercase mb-4">
             Mesa de Investigação
           </p>
           <h1 className="font-serif text-5xl md:text-6xl font-bold tracking-tight text-white leading-tight mb-4">
@@ -118,43 +118,40 @@ function AppHome() {
       <div className="container-liz relative z-20 mb-20">
         
         {/* Documento Físico */}
-        <div className="relative bg-[#FCF9F4] text-[#3B2F2F] p-10 md:p-14 shadow-[0_32px_80px_rgba(0,0,0,0.6)] rotate-[-0.5deg] border border-[#E6DDD0]">
+        <div className="relative bg-[#151A15] text-white p-10 md:p-14 shadow-[0_32px_80px_rgba(0,0,0,0.6)] rotate-[-0.5deg] border border-white/10">
           
           <Tape rotate="-1deg" w="80px" />
           
-          {/* Caneta Fotorrealista sobre o papel */}
-          <div className="absolute -right-8 top-16 w-[280px] z-30 pointer-events-none hidden xl:block">
-            <img src="/assets/objects/pen_clean.jpg" alt="" className="w-full mix-blend-multiply rotate-[22deg]" />
-          </div>
+          {/* Caneta removida */}
 
           <div className="flex flex-col lg:flex-row gap-12 relative z-10">
             
             {/* Esquerda: Dados do Paciente e IA */}
             <div className="flex-1 space-y-8">
-              <div className="flex flex-wrap items-center justify-between border-b border-[#E6DDD0] pb-4">
+              <div className="flex flex-wrap items-center justify-between border-b border-white/10 pb-4">
                 <div className="flex items-center gap-3">
-                  <span className="font-sans text-[11px] font-bold tracking-[0.2em] uppercase text-[#8B7355]">
+                  <span className="font-sans text-[16px] font-bold tracking-[0.2em] uppercase text-white">
                     Ficha Principal
                   </span>
                 </div>
-                <span className="font-sans text-[13px] text-[#8B7355]/70 italic flex items-center gap-1.5 mt-2 sm:mt-0">
+                <span className="font-sans text-[16px] text-white/70 italic flex items-center gap-1.5 mt-2 sm:mt-0">
                   <Paperclip className="size-4" /> Anexado recentemente
                 </span>
               </div>
 
               <div>
-                <h2 className="text-4xl md:text-5xl font-bold font-serif text-[#2B2018] mb-3">
+                <h2 className="text-4xl md:text-5xl font-bold font-serif text-white mb-3">
                   {lastActiveClient?.preferred_name || lastActiveClient?.full_name || "Nenhum dossiê ativo"}
                 </h2>
-                <p className="text-[19px] text-[#5A4A3A] font-serif leading-relaxed">
+                <p className="text-[19px] text-white font-serif leading-relaxed">
                   Iniciando investigação transgeracional de padrões de repetição e lealdades invisíveis.
                 </p>
               </div>
 
               {/* Anotação Marginal da IA */}
-              <div className="relative bg-[#F5F0E8] p-6 border-l-2 border-[#D4AF37] italic font-serif text-[#4A3B3B] text-lg leading-relaxed shadow-sm">
-                <ShieldCheck className="absolute -left-3.5 -top-3.5 size-7 text-[#D4AF37] bg-[#FCF9F4] p-1 rounded-full shadow-sm" />
-                <span className="block font-sans text-[11px] font-bold uppercase tracking-widest text-[#D4AF37] not-italic mb-2">
+              <div className="relative bg-[#151A15] p-6 border-l-2 border-[#D4AF37] italic font-serif text-white text-xl leading-relaxed shadow-sm">
+                <ShieldCheck className="absolute -left-3.5 -top-3.5 size-7 text-[#D4AF37] bg-[#151A15] p-1 rounded-full shadow-sm" />
+                <span className="block font-sans text-[16px] font-bold uppercase tracking-widest text-[#D4AF37] not-italic mb-2">
                   Nota do Supervisor Clínico
                 </span>
                 "Fique atento às datas de aniversário. A repetição de eventos traumáticos pode estar espelhada na terceira geração."
@@ -163,13 +160,13 @@ function AppHome() {
               <div className="pt-6">
                 {lastActiveClient ? (
                   <Link to="/app/clientes/$clientId" params={{ clientId: lastActiveClient.id }}>
-                    <button className="bg-[#1B211A] text-white font-sans text-[13px] font-bold uppercase tracking-widest px-8 py-5 rounded-none hover:bg-[#2B312A] transition-colors shadow-lg cursor-pointer">
+                    <button className="bg-[#1B211A] text-white font-sans text-[16px] font-bold uppercase tracking-widest px-8 py-5 rounded-none hover:bg-[#2B312A] transition-colors shadow-lg cursor-pointer">
                       Abrir Dossiê Físico →
                     </button>
                   </Link>
                 ) : (
                   <Link to="/app/clientes">
-                    <button className="bg-[#1B211A] text-white font-sans text-[13px] font-bold uppercase tracking-widest px-8 py-5 rounded-none hover:bg-[#2B312A] transition-colors shadow-lg cursor-pointer">
+                    <button className="bg-[#1B211A] text-white font-sans text-[16px] font-bold uppercase tracking-widest px-8 py-5 rounded-none hover:bg-[#2B312A] transition-colors shadow-lg cursor-pointer">
                       Acessar Arquivo →
                     </button>
                   </Link>
@@ -178,28 +175,26 @@ function AppHome() {
             </div>
 
             {/* Direita: Referência e Selo */}
-            <div className="lg:w-[320px] shrink-0 border-l border-dashed border-[#E6DDD0] pl-10 flex flex-col justify-between">
+            <div className="lg:w-[320px] shrink-0 border-l border-dashed border-white/10 pl-10 flex flex-col justify-between">
               <div className="space-y-6">
-                <h3 className="font-sans text-[11px] font-bold uppercase tracking-[0.2em] text-[#8B7355]">
+                <h3 className="font-sans text-[16px] font-bold uppercase tracking-[0.2em] text-white">
                   Referência Bibliográfica
                 </h3>
                 <div>
-                  <p className="font-serif font-bold text-[26px] text-[#2B2018] leading-tight">
+                  <p className="font-serif font-bold text-[28px] text-white leading-tight">
                     "Ai, meus ancestrais!"
                   </p>
-                  <p className="font-serif italic text-[#5A4A3A] mt-2 text-[18px]">
+                  <p className="font-serif italic text-white mt-2 text-[20px]">
                     Anne A. Schützenberger
                   </p>
                 </div>
-                <div className="pt-5 border-t border-[#E6DDD0]">
-                  <span className="block font-sans text-[11px] uppercase tracking-widest text-[#8B7355] mb-1.5">Tópico Ativo</span>
-                  <span className="font-serif font-bold text-[#2B2018] text-[20px]">Síndrome de Aniversário</span>
+                <div className="pt-5 border-t border-white/10">
+                  <span className="block font-sans text-[16px] uppercase tracking-widest text-white mb-1.5 font-bold">Tópico Ativo</span>
+                  <span className="font-serif font-bold text-white text-[22px]">Síndrome de Aniversário</span>
                 </div>
               </div>
               
-              <div className="mt-12 self-center opacity-85 hover:opacity-100 transition-opacity">
-                <img src="/assets/objects/wax_seal_tree.jpg" alt="" className="size-24 rounded-full mix-blend-multiply filter contrast-125 sepia-[0.3]" />
-              </div>
+              {/* Selo removido */}
             </div>
 
           </div>
@@ -225,7 +220,7 @@ function AppHome() {
                 <div className="absolute top-0 left-0 w-1 h-full bg-[#D4AF37] opacity-40 group-hover:opacity-100 transition-opacity" />
                 <FolderOpen className="size-7 text-[#D4AF37] mb-5" strokeWidth={1.5} />
                 <h4 className="font-serif font-bold text-white text-[22px] mb-2">Padrão de Exclusão</h4>
-                <p className="font-sans text-white/50 text-[15px] leading-relaxed">
+                <p className="font-sans text-white/50 text-[16px] leading-relaxed">
                   Detectado em 3 linhagens ativas atualmente no acervo da clínica.
                 </p>
               </div>
@@ -234,7 +229,7 @@ function AppHome() {
                 <div className="absolute top-0 left-0 w-1 h-full bg-[#D4AF37] opacity-40 group-hover:opacity-100 transition-opacity" />
                 <BookOpen className="size-7 text-[#D4AF37] mb-5" strokeWidth={1.5} />
                 <h4 className="font-serif font-bold text-white text-[22px] mb-2">Repetição de Nomes</h4>
-                <p className="font-sans text-white/50 text-[15px] leading-relaxed">
+                <p className="font-sans text-white/50 text-[16px] leading-relaxed">
                   Conflitos de identidade identificados em 2 casos recentes abertos.
                 </p>
               </div>
@@ -251,7 +246,7 @@ function AppHome() {
               <div className="space-y-10 relative before:absolute before:inset-0 before:ml-[1.4rem] before:-translate-x-px before:h-full before:w-px before:bg-white/10">
                 
                 <div>
-                  <h4 className="font-sans text-[12px] font-bold uppercase tracking-widest text-[#D4AF37] bg-[#151A15] inline-block pr-5 relative z-10 mb-8">
+                  <h4 className="font-sans text-[16px] font-bold uppercase tracking-widest text-[#D4AF37] bg-[#151A15] inline-block pr-5 relative z-10 mb-8">
                     Hoje
                   </h4>
                   <div className="space-y-8">
@@ -261,7 +256,7 @@ function AppHome() {
                 </div>
 
                 <div className="pt-2">
-                  <h4 className="font-sans text-[12px] font-bold uppercase tracking-widest text-[#D4AF37] bg-[#151A15] inline-block pr-5 relative z-10 mb-8">
+                  <h4 className="font-sans text-[16px] font-bold uppercase tracking-widest text-[#D4AF37] bg-[#151A15] inline-block pr-5 relative z-10 mb-8">
                     Ontem
                   </h4>
                   <div className="space-y-8">
@@ -286,15 +281,15 @@ function AppHome() {
             
             <div className="space-y-6 flex flex-col items-center sm:items-stretch">
               {/* Cartões como bilhetes físicos */}
-              <div className="bg-[#FAF8F5] p-6 shadow-xl rotate-[2deg] relative border border-[#E6DDD0] w-full max-w-sm self-center sm:self-auto hover:rotate-[0deg] hover:z-10 transition-transform">
+              <div className="bg-[#FAF8F5] p-6 shadow-xl rotate-[2deg] relative border border-white/10 w-full max-w-sm self-center sm:self-auto hover:rotate-[0deg] hover:z-10 transition-transform">
                 <Tape rotate="4deg" w="45px" top="-10px" left="50%" />
                 <p className="font-serif text-[#8B3A3A] font-bold text-[22px] mb-1">Árvore sem avós</p>
-                <p className="font-serif italic text-[#5A4A3A] text-[16px]">Sinalizado no Dossiê A</p>
+                <p className="font-serif italic text-white text-[16px]">Sinalizado no Dossiê A</p>
               </div>
-              <div className="bg-[#FAF8F5] p-6 shadow-xl rotate-[-2deg] relative border border-[#E6DDD0] w-full max-w-sm self-center sm:self-auto hover:rotate-[0deg] hover:z-10 transition-transform">
+              <div className="bg-[#FAF8F5] p-6 shadow-xl rotate-[-2deg] relative border border-white/10 w-full max-w-sm self-center sm:self-auto hover:rotate-[0deg] hover:z-10 transition-transform">
                 <Tape rotate="-3deg" w="45px" top="-10px" left="50%" />
                 <p className="font-serif text-[#B8860B] font-bold text-[22px] mb-1">Prontuário incompleto</p>
-                <p className="font-serif italic text-[#5A4A3A] text-[16px]">Sinalizado no Dossiê B</p>
+                <p className="font-serif italic text-white text-[16px]">Sinalizado no Dossiê B</p>
               </div>
             </div>
           </section>
@@ -330,10 +325,10 @@ function FeedItem({ time, action, target, icon }: { time: string, action: string
       </div>
       <div>
         <div className="flex flex-col xl:flex-row xl:items-baseline gap-1 xl:gap-2">
-          <span className="font-sans text-[15px] text-white/70">{action}</span>
+          <span className="font-sans text-[16px] text-white/70">{action}</span>
           <span className="font-serif font-bold text-white text-[20px] border-b border-[#D4AF37]/40 pb-0.5">{target}</span>
         </div>
-        <span className="font-sans text-[13px] text-white/40 mt-1.5 block">{time}</span>
+        <span className="font-sans text-[16px] text-white/40 mt-1.5 block">{time}</span>
       </div>
     </div>
   );
@@ -350,11 +345,11 @@ function AgendaItem({ time, name, state }: { time: string, name: string, state: 
       </div>
       <div className="flex-1 pb-6 border-b border-white/10 last:border-0 last:pb-0">
         <div className="flex justify-between items-baseline">
-          <span className={`font-serif font-bold text-[22px] ${isCurrent ? 'text-[#D4AF37]' : 'text-white'}`}>{name}</span>
-          <span className="font-sans text-[14px] text-white/50 tracking-wider">{time}</span>
+          <span className={`font-serif font-bold text-[24px] ${isCurrent ? 'text-[#D4AF37]' : 'text-white'}`}>{name}</span>
+          <span className="font-sans text-[16px] font-bold text-white/50 tracking-wider">{time}</span>
         </div>
         {isCurrent && (
-          <span className="font-sans text-[11px] font-bold uppercase tracking-widest text-[#D4AF37] mt-1.5 block">
+          <span className="font-sans text-[16px] font-bold uppercase tracking-widest text-[#D4AF37] mt-1.5 block">
             Em Sessão
           </span>
         )}

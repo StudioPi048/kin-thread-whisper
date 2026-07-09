@@ -88,14 +88,14 @@ function DossierView({ data }: { data: PatientDossierDTO }) {
       {/* Breadcrumb */}
       <div className="border-b border-border/60 bg-white/60 backdrop-blur-sm px-6 py-3">
         <div className="container-liz flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.25em] text-muted-foreground">
+          <div className="flex items-center gap-2 text-[16px] font-bold uppercase tracking-[0.25em] text-muted-foreground">
             <Link to="/app/agenda" className="hover:text-mahogany flex items-center gap-1.5">
               <ArrowLeft className="size-3" /> Agenda
             </Link>
             <span className="text-muted-foreground/40">/</span>
             <span className="text-mahogany">Dossiê Clínico</span>
           </div>
-          <span className="text-[10px] font-semibold text-muted-foreground/70">
+          <span className="text-[16px] font-semibold text-muted-foreground/70">
             {counts.totalSessions} sessão(ões) · {counts.totalPersons} pessoas no genograma · {counts.totalPatterns} padrões
           </span>
         </div>
@@ -177,13 +177,13 @@ function PatientHeader({ identity }: { identity: PatientIdentityDTO }) {
 
               {/* Identity */}
               <div className="min-w-0 pt-1">
-                <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-forest-mid mb-2">
+                <p className="text-[16px] font-bold uppercase tracking-[0.35em] text-forest-mid mb-2">
                   Dossiê Clínico
                 </p>
                 <h1 className="font-serif text-3xl md:text-5xl font-bold text-white leading-tight truncate">
                   {displayName}
                 </h1>
-                <p className="mt-2 text-[13px] text-white/70 font-semibold">
+                <p className="mt-2 text-[16px] text-white/70 font-semibold">
                   {[
                     identity.ageYears != null && `${identity.ageYears} anos`,
                     identity.profession,
@@ -199,7 +199,7 @@ function PatientHeader({ identity }: { identity: PatientIdentityDTO }) {
                   {identity.tags.slice(0, 4).map((t) => (
                     <span
                       key={t}
-                      className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/[0.08] px-2 py-0.5 text-[10px] font-bold text-white/85 uppercase tracking-wider"
+                      className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/[0.08] px-2 py-0.5 text-[16px] font-bold text-white/85 uppercase tracking-wider"
                     >
                       {t}
                     </span>
@@ -226,7 +226,7 @@ function StatusChip({ status }: { status: string }) {
   };
   const m = map[status] ?? { label: status, className: "bg-white/10 text-white/80 border-white/20" };
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${m.className}`}>
+    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[16px] font-bold uppercase tracking-wider ${m.className}`}>
       <Circle className="size-2 fill-current" /> {m.label}
     </span>
   );
@@ -236,7 +236,7 @@ function NextSessionCard({ iso }: { iso: string | null }) {
   if (!iso) {
     return (
       <div className="rounded-xl bg-white/[0.06] backdrop-blur border border-white/10 px-4 py-3 text-right">
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">Próxima sessão</p>
+        <p className="text-[16px] font-bold uppercase tracking-[0.2em] text-white/50">Próxima sessão</p>
         <p className="font-serif text-lg font-bold text-white/80 mt-1">Não agendada</p>
       </div>
     );
@@ -244,13 +244,13 @@ function NextSessionCard({ iso }: { iso: string | null }) {
   const d = new Date(iso);
   return (
     <div className="rounded-xl bg-white/[0.08] backdrop-blur border border-white/15 px-4 py-3 text-right">
-      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gold flex items-center gap-1 justify-end">
+      <p className="text-[16px] font-bold uppercase tracking-[0.2em] text-gold flex items-center gap-1 justify-end">
         <CalendarIcon className="size-3" /> Próxima sessão
       </p>
       <p className="font-serif text-2xl font-bold text-white mt-1 tabular-nums">
         {d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
       </p>
-      <p className="text-[11px] text-white/70 tabular-nums">
+      <p className="text-[16px] text-white/70 tabular-nums">
         {d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
       </p>
     </div>
@@ -263,10 +263,10 @@ function JourneyStrip({ journey }: { journey: JourneyDTO }) {
   return (
     <div className="rounded-2xl bg-white/80 backdrop-blur border border-border/50 shadow-sm p-5">
       <div className="flex items-center justify-between mb-4">
-        <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground flex items-center gap-2">
+        <p className="text-[16px] font-bold uppercase tracking-[0.15em] text-muted-foreground flex items-center gap-2">
           <Feather className="size-3.5" /> Jornada clínica
         </p>
-        <span className="text-[10px] text-mahogany font-bold uppercase tracking-wider">
+        <span className="text-[16px] text-mahogany font-bold uppercase tracking-wider">
           Etapa atual: {journey.stages.find((s) => s.status === "current")?.label}
         </span>
       </div>
@@ -278,7 +278,7 @@ function JourneyStrip({ journey }: { journey: JourneyDTO }) {
             <div key={s.key} className="flex-1 min-w-[100px]">
               <div className="flex items-center gap-1">
                 <div
-                  className={`size-6 rounded-full flex items-center justify-center shrink-0 text-white text-[10px] font-bold ${
+                  className={`size-6 rounded-full flex items-center justify-center shrink-0 text-white text-[16px] font-bold ${
                     isCurrent ? "bg-mahogany ring-4 ring-mahogany/15" : isDone ? "bg-forest" : "bg-cream border border-border text-muted-foreground/60"
                   }`}
                 >
@@ -315,7 +315,7 @@ function ClinicalSummary({
 }) {
   return (
     <div className="rounded-3xl bg-white border border-border/60 shadow-[0_20px_60px_-30px_rgba(60,20,80,0.35)] p-6 md:p-7">
-      <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-mahogany flex items-center gap-2 mb-4">
+      <p className="text-[16px] font-bold uppercase tracking-[0.15em] text-mahogany flex items-center gap-2 mb-4">
         <Sparkles className="size-3.5" /> Resumo clínico vivo
       </p>
 
@@ -323,11 +323,11 @@ function ClinicalSummary({
         <SummaryBlock title="Última evolução" empty="Nenhuma evolução registrada ainda.">
           {lastEvolution ? (
             <>
-              <p className="text-[11px] text-muted-foreground font-semibold mb-1">
+              <p className="text-[16px] text-muted-foreground font-semibold mb-1">
                 {new Date(lastEvolution.dateISO).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
                 {lastEvolution.title ? ` · ${lastEvolution.title}` : ""}
               </p>
-              <p className="font-serif italic text-[14px] text-primary/90 leading-relaxed">
+              <p className="font-serif italic text-[16px] text-primary/90 leading-relaxed">
                 {lastEvolution.summary ?? "Evolução registrada sem resumo estruturado."}
               </p>
             </>
@@ -336,19 +336,19 @@ function ClinicalSummary({
 
         <SummaryBlock title="Intenção do paciente" empty="Sem intenção declarada no formulário de acolhimento.">
           {presentingIntention ? (
-            <p className="text-[13px] text-primary/85 leading-relaxed">{presentingIntention}</p>
+            <p className="text-[16px] text-primary/85 leading-relaxed">{presentingIntention}</p>
           ) : null}
         </SummaryBlock>
 
         <SummaryBlock title="Queixa apresentada" empty="Sem queixa registrada.">
           {presentingComplaint ? (
-            <p className="text-[13px] text-primary/85 leading-relaxed">{presentingComplaint}</p>
+            <p className="text-[16px] text-primary/85 leading-relaxed">{presentingComplaint}</p>
           ) : null}
         </SummaryBlock>
 
         <SummaryBlock title="Notas de assinatura" empty="Sem notas de assinatura da terapeuta.">
           {signatureNotes ? (
-            <p className="font-serif italic text-[13px] text-primary/80 leading-relaxed">{signatureNotes}</p>
+            <p className="font-serif italic text-[16px] text-primary/80 leading-relaxed">{signatureNotes}</p>
           ) : null}
         </SummaryBlock>
       </div>
@@ -360,8 +360,8 @@ function SummaryBlock({ title, empty, children }: { title: string; empty: string
   const isEmpty = !children;
   return (
     <div className={`rounded-xl border p-4 ${isEmpty ? "border-dashed border-border/60 bg-cream/30" : "border-border/40 bg-cream/50"}`}>
-      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-2">{title}</p>
-      {isEmpty ? <p className="text-[12px] italic text-muted-foreground/80">{empty}</p> : children}
+      <p className="text-[16px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-2">{title}</p>
+      {isEmpty ? <p className="text-[16px] italic text-muted-foreground/80">{empty}</p> : children}
     </div>
   );
 }
@@ -372,10 +372,10 @@ function GenogramShowcase({ genogram, patientName }: { genogram: DossierGenogram
   return (
     <div className="rounded-3xl bg-white border border-border/60 shadow-[0_10px_40px_-25px_rgba(60,20,80,0.25)] overflow-hidden">
       <div className="flex items-center justify-between px-6 py-4 border-b border-border/40 bg-gradient-to-r from-mahogany/[0.03] to-forest/[0.05]">
-        <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-mahogany flex items-center gap-2">
+        <p className="text-[16px] font-bold uppercase tracking-[0.15em] text-mahogany flex items-center gap-2">
           <GitBranch className="size-3.5" /> Genossociograma
         </p>
-        <Link to="/app/genossociogramas" className="text-[11px] text-mahogany font-bold hover:underline flex items-center gap-1">
+        <Link to="/app/genossociogramas" className="text-[16px] text-mahogany font-bold hover:underline flex items-center gap-1">
           Abrir editor <ChevronRight className="size-3" />
         </Link>
       </div>
@@ -447,7 +447,7 @@ function BigTree({ genogram, patientName }: { genogram: DossierGenogramDTO; pati
         {person.isDeceased && (
           <line x1={x - size} y1={y - size} x2={x + size} y2={y + size} className="stroke-slate-600" strokeWidth="1.5" />
         )}
-        <text x={x} y={labelY} textAnchor="middle" className={`fill-primary font-bold ${highlight ? "text-[11px]" : ""}`} fontSize={highlight ? 11 : 10}>
+        <text x={x} y={labelY} textAnchor="middle" className={`fill-primary font-bold ${highlight ? "text-[16px]" : ""}`} fontSize={highlight ? 11 : 10}>
           {firstName}
         </text>
       </>
@@ -488,7 +488,7 @@ function BigTree({ genogram, patientName }: { genogram: DossierGenogramDTO; pati
         />
       </svg>
 
-      <div className="mt-4 flex items-center justify-between text-[11px] flex-wrap gap-2">
+      <div className="mt-4 flex items-center justify-between text-[16px] flex-wrap gap-2">
         <div className="flex items-center gap-4 text-muted-foreground">
           <span className="flex items-center gap-1"><Circle className="size-2 fill-gold text-gold" /> Paciente</span>
           <span className="flex items-center gap-1"><Circle className="size-2 fill-mahogany text-mahogany" /> Masculino</span>
@@ -519,21 +519,21 @@ function FamilyTimeline({ events }: { events: TimelineEventDTO[] }) {
   return (
     <div className="rounded-3xl bg-white border border-border/60 shadow-[0_10px_40px_-25px_rgba(60,20,80,0.2)] p-6">
       <div className="flex items-center justify-between mb-5">
-        <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-mahogany flex items-center gap-2">
+        <p className="text-[16px] font-bold uppercase tracking-[0.15em] text-mahogany flex items-center gap-2">
           <Clock className="size-3.5" /> Linha do tempo familiar
         </p>
-        <span className="text-[10px] text-muted-foreground/70">{events.length} eventos</span>
+        <span className="text-[16px] text-muted-foreground/70">{events.length} eventos</span>
       </div>
 
       {events.length === 0 ? (
-        <p className="text-[12px] italic text-muted-foreground text-center py-6">
+        <p className="text-[16px] italic text-muted-foreground text-center py-6">
           Nenhum evento familiar registrado ainda — adicione datas ao genossociograma.
         </p>
       ) : (
         <div className="space-y-5">
           {byDecade.map(([decade, list]) => (
             <div key={decade}>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-2">
+              <p className="text-[16px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-2">
                 Década de {decade}
               </p>
               <ul className="space-y-2 pl-2 border-l-2 border-forest/30">
@@ -545,7 +545,7 @@ function FamilyTimeline({ events }: { events: TimelineEventDTO[] }) {
                       }`}
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="text-[13px] text-primary font-semibold">
+                      <p className="text-[16px] text-primary font-semibold">
                         <span className="tabular-nums text-muted-foreground font-normal">{e.year}</span> · {e.label}
                         {e.personName && (
                           <span className="text-muted-foreground font-normal"> — {e.personName}</span>
@@ -569,16 +569,16 @@ function RecentEvolutions({ evolutions }: { evolutions: EvolutionDTO[] }) {
   return (
     <div className="rounded-3xl bg-white border border-border/60 shadow-[0_10px_40px_-25px_rgba(60,20,80,0.2)] p-6">
       <div className="flex items-center justify-between mb-4">
-        <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-mahogany flex items-center gap-2">
+        <p className="text-[16px] font-bold uppercase tracking-[0.15em] text-mahogany flex items-center gap-2">
           <FileText className="size-3.5" /> Últimas evoluções
         </p>
-        <span className="text-[10px] text-muted-foreground/70">{evolutions.length}/8 mais recentes</span>
+        <span className="text-[16px] text-muted-foreground/70">{evolutions.length}/8 mais recentes</span>
       </div>
 
       {evolutions.length === 0 ? (
         <div className="py-8 text-center">
           <FileText className="size-8 text-muted-foreground/30 mx-auto mb-2" />
-          <p className="text-[12px] italic text-muted-foreground">Primeira sessão ainda não realizada.</p>
+          <p className="text-[16px] italic text-muted-foreground">Primeira sessão ainda não realizada.</p>
         </div>
       ) : (
         <ul className="divide-y divide-border/40">
@@ -588,7 +588,7 @@ function RecentEvolutions({ evolutions }: { evolutions: EvolutionDTO[] }) {
                 <p className="font-serif text-2xl font-bold text-mahogany tabular-nums leading-none">
                   {new Date(e.dateISO).getDate().toString().padStart(2, "0")}
                 </p>
-                <p className="text-[10px] font-bold uppercase text-muted-foreground mt-0.5">
+                <p className="text-[16px] font-bold uppercase text-muted-foreground mt-0.5">
                   {new Date(e.dateISO).toLocaleDateString("pt-BR", { month: "short" }).replace(".", "")}
                 </p>
               </div>
@@ -632,8 +632,8 @@ function AiBriefing({ briefing }: { briefing: BriefingDTO }) {
       <div className="relative space-y-5">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-gold">Briefing IA</p>
-            <p className="text-[12px] text-white/70 mt-0.5">Baseado nos padrões detectados</p>
+            <p className="text-[16px] font-black uppercase tracking-[0.25em] text-gold">Briefing IA</p>
+            <p className="text-[16px] text-white/70 mt-0.5">Baseado nos padrões detectados</p>
           </div>
           <button
             disabled
@@ -645,17 +645,17 @@ function AiBriefing({ briefing }: { briefing: BriefingDTO }) {
         </div>
 
         {!hasContent && (
-          <p className="text-[12px] text-white/70 italic">
+          <p className="text-[16px] text-white/70 italic">
             Padrões clínicos e sugestões aparecerão à medida que sessões forem registradas e o genossociograma preenchido.
           </p>
         )}
 
         {briefing.clinicalAlerts.length > 0 && (
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-gold/90 mb-2">Pontos de atenção</p>
+            <p className="text-[16px] font-bold uppercase tracking-[0.15em] text-gold/90 mb-2">Pontos de atenção</p>
             <ul className="space-y-1.5">
               {briefing.clinicalAlerts.map((a, i) => (
-                <li key={i} className="flex items-start gap-2 text-[13px] text-white/90 leading-relaxed">
+                <li key={i} className="flex items-start gap-2 text-[16px] text-white/90 leading-relaxed">
                   <AlertTriangle className={`size-3.5 shrink-0 mt-0.5 ${a.severity === "high" ? "text-rose-300" : a.severity === "warn" ? "text-gold" : "text-forest-mid"}`} />
                   <span>{a.message}</span>
                 </li>
@@ -666,12 +666,12 @@ function AiBriefing({ briefing }: { briefing: BriefingDTO }) {
 
         {briefing.hypotheses.length > 0 && (
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-gold/90 mb-2">Hipóteses clínicas</p>
+            <p className="text-[16px] font-bold uppercase tracking-[0.15em] text-gold/90 mb-2">Hipóteses clínicas</p>
             <ul className="space-y-2">
               {briefing.hypotheses.map((h, i) => (
                 <li key={i} className="rounded-xl bg-white/[0.06] border border-white/10 px-3 py-2">
-                  <p className="font-bold text-[13px] text-white">{h.title}</p>
-                  {h.description && <p className="text-[12px] text-white/70 mt-1 leading-snug">{h.description}</p>}
+                  <p className="font-bold text-[16px] text-white">{h.title}</p>
+                  {h.description && <p className="text-[16px] text-white/70 mt-1 leading-snug">{h.description}</p>}
                 </li>
               ))}
             </ul>
@@ -680,7 +680,7 @@ function AiBriefing({ briefing }: { briefing: BriefingDTO }) {
 
         {briefing.suggestedQuestions.length > 0 && (
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-gold/90 mb-2 flex items-center gap-1.5">
+            <p className="text-[16px] font-bold uppercase tracking-[0.15em] text-gold/90 mb-2 flex items-center gap-1.5">
               <MessageCircle className="size-3" /> Perguntas sugeridas
             </p>
             <ul className="space-y-1.5">
@@ -695,7 +695,7 @@ function AiBriefing({ briefing }: { briefing: BriefingDTO }) {
 
         {briefing.suggestedProtocols.length > 0 && (
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-gold/90 mb-2 flex items-center gap-1.5">
+            <p className="text-[16px] font-bold uppercase tracking-[0.15em] text-gold/90 mb-2 flex items-center gap-1.5">
               <ClipboardList className="size-3" /> Protocolos recomendados
             </p>
             <div className="flex flex-wrap gap-1.5">
@@ -718,16 +718,16 @@ function ConnectedLibrary({ items }: { items: LibrarySuggestionDTO[] }) {
   return (
     <div className="rounded-3xl bg-white border border-border/60 shadow-[0_10px_40px_-25px_rgba(60,20,80,0.2)] p-6">
       <div className="flex items-center justify-between mb-4">
-        <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-mahogany flex items-center gap-2">
+        <p className="text-[16px] font-bold uppercase tracking-[0.15em] text-mahogany flex items-center gap-2">
           <BookOpen className="size-3.5" /> Biblioteca conectada
         </p>
-        <Link to="/app/biblioteca" className="text-[11px] text-mahogany font-bold hover:underline flex items-center gap-1">
+        <Link to="/app/biblioteca" className="text-[16px] text-mahogany font-bold hover:underline flex items-center gap-1">
           Ver tudo <ChevronRight className="size-3" />
         </Link>
       </div>
 
       {items.length === 0 ? (
-        <p className="text-[12px] italic text-muted-foreground text-center py-4">
+        <p className="text-[16px] italic text-muted-foreground text-center py-4">
           Sem sugestões da biblioteca. Elas aparecem quando padrões clínicos são detectados.
         </p>
       ) : (
@@ -742,7 +742,7 @@ function ConnectedLibrary({ items }: { items: LibrarySuggestionDTO[] }) {
                   <BookOpen className="size-4 text-mahogany" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="font-bold text-primary text-[13px] truncate">{it.title}</p>
+                  <p className="font-bold text-primary text-[16px] truncate">{it.title}</p>
                   <p className="text-[11.5px] text-muted-foreground">{it.author}</p>
                   <span className="inline-block mt-1 text-[9.5px] font-bold uppercase tracking-wider text-mahogany/70 bg-mahogany/8 px-1.5 py-0.5 rounded">
                     {it.matchedTag}
@@ -765,7 +765,7 @@ function ActionBar({ clientId }: { clientId: string }) {
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border/60 bg-white/95 backdrop-blur-lg shadow-[0_-8px_30px_-15px_rgba(60,20,80,0.25)]">
       <div className="container-liz py-3 flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+        <div className="flex items-center gap-2 text-[16px] font-bold uppercase tracking-widest text-muted-foreground">
           <Users className="size-3.5 text-mahogany" /> Ações do dossiê
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -798,7 +798,7 @@ function DossierSkeleton() {
   return (
     <div className="min-h-[calc(100vh-64px)] bg-cream flex flex-col items-center justify-center gap-3">
       <Loader2 className="size-8 animate-spin text-mahogany" />
-      <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Carregando dossiê clínico…</p>
+      <p className="text-[16px] font-bold uppercase tracking-widest text-muted-foreground">Carregando dossiê clínico…</p>
     </div>
   );
 }

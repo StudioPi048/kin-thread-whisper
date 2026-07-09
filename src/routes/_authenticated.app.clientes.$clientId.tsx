@@ -209,14 +209,14 @@ function ClientDossierPage() {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pb-12">
       {/* Editorial CRM-Style Mahogany Header */}
-      <div className="block-mahogany pb-6 pt-4 px-6 relative overflow-hidden">
+      <div className="bg-[#151A15] border-b border-white/10 pb-10 pt-6 px-6 relative overflow-hidden">
         {/* Giant decorative initial */}
-        <span className="section-number absolute -right-4 -bottom-10 opacity-[0.03] text-white select-none">
+        <span className="section-number absolute -right-4 -bottom-10 opacity-[0.02] text-white select-none">
           {initials}
         </span>
 
         <div className="container-liz relative z-10 space-y-3">
-          <nav className="flex items-center gap-1 text-[12px] uppercase tracking-[0.1em] font-bold text-white/50">
+          <nav className="flex items-center gap-1 text-[16px] uppercase tracking-[0.1em] font-bold text-white/50">
             <Link
               to="/app/clientes"
               className="inline-flex items-center gap-1 hover:text-white transition-colors"
@@ -227,12 +227,12 @@ function ClientDossierPage() {
             <span className="truncate text-gold">{display}</span>
           </nav>
 
-          <header className="flex flex-col gap-3">
+          <header className="flex flex-col gap-4 mt-2">
             <div className="flex flex-wrap items-center justify-between gap-6">
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-5">
                 <motion.div
                   layoutId={`avatar-${client.id}`}
-                  className="relative flex size-16 shrink-0 items-center justify-center rounded-lg bg-forest font-serif text-2xl font-bold text-white shadow-lg overflow-hidden group cursor-pointer"
+                  className="relative flex size-20 shrink-0 items-center justify-center rounded-none bg-white/5 border border-white/10 font-serif text-3xl font-bold text-white shadow-xl overflow-hidden group cursor-pointer"
                 >
                   {avatarUrl ? (
                     <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
@@ -254,11 +254,11 @@ function ClientDossierPage() {
                   </label>
                 </motion.div>
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-white/60">
+                  <p className="font-sans text-[16px] font-bold uppercase tracking-[0.35em] text-[#D4AF37]">
                     Dossiê Clínico
                   </p>
-                  <div className="flex items-center gap-3">
-                    <h1 className="font-serif text-3xl font-bold text-white">{display}</h1>
+                  <div className="flex items-center gap-4 mt-1">
+                    <h1 className="font-serif text-4xl font-bold text-white">{display}</h1>
                     <div className="flex items-center gap-1 opacity-50 hover:opacity-100 transition-opacity">
                       <Button
                         variant="ghost"
@@ -298,31 +298,31 @@ function ClientDossierPage() {
             </div>
 
             {/* Minimalist Info Bar */}
-            <div className="flex flex-wrap items-center gap-6 border-t border-white/10 pt-3 text-[13px] text-white/80">
-              <div className="flex items-center gap-2">
-                <Mail className="size-3.5 text-white/50" /> 
-                <span className="font-medium">{client.email || "Sem e-mail"}</span>
+            <div className="flex flex-wrap items-center gap-6 border-t border-white/10 pt-4 text-[16px] font-sans font-bold uppercase tracking-widest text-white/50">
+              <div className="flex items-center gap-3">
+                <Mail className="size-4 text-white/30" /> 
+                <span className="font-bold text-white/80">{client.email || "Sem e-mail"}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Phone className="size-3.5 text-white/50" /> 
-                <span className="font-medium">{client.phone || "Sem telefone"}</span>
+              <div className="flex items-center gap-3">
+                <Phone className="size-4 text-white/30" /> 
+                <span className="font-bold text-white/80">{client.phone || "Sem telefone"}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <MapPin className="size-3.5 text-white/50" /> 
-                <span className="font-medium">{client.birthplace || "Local não informado"}</span>
-                <span className="text-white/40 mx-1">•</span>
-                <span className="font-medium">{age !== null ? `${age} anos` : "Idade omitida"}</span>
+              <div className="flex items-center gap-3">
+                <MapPin className="size-4 text-white/30" /> 
+                <span className="font-bold text-white/80">{client.birthplace || "Local não informado"}</span>
+                <span className="text-white/20 mx-2">•</span>
+                <span className="font-bold text-white/80">{age !== null ? `${age} anos` : "Idade omitida"}</span>
               </div>
               
               <div className="flex-1" />
               
-              <div className="flex items-center gap-4 bg-white/10 px-4 py-1.5 rounded-full border border-white/20">
-                <span className="flex items-center gap-1.5 text-[12px] font-semibold text-white/90" title="Próxima sessão">
-                  <CalendarDays className="size-3.5" /> {(client as { session_count?: number }).session_count || 0} sessões
+              <div className="flex items-center gap-4 bg-white/5 px-5 py-2 border border-white/10 shadow-inner">
+                <span className="flex items-center gap-2 text-[16px] font-bold text-white/80" title="Próxima sessão">
+                  <CalendarDays className="size-4" /> {(client as { session_count?: number }).session_count || 0} sessões
                 </span>
-                <div className="w-px h-3 bg-white/20" />
-                <span className="flex items-center gap-1.5 text-[12px] font-bold text-white shadow-sm">
-                  <Sparkles className="size-3.5 text-gold" /> IA Clínica Ativa
+                <div className="w-px h-4 bg-white/20" />
+                <span className="flex items-center gap-2 text-[16px] font-bold text-[#D4AF37] shadow-sm">
+                  <Sparkles className="size-4 text-[#D4AF37]" /> IA Clínica Ativa
                 </span>
               </div>
             </div>
@@ -335,47 +335,47 @@ function ClientDossierPage() {
         <div className="flex-1 min-w-0">
           <Tabs defaultValue="genogram" className="w-full">
             {/* STICKY NAV TABS */}
-            <div className="sticky top-0 z-30 py-2 bg-slate-50/80 backdrop-blur-md border-b border-border/40">
-              <TabsList className="w-fit justify-start h-auto p-1 bg-white shadow-md rounded-full flex gap-1 border border-border/40">
+            <div className="sticky top-0 z-30 py-3 bg-[#1B211A] border-b border-white/10">
+              <TabsList className="w-fit justify-start h-auto p-1.5 bg-[#151A15] border border-white/10 flex gap-2 rounded-none">
                 <TabsTrigger
                   value="overview"
-                  className="flex items-center gap-1.5 py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-mahogany data-[state=state]:bg-mahogany data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
+                  className="flex items-center gap-2 py-2.5 px-5 rounded-none font-sans text-[16px] font-bold uppercase tracking-widest text-white/50 data-[state=active]:bg-[#D4AF37] data-[state=active]:text-[#1B211A] transition-all cursor-pointer"
                 >
-                  <FileText className="size-3.5" /> Visão geral
+                  <FileText className="size-4" /> Visão geral
                 </TabsTrigger>
                 <TabsTrigger
                   value="genogram"
-                  className="flex items-center gap-1.5 py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-mahogany data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
+                  className="flex items-center gap-2 py-2.5 px-5 rounded-none font-sans text-[16px] font-bold uppercase tracking-widest text-white/50 data-[state=active]:bg-[#D4AF37] data-[state=active]:text-[#1B211A] transition-all cursor-pointer"
                 >
-                  <TreePine className="size-3.5" /> Genossociograma
+                  <TreePine className="size-4" /> Genograma
                 </TabsTrigger>
                 <TabsTrigger
                   value="timeline"
-                  className="flex items-center gap-1.5 py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-mahogany data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
+                  className="flex items-center gap-2 py-2.5 px-5 rounded-none font-sans text-[16px] font-bold uppercase tracking-widest text-white/50 data-[state=active]:bg-[#D4AF37] data-[state=active]:text-[#1B211A] transition-all cursor-pointer"
                 >
-                  <History className="size-3.5" /> Linha do tempo
+                  <History className="size-4" /> Linha do tempo
                 </TabsTrigger>
                 <TabsTrigger
                   value="patterns"
-                  className="flex items-center gap-1.5 py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-mahogany data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
+                  className="flex items-center gap-2 py-2.5 px-5 rounded-none font-sans text-[16px] font-bold uppercase tracking-widest text-white/50 data-[state=active]:bg-[#D4AF37] data-[state=active]:text-[#1B211A] transition-all cursor-pointer"
                 >
-                  <Activity className="size-3.5" /> Padrões
+                  <Activity className="size-4" /> Padrões
                 </TabsTrigger>
                 <TabsTrigger
                   value="intake"
-                  className="py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-mahogany data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
+                  className="py-2.5 px-5 rounded-none font-sans text-[16px] font-bold uppercase tracking-widest text-white/50 data-[state=active]:bg-[#D4AF37] data-[state=active]:text-[#1B211A] transition-all cursor-pointer"
                 >
                   Anamnese
                 </TabsTrigger>
                 <TabsTrigger
                   value="sessions"
-                  className="py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-mahogany data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
+                  className="py-2.5 px-5 rounded-none font-sans text-[16px] font-bold uppercase tracking-widest text-white/50 data-[state=active]:bg-[#D4AF37] data-[state=active]:text-[#1B211A] transition-all cursor-pointer"
                 >
                   Sessões
                 </TabsTrigger>
                 <TabsTrigger
                   value="clan"
-                  className="py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-mahogany data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
+                  className="py-2.5 px-5 rounded-none font-sans text-[16px] font-bold uppercase tracking-widest text-white/50 data-[state=active]:bg-[#D4AF37] data-[state=active]:text-[#1B211A] transition-all cursor-pointer"
                 >
                   Planilha
                 </TabsTrigger>
@@ -393,7 +393,7 @@ function ClientDossierPage() {
                       accent="mahogany"
                       icon={<Sparkles className="size-4 text-mahogany" />}
                     >
-                      <p className="text-[14px] leading-relaxed text-foreground font-serif">
+                      <p className="text-[16px] leading-relaxed text-foreground font-serif">
                         O clã de <strong>{display}</strong> exibe repetições notáveis de queixas de
                         abandono nas três últimas gerações (particularmente na linhagem paterna). O
                         padrão de união em casamento coincide de forma significativa com mortes de
@@ -404,7 +404,7 @@ function ClientDossierPage() {
 
                     <Panel title="Queixa apresentada" accent="forest">
                       {client.presenting_complaint ? (
-                        <p className="whitespace-pre-wrap text-[14px] leading-relaxed text-foreground/80 font-serif">
+                        <p className="whitespace-pre-wrap text-[16px] leading-relaxed text-foreground/80 font-serif">
                           {client.presenting_complaint}
                         </p>
                       ) : (
@@ -414,7 +414,7 @@ function ClientDossierPage() {
 
                     <Panel title="Notas clínicas" accent="gold">
                       {client.clinical_notes ? (
-                        <p className="whitespace-pre-wrap text-[14px] leading-relaxed text-foreground/80 font-serif">
+                        <p className="whitespace-pre-wrap text-[16px] leading-relaxed text-foreground/80 font-serif">
                           {client.clinical_notes}
                         </p>
                       ) : (
@@ -468,20 +468,20 @@ function ClientDossierPage() {
                     >
                       {client.consent_given_at ? (
                         <>
-                          <p className="text-[13px] text-foreground font-medium">
+                          <p className="text-[16px] text-foreground font-medium">
                             Consentimento registrado em{" "}
                             <strong className="text-emerald-700">
                               {new Date(client.consent_given_at).toLocaleDateString("pt-BR")}
                             </strong>
                           </p>
                           {client.consent_notes && (
-                            <p className="mt-2 text-[12px] text-muted-foreground">
+                            <p className="mt-2 text-[16px] text-muted-foreground">
                               {client.consent_notes}
                             </p>
                           )}
                         </>
                       ) : (
-                        <p className="text-[13px] font-bold text-amber-700">
+                        <p className="text-[16px] font-bold text-amber-700">
                           Sem consentimento registrado. Registre antes de anotar dados sensíveis.
                         </p>
                       )}
@@ -569,9 +569,9 @@ function ClientDossierPage() {
 function ClientNotFound() {
   return (
     <div className="container-liz py-24 text-center">
-      <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-gold">Instituto Liz</p>
+      <p className="text-[16px] font-bold uppercase tracking-[0.3em] text-gold">Instituto Liz</p>
       <h1 className="mt-4 font-serif text-4xl font-bold text-primary">Dossiê não encontrado</h1>
-      <p className="mt-3 text-[15px] text-muted-foreground">
+      <p className="mt-3 text-[16px] text-muted-foreground">
         Este cliente não existe ou foi removido.
       </p>
       <Button asChild className="mt-8" variant="forest">
@@ -602,10 +602,10 @@ function Panel({
           : "";
 
   return (
-    <section className={`rounded-[1rem] glass-card p-6 ${accentClass}`}>
-      <div className="mb-4 flex items-center gap-2 border-b border-border/50 pb-2">
+    <section className={`bg-[#151A15] shadow-[0_16px_40px_rgba(0,0,0,0.4)] p-8 ${accentClass}`}>
+      <div className="mb-6 flex items-center gap-3 border-b border-black/10 pb-3">
         {icon}
-        <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+        <h3 className="font-sans text-[16px] font-bold uppercase tracking-[0.2em] text-[#1B211A]/60">
           {title}
         </h3>
       </div>
@@ -616,13 +616,13 @@ function Panel({
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between gap-3 border-t border-border/40 py-2.5 text-[13px] first:border-0 first:pt-0">
-      <dt className="font-semibold text-muted-foreground">{label}</dt>
-      <dd className="max-w-[60%] truncate text-right text-foreground font-medium">{value}</dd>
+    <div className="flex justify-between gap-4 border-t border-black/5 py-3 font-sans text-[16px] first:border-0 first:pt-0">
+      <dt className="font-bold uppercase tracking-widest text-[#1B211A]/50">{label}</dt>
+      <dd className="max-w-[60%] truncate text-right text-[#1B211A] font-bold">{value}</dd>
     </div>
   );
 }
 
 function EmptyLine({ children }: { children: React.ReactNode }) {
-  return <p className="text-[14px] italic text-muted-foreground">{children}</p>;
+  return <p className="text-[16px] italic text-muted-foreground">{children}</p>;
 }

@@ -161,7 +161,7 @@ function ClientesIndex() {
       <header className="pt-24 pb-12 relative z-10 border-b border-white/10">
         <div className="container-liz flex flex-wrap items-end justify-between gap-6">
           <div>
-            <p className="font-sans text-[14px] font-bold tracking-[0.2em] text-[#D4AF37] uppercase mb-4 flex items-center gap-2">
+            <p className="font-sans text-[16px] font-bold tracking-[0.2em] text-[#D4AF37] uppercase mb-4 flex items-center gap-2">
               <FolderClosed className="size-5" /> Gaveta de Dossiês Físicos
             </p>
             <h1 className="font-serif text-5xl md:text-6xl font-bold tracking-tight text-white leading-tight">
@@ -172,7 +172,7 @@ function ClientesIndex() {
             </p>
           </div>
           <button 
-            className="bg-[#D4AF37] text-[#1B211A] font-sans text-[13px] font-bold uppercase tracking-widest px-8 py-4 hover:bg-[#E8C65A] transition-colors shadow-lg cursor-pointer"
+            className="bg-[#D4AF37] text-[#1B211A] font-sans text-[16px] font-bold uppercase tracking-widest px-8 py-4 hover:bg-[#E8C65A] transition-colors shadow-lg cursor-pointer"
             onClick={() => setCreating(true)}
           >
             + Criar Novo Dossiê
@@ -190,13 +190,13 @@ function ClientesIndex() {
             <div className="flex bg-[#1B211A] p-1 border border-white/10 rounded-none">
               <button
                 onClick={() => setTab("active")}
-                className={`font-sans text-[12px] font-bold uppercase tracking-widest px-6 py-3 transition-colors ${tab === "active" ? "bg-white/10 text-[#D4AF37]" : "text-white/40 hover:text-white"}`}
+                className={`font-sans text-[16px] font-bold uppercase tracking-widest px-6 py-3 transition-colors ${tab === "active" ? "bg-white/10 text-[#D4AF37]" : "text-white/40 hover:text-white"}`}
               >
                 Dossiês Ativos
               </button>
               <button
                 onClick={() => setTab("archived")}
-                className={`font-sans text-[12px] font-bold uppercase tracking-widest px-6 py-3 transition-colors ${tab === "archived" ? "bg-white/10 text-[#D4AF37]" : "text-white/40 hover:text-white"}`}
+                className={`font-sans text-[16px] font-bold uppercase tracking-widest px-6 py-3 transition-colors ${tab === "archived" ? "bg-white/10 text-[#D4AF37]" : "text-white/40 hover:text-white"}`}
               >
                 Caixa Morta
               </button>
@@ -227,7 +227,7 @@ function ClientesIndex() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Buscar no acervo..."
-              className="w-full bg-[#1B211A] border border-white/20 text-white placeholder:text-white/30 pl-11 pr-4 py-3 font-sans text-[14px] focus:outline-none focus:border-[#D4AF37] transition-colors"
+              className="w-full bg-[#1B211A] border border-white/20 text-white placeholder:text-white/30 pl-11 pr-4 py-3 font-sans text-[16px] focus:outline-none focus:border-[#D4AF37] transition-colors"
             />
           </div>
         </div>
@@ -251,7 +251,7 @@ function ClientesIndex() {
               </p>
               <button 
                 onClick={() => setCreating(true)}
-                className="bg-transparent border border-[#D4AF37] text-[#D4AF37] font-sans text-[12px] font-bold uppercase tracking-widest px-6 py-3 hover:bg-[#D4AF37]/10 transition-colors"
+                className="bg-transparent border border-[#D4AF37] text-[#D4AF37] font-sans text-[16px] font-bold uppercase tracking-widest px-6 py-3 hover:bg-[#D4AF37]/10 transition-colors"
               >
                 Abrir Novo Dossiê
               </button>
@@ -279,18 +279,18 @@ function ClientesIndex() {
                   }}
                 >
                   {/* Cartão de Pasta Parda / Ficha de Investigação */}
-                  <div className={`relative bg-[#FCF9F4] p-8 shadow-[0_16px_40px_rgba(0,0,0,0.4)] border border-[#E6DDD0] text-[#3B2F2F] group transition-transform duration-300 hover:rotate-0 hover:z-10 ${i % 2 === 0 ? 'rotate-[-1deg]' : 'rotate-[1deg]'}`}>
+                  <div className={`relative bg-[#151A15] p-8 shadow-[0_16px_40px_rgba(0,0,0,0.4)] border border-white/10 text-white group transition-transform duration-300 hover:rotate-0 hover:z-10 ${i % 2 === 0 ? 'rotate-[-1deg]' : 'rotate-[1deg]'}`}>
                     
                     <Tape rotate={i % 2 === 0 ? '-2deg' : '2deg'} w="55px" top="-10px" left="50%" />
                     
-                    <div className="flex justify-between items-start mb-6 border-b border-[#E6DDD0] pb-4">
+                    <div className="flex justify-between items-start mb-6 border-b border-white/10 pb-4">
                       <div className="flex items-center gap-3">
                         <div className="size-10 bg-[#1B211A] text-[#D4AF37] flex items-center justify-center font-serif text-[18px] font-bold">
                           {initialsFrom(c.preferred_name || c.full_name)}
                         </div>
                         <div>
-                          <p className="font-sans text-[10px] font-bold uppercase tracking-widest text-[#8B7355]">Ref. {c.id.slice(0, 5)}</p>
-                          <p className="font-sans text-[12px] text-[#5A4A3A]">
+                          <p className="font-sans text-[16px] font-bold uppercase tracking-widest text-white">Ref. {c.id.slice(0, 5)}</p>
+                          <p className="font-sans text-[16px] text-white">
                             {calcAge(c.birth_date) ? `${calcAge(c.birth_date)} anos` : "Idade ñ informada"}
                           </p>
                         </div>
@@ -298,12 +298,12 @@ function ClientesIndex() {
 
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <button className="p-2 hover:bg-[#E6DDD0]/50 transition-colors cursor-pointer text-[#8B7355]">
+                          <button className="p-2 hover:bg-[#E6DDD0]/50 transition-colors cursor-pointer text-white">
                             <MoreHorizontal className="size-5" />
                           </button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48 bg-[#FCF9F4] border-[#E6DDD0] text-[#3B2F2F] font-sans rounded-none p-1">
-                          <DropdownMenuItem onClick={() => setEditing(c)} className="cursor-pointer focus:bg-[#E6DDD0]/50 text-[13px] py-2">
+                        <DropdownMenuContent align="end" className="w-48 bg-[#151A15] border-white/10 text-white font-sans rounded-none p-1">
+                          <DropdownMenuItem onClick={() => setEditing(c)} className="cursor-pointer focus:bg-[#E6DDD0]/50 text-[16px] py-2">
                             <Pencil className="mr-2 size-4" /> Editar Capa
                           </DropdownMenuItem>
                           <DropdownMenuItem
@@ -313,7 +313,7 @@ function ClientesIndex() {
                                 status: c.status === "active" ? "archived" : "active",
                               })
                             }
-                            className="cursor-pointer focus:bg-[#E6DDD0]/50 text-[13px] py-2"
+                            className="cursor-pointer focus:bg-[#E6DDD0]/50 text-[16px] py-2"
                           >
                             {c.status === "active" ? (
                               <><Archive className="mr-2 size-4" /> Arquivar Dossiê</>
@@ -324,7 +324,7 @@ function ClientesIndex() {
                           <DropdownMenuSeparator className="bg-[#E6DDD0]" />
                           <DropdownMenuItem
                             onClick={() => setDeleting(c)}
-                            className="cursor-pointer text-red-700 focus:bg-red-50 focus:text-red-800 text-[13px] py-2"
+                            className="cursor-pointer text-red-700 focus:bg-red-50 focus:text-red-800 text-[16px] py-2"
                           >
                             <Trash2 className="mr-2 size-4" /> Destruir Dossiê
                           </DropdownMenuItem>
@@ -333,26 +333,26 @@ function ClientesIndex() {
                     </div>
 
                     <div className="mb-8">
-                      <h3 className="font-serif font-bold text-[26px] text-[#2B2018] leading-tight mb-2 line-clamp-2">
+                      <h3 className="font-serif font-bold text-[26px] text-white leading-tight mb-2 line-clamp-2">
                         {c.preferred_name || c.full_name}
                       </h3>
-                      <p className="font-serif italic text-[#5A4A3A] text-[17px] line-clamp-2">
+                      <p className="font-serif italic text-white text-[17px] line-clamp-2">
                         {c.presenting_complaint || "Sem queixa inicial registrada."}
                       </p>
                     </div>
 
-                    <div className="space-y-4 pt-4 border-t border-dashed border-[#E6DDD0]">
+                    <div className="space-y-4 pt-4 border-t border-dashed border-white/10">
                        <div className="flex items-center justify-between">
-                         <span className="font-sans text-[11px] font-bold uppercase tracking-widest text-[#8B7355] flex items-center gap-1.5">
+                         <span className="font-sans text-[16px] font-bold uppercase tracking-widest text-white flex items-center gap-1.5">
                            <Layers className="size-4" /> Genograma
                          </span>
-                         <span className="font-serif text-[18px] font-bold text-[#2B2018]">
+                         <span className="font-serif text-[18px] font-bold text-white">
                             Pendente
                          </span>
                        </div>
 
                        <Link to="/app/clientes/$clientId" params={{ clientId: c.id }}>
-                         <button className="w-full bg-[#1B211A] text-white font-sans text-[12px] font-bold uppercase tracking-widest py-4 mt-2 hover:bg-[#2B312A] transition-colors cursor-pointer">
+                         <button className="w-full bg-[#1B211A] text-white font-sans text-[16px] font-bold uppercase tracking-widest py-4 mt-2 hover:bg-[#2B312A] transition-colors cursor-pointer">
                            Abrir Dossiê Completo →
                          </button>
                        </Link>
@@ -365,9 +365,9 @@ function ClientesIndex() {
           ) : (
             // Lista compacta estilo registro
             <div className="bg-[#151A15] border border-white/10 shadow-xl overflow-hidden">
-              <table className="w-full text-left border-collapse font-sans text-[14px]">
+              <table className="w-full text-left border-collapse font-sans text-[16px]">
                 <thead>
-                  <tr className="border-b border-white/10 bg-white/5 text-[#D4AF37] uppercase tracking-[0.15em] font-bold text-[11px]">
+                  <tr className="border-b border-white/10 bg-white/5 text-[#D4AF37] uppercase tracking-[0.15em] font-bold text-[16px]">
                     <th className="p-5 pl-8">Dossiê / Nome</th>
                     <th className="p-5">Localidade</th>
                     <th className="p-5">Motivo da Investigação</th>
@@ -380,7 +380,7 @@ function ClientesIndex() {
                       <td className="p-5 pl-8">
                         <Link to="/app/clientes/$clientId" params={{ clientId: c.id }} className="group-hover:text-[#D4AF37] transition-colors">
                           <p className="font-serif font-bold text-[20px] text-white">{c.preferred_name || c.full_name}</p>
-                          <p className="text-[13px] text-white/40 mt-1 uppercase tracking-widest">{c.id.slice(0,8)}</p>
+                          <p className="text-[16px] text-white/40 mt-1 uppercase tracking-widest">{c.id.slice(0,8)}</p>
                         </Link>
                       </td>
                       <td className="p-5 text-white/60">
@@ -413,41 +413,35 @@ function ClientesIndex() {
       <ClientFormDialog
         open={creating}
         onOpenChange={setCreating}
-        onSuccess={() => {
-          setCreating(false);
-          qc.invalidateQueries({ queryKey: ["clients"] });
-        }}
+        professionalId={user.id}
       />
 
       {editing && (
         <ClientFormDialog
-          clientToEdit={editing}
+          editing={editing}
           open={!!editing}
           onOpenChange={(v) => !v && setEditing(null)}
-          onSuccess={() => {
-            setEditing(null);
-            qc.invalidateQueries({ queryKey: ["clients"] });
-          }}
+          professionalId={user.id}
         />
       )}
 
       {deleting && (
         <AlertDialog open={!!deleting} onOpenChange={(v) => !v && setDeleting(null)}>
-          <AlertDialogContent className="bg-[#FCF9F4] border-[#E6DDD0] rounded-none p-8 font-sans">
+          <AlertDialogContent className="bg-[#151A15] border-white/10 rounded-none p-8 font-sans">
             <AlertDialogHeader>
               <AlertDialogTitle className="font-serif text-3xl font-bold text-[#8B3A3A]">Destruir Dossiê Físico?</AlertDialogTitle>
-              <AlertDialogDescription className="text-[16px] text-[#5A4A3A] font-serif leading-relaxed italic mt-4">
-                Esta ação reduzirá o dossiê de <strong className="not-italic text-[#2B2018]">{deleting.full_name}</strong> a cinzas. 
+              <AlertDialogDescription className="text-[16px] text-white font-serif leading-relaxed italic mt-4">
+                Esta ação reduzirá o dossiê de <strong className="not-italic text-white">{deleting.full_name}</strong> a cinzas. 
                 Isso inclui anamnese, genograma e linha do tempo. É um ato irreversível.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter className="mt-8">
-              <AlertDialogCancel className="rounded-none border-[#E6DDD0] text-[#3B2F2F] hover:bg-[#E6DDD0]/50 font-bold uppercase tracking-widest text-[12px] px-6">
+              <AlertDialogCancel className="rounded-none border-white/10 text-white hover:bg-[#E6DDD0]/50 font-bold uppercase tracking-widest text-[16px] px-6">
                 Guardar de volta
               </AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => remove.mutate(deleting.id)}
-                className="rounded-none bg-[#8B3A3A] hover:bg-[#6A2B2B] text-white font-bold uppercase tracking-widest text-[12px] px-6"
+                className="rounded-none bg-[#8B3A3A] hover:bg-[#6A2B2B] text-white font-bold uppercase tracking-widest text-[16px] px-6"
               >
                 Destruir permanentemente
               </AlertDialogAction>
