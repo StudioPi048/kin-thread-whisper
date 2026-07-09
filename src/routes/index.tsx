@@ -19,290 +19,201 @@ export const Route = createFileRoute("/")({
   component: LandingPage,
 });
 
-/* ─── DESIGN TOKENS (usados hardcoded só aqui — landing page fora do tema) ─── */
-const T = {
-  /* Cores */
-  bgDark:    "#1B211A",   /* Hero e footer */
-  bgDarkAlt: "#151A15",   /* Painel Pilares — lado esquerdo */
-  bgPanel:   "#1A201A",   /* Painel Pilares — fundo geral */
-  bgLight:   "#FCF9F4",   /* Seções claras */
-  bgCard:    "#FAF8F5",   /* Cartões de papel */
-  gold:      "#D4AF37",   /* Dourado principal */
-  goldMuted: "#C8A951",   /* Dourado desaturado */
-  border:    "#E6DDD0",   /* Bordas dos cards */
-  tape:      "rgba(212,195,163,0.75)", /* Fita adesiva */
-  textDark:  "#3D2B1F",   /* Texto sobre fundo claro */
-
-  /* Tipografia — escala modular 1.25 (Major Third) */
-  /* Todos os tamanhos derivam de uma base de 16px */
-  labelXs:   "text-[9px]  tracking-[0.25em] uppercase font-bold",  /* labels categoria */
-  labelSm:   "text-[11px] tracking-[0.2em]  uppercase font-bold",  /* labels seção */
-  body:      "text-[15px] leading-[1.7] font-serif",               /* corpo de texto */
-  bodySm:    "text-[13px] leading-[1.65] font-serif",              /* texto pequeno */
-  bullet:    "text-[13px] leading-[1.6]  font-serif italic",       /* checklist */
-
-  /* Headings — apenas 3 tamanhos no sistema */
-  h1:  "font-serif text-[clamp(2.6rem,6vw,4.5rem)] font-bold leading-[1.05] tracking-tight",
-  h2:  "font-serif text-[clamp(2rem,4vw,3rem)]     font-bold leading-[1.1]",
-  h3:  "font-serif text-[clamp(1.6rem,3vw,2.25rem)] font-bold leading-[1.15]",
-
-  /* Espaçamentos de seção padronizados */
-  sectionPadY: "py-24 lg:py-32",
-  containerPadX: "px-4 md:px-6",
-} as const;
-
-/* ─── DADOS ─── */
+/* ─── DADOS ─────────────────────────────────────────────── */
 const ETHICS = [
-  { Icon: Lock,     n: "01", text: "Criptografia em repouso e em trânsito. Isolamento total entre profissionais." },
+  { Icon: Lock,      n: "01", text: "Criptografia em repouso e em trânsito. Isolamento total entre profissionais." },
   { Icon: UserCheck, n: "02", text: "Consentimento explícito. Direito ao esquecimento e portabilidade de dados." },
   { Icon: EyeOff,   n: "03", text: "Nenhum dado é usado para treinar IA sem consentimento granular." },
   { Icon: Sparkles, n: "04", text: "A IA sempre hipotetiza. Nunca diagnostica. Postura de supervisor clínico." },
 ];
 
 const FEATURES = [
-  { Icon: GitBranch,   label: "Genossociograma vivo" },
-  { Icon: ScanSearch,  label: "Motor de padrões" },
-  { Icon: Mic,         label: "Prontuário por voz" },
-  { Icon: LibraryBig,  label: "Biblioteca sistêmica" },
+  { Icon: GitBranch,    label: "Genossociograma vivo" },
+  { Icon: ScanSearch,   label: "Motor de padrões" },
+  { Icon: Mic,          label: "Prontuário por voz" },
+  { Icon: LibraryBig,   label: "Biblioteca sistêmica" },
   { Icon: BrainCircuit, label: "Copiloto clínico" },
-  { Icon: Sparkles,    label: "Memória entre casos" },
+  { Icon: Sparkles,     label: "Memória entre casos" },
 ];
 
-/* ─── ATOMS (CSS puro, sem assets externos com fundo problemático) ─── */
+/* ─── ATOMS ──────────────────────────────────────────────── */
 
-/** Caneta-tinteiro SVG — substitui pen.jpg que tinha fundo quadriculado */
-function FountainPen({ className = "" }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 240 44" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <rect x="32" y="13" width="158" height="18" rx="9" fill="#1a1a1a" />
-      <rect x="100" y="13" width="20" height="18" fill="#D4AF37" />
-      <rect x="184" y="11" width="50" height="22" rx="10" fill="#111" />
-      <rect x="182" y="14" width="5" height="16" rx="2.5" fill="#D4AF37" />
-      <rect x="203" y="9" width="4" height="28" rx="2" fill="#D4AF37" />
-      <circle cx="205" cy="38" r="3.5" fill="#D4AF37" />
-      <path d="M32 22 L7 18 L2 22 L7 26 Z" fill="#1a1a1a" />
-      <path d="M14 20 L7 18 L2 22 L7 26 L14 24 Z" fill="#D4AF37" opacity="0.85" />
-      <rect x="36" y="15" width="55" height="5" rx="2.5" fill="white" opacity="0.06" />
-    </svg>
-  );
-}
-
-/** Selo de Cera SVG — substitui wax_seal_tree.jpg */
-function WaxSeal({ className = "" }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <circle cx="40" cy="40" r="36" fill="#5C3D2E" />
-      <circle cx="40" cy="40" r="29" fill="#6B4535" />
-      <line x1="40" y1="57" x2="40" y2="23" stroke="#D4AF37" strokeWidth="1.8" />
-      <line x1="40" y1="37" x2="29" y2="28" stroke="#D4AF37" strokeWidth="1.4" />
-      <line x1="40" y1="33" x2="51" y2="25" stroke="#D4AF37" strokeWidth="1.4" />
-      <line x1="40" y1="44" x2="26" y2="36" stroke="#D4AF37" strokeWidth="1.4" />
-      <line x1="40" y1="44" x2="54" y2="37" stroke="#D4AF37" strokeWidth="1.4" />
-      <circle cx="40" cy="20" r="4" fill="#D4AF37" opacity="0.9" />
-      <circle cx="25" cy="26" r="3" fill="#D4AF37" opacity="0.65" />
-      <circle cx="55" cy="23" r="3" fill="#D4AF37" opacity="0.65" />
-      <circle cx="40" cy="40" r="34" stroke="#D4AF37" strokeWidth="1" opacity="0.35" />
-    </svg>
-  );
-}
-
-/** Fita Adesiva CSS */
-function Tape({ rotate = "0deg", width = "w-16" }: { rotate?: string; width?: string }) {
+/** Fita adesiva CSS pura */
+function Tape({ rotate = "0deg", w = "64px" }: { rotate?: string; w?: string }) {
   return (
     <div
-      className={`${width} h-5`}
-      style={{ background: "rgba(212,195,163,0.72)", transform: `rotate(${rotate})`, boxShadow: "0 1px 4px rgba(0,0,0,0.08)" }}
+      style={{
+        width: w,
+        height: "20px",
+        background: "rgba(210,190,155,0.72)",
+        transform: `rotate(${rotate})`,
+        boxShadow: "0 1px 4px rgba(0,0,0,0.1)",
+        flexShrink: 0,
+      }}
     />
-  );
-}
-
-/** Label de categoria — padronizado para toda a landing */
-function SectionLabel({ children, light = false }: { children: React.ReactNode; light?: boolean }) {
-  return (
-    <p className={`${T.labelSm} mb-5 ${light ? "text-gold" : "text-[#8B7355]"}`}>
-      {children}
-    </p>
   );
 }
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-[#FCF9F4] text-[#3B2F2F] relative overflow-x-hidden">
+    <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", background: "#FCF9F4", color: "#3B2F2F", overflowX: "hidden" }}>
 
-      {/* ── HEADER ──────────────────────────────────────── */}
-      <header className="absolute top-0 w-full z-50 bg-[#FCF9F4]/98 border-b border-[#E6DDD0] backdrop-blur-sm">
-        <div className="container-liz flex h-[72px] items-center justify-between">
-          <Link to="/" aria-label="Instituto Liz — início">
+      {/* ═══════════════════════════════════════════════════
+          HEADER
+      ════════════════════════════════════════════════════ */}
+      <header style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, background: "rgba(252,249,244,0.97)", borderBottom: "1px solid #E6DDD0", backdropFilter: "blur(8px)" }}>
+        <div className="container-liz" style={{ display: "flex", height: "68px", alignItems: "center", justifyContent: "space-between" }}>
+          <Link to="/" aria-label="Instituto Liz">
             <LizLogoLockup />
           </Link>
-          <nav className="flex items-center gap-8">
+          <nav style={{ display: "flex", alignItems: "center", gap: "2rem" }}>
             <Link
               to="/auth"
-              className="font-sans text-[12px] font-semibold tracking-[0.12em] uppercase text-[#3B2F2F]/70 hover:text-[#D4AF37] transition-colors duration-200"
+              style={{ fontFamily: "'Outfit', sans-serif", fontSize: "11px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#3B2F2F", textDecoration: "none" }}
+              onMouseEnter={e => (e.currentTarget.style.color = "#D4AF37")}
+              onMouseLeave={e => (e.currentTarget.style.color = "#3B2F2F")}
             >
               Entrar
             </Link>
-            <Button
-              asChild
-              variant="outline"
-              size="sm"
-              className="border-[#3B2F2F] text-[#3B2F2F] hover:bg-[#3B2F2F] hover:text-white font-sans text-[11px] font-semibold tracking-[0.1em] uppercase rounded-full px-6 h-10 transition-all duration-200"
+            <Link
+              to="/auth"
+              search={{ mode: "signup" }}
+              style={{
+                fontFamily: "'Outfit', sans-serif", fontSize: "11px", fontWeight: 700,
+                letterSpacing: "0.12em", textTransform: "uppercase", color: "#3B2F2F",
+                border: "1.5px solid #3B2F2F", borderRadius: "999px", padding: "8px 20px", textDecoration: "none",
+                transition: "all 0.2s",
+              }}
             >
-              <Link to="/auth" search={{ mode: "signup" }}>Acesso beta →</Link>
-            </Button>
+              Acesso beta →
+            </Link>
           </nav>
         </div>
       </header>
 
-      {/* ══════════════════════════════════════════════════
-          HERO — fundo escuro sólido
-          Todos os assets flutuam sobre #1B211A — nunca sobre
-          transparência ou quadriculado.
-      ═══════════════════════════════════════════════════ */}
-      <section
-        className="relative pt-[7rem] pb-48 text-white overflow-hidden"
-        style={{ background: `linear-gradient(170deg, ${T.bgDark} 0%, #22271E 100%)` }}
-      >
-        <div className="container-liz relative z-10">
-          <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16 xl:gap-24">
+      {/* ═══════════════════════════════════════════════════
+          HERO — metade esquerda texto / metade direita foto
+      ════════════════════════════════════════════════════ */}
+      <section style={{ display: "flex", minHeight: "100vh", paddingTop: "68px", background: "#1B211A" }}>
 
-            {/* ── Coluna Texto ── */}
-            <div className="flex-1 lg:max-w-[48%] xl:max-w-[44%] pt-8">
-              {/* Label de categoria — padrão T.labelSm */}
-              <div className="inline-flex items-center gap-2 mb-7">
-                <ShieldCheck className="size-3.5 text-gold shrink-0" strokeWidth={2} />
-                <span className={`${T.labelSm} text-gold`}>Ética & LGPD</span>
-              </div>
-
-              {/* H1 — único na página, tamanho fluido via clamp */}
-              <h1 className={`${T.h1} text-white mb-7`}>
-                Dados clínicos são{" "}
-                <em className="italic" style={{ color: T.gold }}>fundação</em>,{" "}
-                <br className="hidden lg:block" />
-                não feature.
-              </h1>
-
-              {/* Body — padronizado T.body */}
-              <p className={`${T.body} text-white/65 mb-10 max-w-[380px]`}>
-                Uma plataforma segura, ética e viva para psicogenealogistas que
-                cuidam de histórias humanas reais.
-              </p>
-
-              {/* CTAs — alinhados à esquerda, mesma altura */}
-              <div className="flex flex-wrap items-center gap-5">
-                <Button
-                  asChild
-                  className="h-12 px-8 rounded-sm font-sans font-semibold text-[13px] tracking-[0.08em] uppercase"
-                  style={{ background: T.gold, color: "#000" }}
-                >
-                  <Link to="/auth" search={{ mode: "signup" }}>Solicitar acesso beta →</Link>
-                </Button>
-                <button className="inline-flex items-center gap-2.5 font-sans text-[12px] font-semibold uppercase tracking-[0.12em] text-white/70 hover:text-white transition-colors duration-200">
-                  <PlayCircle className="size-5" style={{ color: T.gold }} strokeWidth={1.5} />
-                  Ver como funciona
-                </button>
-              </div>
+        {/* Coluna Texto */}
+        <div style={{ flex: "0 0 42%", display: "flex", alignItems: "center", padding: "80px 40px 80px 6vw" }}>
+          <div style={{ maxWidth: "420px" }}>
+            {/* Label */}
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "28px" }}>
+              <ShieldCheck style={{ width: "14px", height: "14px", color: "#D4AF37", flexShrink: 0 }} strokeWidth={2} />
+              <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: "10px", fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: "#D4AF37" }}>
+                Ética & LGPD
+              </span>
             </div>
 
-            {/* ── Coluna Composição Visual ── */}
-            {/* Container com background idêntico ao hero — elimina qualquer borda visível */}
-            <div
-              className="flex-1 relative w-full h-[480px] lg:h-[560px]"
-              style={{ background: T.bgDark }}
-            >
-              {/* Livro como background com vinhetas */}
-              <div className="absolute inset-0 overflow-hidden">
-                <img
-                  src="/assets/hero/book.jpg"
-                  alt=""
-                  aria-hidden="true"
-                  className="w-full h-full object-cover object-center opacity-60 sepia-[0.15]"
-                />
-                {/* Vinheta esquerda (funde com a coluna de texto) */}
-                <div className="absolute inset-0" style={{ background: `linear-gradient(to right, ${T.bgDark} 0%, transparent 35%)` }} />
-                {/* Vinheta inferior */}
-                <div className="absolute inset-0" style={{ background: `linear-gradient(to top, ${T.bgDark} 0%, transparent 50%)` }} />
-                {/* Vinheta direita leve */}
-                <div className="absolute inset-0" style={{ background: `linear-gradient(to left, ${T.bgDark} 0%, transparent 20%)` }} />
-              </div>
+            {/* H1 */}
+            <h1 style={{ fontSize: "clamp(2.4rem, 4.5vw, 3.8rem)", fontWeight: 700, lineHeight: 1.06, letterSpacing: "-0.01em", color: "#fff", margin: "0 0 28px" }}>
+              Dados clínicos são{" "}
+              <em style={{ fontStyle: "italic", color: "#D4AF37" }}>fundação</em>,{" "}
+              <br />
+              não feature.
+            </h1>
 
-              {/* Foto 1 — Mulher, canto esquerdo superior */}
-              <div className="absolute left-[4%] top-[10%] w-[32%] z-20 -rotate-[6deg] shadow-2xl hover:-rotate-[2deg] transition-transform duration-700">
-                <div className="relative">
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10"><Tape rotate="-2deg" /></div>
-                  <img src="/assets/photos/old_photo_woman.jpg" alt="Retrato vintage" className="w-full border-[9px] border-[#F4EFE6] shadow-xl" />
-                </div>
-              </div>
+            {/* Body */}
+            <p style={{ fontSize: "15px", lineHeight: 1.75, color: "rgba(255,255,255,0.62)", marginBottom: "36px", fontFamily: "'Cormorant Garamond', serif" }}>
+              Uma plataforma segura, ética e viva para psicogenealogistas que cuidam de histórias humanas reais.
+            </p>
 
-              {/* Foto 2 — Família, centro inferior */}
-              <div className="absolute left-[29%] top-[40%] w-[40%] z-20 rotate-[4deg] shadow-2xl hover:rotate-[7deg] transition-transform duration-700">
-                <div className="relative">
-                  <div className="absolute -top-3 right-4 z-10"><Tape rotate="14deg" /></div>
-                  <img src="/assets/photos/old_photo_family.jpg" alt="Família vintage" className="w-full border-[9px] border-[#F0EBE1] shadow-xl" />
-                </div>
-              </div>
-
-              {/* Cartão de Papel — canto superior direito */}
-              <div
-                className="absolute top-[8%] right-[5%] w-[190px] p-5 shadow-2xl rotate-[8deg] border z-30"
-                style={{ background: T.bgCard, borderColor: T.border }}
+            {/* CTAs */}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "20px", alignItems: "center" }}>
+              <Link
+                to="/auth"
+                search={{ mode: "signup" }}
+                style={{
+                  display: "inline-flex", alignItems: "center",
+                  background: "#D4AF37", color: "#000",
+                  fontFamily: "'Outfit', sans-serif", fontSize: "12px", fontWeight: 700,
+                  letterSpacing: "0.1em", textTransform: "uppercase",
+                  padding: "14px 28px", borderRadius: "2px", textDecoration: "none",
+                  boxShadow: "0 4px 20px rgba(212,175,55,0.35)",
+                  transition: "background 0.2s",
+                }}
               >
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10"><Tape rotate="1deg" /></div>
-                <p className={`${T.bodySm} italic text-[${T.textDark}] text-center`}>
-                  Cada história merece ser lembrada.<br />
-                  Cada vida, respeitada. ♡
-                </p>
-              </div>
-
-              {/* Caneta SVG — canto inferior direito, não cobre texto */}
-              <div className="absolute bottom-[10%] right-[3%] w-36 z-30 -rotate-[28deg]">
-                <FountainPen className="w-full drop-shadow-lg" />
-              </div>
-
-              {/* Selo SVG — canto inferior esquerdo */}
-              <div className="absolute bottom-[28%] left-[6%] w-[72px] z-40 -rotate-[14deg]">
-                <WaxSeal className="w-full drop-shadow-xl" />
-              </div>
+                Solicitar acesso beta →
+              </Link>
+              <button style={{ display: "flex", alignItems: "center", gap: "8px", background: "none", border: "none", cursor: "pointer", fontFamily: "'Outfit', sans-serif", fontSize: "11px", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(255,255,255,0.65)", padding: 0 }}>
+                <PlayCircle style={{ width: "18px", height: "18px", color: "#D4AF37" }} strokeWidth={1.5} />
+                Ver como funciona
+              </button>
             </div>
+          </div>
+        </div>
 
+        {/* Coluna Foto — composição única full-bleed */}
+        <div style={{ flex: "0 0 58%", position: "relative", overflow: "hidden", minHeight: "600px" }}>
+          <img
+            src="/assets/hero/hero_composition.jpg"
+            alt="Livro de genealogia com fotos vintage e caneta"
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top" }}
+          />
+          {/* Gradiente esquerda para fundir com o texto */}
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to right, #1B211A 0%, rgba(27,33,26,0.4) 30%, transparent 60%)" }} />
+          {/* Gradiente inferior */}
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, #1B211A 0%, transparent 40%)" }} />
+
+          {/* Cartão de papel flutuante — canto superior direito */}
+          <div style={{
+            position: "absolute", top: "8%", right: "4%",
+            background: "#FAF8F5", border: "1px solid #E6DDD0",
+            padding: "18px 20px", width: "190px",
+            transform: "rotate(7deg)", boxShadow: "0 8px 32px rgba(0,0,0,0.25)",
+            zIndex: 10,
+          }}>
+            <div style={{ position: "absolute", top: "-10px", left: "50%", transform: "translateX(-50%)" }}>
+              <Tape rotate="-1deg" />
+            </div>
+            <p style={{ fontSize: "14px", fontStyle: "italic", color: "#3B2F2F", lineHeight: 1.55, textAlign: "center", margin: 0 }}>
+              Cada história merece ser lembrada.<br />
+              Cada vida, respeitada. ♡
+            </p>
           </div>
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════════════
-          PAINEL PILARES — flutua sobre o hero
-          -mt calibrado para que o overlap seja exatamente
-          metade da altura do painel (~80px).
-      ═══════════════════════════════════════════════════ */}
-      <section className="relative z-30 -mt-20 px-4">
-        <div className="container-liz max-w-6xl">
-          <div
-            className="rounded-2xl overflow-hidden flex flex-col md:flex-row shadow-[0_32px_64px_rgba(0,0,0,0.45)]"
-            style={{ background: T.bgPanel, border: "1px solid rgba(255,255,255,0.04)" }}
-          >
-            {/* Esquerda — Título */}
-            <div
-              className="p-10 md:w-[36%] flex flex-col justify-center relative overflow-hidden shrink-0"
-              style={{ background: T.bgDarkAlt }}
-            >
-              {/* "03" sangra pelo fundo — ornamento intencional */}
-              <span className="absolute left-3 bottom-[-3.5rem] font-serif font-bold text-white/[0.035] leading-none select-none pointer-events-none" style={{ fontSize: "10rem" }}>
+      {/* ═══════════════════════════════════════════════════
+          PAINEL PILARES — sobreposição entre hero e seção 2
+      ════════════════════════════════════════════════════ */}
+      <section style={{ position: "relative", zIndex: 20, marginTop: "-60px", padding: "0 24px 0" }}>
+        <div className="container-liz" style={{ maxWidth: "1120px" }}>
+          <div style={{
+            display: "flex", flexDirection: "row",
+            background: "#1A201A", border: "1px solid rgba(255,255,255,0.04)",
+            borderRadius: "16px", overflow: "hidden",
+            boxShadow: "0 32px 64px rgba(0,0,0,0.5)",
+          }}>
+
+            {/* Esquerda — "03" + título */}
+            <div style={{ flex: "0 0 38%", background: "#151A15", padding: "48px 40px", position: "relative", overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+              {/* Número decorativo GRANDE — igual à referência */}
+              <span style={{
+                position: "absolute", left: "-8px", bottom: "-32px",
+                fontFamily: "'Cormorant Garamond', serif", fontSize: "180px", fontWeight: 700,
+                color: "rgba(212,175,55,0.18)", lineHeight: 1, userSelect: "none", pointerEvents: "none",
+              }}>
                 03
               </span>
-              <SectionLabel light>Pilares da plataforma</SectionLabel>
-              <h2 className={`${T.h3} text-white relative z-10 leading-snug`}>
+              <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: "9px", fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: "#D4AF37", marginBottom: "16px", position: "relative", zIndex: 1 }}>
+                Pilares da plataforma
+              </p>
+              <h2 style={{ fontSize: "clamp(1.5rem,2.5vw,2rem)", fontWeight: 700, color: "#fff", lineHeight: 1.25, margin: 0, position: "relative", zIndex: 1 }}>
                 Ética, segurança e inteligência a{" "}
-                <em className="italic" style={{ color: T.gold }}>serviço da vida.</em>
+                <em style={{ fontStyle: "italic", color: "#D4AF37" }}>serviço da vida.</em>
               </h2>
             </div>
 
-            {/* Direita — 4 colunas de pilares */}
-            <div className="p-10 flex-1 grid grid-cols-2 md:grid-cols-4 gap-8 items-start">
+            {/* Direita — 4 pilares */}
+            <div style={{ flex: 1, padding: "48px 40px", display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "32px", alignItems: "start" }}>
               {ETHICS.map(({ Icon, n, text }) => (
-                <div key={n} className="flex flex-col gap-3">
-                  <Icon className="size-5 shrink-0" style={{ color: `${T.gold}99` }} strokeWidth={1.5} />
-                  <span className={`${T.labelXs} text-white/35`}>{n}</span>
-                  <p className={`${T.bodySm} text-white/55`}>{text}</p>
+                <div key={n} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  <Icon style={{ width: "18px", height: "18px", color: "rgba(212,175,55,0.65)", flexShrink: 0 }} strokeWidth={1.5} />
+                  <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: "9px", fontWeight: 700, letterSpacing: "0.2em", color: "rgba(255,255,255,0.3)" }}>{n}</span>
+                  <p style={{ fontSize: "12px", lineHeight: 1.65, color: "rgba(255,255,255,0.55)", margin: 0 }}>{text}</p>
                 </div>
               ))}
             </div>
@@ -310,69 +221,95 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════════════
+      {/* ═══════════════════════════════════════════════════
           SEÇÃO 2 — Gestão impecável
-          Layout: texto à esquerda / card-papel à direita
-      ═══════════════════════════════════════════════════ */}
-      <section className={`${T.sectionPadY} pt-40 bg-[${T.bgLight}] ${T.containerPadX}`}>
-        <div className="container-liz flex flex-col lg:flex-row items-center gap-16 xl:gap-24">
+          Layout: texto | foto central | card botanicals
+      ════════════════════════════════════════════════════ */}
+      <section style={{ position: "relative", padding: "120px 24px 80px", overflow: "hidden" }}>
+        {/* Fundo com botanicals watermark */}
+        <div style={{ position: "absolute", inset: 0, background: "#F5F0E8", zIndex: 0 }} />
+        <div style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: "55%", zIndex: 0, opacity: 0.22 }}>
+          <img src="/assets/photos/section2_botanicals.jpg" alt="" aria-hidden="true" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "left center" }} />
+        </div>
 
-          {/* Texto */}
-          <div className="flex-1 lg:max-w-[44%]">
-            <SectionLabel>A leveza de uma</SectionLabel>
-            <h2 className={`${T.h2} text-[#3B2F2F] mb-6`}>
+        <div className="container-liz" style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", gap: "40px" }}>
+
+          {/* Coluna Texto */}
+          <div style={{ flex: "0 0 26%", minWidth: 0 }}>
+            <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: "9px", fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: "#8B7355", marginBottom: "18px" }}>
+              A leveza de uma
+            </p>
+            <h2 style={{ fontSize: "clamp(2rem, 3.5vw, 2.8rem)", fontWeight: 700, color: "#2B2018", lineHeight: 1.1, marginBottom: "20px" }}>
               Gestão <br />
               impecável <br />
-              para <em className="italic" style={{ color: T.gold }}>histórias</em> <br />
+              para{" "}<em style={{ fontStyle: "italic", color: "#C8A640" }}>histórias</em><br />
               complexas.
             </h2>
-            <p className={`${T.body} text-[#3B2F2F]/65 mb-10 max-w-[340px]`}>
+            <p style={{ fontSize: "13px", lineHeight: 1.75, color: "#5A4A3A", marginBottom: "32px", maxWidth: "240px" }}>
               Organize seus casos, enxergue padrões e acesse memórias que transformam gerações.
             </p>
-            <Button
-              asChild
-              className="h-12 px-8 rounded-sm font-sans font-semibold text-[13px] tracking-[0.08em] uppercase text-white"
-              style={{ background: T.bgDark }}
+            <Link
+              to="/auth"
+              search={{ mode: "signup" }}
+              style={{
+                display: "inline-flex", alignItems: "center",
+                background: "#1B211A", color: "#fff",
+                fontFamily: "'Outfit', sans-serif", fontSize: "11px", fontWeight: 700,
+                letterSpacing: "0.1em", textTransform: "uppercase",
+                padding: "12px 24px", borderRadius: "2px", textDecoration: "none",
+              }}
             >
-              <Link to="/auth" search={{ mode: "signup" }}>Começar agora →</Link>
-            </Button>
+              Começar agora →
+            </Link>
           </div>
 
-          {/* Card-papel com foto + features */}
-          <div className="flex-1 w-full flex justify-center lg:justify-end">
-            <div
-              className="relative pt-8 px-7 pb-6 shadow-2xl w-full max-w-[400px] rotate-[2deg] border"
-              style={{ background: T.bgCard, borderColor: T.border }}
-            >
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10"><Tape rotate="-3deg" /></div>
+          {/* Foto Central — terapeuta com laptop */}
+          <div style={{ flex: "0 0 30%", position: "relative" }}>
+            <div style={{ position: "relative", transform: "rotate(-2deg)", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
+              <div style={{ position: "absolute", top: "-10px", left: "50%", transform: "translateX(-50%)" }}>
+                <Tape rotate="-1deg" w="72px" />
+              </div>
+              <img
+                src="/assets/photos/section2_woman.jpg"
+                alt="Profissional trabalhando"
+                style={{ width: "100%", aspectRatio: "3/4", objectFit: "cover", objectPosition: "50% 15%", border: "8px solid white", display: "block" }}
+              />
+            </div>
+          </div>
 
-              {/* Foto — object-position alinhado ao rosto (não ao teto) */}
-              <div className="mb-5 overflow-hidden border-[7px] border-white shadow-inner">
-                <img
-                  src="/assets/photos/therapist_office.jpg"
-                  alt="Profissional trabalhando"
-                  className="w-full h-52 object-cover sepia-[0.08]"
-                  style={{ objectPosition: "50% 25%" }}
-                />
+          {/* Card de papel — features + botanicals */}
+          <div style={{ flex: 1, minWidth: 0, position: "relative" }}>
+            <div style={{
+              position: "relative", background: "rgba(250,248,245,0.92)",
+              border: "1px solid #E0D5C5", padding: "28px 28px 24px",
+              transform: "rotate(1.5deg)", boxShadow: "0 12px 40px rgba(0,0,0,0.12)",
+            }}>
+              <div style={{ position: "absolute", top: "-10px", left: "50%", transform: "translateX(-50%)" }}>
+                <Tape rotate="2deg" w="56px" />
               </div>
 
-              {/* Lista de features — tipografia bodySm consistente */}
-              <div className="space-y-0">
+              {/* Features */}
+              <div>
                 {FEATURES.map(({ Icon, label }, i) => (
                   <div
                     key={i}
-                    className="flex items-center gap-4 py-2.5"
-                    style={{ borderBottom: i < FEATURES.length - 1 ? `1px solid ${T.border}80` : "none" }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: "14px",
+                      padding: "10px 0",
+                      borderBottom: i < FEATURES.length - 1 ? "1px solid rgba(224,213,197,0.7)" : "none",
+                    }}
                   >
-                    <Icon className="size-4 shrink-0" style={{ color: T.gold }} strokeWidth={1.5} />
-                    <span className={`${T.bodySm} text-[#3B2F2F]/80`}>{label}</span>
+                    <Icon style={{ width: "16px", height: "16px", color: "#C8A640", flexShrink: 0 }} strokeWidth={1.5} />
+                    <span style={{ fontSize: "14px", color: "#3B2F2F" }}>{label}</span>
                   </div>
                 ))}
               </div>
 
-              {/* Rodapé do card — selo como assinatura */}
-              <div className="flex justify-center pt-4 mt-3" style={{ borderTop: `1px solid ${T.border}80` }}>
-                <WaxSeal className="w-7 h-7 opacity-25" />
+              {/* Selos ornamentais */}
+              <div style={{ display: "flex", justifyContent: "flex-start", alignItems: "center", gap: "16px", marginTop: "20px", paddingTop: "16px", borderTop: "1px solid rgba(224,213,197,0.7)" }}>
+                <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#C8A640", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ fontSize: "18px", color: "#5C3D2E" }}>⚷</span>
+                </div>
               </div>
             </div>
           </div>
@@ -380,42 +317,41 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════════════
-          SEÇÃO 3 — O fio invisível (bloco escuro arredondado)
-      ═══════════════════════════════════════════════════ */}
-      <section className={`${T.sectionPadY} ${T.containerPadX} bg-[${T.bgLight}]`}>
-        <div className="container-liz max-w-6xl">
-          <div
-            className="rounded-3xl p-8 md:p-16 flex flex-col lg:flex-row items-center gap-12 lg:gap-16 overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.28)]"
-            style={{ background: T.bgDark }}
-          >
-            {/* Imagem */}
-            <div className="flex-1 lg:max-w-[46%] w-full">
-              <div className="aspect-[4/3] rounded-xl overflow-hidden shadow-2xl border border-white/10">
-                <img
-                  src="/assets/photos/therapy_session.jpg"
-                  alt="Sessão clínica"
-                  className="w-full h-full object-cover sepia-[0.12]"
-                  style={{ objectPosition: "50% 35%" }}
-                />
-              </div>
+      {/* ═══════════════════════════════════════════════════
+          SEÇÃO 3 — O fio invisível (bloco escuro)
+      ════════════════════════════════════════════════════ */}
+      <section style={{ padding: "40px 24px 60px" }}>
+        <div className="container-liz" style={{ maxWidth: "1120px" }}>
+          <div style={{
+            display: "flex", flexDirection: "row", alignItems: "center", gap: "48px",
+            background: "#1B211A", borderRadius: "24px",
+            padding: "48px 56px", overflow: "hidden",
+            boxShadow: "0 20px 50px rgba(0,0,0,0.3)",
+          }}>
+
+            {/* Foto */}
+            <div style={{ flex: "0 0 42%", borderRadius: "12px", overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <img
+                src="/assets/photos/therapy_session.jpg"
+                alt="Sessão de psicogenealogia"
+                style={{ width: "100%", aspectRatio: "4/3", objectFit: "cover", objectPosition: "50% 35%", display: "block" }}
+              />
             </div>
 
-            {/* Texto — min-w-0 evita overflow do flex item */}
-            <div className="flex-1 text-white min-w-0">
-              <SectionLabel light>O fio invisível da sessão</SectionLabel>
-              <h3 className={`${T.h3} text-white mb-5`}>
-                Conecte gerações, com{" "}
-                <em className="italic" style={{ color: T.gold }}>profundidade</em>{" "}
-                e leveza.
-              </h3>
-              <p className={`${T.body} text-white/60 mb-8`}>
-                Mapeie em tempo real o histórico do seu paciente e descubra padrões
-                transgeracionais profundos sem perder o foco visual na pessoa à sua frente.
+            {/* Texto */}
+            <div style={{ flex: 1, color: "#fff", minWidth: 0 }}>
+              <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: "9px", fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: "#D4AF37", marginBottom: "18px" }}>
+                O fio invisível da sessão
               </p>
-              <div className="space-y-2.5">
-                {["Genograma dinâmico gerado no clique", "Foco absoluto no paciente", "Menos papel, mais insight estruturado"].map((item) => (
-                  <p key={item} className={`${T.bullet} text-gold/75`}>✓ {item}</p>
+              <h3 style={{ fontSize: "clamp(1.6rem, 3vw, 2.2rem)", fontWeight: 700, color: "#fff", lineHeight: 1.15, marginBottom: "18px", wordBreak: "break-word" }}>
+                Conecte gerações, com <em style={{ fontStyle: "italic", color: "#D4AF37" }}>profundidade</em> e leveza.
+              </h3>
+              <p style={{ fontSize: "14px", lineHeight: 1.75, color: "rgba(255,255,255,0.6)", marginBottom: "24px" }}>
+                Mapeie em tempo real o histórico do seu paciente e descubra padrões transgeracionais profundos sem perder o foco visual na pessoa à sua frente.
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                {["Genograma dinâmico gerado no clique", "Foco absoluto no paciente", "Menos papel, mais insight estruturado"].map(item => (
+                  <p key={item} style={{ fontSize: "13px", fontStyle: "italic", color: "rgba(212,175,55,0.8)", margin: 0 }}>✓ {item}</p>
                 ))}
               </div>
             </div>
@@ -424,116 +360,148 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════════════
-          QUOTE SECTION — Citação editorial
-      ═══════════════════════════════════════════════════ */}
-      <section className={`${T.sectionPadY} ${T.containerPadX} bg-[${T.bgLight}] flex justify-center`}>
-        {/* Pontilhado de fundo muito sutil */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ backgroundImage: `radial-gradient(${T.textDark}18 1px, transparent 1px)`, backgroundSize: "22px 22px" }}
-        />
+      {/* ═══════════════════════════════════════════════════
+          QUOTE SECTION — Fundo com background fotográfico
+      ════════════════════════════════════════════════════ */}
+      <section style={{ position: "relative", padding: "80px 24px", overflow: "hidden", minHeight: "360px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {/* Background fotográfico texturizado */}
+        <div style={{ position: "absolute", inset: 0 }}>
+          <img src="/assets/photos/quote_bg.jpg" alt="" aria-hidden="true" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }} />
+          {/* Overlay claro para legibilidade */}
+          <div style={{ position: "absolute", inset: 0, background: "rgba(248,244,236,0.82)" }} />
+        </div>
 
-        <div className="relative z-10 w-full max-w-[480px]">
-          {/* Card de papel */}
-          <div
-            className="px-12 py-11 shadow-xl relative rotate-[1deg] border"
-            style={{ background: T.bgCard, borderColor: T.border }}
-          >
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10"><Tape rotate="2deg" /></div>
-            <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 z-10"><Tape rotate="-3deg" /></div>
+        {/* Caneta — direita */}
+        <div style={{
+          position: "absolute", right: "5%", top: "50%", transform: "translateY(-50%) rotate(-30deg)",
+          zIndex: 5, width: "200px", opacity: 0.9,
+        }}>
+          <svg viewBox="0 0 240 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="32" y="13" width="158" height="18" rx="9" fill="#1a1a1a" />
+            <rect x="100" y="13" width="20" height="18" fill="#D4AF37" />
+            <rect x="184" y="11" width="50" height="22" rx="10" fill="#111" />
+            <rect x="182" y="14" width="5" height="16" rx="2.5" fill="#D4AF37" />
+            <rect x="203" y="9" width="4" height="28" rx="2" fill="#D4AF37" />
+            <circle cx="205" cy="38" r="3.5" fill="#D4AF37" />
+            <path d="M32 22 L7 18 L2 22 L7 26 Z" fill="#1a1a1a" />
+            <path d="M14 20 L7 18 L2 22 L7 26 L14 24 Z" fill="#D4AF37" opacity="0.85" />
+            <rect x="36" y="15" width="55" height="5" rx="2.5" fill="white" opacity="0.06" />
+          </svg>
+        </div>
 
-            {/* Aspas ornamentais (puro CSS, sem asset) */}
-            <span
-              className="absolute top-5 left-6 font-serif text-6xl leading-none select-none pointer-events-none"
-              style={{ color: `${T.gold}25` }}
-              aria-hidden="true"
-            >
-              "
-            </span>
+        {/* Foto vintage no canto direito inferior */}
+        <div style={{ position: "absolute", right: "4%", bottom: "5%", transform: "rotate(5deg)", zIndex: 4, width: "120px" }}>
+          <img src="/assets/photos/old_photo_man.jpg" alt="" aria-hidden="true" style={{ width: "100%", border: "6px solid white", boxShadow: "0 4px 16px rgba(0,0,0,0.2)", display: "block" }} />
+        </div>
 
-            <blockquote>
-              <p className={`${T.h3} text-[#3B2F2F] text-center font-serif italic font-semibold`} style={{ fontSize: "1.4rem", lineHeight: 1.55 }}>
-                "O que não pode ser dito, <br />
-                não pode ser esquecido — <br />
+        {/* Card de citação */}
+        <div style={{ position: "relative", zIndex: 10, maxWidth: "480px", width: "100%" }}>
+          <div style={{
+            background: "rgba(252,249,244,0.94)", border: "1px solid #E0D5C5",
+            padding: "52px 48px 44px", transform: "rotate(1deg)",
+            boxShadow: "0 16px 48px rgba(0,0,0,0.15)",
+          }}>
+            <div style={{ position: "absolute", top: "-10px", left: "50%", transform: "translateX(-50%)" }}>
+              <Tape rotate="2deg" w="60px" />
+            </div>
+            <div style={{ position: "absolute", bottom: "-10px", left: "50%", transform: "translateX(-50%)" }}>
+              <Tape rotate="-2deg" w="60px" />
+            </div>
+
+            {/* Aspas decorativas grandes */}
+            <span style={{
+              position: "absolute", top: "16px", left: "20px",
+              fontFamily: "serif", fontSize: "80px", lineHeight: 1,
+              color: "rgba(200,166,64,0.2)", userSelect: "none", pointerEvents: "none",
+            }}>"</span>
+
+            <blockquote style={{ margin: 0 }}>
+              <p style={{
+                fontSize: "clamp(1.2rem, 2.5vw, 1.5rem)", fontStyle: "italic", fontWeight: 600,
+                color: "#2B2018", lineHeight: 1.5, textAlign: "center", margin: "0 0 18px",
+              }}>
+                "O que não pode ser dito,<br />
+                não pode ser esquecido —<br />
                 apenas repetido."
               </p>
-              <footer className={`${T.bodySm} italic text-[#3B2F2F]/40 text-center mt-5`}>
+              <footer style={{ fontSize: "12px", fontStyle: "italic", color: "rgba(59,47,31,0.45)", textAlign: "center" }}>
                 — inspirado em Françoise Dolto
               </footer>
             </blockquote>
           </div>
-
-          {/* Caneta SVG fora do card — abaixo e à direita */}
-          <div className="flex justify-end overflow-visible -mt-3 mr-[-1.5rem]">
-            <div className="rotate-[22deg]">
-              <FountainPen className="w-48 drop-shadow-lg opacity-90" />
-            </div>
-          </div>
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════════════
-          FOOTER — CTA + Rodapé editorial
-      ═══════════════════════════════════════════════════ */}
-      <footer
-        className="pt-20 pb-10 border-t-[3px]"
-        style={{ background: T.bgDark, borderColor: T.gold }}
-      >
-        <div className="container-liz flex flex-col md:flex-row items-center md:items-end justify-between gap-12">
+      {/* ═══════════════════════════════════════════════════
+          FOOTER
+      ════════════════════════════════════════════════════ */}
+      <footer style={{ background: "#1B211A", borderTop: "3px solid #D4AF37", paddingTop: "64px", paddingBottom: "32px" }}>
+        <div className="container-liz" style={{ display: "flex", flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: "32px", flexWrap: "wrap" }}>
 
-          {/* Esquerda — CTA textual */}
-          <div className="max-w-md text-white">
-            <SectionLabel light>Beta Fechado · 2026</SectionLabel>
-            <h2 className={`${T.h2} text-white mb-4`}>
+          {/* Esquerda */}
+          <div style={{ color: "#fff", maxWidth: "360px" }}>
+            <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: "9px", fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: "#D4AF37", marginBottom: "14px" }}>
+              Beta Fechado · 2026
+            </p>
+            <h2 style={{ fontSize: "clamp(2rem, 3.5vw, 2.8rem)", fontWeight: 700, color: "#fff", lineHeight: 1.15, marginBottom: "12px" }}>
               Pronta para{" "}
-              <em className="italic" style={{ color: T.gold }}>começar?</em>
+              <em style={{ fontStyle: "italic", color: "#D4AF37" }}>começar?</em>
             </h2>
-            <p className={`${T.body} text-white/50`}>
+            <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.5)", lineHeight: 1.65 }}>
               Acesso restrito a psicogenealogistas. Vagas limitadas.
             </p>
           </div>
 
-          {/* Direita — Polaroids + CTA */}
-          <div className="flex items-center gap-8">
-            {/* Minifotos vintage empilhadas */}
-            <div className="hidden lg:flex items-end gap-3">
-              <img
-                src="/assets/photos/old_photo_man.jpg"
-                alt=""
-                aria-hidden="true"
-                className="w-20 h-24 object-cover border-[4px] border-white/80 -rotate-[5deg] shadow-xl grayscale"
-              />
-              <img
-                src="/assets/photos/old_photo_child.jpg"
-                alt=""
-                aria-hidden="true"
-                className="w-24 h-28 object-cover border-[4px] border-white/80 rotate-[3deg] shadow-xl z-10 sepia-[.3]"
-              />
-              {/* Selo SVG puro — sem blend mode problemático */}
-              <div className="w-14 h-14 -ml-3 z-20 opacity-90">
-                <WaxSeal className="w-full h-full drop-shadow-xl" />
-              </div>
+          {/* Centro — árvore botânica + CTA */}
+          <div style={{ display: "flex", alignItems: "flex-end", gap: "32px" }}>
+            {/* Árvore botânica ilustrada */}
+            <div style={{ width: "160px", opacity: 0.75 }}>
+              <img src="/assets/photos/footer_tree.jpg" alt="" aria-hidden="true" style={{ width: "100%", objectFit: "cover", mixBlendMode: "lighten" }} />
             </div>
 
-            <Button
-              asChild
-              className="h-12 px-8 rounded-sm font-sans font-semibold text-[13px] tracking-[0.08em] uppercase text-black shrink-0"
-              style={{ background: T.gold }}
-            >
-              <Link to="/auth" search={{ mode: "signup" }}>Solicitar acesso beta →</Link>
-            </Button>
-          </div>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "16px" }}>
+              <Link
+                to="/auth"
+                search={{ mode: "signup" }}
+                style={{
+                  display: "inline-flex", alignItems: "center",
+                  background: "#D4AF37", color: "#000",
+                  fontFamily: "'Outfit', sans-serif", fontSize: "12px", fontWeight: 700,
+                  letterSpacing: "0.1em", textTransform: "uppercase",
+                  padding: "14px 28px", borderRadius: "2px", textDecoration: "none",
+                  boxShadow: "0 4px 20px rgba(212,175,55,0.3)",
+                }}
+              >
+                Solicitar acesso beta →
+              </Link>
+            </div>
 
+            {/* Selo botânico direita */}
+            <div style={{ width: "56px", height: "56px", flexShrink: 0 }}>
+              <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="40" cy="40" r="36" fill="#5C3D2E" />
+                <circle cx="40" cy="40" r="29" fill="#6B4535" />
+                <line x1="40" y1="57" x2="40" y2="23" stroke="#D4AF37" strokeWidth="1.8" />
+                <line x1="40" y1="37" x2="29" y2="28" stroke="#D4AF37" strokeWidth="1.4" />
+                <line x1="40" y1="33" x2="51" y2="25" stroke="#D4AF37" strokeWidth="1.4" />
+                <line x1="40" y1="44" x2="26" y2="36" stroke="#D4AF37" strokeWidth="1.4" />
+                <line x1="40" y1="44" x2="54" y2="37" stroke="#D4AF37" strokeWidth="1.4" />
+                <circle cx="40" cy="20" r="4" fill="#D4AF37" opacity="0.9" />
+                <circle cx="40" cy="40" r="34" stroke="#D4AF37" strokeWidth="1" opacity="0.35" />
+              </svg>
+            </div>
+          </div>
         </div>
 
         {/* Linha de rodapé */}
-        <div className="container-liz mt-16 pt-8 border-t border-white/10 flex items-center justify-between">
-          <div className="flex items-center gap-3 opacity-40">
+        <div className="container-liz" style={{ marginTop: "48px", paddingTop: "24px", borderTop: "1px solid rgba(255,255,255,0.1)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", opacity: 0.4 }}>
             <LizLogoLockup className="invert scale-75 origin-left" />
-            <span className={`${T.labelXs} text-white`}>— Plataforma de Psicogenealogia</span>
+            <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: "10px", fontWeight: 600, letterSpacing: "0.1em", color: "white" }}>— Plataforma de Psicogenealogia</span>
           </div>
-          <span className={`${T.labelXs} text-white/40`}>BETA FECHADO · 2026</span>
+          <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: "10px", fontWeight: 600, letterSpacing: "0.1em", color: "rgba(255,255,255,0.35)", textTransform: "uppercase" }}>
+            Beta fechado · 2026
+          </span>
         </div>
       </footer>
 
