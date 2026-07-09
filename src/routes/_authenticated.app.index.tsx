@@ -124,7 +124,7 @@ function AppHome() {
           
           {/* Caneta Fotorrealista sobre o papel */}
           <div className="absolute -right-8 top-16 w-[280px] z-30 pointer-events-none hidden xl:block">
-            <img src="/assets/objects/pen_clean.jpg" alt="" className="w-full mix-blend-multiply rotate-[22deg] drop-shadow-2xl" />
+            <img src="/assets/objects/pen_clean.jpg" alt="" className="w-full mix-blend-multiply rotate-[22deg]" />
           </div>
 
           <div className="flex flex-col lg:flex-row gap-12 relative z-10">

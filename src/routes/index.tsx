@@ -102,7 +102,7 @@ export default function LandingPage() {
             {/* Label */}
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "28px" }}>
               <ShieldCheck style={{ width: "16px", height: "16px", color: "#D4AF37", flexShrink: 0 }} strokeWidth={2} />
-              <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: "13px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#D4AF37" }}>
+              <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: "14px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#D4AF37" }}>
                 Ética & LGPD
               </span>
             </div>
@@ -137,7 +137,7 @@ export default function LandingPage() {
               >
                 Solicitar acesso beta →
               </Link>
-              <button style={{ display: "flex", alignItems: "center", gap: "8px", background: "none", border: "none", cursor: "pointer", fontFamily: "'Outfit', sans-serif", fontSize: "13px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.65)", padding: 0 }}>
+              <button style={{ display: "flex", alignItems: "center", gap: "8px", background: "none", border: "none", cursor: "pointer", fontFamily: "'Outfit', sans-serif", fontSize: "14px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.65)", padding: 0 }}>
                 <PlayCircle style={{ width: "20px", height: "20px", color: "#D4AF37" }} strokeWidth={1.5} />
                 Ver como funciona
               </button>
@@ -168,7 +168,7 @@ export default function LandingPage() {
             <div style={{ position: "absolute", top: "-10px", left: "50%", transform: "translateX(-50%)" }}>
               <Tape rotate="-1deg" />
             </div>
-            <p style={{ fontSize: "14px", fontStyle: "italic", color: "#3B2F2F", lineHeight: 1.55, textAlign: "center", margin: 0 }}>
+            <p style={{ fontSize: "16px", fontStyle: "italic", color: "#3B2F2F", lineHeight: 1.55, textAlign: "center", margin: 0, fontWeight: 500 }}>
               Cada história merece ser lembrada.<br />
               Cada vida, respeitada. ♡
             </p>
@@ -198,7 +198,7 @@ export default function LandingPage() {
               }}>
                 03
               </span>
-              <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: "13px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#D4AF37", marginBottom: "16px", position: "relative", zIndex: 1 }}>
+              <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: "14px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#D4AF37", marginBottom: "16px", position: "relative", zIndex: 1 }}>
                 Pilares da plataforma
               </p>
               <h2 style={{ fontSize: "clamp(1.6rem,2.5vw,2.1rem)", fontWeight: 700, color: "#fff", lineHeight: 1.25, margin: 0, position: "relative", zIndex: 1 }}>
@@ -212,8 +212,8 @@ export default function LandingPage() {
               {ETHICS.map(({ Icon, n, text }) => (
                 <div key={n} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                   <Icon style={{ width: "22px", height: "22px", color: "rgba(212,175,55,0.65)", flexShrink: 0 }} strokeWidth={1.5} />
-                  <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: "11px", fontWeight: 700, letterSpacing: "0.18em", color: "rgba(255,255,255,0.35)" }}>{n}</span>
-                  <p style={{ fontSize: "15px", lineHeight: 1.7, color: "rgba(255,255,255,0.6)", margin: 0 }}>{text}</p>
+                  <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: "13px", fontWeight: 700, letterSpacing: "0.18em", color: "rgba(255,255,255,0.35)" }}>{n}</span>
+                  <p style={{ fontSize: "16px", lineHeight: 1.7, color: "rgba(255,255,255,0.6)", margin: 0 }}>{text}</p>
                 </div>
               ))}
             </div>
@@ -236,7 +236,7 @@ export default function LandingPage() {
 
           {/* Coluna Texto */}
           <div style={{ flex: "0 0 26%", minWidth: 0 }}>
-            <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: "13px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#8B7355", marginBottom: "18px" }}>
+            <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: "14px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#8B7355", marginBottom: "18px" }}>
               A leveza de uma
             </p>
             <h2 style={{ fontSize: "clamp(2.1rem, 3.5vw, 2.9rem)", fontWeight: 700, color: "#2B2018", lineHeight: 1.1, marginBottom: "20px" }}>
@@ -343,7 +343,7 @@ export default function LandingPage() {
 
             {/* Texto */}
             <div style={{ flex: 1, color: "#fff", minWidth: 0 }}>
-              <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: "13px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#D4AF37", marginBottom: "18px" }}>
+              <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: "14px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#D4AF37", marginBottom: "18px" }}>
                 O fio invisível da sessão
               </p>
               <h3 style={{ fontSize: "clamp(1.7rem, 3vw, 2.3rem)", fontWeight: 700, color: "#fff", lineHeight: 1.15, marginBottom: "18px", wordBreak: "break-word" }}>
@@ -354,7 +354,7 @@ export default function LandingPage() {
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                 {["Genograma dinâmico gerado no clique", "Foco absoluto no paciente", "Menos papel, mais insight estruturado"].map(item => (
-                  <p key={item} style={{ fontSize: "16px", fontStyle: "italic", color: "rgba(212,175,55,0.8)", margin: 0 }}>✓ {item}</p>
+                  <p key={item} style={{ fontSize: "17px", fontStyle: "italic", color: "rgba(212,175,55,0.8)", margin: 0 }}>✓ {item}</p>
                 ))}
               </div>
             </div>
@@ -440,7 +440,7 @@ export default function LandingPage() {
 
           {/* Esquerda */}
           <div style={{ color: "#fff", maxWidth: "380px" }}>
-            <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: "13px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#D4AF37", marginBottom: "14px" }}>
+            <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: "14px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#D4AF37", marginBottom: "14px" }}>
               Beta Fechado · 2026
             </p>
             <h2 style={{ fontSize: "clamp(2.1rem, 3.5vw, 3rem)", fontWeight: 700, color: "#fff", lineHeight: 1.15, marginBottom: "14px" }}>

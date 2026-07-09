@@ -134,14 +134,14 @@
   --input:  oklch(0.93 0.03 295);
   --ring:   oklch(0.65 0.20 295);
 
-  /* Sidebar: Couro / Fichário escuro */
-  --sidebar:                    var(--mahogany);
+  /* Sidebar: Arquivo Vivo Escuro (Verde Musgo Premium) */
+  --sidebar:                    var(--forest);
   --sidebar-foreground:         var(--archive);
-  --sidebar-primary:            var(--forest);
+  --sidebar-primary:            var(--mahogany);
   --sidebar-primary-foreground: var(--archive);
-  --sidebar-accent:             var(--mahogany-mid);
-  --sidebar-accent-foreground:  var(--archive-doc);
-  --sidebar-border:             var(--mahogany-soft);
+  --sidebar-accent:             var(--forest-mid);
+  --sidebar-accent-foreground:  var(--gold-soft);
+  --sidebar-border:             var(--forest-soft);
   --sidebar-ring:               var(--gold);
 }
 
@@ -192,13 +192,13 @@
   --input:  oklch(0.24 0.07 295);
   --ring:   oklch(0.65 0.20 295);
 
-  --sidebar:                    var(--mahogany);
+  --sidebar:                    var(--forest);
   --sidebar-foreground:         var(--archive);
-  --sidebar-primary:            var(--forest);
+  --sidebar-primary:            var(--mahogany);
   --sidebar-primary-foreground: var(--archive);
-  --sidebar-accent:             var(--mahogany-mid);
-  --sidebar-accent-foreground:  var(--archive-doc);
-  --sidebar-border:             var(--mahogany-soft);
+  --sidebar-accent:             var(--forest-mid);
+  --sidebar-accent-foreground:  var(--gold-soft);
+  --sidebar-border:             var(--forest-soft);
   --sidebar-ring:               var(--gold);
 }
 

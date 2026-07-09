@@ -1,15 +1,31 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { History, Search, Calendar, Sparkles, AlertCircle, ArrowRight } from "lucide-react";
+import { History, Search, Calendar, Sparkles, AlertCircle, ArrowRight, FolderClosed } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import { motion } from "framer-motion";
 
 export const Route = createFileRoute("/_authenticated/app/linha-do-tempo")({
   component: TimelinesPage,
 });
+
+function Tape({ rotate = "0deg", w = "64px", top = "-10px", left = "50%" }: { rotate?: string; w?: string; top?: string; left?: string; }) {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        top,
+        left,
+        transform: `translateX(-50%) rotate(${rotate})`,
+        width: w,
+        height: "22px",
+        background: "rgba(210,190,155,0.75)",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
+        zIndex: 20,
+      }}
+    />
+  );
+}
 
 function TimelinesPage() {
   const [search, setSearch] = useState("");
@@ -31,108 +47,142 @@ function TimelinesPage() {
   );
 
   return (
-    <div>
-      {/* Breadcrumb */}
-      <div className="border-b-2 border-border bg-cream px-6 py-3">
-        <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-muted-foreground">
-          Instituto Liz / Linhas do Tempo
-        </p>
+    <div className="min-h-screen bg-[#1B211A] pb-24 font-serif text-white selection:bg-gold-soft relative overflow-x-hidden">
+      
+      {/* ═══════════════════════════════════════════════════
+          FUNDO E TEXTURAS
+      ════════════════════════════════════════════════════ */}
+      <div className="absolute left-0 top-0 w-[60%] h-[600px] opacity-[0.06] pointer-events-none rotate-180">
+        <img src="/assets/photos/section2_botanicals.jpg" alt="" className="w-full h-full object-cover mix-blend-screen" />
       </div>
 
-      {/* Header */}
-      <div className="block-mahogany px-6 py-10">
-        <div className="container-liz flex flex-wrap items-end justify-between gap-4">
+      {/* ═══════════════════════════════════════════════════
+          CABEÇALHO
+      ════════════════════════════════════════════════════ */}
+      <header className="pt-24 pb-12 relative z-10 border-b border-white/10">
+        <div className="container-liz flex flex-wrap items-end justify-between gap-6">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.35em] text-forest-mid">
-              Estudos de Caso
+            <p className="font-sans text-[14px] font-bold tracking-[0.2em] text-[#D4AF37] uppercase mb-4 flex items-center gap-2">
+              <History className="size-5" /> Arquivo de Acontecimentos
             </p>
-            <h1 className="mt-2 font-serif text-5xl font-bold text-white">Linhas do Tempo</h1>
-            <p className="mt-2 text-[14px] text-white/55">
-              Visualize acontecimentos marcantes, traumas e fatos históricos de forma cronológica
-              por caso.
+            <h1 className="font-serif text-5xl md:text-6xl font-bold tracking-tight text-white leading-tight">
+              Linhas do Tempo
+            </h1>
+            <p className="mt-4 text-[19px] text-white/60 font-serif italic max-w-2xl leading-relaxed">
+              Visualize acontecimentos marcantes, traumas e fatos históricos de forma cronológica por caso.
             </p>
           </div>
         </div>
-      </div>
+      </header>
 
-      <div className="container-liz py-8 space-y-6">
-        {/* Search */}
-        <div className="flex items-center gap-3">
-          <div className="relative w-full max-w-sm">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
+      {/* ═══════════════════════════════════════════════════
+          CONTROLES
+      ════════════════════════════════════════════════════ */}
+      <div className="container-liz py-10 relative z-10">
+        <div className="flex flex-wrap items-center gap-6 justify-between bg-[#151A15] p-6 border border-white/10 shadow-xl mb-12">
+          
+          <div className="relative w-full md:max-w-md">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-white/40" />
+            <input
+              type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por cliente..."
-              className="pl-9 h-10 text-[14px]"
+              placeholder="Buscar por cliente no arquivo cronológico..."
+              className="w-full bg-[#1B211A] border border-white/20 text-white placeholder:text-white/30 pl-11 pr-4 py-3 font-sans text-[14px] focus:outline-none focus:border-[#D4AF37] transition-colors"
             />
           </div>
         </div>
 
-        {/* Timelines list */}
-        {isLoading ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="skeleton h-48" />
-            ))}
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border bg-white p-12 text-center">
-            <History className="size-10 text-forest/50 mx-auto" />
-            <p className="font-serif text-lg font-bold text-primary mt-2">
-              Nenhuma linha do tempo encontrada
-            </p>
-          </div>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((c) => (
-              <div
-                key={c.id}
-                className="rounded-2xl border border-border/50 bg-white p-6 shadow-sm flex flex-col justify-between hover-lift accent-bar-forest"
-              >
-                <div className="space-y-3">
-                  <div className="flex justify-between items-start gap-2">
-                    <h3 className="font-serif text-xl font-bold text-primary truncate">
-                      {c.preferred_name || c.full_name}
-                    </h3>
-                    <Badge
-                      variant="outline"
-                      className="text-forest border-forest bg-forest/5 text-[10px] font-bold"
-                    >
-                      60% completa
-                    </Badge>
-                  </div>
+        {/* ═══════════════════════════════════════════════════
+            LISTAGEM
+        ════════════════════════════════════════════════════ */}
+        <div>
+          {isLoading ? (
+            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 opacity-50 animate-pulse">
+               <div className="h-[240px] bg-[#151A15] border border-white/10"></div>
+               <div className="h-[240px] bg-[#151A15] border border-white/10"></div>
+               <div className="h-[240px] bg-[#151A15] border border-white/10"></div>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="bg-[#151A15] border border-white/10 p-16 text-center shadow-xl">
+              <FolderClosed className="size-12 text-white/20 mx-auto mb-6" strokeWidth={1} />
+              <h3 className="font-serif text-[28px] font-bold text-white mb-3">Nenhuma linha do tempo encontrada.</h3>
+              <p className="font-serif text-[18px] text-white/50 italic mb-8">
+                Abra um dossiê para inserir marcos históricos.
+              </p>
+            </div>
+          ) : (
+            <motion.ul
+              className="grid gap-x-8 gap-y-12 md:grid-cols-2 lg:grid-cols-3"
+              initial="hidden"
+              animate="visible"
+              variants={{
+                hidden: { opacity: 0 },
+                visible: { opacity: 1, transition: { staggerChildren: 0.08 } },
+              }}
+            >
+              {filtered.map((c, i) => (
+                <motion.li
+                  key={c.id}
+                  variants={{
+                    hidden: { opacity: 0, y: 15 },
+                    visible: {
+                      opacity: 1,
+                      y: 0,
+                      transition: { type: "spring", stiffness: 300, damping: 24 },
+                    },
+                  }}
+                >
+                  {/* Cartão de Ficha Pautada Antiga */}
+                  <div className={`relative bg-[#FAFAF8] p-8 shadow-[0_16px_40px_rgba(0,0,0,0.4)] border border-[#E6DDD0] text-[#3B2F2F] group transition-transform duration-300 hover:rotate-0 hover:z-10 ${i % 2 === 0 ? 'rotate-[-1deg]' : 'rotate-[1deg]'}`}>
+                    
+                    {/* Textura de Pautas */}
+                    <div className="absolute inset-0 pointer-events-none opacity-20" style={{ backgroundImage: "linear-gradient(#E6DDD0 1px, transparent 1px)", backgroundSize: "100% 24px", backgroundPosition: "0 40px" }} />
 
-                  <div className="space-y-1.5 text-[13px] text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="size-4 text-gold shrink-0" />
-                      <span>12 marcos históricos registrados</span>
+                    <Tape rotate={i % 2 === 0 ? '-2deg' : '2deg'} w="45px" top="-10px" left="50%" />
+                    
+                    <div className="relative flex justify-between items-start gap-4 mb-6 border-b-2 border-[#8B3A3A] pb-4">
+                      <h3 className="font-serif font-bold text-[24px] text-[#2B2018] leading-tight truncate">
+                        {c.preferred_name || c.full_name}
+                      </h3>
+                      <span className="shrink-0 bg-[#E6DDD0] text-[#3B2F2F] px-2 py-1 font-sans text-[10px] font-bold uppercase tracking-widest border border-[#C5B39A]">
+                        60% Vol
+                      </span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="size-4 text-mahogany shrink-0" />
-                      <span>2 traumas principais mapeados</span>
+
+                    <div className="relative space-y-3 font-serif italic text-[#5A4A3A] text-[16px] mb-8 bg-white/50 p-4 border border-[#E6DDD0]/50 backdrop-blur-sm">
+                      <div className="flex items-center gap-3">
+                        <Calendar className="size-4 text-[#8B7355] shrink-0" />
+                        <span>12 marcos históricos registrados</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Sparkles className="size-4 text-[#8B3A3A] shrink-0" />
+                        <span>2 traumas principais mapeados</span>
+                      </div>
                     </div>
+
+                    <div className="relative mt-6 pt-4 border-t border-[#E6DDD0] flex justify-between items-center">
+                      <span className="text-[11px] text-[#8B3A3A] font-sans font-bold uppercase tracking-widest flex items-center gap-1.5">
+                        <AlertCircle className="size-3.5" />
+                        Pendente revisão
+                      </span>
+
+                      <Link
+                        to="/app/clientes/$clientId"
+                        params={{ clientId: c.id }}
+                        search={{ tab: "linha-do-tempo" }}
+                        className="font-sans font-bold text-[11px] uppercase tracking-widest text-[#2B2018] hover:text-[#D4AF37] flex items-center gap-1 transition-colors"
+                      >
+                        Abrir Arquivo Cronológico <ArrowRight className="size-3.5" />
+                      </Link>
+                    </div>
+
                   </div>
-                </div>
-
-                <div className="mt-6 pt-4 border-t border-border/40 flex justify-between items-center">
-                  <span className="text-[11px] text-muted-foreground font-semibold flex items-center gap-1">
-                    <AlertCircle className="size-3.5 text-amber-600" />
-                    Pendente revisão
-                  </span>
-
-                  <Link
-                    to="/app/clientes/$clientId"
-                    params={{ clientId: c.id }}
-                    className="font-bold text-[12px] uppercase tracking-wider text-mahogany hover:text-forest flex items-center gap-1"
-                  >
-                    Ver Linha do Tempo <ArrowRight className="size-3.5" />
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+                </motion.li>
+              ))}
+            </motion.ul>
+          )}
+        </div>
       </div>
     </div>
   );
