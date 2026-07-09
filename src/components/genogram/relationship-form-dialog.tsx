@@ -177,7 +177,7 @@ export function RelationshipFormDialog({
                 <Link2 className="size-8" />
               </div>
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-gold">
+                <p className="text-[14px] font-bold uppercase tracking-[0.3em] text-gold">
                   Conexão
                 </p>
                 <SheetTitle className="font-serif text-3xl font-bold text-white mt-1">
@@ -185,7 +185,7 @@ export function RelationshipFormDialog({
                 </SheetTitle>
               </div>
             </div>
-            <SheetDescription className="text-white/60 text-[14px]">
+            <SheetDescription className="text-white text-[14px]">
               Vínculos entrelaçam os dados. Registre parentalidade, uniões, rupturas ou
               aproximações.
             </SheetDescription>
@@ -202,7 +202,7 @@ export function RelationshipFormDialog({
             }}
           >
             <div className="space-y-2">
-              <Label className="text-[13px] font-bold text-foreground">Natureza da relação</Label>
+              <Label className="text-[16px] font-bold text-foreground">Natureza da relação</Label>
               <Select
                 value={v.relationship_type}
                 onValueChange={(x) =>
@@ -225,7 +225,7 @@ export function RelationshipFormDialog({
             <div className="grid gap-5 border-l-2 border-dashed border-border pl-4 ml-2">
               <div className="space-y-2 relative">
                 <div className="absolute -left-[23px] top-4 size-2.5 rounded-full bg-border" />
-                <Label className="text-[13px] font-bold text-foreground">{fromHint}</Label>
+                <Label className="text-[16px] font-bold text-foreground">{fromHint}</Label>
                 <Select
                   value={v.from_person_id}
                   onValueChange={(x) => setV((p) => ({ ...p, from_person_id: x }))}
@@ -245,7 +245,7 @@ export function RelationshipFormDialog({
 
               <div className="space-y-2 relative">
                 <div className="absolute -left-[23px] top-4 size-2.5 rounded-full bg-border" />
-                <Label className="text-[13px] font-bold text-foreground">{toHint}</Label>
+                <Label className="text-[16px] font-bold text-foreground">{toHint}</Label>
                 <Select
                   value={v.to_person_id}
                   onValueChange={(x) => setV((p) => ({ ...p, to_person_id: x }))}
@@ -266,7 +266,7 @@ export function RelationshipFormDialog({
 
             {qualifierOptions.length > 0 && (
               <div className="space-y-2 pt-2">
-                <Label className="text-[13px] font-bold text-foreground">
+                <Label className="text-[16px] font-bold text-foreground">
                   Intensidade / Qualificador
                 </Label>
                 <Select
@@ -289,7 +289,7 @@ export function RelationshipFormDialog({
 
             {v.relationship_type === "union" && (
               <div className="space-y-2 pt-2">
-                <Label className="text-[13px] font-bold text-foreground">Ordem desta união</Label>
+                <Label className="text-[16px] font-bold text-foreground">Ordem desta união</Label>
                 <Select
                   value={v.marriage_order || "none"}
                   onValueChange={(x) =>
@@ -308,7 +308,7 @@ export function RelationshipFormDialog({
                     <SelectItem value="5">⑤ Quinta união</SelectItem>
                   </SelectContent>
                 </Select>
-                <p className="text-[11px] text-muted-foreground leading-snug">
+                <p className="text-[14px] text-muted-foreground leading-snug">
                   Use quando a pessoa teve mais de um casamento — aparece como ①/②/③ na linha do
                   casal para diferenciar cônjuges.
                 </p>
@@ -316,7 +316,7 @@ export function RelationshipFormDialog({
             )}
 
             <div className="space-y-2 pt-2">
-              <Label className="text-[13px] font-bold text-foreground">Anotações sistêmicas</Label>
+              <Label className="text-[16px] font-bold text-foreground">Anotações sistêmicas</Label>
               <Textarea
                 rows={4}
                 value={v.notes}

@@ -227,7 +227,7 @@ export function PersonFormDialog({
                 {initials}
               </div>
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-mahogany/50">
+                <p className="text-[14px] font-bold uppercase tracking-[0.3em] text-mahogany">
                   Dossiê
                 </p>
                 <SheetTitle className="font-serif text-3xl font-bold text-mahogany">
@@ -236,11 +236,11 @@ export function PersonFormDialog({
               </div>
             </div>
             {!v.is_proband && v.relationship_to_proband && (
-              <span className="mt-2 inline-block rounded-full bg-mahogany/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-mahogany">
+              <span className="mt-2 inline-block rounded-full bg-mahogany/10 px-3 py-1 text-sm font-bold uppercase tracking-wider text-mahogany">
                 Contexto: {v.relationship_to_proband}
               </span>
             )}
-            <SheetDescription className="mt-2 font-sans text-[13px] text-mahogany/70">
+            <SheetDescription className="mt-2 font-sans text-[16px] text-mahogany/70">
               Preencha os dados do {editing ? "dossiê selecionado" : "novo integrante da árvore"}.
             </SheetDescription>
           </SheetHeader>
@@ -391,7 +391,7 @@ export function PersonFormDialog({
                       <Badge
                         key={c}
                         variant="secondary"
-                        className="gap-1.5 font-semibold text-[13px] bg-accent/50 px-2 py-1"
+                        className="gap-1.5 font-semibold text-[16px] bg-accent/50 px-2 py-1"
                       >
                         {c}
                         <button
@@ -436,7 +436,7 @@ export function PersonFormDialog({
                             key={`${ev.date}-${i}`}
                             className="flex items-center gap-3 rounded-md border border-border/70 bg-background px-3 py-2 shadow-sm"
                           >
-                            <span className="font-mono text-[12px] font-bold text-muted-foreground">
+                            <span className="font-mono text-[16px] font-bold text-muted-foreground">
                               {ev.date}
                             </span>
                             <span className="flex-1 truncate text-[14px] font-medium">
@@ -502,7 +502,7 @@ function Row({ children }: { children: React.ReactNode }) {
 function Field({ label, id, children }: { label: string; id: string; children: React.ReactNode }) {
   return (
     <div className="space-y-2">
-      <Label htmlFor={id} className="text-[13px] font-bold text-foreground">
+      <Label htmlFor={id} className="text-[16px] font-bold text-foreground">
         {label}
       </Label>
       {children}

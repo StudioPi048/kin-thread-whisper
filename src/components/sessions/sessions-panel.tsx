@@ -215,7 +215,7 @@ export function SessionsPanel({ clientId }: Props) {
         <div className="p-8 md:p-10 relative z-10 flex flex-col md:flex-row items-center gap-6 justify-between">
           <div className="flex-1 text-center md:text-left">
             <h3 className="font-serif text-3xl font-bold">Gravar Relato da Sessão</h3>
-            <p className="text-sm text-white/70 mt-2 max-w-xl leading-relaxed">
+            <p className="text-sm text-white/90 mt-2 max-w-xl leading-relaxed">
               Grave suas observações logo após o término da sessão. A inteligência transcreverá e
               extrairá automaticamente fatos, hipóteses sistêmicas e figuras mencionadas para o
               prontuário.
@@ -359,13 +359,13 @@ function SessionCard({
       {/* Header */}
       <div className="border-b border-border/40 bg-background/50 px-6 py-4 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-1">
+          <p className="text-[14px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-1">
             {format(new Date(session.session_date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
           </p>
           <h4 className="font-serif text-2xl font-bold text-primary">
             {session.title ?? "Sessão"}
           </h4>
-          <p className="text-[13px] text-muted-foreground/70 font-mono mt-1 flex items-center gap-2">
+          <p className="text-[16px] text-muted-foreground/70 font-mono mt-1 flex items-center gap-2">
             <Mic className="size-3" />
             {formatDuration(session.duration_seconds)} de áudio registrado
           </p>
@@ -414,7 +414,7 @@ function SessionCard({
                 key={label as string}
                 className="bg-background border border-border/40 p-4 rounded-sm"
               >
-                <p className="text-[11px] font-bold text-gold uppercase tracking-[0.15em] mb-2">
+                <p className="text-[14px] font-bold text-gold uppercase tracking-[0.15em] mb-2">
                   {label as string}
                 </p>
                 {Array.isArray(value) ? (
@@ -446,7 +446,7 @@ function SessionCard({
               variant="ghost"
               size="sm"
               onClick={() => setShowTranscript((v) => !v)}
-              className="text-[13px] text-muted-foreground hover:text-primary"
+              className="text-[16px] text-muted-foreground hover:text-primary"
             >
               <FileText className="h-4 w-4 mr-2" />
               {showTranscript ? "Ocultar" : "Ver"} transcrição bruta gerada pela IA
@@ -461,7 +461,7 @@ function SessionCard({
                   readOnly
                   aria-label="Transcrição da sessão"
                   value={session.transcript}
-                  className="font-mono text-[12px] min-h-[160px] bg-background border-border/50 resize-none text-muted-foreground/80 p-4 leading-relaxed"
+                  className="font-mono text-[16px] min-h-[160px] bg-background border-border/50 resize-none text-muted-foreground/80 p-4 leading-relaxed"
                 />
               </motion.div>
             )}

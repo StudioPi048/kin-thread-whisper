@@ -62,7 +62,7 @@ const UnionNodeComponent = ({ data }: NodeProps) => {
     >
       {d.label && (
         <div
-          className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-card/95 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-mahogany shadow-sm"
+          className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-card/95 px-1.5 py-0.5 text-[14px] font-bold uppercase tracking-[0.08em] text-mahogany shadow-sm"
           style={{ top: -22 }}
         >
           {d.label}
@@ -368,7 +368,7 @@ function ShortcutsLegend() {
     <div className="w-[168px] overflow-hidden rounded-lg border border-mahogany/25 bg-white/95 shadow-lg backdrop-blur-md ring-1 ring-black/5">
 
       <div className="bg-mahogany/5 px-2.5 py-1.5 border-b border-mahogany/20">
-        <p className="font-serif text-[13px] font-bold leading-tight text-mahogany">Atalhos</p>
+        <p className="font-serif text-[16px] font-bold leading-tight text-mahogany">Atalhos</p>
       </div>
       <div className="px-3 py-2.5 flex flex-col gap-2.5">
         <div className="flex flex-col gap-0.5">
@@ -376,8 +376,8 @@ function ShortcutsLegend() {
             <kbd className="px-1 py-0.5 text-[9px] font-mono font-medium rounded border border-border bg-muted text-muted-foreground">
               Espaço
             </kbd>
-            <span className="text-[10px] text-muted-foreground leading-none">+</span>
-            <span className="text-[10px] font-bold text-foreground leading-none">Arrastar</span>
+            <span className="text-[14px] text-muted-foreground leading-none">+</span>
+            <span className="text-[14px] font-bold text-foreground leading-none">Arrastar</span>
           </div>
           <p className="text-[9px] leading-tight text-muted-foreground mt-0.5">
             Navegar pelo quadro
@@ -386,7 +386,7 @@ function ShortcutsLegend() {
 
         <div className="flex flex-col gap-0.5">
           <div className="flex items-center gap-1">
-            <span className="text-[10px] font-bold text-foreground leading-none">
+            <span className="text-[14px] font-bold text-foreground leading-none">
               Clique (Node)
             </span>
           </div>
@@ -397,7 +397,7 @@ function ShortcutsLegend() {
 
         <div className="flex flex-col gap-0.5">
           <div className="flex items-center gap-1">
-            <span className="text-[10px] font-bold text-foreground leading-none">Clique Duplo</span>
+            <span className="text-[14px] font-bold text-foreground leading-none">Clique Duplo</span>
           </div>
           <p className="text-[9px] leading-tight text-muted-foreground mt-0.5">Editar pessoa</p>
         </div>
@@ -914,7 +914,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
         <div className="pointer-events-auto flex flex-wrap items-center gap-2 px-4 py-3 rounded-xl bg-mahogany shadow-xl border border-white/10">
           <div className="flex items-center gap-2 mr-3">
             <TreePine className="size-4 text-gold" />
-            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/60">
+            <span className="text-[14px] font-bold uppercase tracking-[0.2em] text-white">
               Genossociograma
             </span>
           </div>
@@ -923,7 +923,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
             size="sm"
             variant="forest"
             onClick={() => setCreatingPerson(true)}
-            className="h-9 gap-2"
+            className="h-11 gap-2"
           >
             <UserPlus className="size-4" />
             Adicionar pessoa
@@ -934,7 +934,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
             variant="outline"
             onClick={() => setRelDialog({ open: true })}
             disabled={persons.length < 2}
-            className="h-9 gap-2 border-white/25 text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[13px]"
+            className="h-11 gap-2 border-white/25 text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[16px]"
           >
             <Link2 className="size-4" />
             Criar vínculo
@@ -945,7 +945,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
             variant="outline"
             onClick={() => saveLayout.mutate()}
             disabled={saveLayout.isPending || !layoutDirty}
-            className="h-9 gap-2 border-white/25 text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[13px] disabled:opacity-45"
+            className="h-11 gap-2 border-white/25 text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[16px] disabled:opacity-45"
           >
             <Save className="size-4" />
             {saveLayout.isPending ? "Salvando" : "Salvar layout"}
@@ -956,7 +956,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
             variant="outline"
             onClick={() => toggleLayoutFixed.mutate()}
             disabled={!query.data?.layout?.id || toggleLayoutFixed.isPending}
-            className={`h-9 gap-2 border-white/25 normal-case tracking-normal font-semibold text-[13px] ${isLayoutFixed ? "bg-white/20 text-white" : "text-white hover:bg-white/10 hover:text-white"}`}
+            className={`h-11 gap-2 border-white/25 normal-case tracking-normal font-semibold text-[16px] ${isLayoutFixed ? "bg-white/20 text-white" : "text-white hover:bg-white/10 hover:text-white"}`}
             title={!query.data?.layout?.id ? "Salve o layout pelo menos uma vez para poder fixá-lo" : ""}
           >
             {isLayoutFixed ? <Lock className="size-4 text-gold" /> : <Unlock className="size-4" />}
@@ -964,39 +964,39 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
           </Button>
 
           <div className="hidden items-center gap-4 md:flex ml-3">
-            <span className="flex items-center gap-1.5 text-[13px] text-white/55">
+            <span className="flex items-center gap-1.5 text-[16px] text-white">
               <Users className="size-3.5 text-forest" />
               <strong className="text-white">{qualifiedCount}</strong>
               <span>no mapa</span>
               {incompleteCount > 0 && (
-                <span className="ml-1 rounded-full bg-amber-500/25 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">
+                <span className="ml-1 rounded-full bg-amber-500/25 px-1.5 py-0.5 text-[14px] font-bold text-amber-300">
                   {incompleteCount} incompletos
                 </span>
               )}
             </span>
-            <span className="flex items-center gap-1.5 text-[13px] text-white/55">
+            <span className="flex items-center gap-1.5 text-[16px] text-white">
               <Link2 className="size-3.5 text-gold" />
               <strong className="text-white">{relCount}</strong> vínculos
             </span>
             {(layoutDirty || lastSavedAt) && (
-              <span className="text-[12px] font-semibold text-white/50">
+              <span className="text-[16px] font-semibold text-white">
                 {layoutDirty ? "Não salvo" : `Salvo às ${lastSavedAt}`}
               </span>
             )}
-            <span className="text-[10px] opacity-40 ml-4 text-white font-mono">{BUILD_TAG}</span>
+            <span className="text-[14px] opacity-40 ml-4 text-white font-mono">{BUILD_TAG}</span>
           </div>
 
           <div className="ml-auto flex items-center gap-1">
             <button
               onClick={() => setShowGuide(!showGuide)}
-              className="flex items-center gap-1.5 rounded px-3 py-2 text-[12px] font-bold uppercase tracking-[0.1em] text-white/55 transition-colors hover:bg-white/10 hover:text-white"
+              className="flex items-center gap-1.5 rounded px-3 py-2 text-[16px] font-bold uppercase tracking-[0.1em] text-white transition-colors hover:bg-white/10 hover:text-white"
             >
               <HelpCircle className="size-4" />
               <span className="hidden sm:inline">Guia</span>
             </button>
             <button
               onClick={() => window.print()}
-              className="flex items-center gap-1.5 rounded px-3 py-2 text-[12px] font-bold uppercase tracking-[0.1em] text-white/55 transition-colors hover:bg-white/10 hover:text-white"
+              className="flex items-center gap-1.5 rounded px-3 py-2 text-[16px] font-bold uppercase tracking-[0.1em] text-white transition-colors hover:bg-white/10 hover:text-white"
             >
               <Printer className="size-4" />
               <span className="hidden sm:inline">A3</span>
@@ -1004,7 +1004,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
             <button
               onClick={() => deleteSelected.mutate()}
               disabled={deleteSelected.isPending}
-              className="flex items-center gap-1.5 rounded px-3 py-2 text-[12px] font-bold uppercase tracking-[0.1em] text-white/60 transition-colors hover:bg-white/10 hover:text-red-400 ml-4 border-l border-border pl-4"
+              className="flex items-center gap-1.5 rounded px-3 py-2 text-[16px] font-bold uppercase tracking-[0.1em] text-white transition-colors hover:bg-white/10 hover:text-red-400 ml-4 border-l border-border pl-4"
             >
               <Trash2 className="size-4" />
               <span className="hidden sm:inline">Remover</span>
@@ -1017,7 +1017,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
 
       {showGuide && (
         <div className="border-b border-border bg-forest-soft px-4 py-3">
-          <div className="flex flex-wrap gap-6 text-[13px] text-foreground/70">
+          <div className="flex flex-wrap gap-6 text-[16px] text-foreground/70">
             {[
               ["Espaço + Arrastar", "Navegar pela tela"],
               ["Arrastar Pessoa", "Reposicionar horizontalmente"],
@@ -1026,7 +1026,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
               ["Scroll", "Zoom in/out"],
             ].map(([key, desc]) => (
               <span key={key} className="flex items-center gap-2">
-                <kbd className="rounded border border-border bg-white px-1.5 py-0.5 text-[11px] font-mono font-semibold">
+                <kbd className="rounded border border-border bg-white px-1.5 py-0.5 text-[14px] font-mono font-semibold">
                   {key}
                 </kbd>
                 {desc}
@@ -1045,7 +1045,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
       >
         {query.isLoading ? (
           <div className="flex h-full flex-col items-center justify-center gap-3">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-forest border-t-transparent" />
+            <div className="h-11 w-11 animate-spin rounded-full border-2 border-forest border-t-transparent" />
             <p className="text-[14px] text-muted-foreground">Carregando a árvore...</p>
           </div>
         ) : persons.length === 0 ? (
@@ -1204,7 +1204,7 @@ function EmptyCanvas({ onCreate }: { onCreate: () => void }) {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-6 p-10 text-center">
       <div className="flex h-20 w-20 items-center justify-center border-2 border-dashed border-forest/40 bg-forest-soft">
-        <TreePine className="size-9 text-forest/60" />
+        <TreePine className="size-9 text-forest" />
       </div>
 
       <div>

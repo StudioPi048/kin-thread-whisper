@@ -56,7 +56,7 @@ export function PatternsPanel({ clientId }: Props) {
         <div>
           <div className="flex items-center gap-2 mb-2">
             <Activity className="size-4 text-gold" />
-            <p className="text-[11px] uppercase tracking-[0.2em] font-bold text-muted-foreground">
+            <p className="text-[14px] uppercase tracking-[0.2em] font-bold text-muted-foreground">
               Motor de Padrões v1
             </p>
           </div>
@@ -127,7 +127,7 @@ export function PatternsPanel({ clientId }: Props) {
                       {p.title}
                     </h4>
                     <Badge
-                      className={`${badgeClass} border-0 uppercase tracking-[0.1em] text-[10px] font-bold shrink-0`}
+                      className={`${badgeClass} border-0 uppercase tracking-[0.1em] text-[14px] font-bold shrink-0`}
                     >
                       <AlertCircle className="size-3 mr-1" /> Nível {p.severity}
                     </Badge>
@@ -137,14 +137,14 @@ export function PatternsPanel({ clientId }: Props) {
                   </p>
                   {p.personIds.length > 0 && (
                     <div className="mt-2 pt-4 border-t border-border/50 flex flex-wrap gap-2 items-center">
-                      <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground mr-1">
+                      <span className="text-[14px] font-bold uppercase tracking-[0.1em] text-muted-foreground mr-1">
                         Membros afetados:
                       </span>
                       {p.personIds.map((id) => (
                         <Badge
                           key={id}
                           variant="secondary"
-                          className="font-semibold text-[12px] bg-background border border-border"
+                          className="font-semibold text-[16px] bg-background border border-border"
                         >
                           {nameById.get(id) ?? "—"}
                         </Badge>

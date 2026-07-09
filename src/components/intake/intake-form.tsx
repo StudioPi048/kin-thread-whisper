@@ -129,14 +129,14 @@ export function IntakeForm({ clientId, professionalId }: Props) {
       {/* Sidebar */}
       <aside className="space-y-4">
         <div className="rounded-lg border border-border bg-card p-4">
-          <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-gold">
+          <p className="text-[14px] font-medium uppercase tracking-[0.28em] text-gold">
             Preenchimento total
           </p>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="font-serif text-3xl text-primary">{completion}%</span>
           </div>
           <Progress value={completion} className="mt-3 h-1.5" />
-          <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+          <p className="mt-3 flex items-center gap-1.5 text-sm text-muted-foreground">
             {save.isPending ? (
               <>
                 <Loader2 className="size-3 animate-spin" /> Salvando…
@@ -173,14 +173,14 @@ export function IntakeForm({ clientId, professionalId }: Props) {
       <div className="min-w-0 space-y-6">
         <header className="flex items-center justify-between gap-4">
           <div>
-            <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-gold">
+            <p className="text-[14px] font-medium uppercase tracking-[0.28em] text-gold">
               Anamnese psicogenealógica
             </p>
             <h2 className="mt-1 font-serif text-2xl text-primary">
               {INTAKE_SECTIONS.find((s) => s.id === section)?.label}
             </h2>
           </div>
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
             <span>{sectionCompletion}% desta seção</span>
             <Button
               size="sm"
@@ -231,7 +231,7 @@ function Field({
     <div className="space-y-1.5">
       <Label className="text-sm text-foreground">{label}</Label>
       {children}
-      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+      {hint && <p className="text-sm text-muted-foreground">{hint}</p>}
     </div>
   );
 }
@@ -621,7 +621,7 @@ function SectionOrigins({ draft, update }: SectionProps) {
       />
 
       <div className="mt-4 rounded-md border border-lilac-soft bg-lilac-soft/40 p-4">
-        <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-gold mb-3">
+        <p className="text-[14px] font-medium uppercase tracking-[0.28em] text-gold mb-3">
           Condições dos pais na gestação
         </p>
         <div className="grid gap-4 md:grid-cols-2">
@@ -1042,7 +1042,7 @@ function SectionAdditional({ draft, update }: SectionProps) {
       </div>
 
       <div className="rounded-md border border-lilac-soft bg-lilac-soft/40 p-4">
-        <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-gold mb-3">
+        <p className="text-[14px] font-medium uppercase tracking-[0.28em] text-gold mb-3">
           Átomo social
         </p>
         <div className="grid gap-4 md:grid-cols-2">
@@ -1128,7 +1128,7 @@ function RepeatableList<T extends object>({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-gold">{title}</p>
+        <p className="text-[14px] font-medium uppercase tracking-[0.28em] text-gold">{title}</p>
         <Button size="sm" variant="outline" onClick={() => onChange([...items, { ...blank }])}>
           <Plus className="size-3.5" /> Adicionar
         </Button>
@@ -1142,7 +1142,7 @@ function RepeatableList<T extends object>({
           {items.map((row, i) => (
             <div key={i} className="rounded-md border border-border bg-background/40 p-4">
               <div className="mb-3 flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">#{i + 1}</span>
+                <span className="text-sm text-muted-foreground">#{i + 1}</span>
                 <Button
                   size="sm"
                   variant="ghost"

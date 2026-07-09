@@ -208,7 +208,7 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
         <p
           className={cn(
             "font-sans font-bold text-foreground leading-[1.2] break-words",
-            d.is_proband ? "text-[12px]" : "text-[11px]",
+            d.is_proband ? "text-[16px]" : "text-[14px]",
           )}
         >
           {displayName}

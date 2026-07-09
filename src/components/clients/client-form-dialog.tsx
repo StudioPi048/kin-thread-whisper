@@ -254,7 +254,7 @@ export function ClientFormDialog({ open, onOpenChange, professionalId, editing }
                 onChange={(e) => set("tags_input", e.target.value)}
                 placeholder="luto, síndrome-aniversário, ruptura-afetiva"
               />
-              <p className="mt-1.5 text-xs text-muted-foreground">Separe por vírgula.</p>
+              <p className="mt-1.5 text-sm text-muted-foreground">Separe por vírgula.</p>
             </Field>
           </section>
 
@@ -304,7 +304,7 @@ export function ClientFormDialog({ open, onOpenChange, professionalId, editing }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-gold">{children}</p>
+    <p className="text-[14px] font-medium uppercase tracking-[0.28em] text-gold">{children}</p>
   );
 }
 

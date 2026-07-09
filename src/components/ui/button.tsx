@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
   // Base gráfica: serif, uppercase, bordas retas (rounded-sm)
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-sm border border-transparent font-serif text-[13px] uppercase tracking-[0.15em] cursor-pointer transition-all duration-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-mahogany focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-40 [&_svg]:pointer-events-none [&_svg]:size-[16px] [&_svg]:shrink-0 [&_svg]:stroke-[1.5]",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-sm border border-transparent font-serif text-[16px] uppercase tracking-[0.15em] cursor-pointer transition-all duration-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-mahogany focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-40 [&_svg]:pointer-events-none [&_svg]:size-[16px] [&_svg]:shrink-0 [&_svg]:stroke-[1.5]",
   {
     variants: {
       variant: {
@@ -24,7 +24,7 @@ const buttonVariants = cva(
       },
       size: {
         default: "h-[52px] px-7 py-3",
-        sm: "h-10 px-4 text-[12px]",
+        sm: "h-10 px-4 text-[16px]",
         lg: "h-[58px] px-10 text-[14px]",
         xl: "h-16 px-14 text-[15px]",
         icon: "h-[52px] w-[52px]",

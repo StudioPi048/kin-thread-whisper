@@ -465,7 +465,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
     <div className="space-y-6 pb-12">
       <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border/60 pb-4">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gold mb-1">
+          <p className="text-[14px] font-bold uppercase tracking-[0.2em] text-gold mb-1">
             Planilha do Clã
           </p>
           <h2 className="font-serif text-3xl font-bold text-primary">Atlas Familiar</h2>
@@ -592,10 +592,10 @@ export function ClanSpreadsheet({ clientId }: Props) {
           </datalist>
 
           <div className="overflow-x-auto rounded-sm border-2 border-border/80 bg-white shadow-sm">
-            <table className="w-full min-w-[1500px] border-collapse text-[13px]">
-              <thead className="bg-forest-soft/40 text-[10px] font-bold uppercase tracking-[0.15em] text-mahogany border-b-2 border-border/80">
+            <table className="w-full min-w-[1500px] border-collapse text-[16px]">
+              <thead className="bg-forest-soft/40 text-[14px] font-bold uppercase tracking-[0.15em] text-mahogany border-b-2 border-border/80">
                 <tr>
-                  <Th w="w-8">#</Th>
+                  <Th w="w-11">#</Th>
                   <Th w="min-w-[180px]">Nome</Th>
                   <Th w="min-w-[180px]">Parentesco</Th>
                   <Th w="w-36">Nascimento</Th>
@@ -616,7 +616,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
                     key={r.id}
                     className="border-b border-border/40 hover:bg-forest-soft/20 transition-colors"
                   >
-                    <td className="px-3 text-center text-[11px] font-mono font-medium text-muted-foreground/60">
+                    <td className="px-3 text-center text-[14px] font-mono font-medium text-muted-foreground">
                       {i + 1}
                     </td>
                     <Td>
@@ -723,7 +723,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
                           if (confirm(`Remover ${r.full_name || "pessoa sem nome"}?`))
                             removePerson.mutate(r.id);
                         }}
-                        className="rounded p-1.5 text-muted-foreground/50 transition-colors hover:bg-destructive/10 hover:text-destructive"
+                        className="rounded p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                         title="Remover"
                       >
                         <Trash2 className="size-4" />
@@ -735,7 +735,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
             </table>
           </div>
           <div className="mt-3 flex items-center justify-between">
-            <p className="text-[11px] uppercase tracking-[0.1em] font-bold text-muted-foreground/60">
+            <p className="text-[14px] uppercase tracking-[0.1em] font-bold text-muted-foreground">
               Salvamento automático a cada digitação (0.9s)
             </p>
           </div>
@@ -861,7 +861,7 @@ function CellInput(props: {
       onChange={(e) => props.onChange(e.target.value)}
       placeholder={props.placeholder}
       list={props.list}
-      className={`w-full h-8 rounded-sm border-0 bg-transparent px-2 text-[13px] font-medium text-foreground outline-none ring-1 ring-transparent transition-all focus:bg-forest-soft/30 focus:ring-forest placeholder:text-muted-foreground/40 ${props.className ?? ""}`}
+      className={`w-full h-11 rounded-sm border-0 bg-transparent px-2 text-[16px] font-medium text-foreground outline-none ring-1 ring-transparent transition-all focus:bg-forest-soft/30 focus:ring-forest placeholder:text-muted-foreground/40 ${props.className ?? ""}`}
     />
   );
 }

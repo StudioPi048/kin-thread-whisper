@@ -45,8 +45,8 @@ export function LizLogoLockup({
         </p>
         <p
           className={cn(
-            "text-[10px] uppercase tracking-[0.28em]",
-            variant === "light" ? "text-sidebar-foreground/60" : "text-muted-foreground",
+            "text-[14px] uppercase tracking-[0.28em]",
+            variant === "light" ? "text-sidebar-foreground" : "text-muted-foreground",
           )}
         >
           Psicogenealogia

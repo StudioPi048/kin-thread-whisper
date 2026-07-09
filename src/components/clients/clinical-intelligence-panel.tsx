@@ -258,12 +258,12 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
           >
             {/* Header */}
             <div className="flex items-center gap-2 pb-4 border-b border-border/40">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-mahogany/5">
+              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-mahogany/5">
                 <Sparkles className="size-4 text-mahogany" />
               </div>
               <div>
                 <h3 className="font-serif text-lg font-bold text-primary">Copiloto Clínico</h3>
-                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
+                <p className="text-[14px] text-muted-foreground font-bold uppercase tracking-wider">
                   Inteligência Transgeracional
                 </p>
               </div>
@@ -271,12 +271,12 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
 
             {/* Padrões Ativos */}
             <div className="space-y-3">
-              <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <h4 className="text-[14px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <Layers className="size-3.5 text-forest" />
                 Padrões Ativos ({patterns.length})
               </h4>
               {patterns.length === 0 ? (
-                <p className="text-[13px] text-muted-foreground/80 italic pl-1">
+                <p className="text-[16px] text-muted-foreground/80 italic pl-1">
                   Nenhum padrão óbvio encontrado. Adicione mais dados na árvore.
                 </p>
               ) : (
@@ -285,7 +285,7 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
                     <Badge
                       key={p.id}
                       variant="secondary"
-                      className="bg-mahogany/5 text-mahogany hover:bg-mahogany/10 text-[11px] font-medium border border-mahogany/10 py-1 px-2.5 rounded-full"
+                      className="bg-mahogany/5 text-mahogany hover:bg-mahogany/10 text-[14px] font-medium border border-mahogany/10 py-1 px-2.5 rounded-full"
                     >
                       {p.title}
                     </Badge>
@@ -296,7 +296,7 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
 
             {/* Hipóteses Clínicas */}
             <div className="space-y-4">
-              <h4 className="text-[12px] font-bold uppercase tracking-widest text-clinical-warning flex items-center gap-2">
+              <h4 className="text-[16px] font-bold uppercase tracking-widest text-clinical-warning flex items-center gap-2">
                 <AlertCircle className="size-4" />
                 Hipóteses Clínicas
               </h4>
@@ -306,8 +306,8 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
                     key={i}
                     className="p-3 bg-clinical-warning/10 border-l-2 border-clinical-warning rounded-r-xl space-y-1.5"
                   >
-                    <p className="text-[13px] font-bold text-ink">{h.title}</p>
-                    <p className="text-[12px] leading-relaxed text-ink/80 font-serif">
+                    <p className="text-[16px] font-bold text-ink">{h.title}</p>
+                    <p className="text-[16px] leading-relaxed text-ink/80 font-serif">
                       {h.description}
                     </p>
                   </div>
@@ -318,7 +318,7 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
             {/* Lacunas de Informação */}
             {infoGaps.length > 0 && (
               <div className="space-y-3">
-                <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <h4 className="text-[14px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                   <HelpCircle className="size-3.5 text-forest" />
                   Lacunas de Informação
                 </h4>
@@ -326,7 +326,7 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
                   {infoGaps.map((g, i) => (
                     <li
                       key={i}
-                      className="text-[12px] text-muted-foreground flex items-start gap-2"
+                      className="text-[16px] text-muted-foreground flex items-start gap-2"
                     >
                       <span className="text-forest select-none">•</span>
                       <span>{g}</span>
@@ -338,14 +338,14 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
 
             {/* Perguntas Recomendadas */}
             <div className="space-y-3">
-              <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <h4 className="text-[14px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <QuestionIcon className="size-3.5 text-mahogany" />
                 Perguntas para Próxima Sessão
               </h4>
               <div className="space-y-2.5">
                 {suggestedQuestions.map((q, i) => (
                   <div key={i} className="p-3 bg-mahogany/[0.02] border border-mahogany/5 rounded-xl">
-                    <p className="text-[12px] leading-relaxed text-foreground/90 font-serif italic">
+                    <p className="text-[16px] leading-relaxed text-foreground/90 font-serif italic">
                       "{q}"
                     </p>
                   </div>
@@ -356,14 +356,14 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
             {/* Linha do Tempo Inteligente */}
             {smartTimeline.length > 0 && (
               <div className="space-y-4">
-                <h4 className="text-[12px] font-bold uppercase tracking-widest text-mahogany-soft flex items-center gap-2">
+                <h4 className="text-[16px] font-bold uppercase tracking-widest text-mahogany-soft flex items-center gap-2">
                   <Clock className="size-4" />
                   Linha do Tempo Inteligente
                 </h4>
                 <div className="space-y-3">
                   {smartTimeline.map((item, i) => (
                     <div key={i} className="p-3 bg-mahogany/5 border-l-2 border-mahogany-soft rounded-r-xl">
-                      <p className="text-[12px] leading-relaxed text-ink font-serif">
+                      <p className="text-[16px] leading-relaxed text-ink font-serif">
                         {item}
                       </p>
                     </div>
@@ -375,14 +375,14 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
             {/* Casos Semelhantes */}
             {similarCases.length > 0 && (
               <div className="space-y-4">
-                <h4 className="text-[12px] font-bold uppercase tracking-widest text-clinical-positive flex items-center gap-2">
+                <h4 className="text-[16px] font-bold uppercase tracking-widest text-clinical-positive flex items-center gap-2">
                   <Users className="size-4" />
                   Casos Semelhantes
                 </h4>
                 <div className="space-y-3">
                   {similarCases.map((item, i) => (
                     <div key={i} className="p-3 bg-clinical-positive/10 border-l-2 border-clinical-positive rounded-r-xl">
-                      <p className="text-[12px] leading-relaxed text-ink font-serif">
+                      <p className="text-[16px] leading-relaxed text-ink font-serif">
                         {item}
                       </p>
                     </div>
@@ -394,13 +394,13 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
             {/* Alertas de Consistência */}
             {consistencyAlerts.length > 0 && (
               <div className="space-y-4">
-                <h4 className="text-[12px] font-bold uppercase tracking-widest text-clinical-critical flex items-center gap-2">
+                <h4 className="text-[16px] font-bold uppercase tracking-widest text-clinical-critical flex items-center gap-2">
                   <AlertTriangle className="size-4" />
                   Alertas de Consistência
                 </h4>
                 <ul className="space-y-2 pl-1">
                   {consistencyAlerts.map((alert, i) => (
-                    <li key={i} className="text-[12px] text-ink flex items-start gap-2 font-medium bg-clinical-critical/10 p-2 rounded border-l-2 border-clinical-critical">
+                    <li key={i} className="text-[16px] text-ink flex items-start gap-2 font-medium bg-clinical-critical/10 p-2 rounded border-l-2 border-clinical-critical">
                       <span className="text-clinical-critical select-none mt-0.5">•</span>
                       <span>{alert}</span>
                     </li>
@@ -411,17 +411,17 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
 
             {/* Referências de Autores */}
             <div className="space-y-3 pt-4 border-t border-border/40">
-              <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <h4 className="text-[14px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <BookOpen className="size-3.5 text-gold" />
                 Autores Relacionados
               </h4>
               <div className="space-y-2">
                 {bibliography.map((b, i) => (
-                  <div key={i} className="flex justify-between items-center text-[12px]">
+                  <div key={i} className="flex justify-between items-center text-[16px]">
                     <span className="font-serif font-bold text-primary truncate max-w-[180px]">
                       {b.title}
                     </span>
-                    <span className="text-[11px] text-muted-foreground truncate max-w-[120px]">
+                    <span className="text-[14px] text-muted-foreground truncate max-w-[120px]">
                       {b.author}
                     </span>
                   </div>
@@ -431,11 +431,11 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
 
             {/* Legenda do Mapa */}
             <div className="space-y-3 pt-4 border-t border-border/40">
-              <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <h4 className="text-[14px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <Layers className="size-3.5 text-mahogany" />
                 Legenda do Mapa
               </h4>
-              <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-[12px]">
+              <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-[16px]">
                 <span className="flex items-center gap-2">
                   <span className="inline-block size-3.5 border-[2px] border-mahogany bg-white" />
                   <span className="text-foreground/80">Masculino</span>
@@ -478,7 +478,7 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
           >
             <Sparkles className="size-4 text-mahogany animate-pulse" />
             <div className="flex-1 flex items-center justify-center">
-              <p className="text-[10px] font-bold text-mahogany/60 uppercase tracking-widest vertical-text select-none">
+              <p className="text-[14px] font-bold text-mahogany uppercase tracking-widest vertical-text select-none">
                 Copiloto Clínico
               </p>
             </div>

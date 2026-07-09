@@ -129,10 +129,10 @@ function TimelineCard({ item }: { item: TimelineItem }) {
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
+            <span className="text-[14px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
               {item.label}
             </span>
-            <span className="font-mono text-[11px] font-bold text-muted-foreground/70 bg-background px-1.5 py-0.5 rounded border border-border">
+            <span className="font-mono text-[14px] font-bold text-muted-foreground/70 bg-background px-1.5 py-0.5 rounded border border-border">
               {item.date}
             </span>
           </div>
@@ -145,7 +145,7 @@ function TimelineCard({ item }: { item: TimelineItem }) {
       {item.meta && (
         <div className="mt-3 pt-3 border-t border-border/50">
           <p className="flex items-start gap-2 text-[14px] leading-relaxed text-foreground/80 font-serif">
-            {isDeath && <HeartPulse className="size-4 text-mahogany/60 mt-0.5 shrink-0" />}
+            {isDeath && <HeartPulse className="size-4 text-mahogany mt-0.5 shrink-0" />}
             {item.meta}
           </p>
         </div>
