@@ -222,7 +222,7 @@ function AuthenticatedLayout() {
                 <item.icon
                   className={
                     "size-5 shrink-0 transition-colors " +
-                    (active ? "text-sidebar-ring" : "text-sidebar-foreground/45 group-hover:text-sidebar-foreground/80")
+                    (active ? "text-current" : "text-sidebar-foreground/45 group-hover:text-sidebar-foreground/80")
                   }
                 />
                 {!isCollapsed && <span>{item.label}</span>}
