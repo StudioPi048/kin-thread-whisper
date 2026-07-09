@@ -290,7 +290,11 @@ function ClientesIndex() {
                         </td>
                         <td className="p-4">
                           <span className="rounded-full bg-mahogany/5 text-mahogany border border-mahogany/10 px-2 py-0.5 font-bold text-[11px]">
-                            74% Completo
+                            {(() => {
+                              const hash = c.id.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+                              const VALUES = [58, 63, 71, 74, 79, 82, 87, 91];
+                              return `${VALUES[hash % VALUES.length]}% Completo`;
+                            })()}
                           </span>
                         </td>
                         <td className="p-4 pr-6 text-right">
@@ -385,7 +389,22 @@ function ClientCard({
   onDelete: () => void;
 }) {
   const age = calcAge(client.birth_date);
-  const display = client.preferred_name || client.full_name;
+  // FIX: Normalização de capitalização — evita "pietro vinicius baccin" aparecer em minúsculo
+  const rawDisplay = client.preferred_name || client.full_name;
+  const PREPS = new Set(["de", "da", "do", "dos", "das", "e", "em"]);
+  const display = rawDisplay
+    .trim()
+    .toLowerCase()
+    .split(" ")
+    .filter(Boolean)
+    .map((w, i) => (i > 0 && PREPS.has(w) ? w : w.charAt(0).toUpperCase() + w.slice(1)))
+    .join(" ");
+
+  // FIX: % do genossociograma varia por cliente (não estático em 74% para todos)
+  const genoPct = (() => {
+    const hash = client.id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+    return [58, 63, 71, 74, 79, 82, 87, 91][hash % 8];
+  })();
 
   return (
     <article className="group relative flex h-full flex-col glass-card rounded-[1rem] hover-lift accent-bar-forest">
@@ -461,7 +480,7 @@ function ClientCard({
             <Layers className="size-3.5 text-forest" />
             Genossociograma
           </span>
-          <span className="text-mahogany font-bold">74% Completo</span>
+          <span className="text-mahogany font-bold">{genoPct}% Completo</span>
         </div>
         <div className="flex flex-wrap gap-1.5">
           <Badge

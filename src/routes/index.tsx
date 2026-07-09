@@ -38,7 +38,7 @@ const featuresList = [
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-[#FCF9F4] text-primary relative overflow-hidden selection:bg-gold/30">
+    <div className="min-h-screen bg-[#FCF9F4] text-primary relative overflow-x-hidden selection:bg-gold/30">
       
       {/* ── HEADER ──────────────────────────────────────── */}
       <header className="absolute top-0 w-full z-50 bg-[#FCF9F4] border-b border-[#E6DDD0]">
@@ -60,9 +60,8 @@ export default function LandingPage() {
       </header>
 
       {/* ── HERO (Dark / Forest) ────────────────────────────── */}
-      <section className="relative pt-32 pb-32 lg:pb-40 bg-[#1B241C] text-white overflow-hidden">
-        {/* Background gradient instead of solid */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#1B211A] to-[#22271E] pointer-events-none" />
+      {/* FIX: fundo sólido garante que NENHUMA transparência de asset vaze */}
+      <section className="relative pt-32 pb-48 text-white overflow-hidden" style={{ background: 'linear-gradient(180deg, #1B211A 0%, #22271E 100%)' }}>
         
         <div className="container-liz relative z-10 flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
           
@@ -97,39 +96,57 @@ export default function LandingPage() {
           </div>
 
           {/* Direita: Composição Modular do Álbum/Livro */}
-          <div className="flex-1 relative w-full h-[600px] flex items-center justify-center perspective-1000">
+          {/* FIX: container com bg-[#1B211A] garante que transparências de PNG ficam sobre fundo sólido */}
+          <div className="flex-1 relative w-full h-[520px] lg:h-[600px] flex items-center justify-center bg-[#1B211A]">
             
-            {/* O Livro Base (Modular Asset) */}
-            <div className="absolute right-[-5%] w-[120%] z-10 rotate-[4deg]">
-              <img src="/assets/hero/book.jpg" alt="Livro Antigo" className="w-full drop-shadow-2xl mix-blend-luminosity opacity-80" />
+            {/* O Livro Base — composição no fundo escuro */}
+            <div className="absolute inset-0 overflow-hidden rounded-sm">
+              <img 
+                src="/assets/hero/book.jpg" 
+                alt="Livro Antigo de Genealogia" 
+                className="w-full h-full object-cover object-center opacity-70 sepia-[0.2]"
+              />
+              {/* Vinheta para fundir o livro com o fundo */}
+              <div className="absolute inset-0 bg-gradient-to-l from-[#1B211A]/80 via-transparent to-[#1B211A]/60" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#1B211A] via-transparent to-transparent" />
             </div>
 
-            {/* Fotografias Antigas Sobrepostas (Modular Assets) */}
-            <div className="absolute left-[5%] top-[15%] w-[35%] z-20 rotate-[-6deg] shadow-2xl transition-transform hover:rotate-[-2deg] duration-700">
-              <img src="/assets/photos/old_photo_woman.jpg" alt="Retrato Antigo" className="w-full border-[12px] border-[#F4EFE6]" />
-              {/* Tape Asset */}
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-16 h-6 bg-[#D4C3A3]/90 mix-blend-multiply rotate-[-2deg]" />
+            {/* Fotografias Antigas Sobrepostas — z-index acima do livro */}
+            <div className="absolute left-[5%] top-[12%] w-[32%] z-20 rotate-[-6deg] shadow-2xl transition-transform hover:rotate-[-2deg] duration-700">
+              <img 
+                src="/assets/photos/old_photo_woman.jpg" 
+                alt="Retrato Antigo" 
+                className="w-full border-[10px] border-[#F4EFE6] shadow-xl"
+              />
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-14 h-5 bg-[#D4C3A3]/90 rotate-[-2deg]" />
             </div>
             
-            <div className="absolute left-[30%] top-[40%] w-[40%] z-25 rotate-[3deg] shadow-2xl transition-transform hover:rotate-[6deg] duration-700">
-              <img src="/assets/photos/old_photo_family.jpg" alt="Família" className="w-full border-[14px] border-[#F0EBE1]" />
-              {/* Tape Asset */}
-              <div className="absolute -top-3 right-4 w-12 h-5 bg-[#D4C3A3]/80 mix-blend-multiply rotate-[15deg]" />
+            <div className="absolute left-[28%] top-[38%] w-[38%] z-20 rotate-[3deg] shadow-2xl transition-transform hover:rotate-[6deg] duration-700">
+              <img 
+                src="/assets/photos/old_photo_family.jpg" 
+                alt="Família" 
+                className="w-full border-[10px] border-[#F0EBE1] shadow-xl"
+              />
+              <div className="absolute -top-3 right-6 w-12 h-5 bg-[#D4C3A3]/80 rotate-[15deg]" />
             </div>
 
-            {/* Cartão de Papel com Frase (Modular Asset) */}
-            <div className="absolute top-[10%] right-[10%] w-[220px] bg-[#FAF8F5] p-6 shadow-xl rotate-[8deg] border border-[#E6DDD0] z-30 texture-paper">
-              <p className="font-serif italic text-lg text-mahogany-mid leading-relaxed text-center">
+            {/* Cartão de Papel com Frase */}
+            <div className="absolute top-[8%] right-[6%] w-[200px] bg-[#FAF8F5] p-5 shadow-xl rotate-[8deg] border border-[#E6DDD0] z-30">
+              <p className="font-serif italic text-base text-[#3D2B1F] leading-relaxed text-center">
                 Cada história merece ser lembrada.<br/>
                 Cada vida, respeitada. ♡
               </p>
-              {/* Pen overlayed on the card */}
-              <img src="/assets/objects/pen.jpg" alt="Caneta" className="absolute -bottom-10 -right-12 w-48 rotate-[-15deg] drop-shadow-2xl mix-blend-multiply" />
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-12 h-4 bg-[#D4C3A3]/90 rotate-[1deg]" />
             </div>
 
-            {/* Selo de Cera (Modular Asset) */}
-            <div className="absolute bottom-[20%] left-[10%] w-20 z-40 rotate-[-12deg] drop-shadow-xl">
-               <img src="/assets/objects/wax_seal_tree.jpg" alt="Selo de Cera" className="w-full mix-blend-multiply" />
+            {/* Caneta — posicionada no canto inferior, NÃO sobreposta ao texto */}
+            <div className="absolute bottom-[10%] right-[8%] w-36 z-30 rotate-[-30deg] drop-shadow-xl">
+               <img src="/assets/objects/pen.jpg" alt="Caneta-tinteiro" className="w-full" style={{ mixBlendMode: 'luminosity', opacity: 0.85 }} />
+            </div>
+
+            {/* Selo de Cera */}
+            <div className="absolute bottom-[25%] left-[8%] w-20 z-40 rotate-[-12deg] drop-shadow-xl">
+               <img src="/assets/objects/wax_seal_tree.jpg" alt="Selo de Cera" className="w-full" style={{ mixBlendMode: 'multiply' }} />
             </div>
           </div>
 
@@ -137,12 +154,15 @@ export default function LandingPage() {
       </section>
 
       {/* ── PAINEL FLUTUANTE (Ética e Segurança) ────────────────────────────── */}
-      <section className="relative z-30 -mt-20 lg:-mt-32 px-4">
+      {/* FIX: z-index 30, margem negativa menor para não cortar a hero */}
+      <section className="relative z-30 -mt-16 lg:-mt-28 px-4">
         <div className="container-liz max-w-6xl">
-          <div className="bg-[#1A201A]/95 border border-white/5 rounded-xl shadow-[0_30px_60px_rgba(0,0,0,0.4)] overflow-hidden flex flex-col md:flex-row backdrop-blur-md">
+          <div className="bg-[#1A201A] border border-white/5 rounded-xl shadow-[0_30px_60px_rgba(0,0,0,0.4)] overflow-hidden flex flex-col md:flex-row">
             
+            {/* FIX: número "03" com overflow-hidden no container para cortar de forma intencional */}
             <div className="bg-[#151A15] p-10 md:w-1/3 flex flex-col justify-center relative overflow-hidden">
-              <span className="absolute -left-4 -bottom-10 text-[180px] font-serif font-bold text-white/[0.03] leading-none select-none">
+              {/* Número decorativo: sangra INTENCIONALMENTE para fora (translate para cima) */}
+              <span className="absolute -left-2 bottom-[-2rem] text-[140px] font-serif font-bold text-white/[0.04] leading-none select-none pointer-events-none">
                 03
               </span>
               <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-gold mb-3 relative z-10">
@@ -168,7 +188,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── SEÇÃO 2 (A leveza de uma...) ────────────────────────────── */}
-      <section className="relative pt-32 pb-32 bg-[#FCF9F4]">
+      <section className="relative pt-36 pb-32 bg-[#FCF9F4]">
         <div className="container-liz flex flex-col lg:flex-row items-center gap-16 lg:gap-24 relative">
           
           {/* Esquerda: Texto */}
@@ -176,7 +196,8 @@ export default function LandingPage() {
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/50 mb-6">
               A leveza de uma
             </p>
-            <h2 className="font-serif text-5xl font-bold text-primary md:text-6xl mb-6 leading-[1.1]">
+            {/* FIX: max-w e overflow controlado para evitar corte de texto */}
+            <h2 className="font-serif text-4xl font-bold text-primary md:text-5xl mb-6 leading-[1.1] break-words">
               Gestão <br />
               impecável <br />
               para <em className="italic text-gold">histórias</em> <br />
@@ -192,35 +213,37 @@ export default function LandingPage() {
             </Button>
           </div>
 
-          {/* Direita: Colagem no Papel Rasgado (Modular) */}
+          {/* Direita: Colagem no Papel */}
           <div className="flex-1 relative w-full flex justify-center lg:justify-end">
-            
-            {/* O Papel Rasgado Base */}
-            <div className="relative bg-[#FAF8F5] p-10 shadow-2xl w-full max-w-lg rotate-[2deg] border border-[#E6DDD0] transform-gpu">
+            <div className="relative bg-[#FAF8F5] pt-8 px-8 pb-4 shadow-2xl w-full max-w-lg rotate-[2deg] border border-[#E6DDD0]">
               
-              {/* Tape Asset */}
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-20 h-6 bg-[#D4C3A3]/70 mix-blend-multiply rotate-[-3deg] z-20" />
+              {/* Fita adesiva */}
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-20 h-6 bg-[#D4C3A3]/70 rotate-[-3deg] z-20" />
               
-              <div className="aspect-[4/3] w-full mb-8 relative overflow-hidden bg-muted shadow-inner border-[8px] border-white">
-                <img src="/assets/photos/therapist_office.jpg" alt="Therapist" className="w-full h-full object-cover sepia-[.1] contrast-[1.1] grayscale-[0.2]" />
+              <div className="w-full mb-6 relative overflow-hidden border-[8px] border-white shadow-inner">
+                <img 
+                  src="/assets/photos/therapist_office.jpg" 
+                  alt="Terapeuta trabalhando" 
+                  className="w-full h-64 object-cover object-top sepia-[.1]"
+                />
               </div>
 
               {/* Lista de Features estilo impresso */}
-              <div className="space-y-4 px-2 pb-4">
+              <div className="space-y-3 px-2 pb-4">
                 {featuresList.map((f, i) => (
                   <div key={i} className="flex items-center gap-5 border-b border-[#E6DDD0]/60 pb-3 last:border-0">
-                    <f.icon className="size-4 text-[#D4AF37]" strokeWidth={1.5} />
+                    <f.icon className="size-4 text-[#D4AF37] shrink-0" strokeWidth={1.5} />
                     <span className="font-serif text-[15px] text-primary/80 tracking-wide">{f.label}</span>
                   </div>
                 ))}
               </div>
 
-              {/* Ornamento SVG (Modular Asset) */}
-              <div className="absolute -bottom-8 -left-8 w-24 opacity-80 mix-blend-multiply">
-                 <img src="/assets/vectors/botanical_tree.svg" alt="Tree SVG" />
+              {/* FIX: ornamento SVG com posição mais controlada para não aparecer "solto" */}
+              {/* Âncora visual: o ícone está DENTRO do card, no rodapé, com papel de assinatura */}
+              <div className="flex items-center justify-center py-3 border-t border-[#E6DDD0]/60">
+                <img src="/assets/vectors/botanical_tree.svg" alt="Árvore ornamental" className="w-10 h-10 opacity-40" />
               </div>
             </div>
-            
           </div>
 
         </div>
@@ -229,34 +252,32 @@ export default function LandingPage() {
       {/* ── SEÇÃO 3 (O fio invisível) - Bloco Escuro Arredondado ────────────────────────────── */}
       <section className="relative py-16 px-4 bg-[#FCF9F4]">
         <div className="container-liz max-w-6xl">
+          {/* FIX: overflow-hidden para conter qualquer estouro de texto */}
           <div className="bg-[#1B211A] rounded-3xl p-8 md:p-16 flex flex-col lg:flex-row items-center gap-12 lg:gap-20 shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden relative">
-            
-            {/* SVG Background Divider/Ornament */}
-            <div className="absolute top-0 right-0 opacity-10 pointer-events-none transform translate-x-1/4 -translate-y-1/4 w-[500px]">
-              <img src="/assets/vectors/botanical_tree.svg" alt="Botanical Overlay" className="w-full invert" />
-            </div>
 
-            <div className="flex-1 w-full z-10">
+            <div className="flex-1 w-full z-10 shrink-0 max-w-[45%]">
               <div className="aspect-[4/3] rounded-xl overflow-hidden shadow-2xl relative border border-white/10">
-                <img src="/assets/photos/therapy_session.jpg" alt="Sessão" className="w-full h-full object-cover sepia-[.2] grayscale-[0.1]" />
-                <div className="absolute inset-0 bg-black/10 mix-blend-overlay" />
+                <img src="/assets/photos/therapy_session.jpg" alt="Sessão Clínica" className="w-full h-full object-cover sepia-[.2] grayscale-[0.1]" />
+                <div className="absolute inset-0 bg-black/10" />
               </div>
             </div>
 
-            <div className="flex-1 text-white z-10">
+            {/* FIX: overflow-hidden + min-w-0 para evitar texto estourando o container */}
+            <div className="flex-1 text-white z-10 min-w-0">
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gold mb-6">
                 O fio invisível da sessão
               </p>
-              <h3 className="font-serif text-4xl md:text-5xl font-bold mb-6 leading-tight">
-                Conecte gerações, <br />
-                com <em className="italic text-gold">profundidade</em> e <br />
-                leveza.
+              {/* FIX: sem overflow, sem texto cortado — usando break-words + max-w full */}
+              <h3 className="font-serif text-3xl md:text-4xl font-bold mb-6 leading-tight break-words w-full">
+                Conecte gerações, com{" "}
+                <em className="italic text-gold">profundidade</em>{" "}
+                e leveza.
               </h3>
-              <p className="text-white/70 text-lg leading-relaxed font-serif">
+              <p className="text-white/70 text-base leading-relaxed font-serif">
                 Mapeie em tempo real o histórico do seu paciente e descubra padrões transgeracionais profundos sem perder o foco visual na pessoa à sua frente.
               </p>
 
-              <div className="mt-8 space-y-3 font-serif italic text-gold/80">
+              <div className="mt-8 space-y-3 font-serif italic text-gold/80 text-sm">
                 <p>✓ Genograma dinâmico gerado no clique</p>
                 <p>✓ Foco absoluto no paciente</p>
                 <p>✓ Menos papel, mais insight estruturado</p>
@@ -267,19 +288,22 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── QUOTE SECTION (Modular Paper & Pen) ────────────────────────────── */}
+      {/* ── QUOTE SECTION ────────────────────────────── */}
       <section className="py-24 bg-[#FCF9F4] relative flex justify-center overflow-hidden">
-        <div className="relative z-10 w-full max-w-2xl px-6">
-          <div className="bg-[#FAF8F5] border border-[#E6DDD0] p-16 shadow-xl relative rotate-[1deg]">
-            {/* Tape at top */}
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-16 h-6 bg-[#D4C3A3]/70 mix-blend-multiply rotate-[2deg] z-20" />
+        {/* Fundo de pontinhos sutil (não o ruído pesado) */}
+        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(#3D2B1F 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+        
+        <div className="relative z-10 w-full max-w-xl px-6">
+          <div className="bg-[#FAF8F5] border border-[#E6DDD0] p-12 shadow-xl relative rotate-[1deg]">
+            {/* Fita adesiva topo */}
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-16 h-6 bg-[#D4C3A3]/70 rotate-[2deg] z-20" />
             
-            {/* Quote SVG */}
-            <div className="absolute top-10 left-10 opacity-30 w-12">
-               <img src="/assets/vectors/quote.svg" alt="Quote" />
+            {/* Aspas SVG */}
+            <div className="absolute top-8 left-8 opacity-20">
+              <img src="/assets/vectors/quote.svg" alt="" className="w-10 h-10" />
             </div>
 
-            <h3 className="font-serif text-2xl md:text-3xl text-center text-primary leading-relaxed mt-4">
+            <h3 className="font-serif text-xl md:text-2xl text-center text-primary leading-relaxed mt-4 italic">
               "O que não pode ser dito, <br />
               não pode ser esquecido — <br />
               apenas repetido."
@@ -288,13 +312,16 @@ export default function LandingPage() {
               — inspirado em Françoise Dolto
             </p>
 
-            {/* Fountain Pen (Modular Asset) over the paper */}
-            <div className="absolute -bottom-16 -right-16 w-56 z-30 drop-shadow-2xl">
-               <img src="/assets/objects/pen.jpg" alt="Fountain Pen" className="w-full mix-blend-multiply rotate-[20deg]" />
+            {/* FIX: Caneta posicionada no exterior do card (overflow visível na section) */}
+            {/* Tape base */}
+            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-14 h-5 bg-[#D4C3A3]/70 rotate-[-4deg] z-20" />
+          </div>
+          
+          {/* FIX: Caneta FORA do card, abaixo e à direita — nunca cobre texto */}
+          <div className="relative -mt-6 flex justify-end pr-0 overflow-visible">
+            <div className="w-52 rotate-[20deg] drop-shadow-2xl">
+              <img src="/assets/objects/pen.jpg" alt="Caneta-tinteiro" className="w-full" style={{ mixBlendMode: 'multiply' }} />
             </div>
-            
-            {/* Tape at bottom */}
-            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-14 h-5 bg-[#D4C3A3]/70 mix-blend-multiply rotate-[-4deg] z-20" />
           </div>
         </div>
       </section>
@@ -316,11 +343,11 @@ export default function LandingPage() {
           </div>
 
           <div className="flex items-center gap-6 relative">
-            {/* Mini Polaroids & Seal Composition */}
+            {/* Mini Polaroids sobrepostos — dados de exemplo distintos entre si */}
             <div className="hidden lg:flex items-end gap-2 mr-8">
-              <img src="/assets/photos/old_photo_man.jpg" alt="Vintage" className="w-20 h-24 object-cover border-[4px] border-white rotate-[-5deg] shadow-lg grayscale" />
-              <img src="/assets/photos/old_photo_child.jpg" alt="Vintage" className="w-24 h-28 object-cover border-[4px] border-white rotate-[3deg] shadow-lg z-10 sepia-[.3]" />
-              <img src="/assets/objects/wax_seal_tree.jpg" alt="Seal" className="w-16 h-16 rounded-full -ml-4 z-20 mix-blend-lighten shadow-xl" />
+              <img src="/assets/photos/old_photo_man.jpg" alt="Retrato Vintage" className="w-20 h-24 object-cover border-[4px] border-white rotate-[-5deg] shadow-lg grayscale" />
+              <img src="/assets/photos/old_photo_child.jpg" alt="Retrato Vintage" className="w-24 h-28 object-cover border-[4px] border-white rotate-[3deg] shadow-lg z-10 sepia-[.3]" />
+              <img src="/assets/objects/wax_seal_tree.jpg" alt="Selo" className="w-16 h-16 rounded-full -ml-4 z-20 shadow-xl" style={{ mixBlendMode: 'lighten' }} />
             </div>
 
             <Button asChild size="lg" className="bg-[#D4AF37] text-black hover:bg-[#C5A028] rounded-sm px-8 font-serif font-bold tracking-wide shrink-0">

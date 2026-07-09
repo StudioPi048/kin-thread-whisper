@@ -72,3 +72,28 @@ export function initialsFrom(name?: string | null): string {
     .map((p) => p[0]?.toUpperCase() ?? "")
     .join("");
 }
+
+/**
+ * Normaliza capitalização de nomes próprios em português.
+ * Preposições (de, da, do, dos, das, e) ficam em minúsculo.
+ * Todos os demais tokens ficam com inicial maiúscula.
+ *
+ * Exemplo: "pietro vinicius baccin" → "Pietro Vinicius Baccin"
+ * Exemplo: "JOANA da SILVA" → "Joana da Silva"
+ */
+export function formatName(name?: string | null): string {
+  if (!name) return "";
+  const LOWER_TOKENS = new Set(["de", "da", "do", "dos", "das", "e", "em", "a", "o", "as", "os"]);
+  return name
+    .trim()
+    .toLowerCase()
+    .split(" ")
+    .filter(Boolean)
+    .map((token, index) => {
+      // Primeiro token sempre capitalizado
+      if (index === 0) return token.charAt(0).toUpperCase() + token.slice(1);
+      if (LOWER_TOKENS.has(token)) return token;
+      return token.charAt(0).toUpperCase() + token.slice(1);
+    })
+    .join(" ");
+}
