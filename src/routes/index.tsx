@@ -208,7 +208,7 @@ export default function LandingPage() {
             </div>
 
             {/* Direita — 4 pilares */}
-            <div style={{ flex: 1, padding: "56px 48px", display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "40px", alignItems: "start" }}>
+            <div style={{ flex: 1, background: "#1C201B", padding: "56px 48px", display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "40px", alignItems: "start" }}>
               {ETHICS.map(({ Icon, n, text }) => (
                 <div key={n} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                   <Icon style={{ width: "28px", height: "28px", color: "rgba(212,175,55,0.65)", flexShrink: 0 }} strokeWidth={1} />
@@ -374,18 +374,7 @@ export default function LandingPage() {
           <div style={{ position: "absolute", inset: 0, background: "rgba(248,244,236,0.82)" }} />
         </div>
 
-        {/* Caneta — fotorrealista com mix-blend-mode:multiply (elimina fundo branco) */}
-        <div style={{
-          position: "absolute", right: "3%", top: "45%", transform: "translateY(-50%) rotate(-35deg)",
-          zIndex: 5, width: "280px",
-        }}>
-          <img
-            src="/assets/objects/pen_clean.jpg"
-            alt=""
-            aria-hidden="true"
-            style={{ width: "100%", display: "block", mixBlendMode: "multiply" }}
-          />
-        </div>
+        {/* Caneta removida conforme feedback de "Fundo branco feio" */}
 
         {/* Foto vintage no canto direito inferior */}
         <div style={{ position: "absolute", right: "4%", bottom: "5%", transform: "rotate(5deg)", zIndex: 4, width: "120px" }}>
@@ -452,24 +441,8 @@ export default function LandingPage() {
             </p>
           </div>
 
-          {/* Centro — árvore botânica + CTA + Selo */}
-          <div style={{ display: "flex", alignItems: "center", gap: "32px" }}>
-            {/* FIX: árvore botânica — filter inverte e coloriza para ouro sobre fundo escuro */}
-            <div style={{ width: "140px", flexShrink: 0 }}>
-              <img
-                src="/assets/photos/footer_tree.jpg"
-                alt=""
-                aria-hidden="true"
-                style={{
-                  width: "100%",
-                  display: "block",
-                  filter: "invert(1) sepia(1) saturate(1.5) hue-rotate(10deg) brightness(0.85)",
-                  mixBlendMode: "screen",
-                  opacity: 0.7,
-                }}
-              />
-            </div>
-
+          {/* Centro — CTA (Selo e Árvore removidos por legibilidade/distorção) */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flex: 1 }}>
             <Link
               to="/auth"
               search={{ mode: "signup" }}
@@ -485,22 +458,12 @@ export default function LandingPage() {
             >
               Solicitar acesso beta →
             </Link>
-
-            {/* FIX: Selo fotorrealista — wax_seal_tree.jpg com mix-blend-mode:screen no fundo escuro */}
-            <div style={{ width: "60px", height: "60px", flexShrink: 0, borderRadius: "50%", overflow: "hidden" }}>
-              <img
-                src="/assets/objects/wax_seal_tree.jpg"
-                alt=""
-                aria-hidden="true"
-                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-              />
-            </div>
           </div>
         </div>
 
         {/* Linha de rodapé */}
         <div className="container-liz" style={{ marginTop: "48px", paddingTop: "24px", borderTop: "1px solid rgba(255,255,255,0.1)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "12px", opacity: 0.4 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", opacity: 0.8 }}>
             <LizLogoLockup className="invert scale-75 origin-left" />
             <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: "12px", fontWeight: 600, letterSpacing: "0.1em", color: "white" }}>— Plataforma de Psicogenealogia</span>
           </div>
