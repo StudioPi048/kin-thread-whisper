@@ -62,14 +62,14 @@ export default function LandingPage() {
           HEADER
       ════════════════════════════════════════════════════ */}
       <header style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, background: "rgba(252,249,244,0.97)", borderBottom: "1px solid #E6DDD0", backdropFilter: "blur(8px)" }}>
-        <div className="container-liz" style={{ display: "flex", height: "68px", alignItems: "center", justifyContent: "space-between" }}>
+        <div className="container-liz" style={{ display: "flex", height: "72px", alignItems: "center", justifyContent: "space-between" }}>
           <Link to="/" aria-label="Instituto Liz">
             <LizLogoLockup />
           </Link>
           <nav style={{ display: "flex", alignItems: "center", gap: "2rem" }}>
             <Link
               to="/auth"
-              style={{ fontFamily: "'Outfit', sans-serif", fontSize: "11px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#3B2F2F", textDecoration: "none" }}
+              style={{ fontFamily: "'Outfit', sans-serif", fontSize: "13px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#3B2F2F", textDecoration: "none" }}
               onMouseEnter={e => (e.currentTarget.style.color = "#D4AF37")}
               onMouseLeave={e => (e.currentTarget.style.color = "#3B2F2F")}
             >
@@ -79,9 +79,9 @@ export default function LandingPage() {
               to="/auth"
               search={{ mode: "signup" }}
               style={{
-                fontFamily: "'Outfit', sans-serif", fontSize: "11px", fontWeight: 700,
-                letterSpacing: "0.12em", textTransform: "uppercase", color: "#3B2F2F",
-                border: "1.5px solid #3B2F2F", borderRadius: "999px", padding: "8px 20px", textDecoration: "none",
+                fontFamily: "'Outfit', sans-serif", fontSize: "13px", fontWeight: 700,
+                letterSpacing: "0.1em", textTransform: "uppercase", color: "#3B2F2F",
+                border: "1.5px solid #3B2F2F", borderRadius: "999px", padding: "10px 22px", textDecoration: "none",
                 transition: "all 0.2s",
               }}
             >
@@ -98,25 +98,25 @@ export default function LandingPage() {
 
         {/* Coluna Texto */}
         <div style={{ flex: "0 0 42%", display: "flex", alignItems: "center", padding: "80px 40px 80px 6vw" }}>
-          <div style={{ maxWidth: "420px" }}>
+        <div style={{ maxWidth: "440px" }}>
             {/* Label */}
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "28px" }}>
-              <ShieldCheck style={{ width: "14px", height: "14px", color: "#D4AF37", flexShrink: 0 }} strokeWidth={2} />
-              <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: "10px", fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: "#D4AF37" }}>
+              <ShieldCheck style={{ width: "16px", height: "16px", color: "#D4AF37", flexShrink: 0 }} strokeWidth={2} />
+              <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: "13px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#D4AF37" }}>
                 Ética & LGPD
               </span>
             </div>
 
             {/* H1 */}
-            <h1 style={{ fontSize: "clamp(2.4rem, 4.5vw, 3.8rem)", fontWeight: 700, lineHeight: 1.06, letterSpacing: "-0.01em", color: "#fff", margin: "0 0 28px" }}>
+            <h1 style={{ fontSize: "clamp(2.6rem, 4.8vw, 4rem)", fontWeight: 700, lineHeight: 1.06, letterSpacing: "-0.01em", color: "#fff", margin: "0 0 28px" }}>
               Dados clínicos são{" "}
               <em style={{ fontStyle: "italic", color: "#D4AF37" }}>fundação</em>,{" "}
               <br />
               não feature.
             </h1>
 
-            {/* Body */}
-            <p style={{ fontSize: "15px", lineHeight: 1.75, color: "rgba(255,255,255,0.62)", marginBottom: "36px", fontFamily: "'Cormorant Garamond', serif" }}>
+            {/* Body — mínimo 18px para 40+ */}
+            <p style={{ fontSize: "18px", lineHeight: 1.8, color: "rgba(255,255,255,0.65)", marginBottom: "36px", fontFamily: "'Cormorant Garamond', serif" }}>
               Uma plataforma segura, ética e viva para psicogenealogistas que cuidam de histórias humanas reais.
             </p>
 
@@ -128,17 +128,17 @@ export default function LandingPage() {
                 style={{
                   display: "inline-flex", alignItems: "center",
                   background: "#D4AF37", color: "#000",
-                  fontFamily: "'Outfit', sans-serif", fontSize: "12px", fontWeight: 700,
-                  letterSpacing: "0.1em", textTransform: "uppercase",
-                  padding: "14px 28px", borderRadius: "2px", textDecoration: "none",
+                  fontFamily: "'Outfit', sans-serif", fontSize: "14px", fontWeight: 700,
+                  letterSpacing: "0.08em", textTransform: "uppercase",
+                  padding: "16px 32px", borderRadius: "2px", textDecoration: "none",
                   boxShadow: "0 4px 20px rgba(212,175,55,0.35)",
                   transition: "background 0.2s",
                 }}
               >
                 Solicitar acesso beta →
               </Link>
-              <button style={{ display: "flex", alignItems: "center", gap: "8px", background: "none", border: "none", cursor: "pointer", fontFamily: "'Outfit', sans-serif", fontSize: "11px", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(255,255,255,0.65)", padding: 0 }}>
-                <PlayCircle style={{ width: "18px", height: "18px", color: "#D4AF37" }} strokeWidth={1.5} />
+              <button style={{ display: "flex", alignItems: "center", gap: "8px", background: "none", border: "none", cursor: "pointer", fontFamily: "'Outfit', sans-serif", fontSize: "13px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.65)", padding: 0 }}>
+                <PlayCircle style={{ width: "20px", height: "20px", color: "#D4AF37" }} strokeWidth={1.5} />
                 Ver como funciona
               </button>
             </div>
@@ -190,7 +190,7 @@ export default function LandingPage() {
 
             {/* Esquerda — "03" + título */}
             <div style={{ flex: "0 0 38%", background: "#151A15", padding: "48px 40px", position: "relative", overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "center" }}>
-              {/* Número decorativo GRANDE — igual à referência */}
+              {/* Número decorativo GRANDE */}
               <span style={{
                 position: "absolute", left: "-8px", bottom: "-32px",
                 fontFamily: "'Cormorant Garamond', serif", fontSize: "180px", fontWeight: 700,
@@ -198,10 +198,10 @@ export default function LandingPage() {
               }}>
                 03
               </span>
-              <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: "9px", fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: "#D4AF37", marginBottom: "16px", position: "relative", zIndex: 1 }}>
+              <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: "13px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#D4AF37", marginBottom: "16px", position: "relative", zIndex: 1 }}>
                 Pilares da plataforma
               </p>
-              <h2 style={{ fontSize: "clamp(1.5rem,2.5vw,2rem)", fontWeight: 700, color: "#fff", lineHeight: 1.25, margin: 0, position: "relative", zIndex: 1 }}>
+              <h2 style={{ fontSize: "clamp(1.6rem,2.5vw,2.1rem)", fontWeight: 700, color: "#fff", lineHeight: 1.25, margin: 0, position: "relative", zIndex: 1 }}>
                 Ética, segurança e inteligência a{" "}
                 <em style={{ fontStyle: "italic", color: "#D4AF37" }}>serviço da vida.</em>
               </h2>
@@ -210,10 +210,10 @@ export default function LandingPage() {
             {/* Direita — 4 pilares */}
             <div style={{ flex: 1, padding: "48px 40px", display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "32px", alignItems: "start" }}>
               {ETHICS.map(({ Icon, n, text }) => (
-                <div key={n} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                  <Icon style={{ width: "18px", height: "18px", color: "rgba(212,175,55,0.65)", flexShrink: 0 }} strokeWidth={1.5} />
-                  <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: "9px", fontWeight: 700, letterSpacing: "0.2em", color: "rgba(255,255,255,0.3)" }}>{n}</span>
-                  <p style={{ fontSize: "12px", lineHeight: 1.65, color: "rgba(255,255,255,0.55)", margin: 0 }}>{text}</p>
+                <div key={n} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  <Icon style={{ width: "22px", height: "22px", color: "rgba(212,175,55,0.65)", flexShrink: 0 }} strokeWidth={1.5} />
+                  <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: "11px", fontWeight: 700, letterSpacing: "0.18em", color: "rgba(255,255,255,0.35)" }}>{n}</span>
+                  <p style={{ fontSize: "15px", lineHeight: 1.7, color: "rgba(255,255,255,0.6)", margin: 0 }}>{text}</p>
                 </div>
               ))}
             </div>
@@ -236,16 +236,16 @@ export default function LandingPage() {
 
           {/* Coluna Texto */}
           <div style={{ flex: "0 0 26%", minWidth: 0 }}>
-            <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: "9px", fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: "#8B7355", marginBottom: "18px" }}>
+            <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: "13px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#8B7355", marginBottom: "18px" }}>
               A leveza de uma
             </p>
-            <h2 style={{ fontSize: "clamp(2rem, 3.5vw, 2.8rem)", fontWeight: 700, color: "#2B2018", lineHeight: 1.1, marginBottom: "20px" }}>
+            <h2 style={{ fontSize: "clamp(2.1rem, 3.5vw, 2.9rem)", fontWeight: 700, color: "#2B2018", lineHeight: 1.1, marginBottom: "20px" }}>
               Gestão <br />
               impecável <br />
               para{" "}<em style={{ fontStyle: "italic", color: "#C8A640" }}>histórias</em><br />
               complexas.
             </h2>
-            <p style={{ fontSize: "13px", lineHeight: 1.75, color: "#5A4A3A", marginBottom: "32px", maxWidth: "240px" }}>
+            <p style={{ fontSize: "17px", lineHeight: 1.8, color: "#5A4A3A", marginBottom: "32px", maxWidth: "260px" }}>
               Organize seus casos, enxergue padrões e acesse memórias que transformam gerações.
             </p>
             <Link
@@ -254,9 +254,9 @@ export default function LandingPage() {
               style={{
                 display: "inline-flex", alignItems: "center",
                 background: "#1B211A", color: "#fff",
-                fontFamily: "'Outfit', sans-serif", fontSize: "11px", fontWeight: 700,
-                letterSpacing: "0.1em", textTransform: "uppercase",
-                padding: "12px 24px", borderRadius: "2px", textDecoration: "none",
+                fontFamily: "'Outfit', sans-serif", fontSize: "14px", fontWeight: 700,
+                letterSpacing: "0.08em", textTransform: "uppercase",
+                padding: "14px 28px", borderRadius: "2px", textDecoration: "none",
               }}
             >
               Começar agora →
@@ -295,21 +295,24 @@ export default function LandingPage() {
                     key={i}
                     style={{
                       display: "flex", alignItems: "center", gap: "14px",
-                      padding: "10px 0",
+                      padding: "12px 0",
                       borderBottom: i < FEATURES.length - 1 ? "1px solid rgba(224,213,197,0.7)" : "none",
                     }}
                   >
-                    <Icon style={{ width: "16px", height: "16px", color: "#C8A640", flexShrink: 0 }} strokeWidth={1.5} />
-                    <span style={{ fontSize: "14px", color: "#3B2F2F" }}>{label}</span>
+                    <Icon style={{ width: "18px", height: "18px", color: "#C8A640", flexShrink: 0 }} strokeWidth={1.5} />
+                    <span style={{ fontSize: "17px", color: "#3B2F2F", lineHeight: 1.4 }}>{label}</span>
                   </div>
                 ))}
               </div>
 
-              {/* Selos ornamentais */}
-              <div style={{ display: "flex", justifyContent: "flex-start", alignItems: "center", gap: "16px", marginTop: "20px", paddingTop: "16px", borderTop: "1px solid rgba(224,213,197,0.7)" }}>
-                <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#C8A640", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <span style={{ fontSize: "18px", color: "#5C3D2E" }}>⚷</span>
-                </div>
+              {/* Ornamento de assinatura — selo de cera fotorrealista */}
+              <div style={{ display: "flex", justifyContent: "center", paddingTop: "14px", marginTop: "12px", borderTop: "1px solid rgba(224,213,197,0.6)" }}>
+                <img
+                  src="/assets/objects/wax_seal_tree.jpg"
+                  alt=""
+                  aria-hidden="true"
+                  style={{ width: "40px", height: "40px", objectFit: "cover", borderRadius: "50%", opacity: 0.5, filter: "sepia(0.3)" }}
+                />
               </div>
             </div>
           </div>
@@ -340,18 +343,18 @@ export default function LandingPage() {
 
             {/* Texto */}
             <div style={{ flex: 1, color: "#fff", minWidth: 0 }}>
-              <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: "9px", fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: "#D4AF37", marginBottom: "18px" }}>
+              <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: "13px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#D4AF37", marginBottom: "18px" }}>
                 O fio invisível da sessão
               </p>
-              <h3 style={{ fontSize: "clamp(1.6rem, 3vw, 2.2rem)", fontWeight: 700, color: "#fff", lineHeight: 1.15, marginBottom: "18px", wordBreak: "break-word" }}>
+              <h3 style={{ fontSize: "clamp(1.7rem, 3vw, 2.3rem)", fontWeight: 700, color: "#fff", lineHeight: 1.15, marginBottom: "18px", wordBreak: "break-word" }}>
                 Conecte gerações, com <em style={{ fontStyle: "italic", color: "#D4AF37" }}>profundidade</em> e leveza.
               </h3>
-              <p style={{ fontSize: "14px", lineHeight: 1.75, color: "rgba(255,255,255,0.6)", marginBottom: "24px" }}>
+              <p style={{ fontSize: "17px", lineHeight: 1.8, color: "rgba(255,255,255,0.62)", marginBottom: "24px" }}>
                 Mapeie em tempo real o histórico do seu paciente e descubra padrões transgeracionais profundos sem perder o foco visual na pessoa à sua frente.
               </p>
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                 {["Genograma dinâmico gerado no clique", "Foco absoluto no paciente", "Menos papel, mais insight estruturado"].map(item => (
-                  <p key={item} style={{ fontSize: "13px", fontStyle: "italic", color: "rgba(212,175,55,0.8)", margin: 0 }}>✓ {item}</p>
+                  <p key={item} style={{ fontSize: "16px", fontStyle: "italic", color: "rgba(212,175,55,0.8)", margin: 0 }}>✓ {item}</p>
                 ))}
               </div>
             </div>
@@ -371,22 +374,17 @@ export default function LandingPage() {
           <div style={{ position: "absolute", inset: 0, background: "rgba(248,244,236,0.82)" }} />
         </div>
 
-        {/* Caneta — direita */}
+        {/* Caneta — fotorrealista com mix-blend-mode:multiply (elimina fundo branco) */}
         <div style={{
-          position: "absolute", right: "5%", top: "50%", transform: "translateY(-50%) rotate(-30deg)",
-          zIndex: 5, width: "200px", opacity: 0.9,
+          position: "absolute", right: "3%", top: "45%", transform: "translateY(-50%) rotate(-35deg)",
+          zIndex: 5, width: "280px",
         }}>
-          <svg viewBox="0 0 240 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="32" y="13" width="158" height="18" rx="9" fill="#1a1a1a" />
-            <rect x="100" y="13" width="20" height="18" fill="#D4AF37" />
-            <rect x="184" y="11" width="50" height="22" rx="10" fill="#111" />
-            <rect x="182" y="14" width="5" height="16" rx="2.5" fill="#D4AF37" />
-            <rect x="203" y="9" width="4" height="28" rx="2" fill="#D4AF37" />
-            <circle cx="205" cy="38" r="3.5" fill="#D4AF37" />
-            <path d="M32 22 L7 18 L2 22 L7 26 Z" fill="#1a1a1a" />
-            <path d="M14 20 L7 18 L2 22 L7 26 L14 24 Z" fill="#D4AF37" opacity="0.85" />
-            <rect x="36" y="15" width="55" height="5" rx="2.5" fill="white" opacity="0.06" />
-          </svg>
+          <img
+            src="/assets/objects/pen_clean.jpg"
+            alt=""
+            aria-hidden="true"
+            style={{ width: "100%", display: "block", mixBlendMode: "multiply" }}
+          />
         </div>
 
         {/* Foto vintage no canto direito inferior */}
@@ -408,23 +406,25 @@ export default function LandingPage() {
               <Tape rotate="-2deg" w="60px" />
             </div>
 
-            {/* Aspas decorativas grandes */}
-            <span style={{
-              position: "absolute", top: "16px", left: "20px",
-              fontFamily: "serif", fontSize: "80px", lineHeight: 1,
-              color: "rgba(200,166,64,0.2)", userSelect: "none", pointerEvents: "none",
-            }}>"</span>
+            {/* Aspas tipográficas grandes — estilo editorial */}
+            <div style={{
+              position: "absolute", top: "12px", left: "18px",
+              fontFamily: "'Cormorant Garamond', Georgia, serif",
+              fontSize: "96px", lineHeight: 1, fontWeight: 700,
+              color: "rgba(200,166,64,0.22)", userSelect: "none", pointerEvents: "none",
+              letterSpacing: "-0.05em",
+            }}>❝</div>
 
             <blockquote style={{ margin: 0 }}>
               <p style={{
-                fontSize: "clamp(1.2rem, 2.5vw, 1.5rem)", fontStyle: "italic", fontWeight: 600,
-                color: "#2B2018", lineHeight: 1.5, textAlign: "center", margin: "0 0 18px",
+                fontSize: "clamp(1.5rem, 2.8vw, 1.9rem)", fontStyle: "italic", fontWeight: 600,
+                color: "#2B2018", lineHeight: 1.5, textAlign: "center", margin: "0 0 20px",
               }}>
                 "O que não pode ser dito,<br />
                 não pode ser esquecido —<br />
                 apenas repetido."
               </p>
-              <footer style={{ fontSize: "12px", fontStyle: "italic", color: "rgba(59,47,31,0.45)", textAlign: "center" }}>
+              <footer style={{ fontSize: "15px", fontStyle: "italic", color: "rgba(59,47,31,0.5)", textAlign: "center" }}>
                 — inspirado em Françoise Dolto
               </footer>
             </blockquote>
@@ -439,56 +439,61 @@ export default function LandingPage() {
         <div className="container-liz" style={{ display: "flex", flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: "32px", flexWrap: "wrap" }}>
 
           {/* Esquerda */}
-          <div style={{ color: "#fff", maxWidth: "360px" }}>
-            <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: "9px", fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: "#D4AF37", marginBottom: "14px" }}>
+          <div style={{ color: "#fff", maxWidth: "380px" }}>
+            <p style={{ fontFamily: "'Outfit', sans-serif", fontSize: "13px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#D4AF37", marginBottom: "14px" }}>
               Beta Fechado · 2026
             </p>
-            <h2 style={{ fontSize: "clamp(2rem, 3.5vw, 2.8rem)", fontWeight: 700, color: "#fff", lineHeight: 1.15, marginBottom: "12px" }}>
+            <h2 style={{ fontSize: "clamp(2.1rem, 3.5vw, 3rem)", fontWeight: 700, color: "#fff", lineHeight: 1.15, marginBottom: "14px" }}>
               Pronta para{" "}
               <em style={{ fontStyle: "italic", color: "#D4AF37" }}>começar?</em>
             </h2>
-            <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.5)", lineHeight: 1.65 }}>
+            <p style={{ fontSize: "17px", color: "rgba(255,255,255,0.55)", lineHeight: 1.75 }}>
               Acesso restrito a psicogenealogistas. Vagas limitadas.
             </p>
           </div>
 
-          {/* Centro — árvore botânica + CTA */}
-          <div style={{ display: "flex", alignItems: "flex-end", gap: "32px" }}>
-            {/* Árvore botânica ilustrada */}
-            <div style={{ width: "160px", opacity: 0.75 }}>
-              <img src="/assets/photos/footer_tree.jpg" alt="" aria-hidden="true" style={{ width: "100%", objectFit: "cover", mixBlendMode: "lighten" }} />
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "16px" }}>
-              <Link
-                to="/auth"
-                search={{ mode: "signup" }}
+          {/* Centro — árvore botânica + CTA + Selo */}
+          <div style={{ display: "flex", alignItems: "center", gap: "32px" }}>
+            {/* FIX: árvore botânica — filter inverte e coloriza para ouro sobre fundo escuro */}
+            <div style={{ width: "140px", flexShrink: 0 }}>
+              <img
+                src="/assets/photos/footer_tree.jpg"
+                alt=""
+                aria-hidden="true"
                 style={{
-                  display: "inline-flex", alignItems: "center",
-                  background: "#D4AF37", color: "#000",
-                  fontFamily: "'Outfit', sans-serif", fontSize: "12px", fontWeight: 700,
-                  letterSpacing: "0.1em", textTransform: "uppercase",
-                  padding: "14px 28px", borderRadius: "2px", textDecoration: "none",
-                  boxShadow: "0 4px 20px rgba(212,175,55,0.3)",
+                  width: "100%",
+                  display: "block",
+                  filter: "invert(1) sepia(1) saturate(1.5) hue-rotate(10deg) brightness(0.85)",
+                  mixBlendMode: "screen",
+                  opacity: 0.7,
                 }}
-              >
-                Solicitar acesso beta →
-              </Link>
+              />
             </div>
 
-            {/* Selo botânico direita */}
-            <div style={{ width: "56px", height: "56px", flexShrink: 0 }}>
-              <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="40" cy="40" r="36" fill="#5C3D2E" />
-                <circle cx="40" cy="40" r="29" fill="#6B4535" />
-                <line x1="40" y1="57" x2="40" y2="23" stroke="#D4AF37" strokeWidth="1.8" />
-                <line x1="40" y1="37" x2="29" y2="28" stroke="#D4AF37" strokeWidth="1.4" />
-                <line x1="40" y1="33" x2="51" y2="25" stroke="#D4AF37" strokeWidth="1.4" />
-                <line x1="40" y1="44" x2="26" y2="36" stroke="#D4AF37" strokeWidth="1.4" />
-                <line x1="40" y1="44" x2="54" y2="37" stroke="#D4AF37" strokeWidth="1.4" />
-                <circle cx="40" cy="20" r="4" fill="#D4AF37" opacity="0.9" />
-                <circle cx="40" cy="40" r="34" stroke="#D4AF37" strokeWidth="1" opacity="0.35" />
-              </svg>
+            <Link
+              to="/auth"
+              search={{ mode: "signup" }}
+              style={{
+                display: "inline-flex", alignItems: "center",
+                background: "#D4AF37", color: "#000",
+                fontFamily: "'Outfit', sans-serif", fontSize: "14px", fontWeight: 700,
+                letterSpacing: "0.08em", textTransform: "uppercase",
+                padding: "16px 32px", borderRadius: "2px", textDecoration: "none",
+                boxShadow: "0 4px 20px rgba(212,175,55,0.3)",
+                flexShrink: 0,
+              }}
+            >
+              Solicitar acesso beta →
+            </Link>
+
+            {/* FIX: Selo fotorrealista — wax_seal_tree.jpg com mix-blend-mode:screen no fundo escuro */}
+            <div style={{ width: "60px", height: "60px", flexShrink: 0, borderRadius: "50%", overflow: "hidden" }}>
+              <img
+                src="/assets/objects/wax_seal_tree.jpg"
+                alt=""
+                aria-hidden="true"
+                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+              />
             </div>
           </div>
         </div>
