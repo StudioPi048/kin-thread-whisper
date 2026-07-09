@@ -179,7 +179,7 @@ export default function LandingPage() {
       {/* ═══════════════════════════════════════════════════
           PAINEL PILARES
       ════════════════════════════════════════════════════ */}
-      <section style={{ position: "relative", zIndex: 20, marginTop: "40px", padding: "0 24px 0" }}>
+      <section style={{ position: "relative", zIndex: 20, marginTop: "-120px", padding: "0 24px 0" }}>
         <div className="container-liz" style={{ maxWidth: "1120px" }}>
           <div style={{
             display: "flex", flexDirection: "row",
