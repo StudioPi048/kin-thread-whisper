@@ -10,6 +10,29 @@ A premissa central:
 
 ---
 
+## Regra Central — Máximo 3 Materiais por Tela
+
+> **Cada tela deve usar no máximo três materiais principais.**  
+> Usar todos os materiais disponíveis ao mesmo tempo destrói a elegância.  
+> A restrição é o que cria personalidade.
+
+Cada ambiente recebe uma **identidade material própria**:
+
+| Tela | Material 1 | Material 2 | Material 3 | Função cognitiva |
+|---|---|---|---|---|
+| **Clientes** | archive | document | dossier | "Quem faz parte da minha base?" |
+| **Centro Clínico** | archive | document | protocol | "O que merece minha atenção hoje?" |
+| **Biblioteca** | archive | book | bookmark | "O que posso aprender?" |
+| **Detalhe do Paciente** | document | folder | manuscript | "Qual é a história deste caso?" |
+| **Agenda** | document | dossier (compact) | — | "O que acontece agora?" |
+
+**Consequências desta regra:**
+- O Centro Clínico (Dashboard) NÃO usa `dossier` em grade. Usa `protocol` para destacar o que é urgente.
+- A Biblioteca NÃO usa `dossier`. Os cards de livro têm identidade própria (`book`).
+- O Detalhe do Paciente aprofunda com `manuscript` — o único ambiente onde o texto autoral é protagonista.
+
+---
+
 ## Princípio de Design
 
 A identidade visual de arquivo histórico opera de forma **subliminar**, nunca literal.
