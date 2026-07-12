@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated.app.index'
 import { Route as AuthenticatedAppLinhaDoTempoRouteImport } from './routes/_authenticated.app.linha-do-tempo'
 import { Route as AuthenticatedAppIaClinicaRouteImport } from './routes/_authenticated.app.ia-clinica'
+import { Route as AuthenticatedAppGuiaRouteImport } from './routes/_authenticated.app.guia'
 import { Route as AuthenticatedAppGenossociogramasRouteImport } from './routes/_authenticated.app.genossociogramas'
 import { Route as AuthenticatedAppConfiguracoesRouteImport } from './routes/_authenticated.app.configuracoes'
 import { Route as AuthenticatedAppBibliotecaRouteImport } from './routes/_authenticated.app.biblioteca'
@@ -54,6 +55,11 @@ const AuthenticatedAppIaClinicaRoute =
     path: '/app/ia-clinica',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedAppGuiaRoute = AuthenticatedAppGuiaRouteImport.update({
+  id: '/app/guia',
+  path: '/app/guia',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedAppGenossociogramasRoute =
   AuthenticatedAppGenossociogramasRouteImport.update({
     id: '/app/genossociogramas',
@@ -103,6 +109,7 @@ export interface FileRoutesByFullPath {
   '/app/biblioteca': typeof AuthenticatedAppBibliotecaRoute
   '/app/configuracoes': typeof AuthenticatedAppConfiguracoesRoute
   '/app/genossociogramas': typeof AuthenticatedAppGenossociogramasRoute
+  '/app/guia': typeof AuthenticatedAppGuiaRoute
   '/app/ia-clinica': typeof AuthenticatedAppIaClinicaRoute
   '/app/linha-do-tempo': typeof AuthenticatedAppLinhaDoTempoRoute
   '/app/': typeof AuthenticatedAppIndexRoute
@@ -117,6 +124,7 @@ export interface FileRoutesByTo {
   '/app/biblioteca': typeof AuthenticatedAppBibliotecaRoute
   '/app/configuracoes': typeof AuthenticatedAppConfiguracoesRoute
   '/app/genossociogramas': typeof AuthenticatedAppGenossociogramasRoute
+  '/app/guia': typeof AuthenticatedAppGuiaRoute
   '/app/ia-clinica': typeof AuthenticatedAppIaClinicaRoute
   '/app/linha-do-tempo': typeof AuthenticatedAppLinhaDoTempoRoute
   '/app': typeof AuthenticatedAppIndexRoute
@@ -133,6 +141,7 @@ export interface FileRoutesById {
   '/_authenticated/app/biblioteca': typeof AuthenticatedAppBibliotecaRoute
   '/_authenticated/app/configuracoes': typeof AuthenticatedAppConfiguracoesRoute
   '/_authenticated/app/genossociogramas': typeof AuthenticatedAppGenossociogramasRoute
+  '/_authenticated/app/guia': typeof AuthenticatedAppGuiaRoute
   '/_authenticated/app/ia-clinica': typeof AuthenticatedAppIaClinicaRoute
   '/_authenticated/app/linha-do-tempo': typeof AuthenticatedAppLinhaDoTempoRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
@@ -149,6 +158,7 @@ export interface FileRouteTypes {
     | '/app/biblioteca'
     | '/app/configuracoes'
     | '/app/genossociogramas'
+    | '/app/guia'
     | '/app/ia-clinica'
     | '/app/linha-do-tempo'
     | '/app/'
@@ -163,6 +173,7 @@ export interface FileRouteTypes {
     | '/app/biblioteca'
     | '/app/configuracoes'
     | '/app/genossociogramas'
+    | '/app/guia'
     | '/app/ia-clinica'
     | '/app/linha-do-tempo'
     | '/app'
@@ -178,6 +189,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/biblioteca'
     | '/_authenticated/app/configuracoes'
     | '/_authenticated/app/genossociogramas'
+    | '/_authenticated/app/guia'
     | '/_authenticated/app/ia-clinica'
     | '/_authenticated/app/linha-do-tempo'
     | '/_authenticated/app/'
@@ -234,6 +246,13 @@ declare module '@tanstack/react-router' {
       path: '/app/ia-clinica'
       fullPath: '/app/ia-clinica'
       preLoaderRoute: typeof AuthenticatedAppIaClinicaRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/app/guia': {
+      id: '/_authenticated/app/guia'
+      path: '/app/guia'
+      fullPath: '/app/guia'
+      preLoaderRoute: typeof AuthenticatedAppGuiaRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/app/genossociogramas': {
@@ -293,6 +312,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAppBibliotecaRoute: typeof AuthenticatedAppBibliotecaRoute
   AuthenticatedAppConfiguracoesRoute: typeof AuthenticatedAppConfiguracoesRoute
   AuthenticatedAppGenossociogramasRoute: typeof AuthenticatedAppGenossociogramasRoute
+  AuthenticatedAppGuiaRoute: typeof AuthenticatedAppGuiaRoute
   AuthenticatedAppIaClinicaRoute: typeof AuthenticatedAppIaClinicaRoute
   AuthenticatedAppLinhaDoTempoRoute: typeof AuthenticatedAppLinhaDoTempoRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
@@ -306,6 +326,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAppBibliotecaRoute: AuthenticatedAppBibliotecaRoute,
   AuthenticatedAppConfiguracoesRoute: AuthenticatedAppConfiguracoesRoute,
   AuthenticatedAppGenossociogramasRoute: AuthenticatedAppGenossociogramasRoute,
+  AuthenticatedAppGuiaRoute: AuthenticatedAppGuiaRoute,
   AuthenticatedAppIaClinicaRoute: AuthenticatedAppIaClinicaRoute,
   AuthenticatedAppLinhaDoTempoRoute: AuthenticatedAppLinhaDoTempoRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
