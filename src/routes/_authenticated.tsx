@@ -20,6 +20,7 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
+  BookOpen,
 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 
@@ -44,6 +45,7 @@ const nav = [
   { to: "/app/linha-do-tempo",    label: "Linhas de Herança", shortLabel: "Tempo",    icon: History },
   { to: "/app/biblioteca",        label: "Biblioteca",        shortLabel: "Livros",   icon: Library },
   { to: "/app/ia-clinica",        label: "Segundo Cérebro",   shortLabel: "IA",       icon: Sparkles },
+  { to: "/app/guia",              label: "Manual Clínico",    shortLabel: "Manual",   icon: BookOpen },
   { to: "/app/configuracoes",     label: "Configurações",     shortLabel: "Ajustes",  icon: Settings },
 ] as const;
 
