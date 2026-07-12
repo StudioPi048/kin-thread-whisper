@@ -148,7 +148,7 @@ function AuthenticatedLayout() {
           overflow: "hidden",
           flexShrink: 0,
         }}
-        className="hidden md:flex"
+        className="flex"
       >
         {/* Gradiente sutil no topo */}
         <div
@@ -451,79 +451,9 @@ function AuthenticatedLayout() {
           background: "var(--archive)", overflow: "hidden", position: "relative",
         }}
       >
-        {/* Mobile header */}
-        <header
-          className="md:hidden"
-          style={{
-            height: "56px", display: "flex", alignItems: "center",
-            justifyContent: "space-between",
-            padding: "0 16px",
-            background: "var(--forest)",
-            borderBottom: "1px solid rgba(255,255,255,0.08)",
-          }}
-        >
-          <Link to="/app">
-            <LizLogoLockup variant="light" />
-          </Link>
-          <button
-            onClick={handleSignOut}
-            style={{
-              background: "transparent", border: "none", cursor: "pointer",
-              color: "rgba(242,238,230,0.6)", padding: "8px",
-            }}
-          >
-            <LogOut style={{ width: "18px", height: "18px" }} strokeWidth={1.5} />
-          </button>
-        </header>
-
-        <main style={{ flex: 1, overflowY: "auto", paddingBottom: "56px" }} className="md:pb-0">
+        <main style={{ flex: 1, overflowY: "auto" }}>
           <Outlet />
         </main>
-
-        {/* Mobile Bottom Nav */}
-        <nav
-          className="md:hidden"
-          style={{
-            position: "fixed", bottom: 0, left: 0, right: 0,
-            height: "56px",
-            background: "var(--forest)",
-            borderTop: "1px solid rgba(255,255,255,0.08)",
-            display: "grid",
-            gridTemplateColumns: `repeat(${nav.length}, 1fr)`,
-            zIndex: 50,
-          }}
-        >
-          {nav.map((item) => {
-            const active =
-              "exact" in item && item.exact
-                ? location.pathname === item.to
-                : location.pathname.startsWith(item.to);
-            return (
-              <Link
-                key={item.to}
-                to={item.to as "/app"}
-                aria-label={item.label}
-                style={{
-                  display: "flex", flexDirection: "column", alignItems: "center",
-                  justifyContent: "center", gap: "2px",
-                  color: active ? "var(--gold-soft)" : "rgba(242,238,230,0.45)",
-                  textDecoration: "none", padding: "0 4px",
-                  transition: "color 0.15s ease",
-                }}
-              >
-                <item.icon style={{ width: "18px", height: "18px" }} strokeWidth={active ? 1.75 : 1.5} />
-                <span style={{
-                  fontSize: "9px", fontWeight: 700,
-                  fontFamily: "var(--font-sans)",
-                  letterSpacing: "0.03em",
-                  maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                }}>
-                  {item.shortLabel}
-                </span>
-              </Link>
-            );
-          })}
-        </nav>
       </div>
 
       {/* ═══════════════════════════════════════════════════
