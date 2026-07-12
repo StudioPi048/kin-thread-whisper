@@ -1,9 +1,9 @@
 # Sistema de Materiais — Instituto Liz
 
-> Versão 1.0 · Passo 2.5 · Última atualização: 2026-07-12
+> Versão 1.1 · Passo 2.5 · Última atualização: 2026-07-12
 
-Este documento registra o **Sistema de Materiais** da plataforma GeneaLiz/PsicoLink.  
-O sistema define quais "superfícies" existem na interface, como devem ser usadas e quais comportamentos são proibidos.
+Este documento é o **contrato de produto** do Sistema de Materiais.  
+Define quais superfícies existem, seu nível de maturidade, onde podem ser usadas, onde são proibidas e o que ainda está planejado.
 
 A premissa central:
 > A plataforma deve transmitir a sensação de um **arquivo histórico clínico de alta precisão** — não de um álbum vintage ou scrapbook.
@@ -14,108 +14,124 @@ A premissa central:
 
 A identidade visual de arquivo histórico opera de forma **subliminar**, nunca literal.
 
-| Correto | Incorreto |
+| ✅ Correto | ❌ Incorreto |
 |---|---|
 | Tons de marfim e bege quente | Textura de papel rasgado |
-| Borda esquerda em bronze | Fita adesiva em cards |
-| Carimbo SVG discreto (48px, 0.72 opacidade) | Carimbo gigante ou rotacionado > 5° |
-| Sombra multi-camada sutil | Sombra drop com spread excessivo |
-| Serif italic em citações curtas (≤ 2 linhas) | Serif italic em blocos longos de texto |
-| Número de registro como metadado | Número de registro como título principal |
+| Borda esquerda em bronze | Fita adesiva em cards operacionais |
+| Carimbo SVG 48px, opacidade 0.72 | Carimbo > 64px ou rotacionado > 5° |
+| Sombra multi-camada discreta | Drop shadow com spread excessivo |
+| Serif italic em citações curtas (≤ 2 linhas) | Serif italic em blocos longos de prontuário |
+| Número de registro como metadado (Eyebrow) | Número de registro como título principal |
 
 ---
 
-## 1. Superfícies Estruturais
+## 1. Matriz de Maturidade
 
-São os **recipientes** da interface — definem áreas, fundos e containers.
+Cada material possui um nível de maturidade declarado:
+
+| Nível | Significado |
+|---|---|
+| **stable** | Token CSS + componente + validado em tela de produção |
+| **experimental** | Componente criado, aguardando validação visual completa |
+| **planned** | Token CSS definido, componente ainda não implementado |
+| **deprecated** | Substituído — não usar em novas telas |
+
+### Matriz Completa
+
+| Material | Maturidade | Token CSS | Componente | Rotas aprovadas | Rotas proibidas |
+|---|---|---|---|---|---|
+| **archive** | stable | `--surface-archive` | — | Todas as áreas autenticadas, fundos de página | Modais críticos, dialogs |
+| **document** | stable | `--surface-document` | — | Toolbars, fichas, painéis de filtro, tabelas | Botões, badges, qualquer elemento flutuante |
+| **dossier** | stable | `--surface-dossier` | `DossierCard` | Clientes (full), Dashboard (compact) | Biblioteca, Configurações |
+| **manuscript** | stable | `--surface-manuscript` | (interno ao DossierCard) | IA Clínica, hipóteses curtas, citações | Texto corrido longo, prontuário completo |
+| **protocol** | stable | `--material-protocol` | `PatternToken` | Padrões clínicos, DossierCard, busca | Status global, navegação |
+| **stamp** | stable | `--material-stamp-*` | `StatusStamp` | Status do dossiê (DossierCard) | Elemento único de status, navegação |
+| **folder** | planned | `--surface-folder` | ❌ `DossierTabs` | Detalhe do paciente (abas) | Dashboard, qualquer outra área |
+| **book** | planned | `--surface-book` | ❌ `BookCard` | Biblioteca | Pacientes, Agenda |
+| **bookmark** | planned | `--material-bookmark` | ❌ `ReferenceBookmark` | Referências bibliográficas, Biblioteca | CTAs, navegação |
+
+---
+
+## 2. Superfícies Estruturais (stable)
 
 ### `surface-archive`
-- **Token CSS**: `--surface-archive: #F4F1EB`
-- **Finalidade**: Fundo base global da plataforma. O "pergaminho arquivístico" que envolve tudo.
-- **Uso permitido**: `background` de `<body>`, fundo de páginas, fundo de seções abertas.
-- **Uso proibido**: cards, dialogs, qualquer elemento flutuante (use `surface-document`).
-- **Contraste mínimo**: texto `var(--ink)` (#1A1714) sobre `#F4F1EB` → 12.4:1 ✅
+- **Token**: `--surface-archive: #F4F1EB`
+- **Função**: Pergaminho arquivístico — fundo base global da plataforma.
+- **Uso**: `background` de páginas autenticadas, seções abertas.
+- **Proibido**: Cards, dialogs, elementos flutuantes.
+- **Contraste**: `var(--ink)` / `#F4F1EB` → 12.4:1 ✅
 
 ### `surface-document`
-- **Token CSS**: `--surface-document: #FAFAF7`
-- **Finalidade**: Superfície de "papel clínico" para conteúdo principal.
-- **Uso permitido**: toolbar, painéis de filtro, listas compactas, fundos de seção dentro de cards.
-- **Uso proibido**: não substituir `surface-dossier` em cards de paciente.
-- **Contraste mínimo**: texto `var(--ink)` → 13.1:1 ✅
+- **Token**: `--surface-document: #FAFAF7`
+- **Função**: Papel clínico — superfície de conteúdo editável ou navegável.
+- **Uso**: Toolbars, listas, painéis de filtro, tabelas.
+- **Proibido**: Não substituir `surface-dossier` em cards de paciente.
+- **Contraste**: `var(--ink)` / `#FAFAF7` → 13.1:1 ✅
 
 ### `surface-dossier`
-- **Token CSS**: `--surface-dossier: #FAFAF4`
-- **Finalidade**: A "pasta clínica" — superfície específica do DossierCard.
-- **Uso permitido**: `DossierCard`, variante compact do DossierCard, cards de sessão.
-- **Uso proibido**: fundo de página, toolbars, elementos secundários.
-- **Nota**: levemente mais quente que `surface-document` para criar diferenciação de hierarquia.
+- **Token**: `--surface-dossier: #FAFAF4`
+- **Função**: Pasta clínica — superfície do DossierCard.
+- **Diferença de document**: levemente mais quente para criar hierarquia visual.
+- **Uso**: `DossierCard` (full e compact), cards de sessão no futuro.
+- **Proibido**: Fundos de página, toolbars.
 
 ### `surface-manuscript`
-- **Token CSS**: `--surface-manuscript: #F0EDE5`
-- **Finalidade**: Superfície de manuscrito/anotação — seções de texto autoral, hipóteses da IA.
-- **Uso permitido**: área de hipótese no DossierCard, anotações de sessão, citações longas.
-- **Uso proibido**: cards inteiros, toolbars, qualquer elemento de navegação.
-- **Tipografia**: Cormorant Garamond italic para frases curtas (≤ 2 linhas). Outfit regular para desenvolvimento.
+- **Token**: `--surface-manuscript: #F0EDE5`
+- **Função**: Manuscrito/anotação — seções de hipótese e texto autoral da IA.
+- **Uso**: Bloco de hipótese no DossierCard, anotações de sessão.
+- **Tipografia**: `Cormorant Garamond italic` apenas em frases curtas (≤ 2 linhas). Outfit regular para desenvolvimento do texto.
+- **Proibido**: Cards inteiros, toolbars, navegação.
 
-### `surface-folder`
-- **Token CSS**: `--surface-folder: #EDE8DE`
-- **Finalidade**: Aba de pasta / tab secundária — seções dentro de um dossiê.
-- **Status**: ⏳ Token definido. Componente ainda não implementado.
-- **Uso previsto**: abas no detalhe do paciente (`_authenticated.app.clientes.$clientId.tsx`).
+### `surface-folder` *(planned)*
+- **Token**: `--surface-folder: #EDE8DE`
+- **Função prevista**: Aba de pasta clínica — tabs no detalhe do paciente.
+- **Componente planejado**: `DossierTabs`
 
-### `surface-book`
-- **Token CSS**: `--surface-book: #E8E3D8`
-- **Finalidade**: Capa de livro — cards da Biblioteca.
-- **Status**: ⏳ Token definido. Aplicação pendente no redesign da Biblioteca.
-- **Uso previsto**: card de livro na rota `_authenticated.app.biblioteca.tsx`.
+### `surface-book` *(planned)*
+- **Token**: `--surface-book: #E8E3D8`
+- **Função prevista**: Capa de livro — cards da Biblioteca.
+- **Componente planejado**: `BookCard`
 
 ---
 
-## 2. Ornamentos (Elementos Acessórios)
+## 3. Ornamentos (Componentes Semânticos)
 
-Não são superfícies — são **componentes semânticos** que transmitem identidade.
-
-### `status-stamp` (StatusStamp)
-- **Token CSS**: `--material-stamp-fg`, `--material-stamp-arc`
-- **Componente**: `src/components/ui/dossier-card.tsx` → `StatusStamp`
+### `status-stamp` — StatusStamp (stable)
+- **Tokens**: `--material-stamp-fg: #1B3D2D`, `--material-stamp-arc: #8B6914`
+- **Componente**: interno a `dossier-card.tsx`
 - **Especificações obrigatórias**:
-  - Diâmetro: **48px**
-  - Opacidade: **0.72** (nunca acima de 0.85)
-  - Rotação: **≤ ±4°** (nunca além disso)
+  - Diâmetro: 48px (full) / 36px (compact)
+  - Opacidade: máx 0.72
+  - Rotação: ≤ ±4°
   - `pointer-events: none` — nunca bloqueia cliques
   - `aria-label` descritivo obrigatório
-  - Texto interno: máximo 8 caracteres
-- **O status também existe em texto** (legível ao lado ou via aria-label). O carimbo é *reforço visual*, não substituto.
-- **Usos permitidos**: DossierCard, fichas de sessão, cards de protocolo.
-- **Usos proibidos**: como único indicador de status, em tamanho > 64px, com textura envelhecida.
+  - Texto interno: ≤ 8 chars
+  - **Nunca é o único indicador de status** — texto sempre presente ao lado
+- **Proibido**: Como única fonte de status, tamanho > 64px, textura envelhecida.
 
-### `protocol-card` (PatternToken)
-- **Token CSS**: `--material-protocol: #5C6644`
-- **Componente**: `src/components/ui/dossier-card.tsx` → `PatternToken`
-- **Finalidade**: Identificar padrões clínicos detectados (real — nunca fictício).
+### `protocol-card` — PatternToken (stable)
+- **Token**: `--material-protocol: #5C6644`
+- **Componente**: interno a `dossier-card.tsx`
 - **Tipos**: `sentido`, `lealdade`, `aniversario`, `geral`
-- **Regra de exibição**: máximo 3 visíveis + contador "+N" quando houver mais.
-- **Acessibilidade**: cor nunca é o único diferencial (texto sempre presente).
+- **Regra**: máx 3 (full) / máx 2 (compact) + contador "+N"
+- **Acessibilidade**: cor nunca é o único diferencial.
 
-### `reference-bookmark`
-- **Token CSS**: `--material-bookmark: #C6A23A`
-- **Componente**: ❌ **Ainda não implementado**
-- **Finalidade prevista**: referências bibliográficas, citações, fontes em painéis laterais.
-- **Design planejado**: barra vertical de 3-4px em dourado à esquerda de uma citação curta.
-- **Uso previsto**: sidebar da Biblioteca, seção de referências no dossiê do paciente.
+### `reference-bookmark` *(planned)*
+- **Token**: `--material-bookmark: #C6A23A`
+- **Componente planejado**: `ReferenceBookmark`
+- **Design**: barra vertical de 3-4px em dourado + citação ao lado.
+- **Uso previsto**: Sidebar de referências na Biblioteca e no detalhe do paciente.
 
 ---
 
-## 3. Tokens de Cor de Material
+## 4. Tokens de Cor de Material
 
-Complementam os tokens de superfície com cores específicas de ornamento.
-
-| Token | Valor | Uso |
+| Token | Valor | Semântica |
 |---|---|---|
 | `--material-border` | `rgba(180,170,155,0.5)` | Borda arquivística universal |
-| `--material-bronze` | `#8A6845` | Accent bar esquerda, número de registro |
-| `--material-gold` | `#C6A23A` | Hover de link, carimbo dourado |
-| `--material-olive` | `#7D8060` | Label IA Clínica, categorias secundárias |
+| `--material-bronze` | `#8A6845` | Accent bar, número de registro |
+| `--material-gold` | `#C6A23A` | Hover, CTAs, selos dourados |
+| `--material-olive` | `#7D8060` | Label IA Clínica, categorias |
 | `--material-terracotta` | `#A8654D` | Alertas, consentimento pendente |
 | `--material-stamp-fg` | `#1B3D2D` | Carimbo de dossiê ativo |
 | `--material-stamp-arc` | `#8B6914` | Carimbo de dossiê arquivado |
@@ -124,74 +140,116 @@ Complementam os tokens de superfície com cores específicas de ornamento.
 
 ---
 
-## 4. Regras Rígidas de Tipografia
+## 5. Regras Tipográficas Rígidas
 
-| Token | Classe CSS | Fonte | Onde usar | Onde NUNCA usar |
-|---|---|---|---|---|
-| Display | `.type-display` | Cormorant Garamond 700 | Hero, números decorativos gigantes | Dentro de cards |
-| Headline | `.type-headline` | Cormorant Garamond 700 | Nome do paciente, título de livro | Botões, labels |
-| Title | `.type-title` | Cormorant Garamond 600 | Subtítulo de seção | Texto corrido |
-| Body | `.type-body` | Outfit 400 | Descrições, anotações, prontuário | Títulos, botões |
-| Caption | `.type-caption` | Outfit 400 | Data, hora, ID, metadados | Títulos |
-| Label | `.type-label` | Outfit 700 | Botões, badges de status | Títulos, corpo |
-| Eyebrow | `.type-eyebrow` | Outfit 800 | Tipo de superfície, categoria | Qualquer texto longo |
-
-**Serif itálico (Cormorant Garamond italic)**:
-- ✅ Permitido: frases curtas de IA (≤ 2 linhas), citações, hipóteses de destaque
-- ❌ Proibido: blocos longos de prontuário, listas, tabelas, qualquer texto de mais de 3 linhas
-
----
-
-## 5. Componentes Disponíveis
-
-| Componente | Caminho | Variantes | Status |
+| Token | Fonte / Peso | Onde usar | Onde NUNCA usar |
 |---|---|---|---|
-| `DossierCard` | `src/components/ui/dossier-card.tsx` | `full`, `compact` | ✅ Implementado |
-| `DossierCardSkeleton` | `src/components/ui/dossier-card.tsx` | — | ✅ Implementado |
-| `StatusStamp` | `dossier-card.tsx` (interno) | `active`, `archived` | ✅ Implementado |
-| `PatternToken` | `dossier-card.tsx` (interno) | por tipo | ✅ Implementado |
-| `ReferenceBookmark` | — | — | ❌ Pendente |
-| `FolderTab` | — | — | ❌ Pendente |
-| `BookCard` | — | — | ❌ Pendente |
+| Display | Cormorant Garamond 700 | Hero, números decorativos gigantes | Dentro de qualquer card |
+| Headline | Cormorant Garamond 700 | Nome do paciente, título de livro | Botões, labels, inputs |
+| Title | Cormorant Garamond 600 | Subtítulo de seção | Texto corrido |
+| Body | Outfit 400 | Prontuário, anotações, descrições | Títulos, botões |
+| Caption | Outfit 400 | Data, hora, ID, metadados | Títulos |
+| Label | Outfit 700 | Botões, badges de status | Títulos, corpo |
+| Eyebrow | Outfit 800 | Tipo de superfície, categoria | Qualquer texto longo |
+
+**Serif italic** (`Cormorant Garamond italic`):
+- ✅ Hipóteses curtas da IA (≤ 2 linhas), citações de destaque, frases de abertura
+- ❌ Blocos longos de prontuário, listas, tabelas, qualquer texto contínuo > 3 linhas
 
 ---
 
-## 6. Comportamento Responsivo
+## 6. Componentes — Inventário
 
-| Largura | Grid DossierCard | Comportamento |
+| Componente | Caminho | Variantes | Maturidade |
+|---|---|---|---|
+| `DossierCard` | `src/components/ui/dossier-card.tsx` | `full`, `compact` | stable |
+| `DossierCardSkeleton` | `src/components/ui/dossier-card.tsx` | `full`, `compact` | stable |
+| `StatusStamp` | `dossier-card.tsx` (interno) | `active`, `archived` | stable |
+| `PatternToken` | `dossier-card.tsx` (interno) | por tipo | stable |
+| `CardMenu` | `dossier-card.tsx` (interno) | `compact` prop | stable |
+| `DossierTabs` | — | — | planned |
+| `BookCard` | — | — | planned |
+| `ReferenceBookmark` | — | — | planned |
+
+---
+
+## 7. DossierCard — Semântica de Acessibilidade
+
+```tsx
+<article
+  role="link"                            // interativo, navega ao dossiê
+  tabIndex={0}                           // focável por teclado
+  aria-label={`Abrir dossiê de ${name}`} // ação descrita, não apenas conteúdo
+  onKeyDown={e => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      navigate(…);
+    }
+  }}
+>
+```
+
+- **Controles internos** (menu, "Abrir →"): `onClick={e => e.stopPropagation()}`
+- **Focus ring**: `outline: 2px solid var(--forest-soft)` + `outline-offset: 3px`
+- **Skeleton**: `aria-busy="true"` no container externo + `aria-hidden="true"` no conteúdo visual interno
+
+---
+
+## 8. DossierCard — Variante Compact
+
+A variante `compact` não é apenas redução de padding. Ela altera a **estrutura e os metadados exibidos**.
+
+| | `variant="full"` | `variant="compact"` |
+|---|---|---|
+| Número de registro | ✅ | ❌ |
+| Carimbo SVG | ✅ 48px | ❌ → status em texto |
+| Nome | ✅ h2 grande | ✅ h3 |
+| Subtítulo/especialidade | ✅ | ✅ (inline com idade) |
+| Queixa principal | ✅ 2 linhas | ✅ 1 linha |
+| Padrões | ✅ máx 3 | ✅ máx 2 |
+| Hipótese IA | ✅ (se real) | ❌ |
+| Consentimento | ✅ ícone + texto | ❌ |
+| Ação explícita | ✅ "Abrir →" | ❌ (clique no card) |
+
+---
+
+## 9. Comportamento Responsivo
+
+| Largura | Grid DossierCard | Observação |
 |---|---|---|
 | ≥ 1280px | 3 colunas | Completo |
 | 1024–1279px | 2 colunas | Completo |
-| 768–1023px | 2 colunas | Carimbo ligeiramente menor |
-| < 768px | 1 coluna | Stack vertical, nome em tamanho completo |
+| 768–1023px | 2 colunas | — |
+| < 768px | 1 coluna | Stack vertical, nome em tamanho pleno |
 
-**Altura dos cards**: `auto-fill, minmax(280px, 1fr)`. Sem altura fixa — cards com mais padrões serão naturalmente mais altos. O grid masonry não está implementado (a considerar no Passo 3).
+Grid CSS: `grid-template-columns: repeat(auto-fill, minmax(280px, 1fr))`  
+Altura: `auto` — cards com mais padrões são naturalmente mais altos (masonry considerado para Passo 3).
 
 ---
 
-## 7. Auditoria Honesta — Estado Atual (Passo 2.5)
+## 10. Auditoria de Estado — Passo 2.5
 
 | Material | Token CSS | Componente | Aplicado em rota |
 |---|---|---|---|
-| archive | ✅ `--surface-archive` | — | ✅ Clientes |
-| document | ✅ `--surface-document` | — | ✅ Clientes |
-| dossier | ✅ `--surface-dossier` | ✅ DossierCard | ✅ Clientes |
-| folder | ✅ `--surface-folder` | ❌ Pendente | ❌ |
-| manuscript | ✅ `--surface-manuscript` | ✅ (no DossierCard) | ✅ Clientes |
-| book | ✅ `--surface-book` | ❌ Pendente | ❌ |
-| protocol | ✅ `--material-protocol` | ✅ PatternToken | ✅ Clientes |
-| stamp | ✅ `--material-stamp-*` | ✅ StatusStamp | ✅ Clientes |
-| bookmark | ✅ `--material-bookmark` | ❌ Pendente | ❌ |
+| archive | ✅ | — | ✅ Clientes |
+| document | ✅ | — | ✅ Clientes |
+| dossier | ✅ | ✅ DossierCard (full + compact) | ✅ Clientes |
+| manuscript | ✅ | ✅ (interno ao DossierCard) | ✅ Clientes |
+| protocol | ✅ | ✅ PatternToken | ✅ Clientes |
+| stamp | ✅ | ✅ StatusStamp | ✅ Clientes |
+| folder | ✅ | ❌ | ❌ |
+| book | ✅ | ❌ | ❌ |
+| bookmark | ✅ | ❌ | ❌ |
 
-**Conclusão**: 6 tokens de superfície + 9 tokens de ornamento = **15 tokens** (conforme relatório anterior).  
-Dos 9 materiais conceituais, **6 têm implementação completa** (token + componente + uso em rota).  
-3 materiais (`folder`, `book`, `bookmark`) têm **token definido mas componente pendente** — previsto para os próximos passos (Biblioteca, detalhe do paciente).
+**6 de 9 materiais** operacionais. **3 materiais** com token preparado, aguardando implementação nas rotas específicas (detalhe do paciente, Biblioteca).
 
 ---
 
-## 8. Próximos Passos
+## 11. Roadmap — Próximas Adoções
 
-1. **Passo 3 — Dashboard**: usar `<DossierCard variant="compact" />` nos dossiês recentes.
-2. **Passo 4 — Biblioteca**: implementar `BookCard` com `--surface-book`.
-3. **Passo 5 — Detalhe do Paciente**: implementar `FolderTab` com `--surface-folder` e `ReferenceBookmark` com `--material-bookmark`.
-4. **Passo 6 — Agenda**: aplicar `surface-document` em cards de sessão.
+| Passo | Rota | Materiais | Componente |
+|---|---|---|---|
+| 3 | Dashboard (`/app`) | dossier (compact), archive | `DossierCard variant="compact"` |
+| 4 | Biblioteca | book, bookmark | `BookCard`, `ReferenceBookmark` |
+| 5 | Detalhe do Paciente | folder, manuscript | `DossierTabs`, `ManuscriptBlock` |
+| 6 | Agenda | document | cards de sessão |
