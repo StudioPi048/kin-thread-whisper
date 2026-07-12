@@ -33,6 +33,32 @@ Cada ambiente recebe uma **identidade material própria**:
 
 ---
 
+## Regra da Assinatura Invisível
+
+> **Toda tela deve possuir apenas um elemento memorável.**  
+> Nunca dois ou três "efeitos assinatura" competindo no mesmo ambiente.  
+> Essa disciplina dá a cada tela uma identidade própria e mantém a plataforma inteira elegante.
+
+O elemento memorável não é o mais chamativo — é o mais **característico**.  
+Ele define o que o usuário vai lembrar sobre aquela tela 24 horas depois.
+
+| Tela | Assinatura Invisível | O que o usuário lembra |
+|---|---|---|
+| **Clientes** | O dossiê | "Cada paciente tem um arquivo" |
+| **Centro Clínico** | O painel de prioridades | "Sei exatamente o que fazer hoje" |
+| **Biblioteca** | Lombadas dos livros | "Parecem livros de verdade" |
+| **Detalhe do Paciente** | O manuscrito | "Sinto que estou lendo uma história" |
+| **Agenda** | A linha temporal clínica | "Tenho controle do meu dia" |
+
+**Consequência direta:**  
+Se numa tela existem dossiê *e* carimbo *e* marcador *e* lombada competindo ao mesmo tempo, nenhum deles é memorável. Todos viram decoração.
+
+**Critério de revisão:**  
+Ao finalizar qualquer tela, perguntar: *"Qual é o único elemento que define este ambiente?"*  
+Se a resposta não for imediata, a tela tem elementos demais.
+
+---
+
 ## Princípio de Design
 
 A identidade visual de arquivo histórico opera de forma **subliminar**, nunca literal.
