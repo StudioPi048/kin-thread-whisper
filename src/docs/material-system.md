@@ -59,6 +59,41 @@ Se a resposta não for imediata, a tela tem elementos demais.
 
 ---
 
+## Regra do Teste do Screenshot
+
+> **Nenhuma tela entra em produção sem passar por este teste.**
+
+**Protocolo:**
+1. Fazer um screenshot da tela completa
+2. Esconder logotipo e nome da plataforma
+3. Mostrar para alguém que nunca viu o sistema
+4. Perguntar apenas: *"Que tipo de software você acha que é?"*
+
+**Critério de aprovação:**  
+A resposta deve convergir espontaneamente para um destes conceitos:
+- Psicogenealogia
+- história familiar
+- genealogia clínica
+- arquivo clínico
+- prontuário genealógico
+
+Qualquer outra resposta — *CRM*, *software médico*, *sistema de gestão*, *dashboard* — indica que a identidade ainda não foi incorporada ao design. Não propagar para outras telas.
+
+**Por que essa regra existe:**  
+Ela mede a percepção real do produto, não a intenção do designer.  
+Um Design System pode estar tecnicamente correto e ainda assim não comunicar identidade.  
+O teste do screenshot é o único critério que não pode ser justificado por arquitetura.
+
+**Vereditos possíveis:**
+
+| Veredito | Significado | Próximo passo |
+|---|---|---|
+| 🟢 Aprovado | A tela virou referência visual do produto | Propagar o sistema para o próximo ambiente |
+| 🟡 Refinamento | Arquitetura correta, ajustes pontuais de composição | Refinar antes de propagar |
+| 🔴 Reprojeto | Ainda parece coleção de cards | Não propagar. Identificar o que falta |
+
+---
+
 ## Princípio de Design
 
 A identidade visual de arquivo histórico opera de forma **subliminar**, nunca literal.
