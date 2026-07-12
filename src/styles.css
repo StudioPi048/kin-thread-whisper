@@ -158,6 +158,20 @@
   --input:           #EAE5DC;
   --ring:            var(--forest-soft);
 
+  /* ── Material Surface Tokens ────────────────────── */
+  --surface-archive:    #F4F1EB;  /* Pergaminho arquivístico — fundo base */
+  --surface-document:   #FAFAF7;  /* Documento clínico — superfície branca-quente */
+  --surface-manuscript: #F0EDE5;  /* Manuscrito/anotação — levemente escurecido */
+  --surface-folder:     #EDE8DE;  /* Aba de pasta clínica */
+  --surface-book:       #E8E3D8;  /* Capa de livro/biblioteca */
+
+  /* ── Material Ornament Tokens ────────────────────── */
+  --material-border:    rgba(180, 170, 155, 0.5);  /* Borda arquivística universal */
+  --material-bronze:    #8A6845;  /* Bronze envelhecido — accent bar, registro */
+  --material-gold:      #C6A23A;  /* Ouro editorial — hover, selos */
+  --material-olive:     #7D8060;  /* Oliva — label IA, categorias */
+  --material-terracotta:#A8654D;  /* Terracota — alertas, bordas especiais */
+
   /* ── Sidebar Premium ────────────────────────── */
   --sidebar:                    var(--forest);
   --sidebar-foreground:         rgba(242, 238, 230, 0.92);
@@ -342,6 +356,15 @@
     outline: 2px solid var(--color-forest-soft);
     outline-offset: 2px;
     border-radius: 4px;
+  }
+
+  /* Respeito por preferência de movimento reduzido */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 
