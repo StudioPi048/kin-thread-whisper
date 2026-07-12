@@ -16,6 +16,11 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import {
+  QuoteConnector,
+  DateMarkConnector,
+  GenealogyDivider,
+} from "@/components/ui/narrative-connector";
 
 export const Route = createFileRoute("/_authenticated/app/")({
   component: AppHome,
@@ -139,6 +144,11 @@ function AppHome() {
         </div>
       </header>
 
+      {/* 1.5. Conector Narrativo (Respiro + Identidade) */}
+      <div className="container-liz py-4 flex justify-center">
+        <QuoteConnector />
+      </div>
+
       {/* 2. Grid Principal da Mesa */}
       <main className="container-liz grid grid-cols-1 lg:grid-cols-12 gap-8">
         
@@ -161,6 +171,10 @@ function AppHome() {
               />
             </div>
           </section>
+
+          <div className="py-2">
+            <DateMarkConnector label="Registro do dia de hoje" />
+          </div>
 
           {/* Registro de Atividades (Linha do Tempo Documental) */}
           <section className="space-y-4">
@@ -216,6 +230,11 @@ function AppHome() {
 
         </div>
       </main>
+
+      {/* Fechamento editorial */}
+      <div className="container-liz pt-16 pb-8">
+        <GenealogyDivider opacity={0.3} />
+      </div>
     </div>
   );
 }
