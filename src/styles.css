@@ -159,18 +159,23 @@
   --ring:            var(--forest-soft);
 
   /* ── Material Surface Tokens ────────────────────── */
-  --surface-archive:    #F4F1EB;  /* Pergaminho arquivístico — fundo base */
+  --surface-archive:    #F4F1EB;  /* Pergaminho arquivístico — fundo base global */
   --surface-document:   #FAFAF7;  /* Documento clínico — superfície branca-quente */
+  --surface-dossier:    #FAFAF4;  /* Pasta clínica — levemente mais quente que document */
   --surface-manuscript: #F0EDE5;  /* Manuscrito/anotação — levemente escurecido */
-  --surface-folder:     #EDE8DE;  /* Aba de pasta clínica */
-  --surface-book:       #E8E3D8;  /* Capa de livro/biblioteca */
+  --surface-folder:     #EDE8DE;  /* Aba de pasta / tab secundária */
+  --surface-book:       #E8E3D8;  /* Capa de livro — Biblioteca */
 
   /* ── Material Ornament Tokens ────────────────────── */
-  --material-border:    rgba(180, 170, 155, 0.5);  /* Borda arquivística universal */
-  --material-bronze:    #8A6845;  /* Bronze envelhecido — accent bar, registro */
-  --material-gold:      #C6A23A;  /* Ouro editorial — hover, selos */
-  --material-olive:     #7D8060;  /* Oliva — label IA, categorias */
-  --material-terracotta:#A8654D;  /* Terracota — alertas, bordas especiais */
+  --material-border:     rgba(180, 170, 155, 0.5);  /* Borda arquivística universal */
+  --material-bronze:     #8A6845;  /* Bronze envelhecido — accent bar, número de registro */
+  --material-gold:       #C6A23A;  /* Ouro editorial — hover, selos dourados */
+  --material-olive:      #7D8060;  /* Oliva — label IA, categorias secundárias */
+  --material-terracotta: #A8654D;  /* Terracota — alertas, consentimento pendente */
+  --material-stamp-fg:   #1B3D2D;  /* Carimbo ativo — verde profundo */
+  --material-stamp-arc:  #8B6914;  /* Carimbo arquivado — bronze escuro */
+  --material-protocol:   #5C6644;  /* Cartão de protocolo — oliva escuro */
+  --material-bookmark:   #C6A23A;  /* Marcador de referência — ouro editorial */
 
   /* ── Sidebar Premium ────────────────────────── */
   --sidebar:                    var(--forest);
