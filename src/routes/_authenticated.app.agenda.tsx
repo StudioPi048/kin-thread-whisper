@@ -34,6 +34,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { DocumentHeader } from "@/components/ui/document-header";
 import { Badge } from "@/components/ui/badge";
 import { getAgendaData, type AgendaSessionDTO, type OrphanClientDTO } from "@/lib/agenda.functions";
@@ -82,7 +83,7 @@ type Session = {
   aiAlerts: string[];
   protocols: string[];
   status: "upcoming" | "next" | "later";
-  accent: "forest" | "forest" | "gold";
+  accent: "forest" | "rose" | "gold";
 };
 
 const FALLBACK_SESSIONS: Session[] = [
@@ -538,13 +539,13 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
 
   const accentBar = {
     forest: "bg-gradient-to-b from-forest to-forest",
-    forest: "bg-gradient-to-b from-forest to-forest",
+    rose: "bg-rose-500",
     gold: "bg-gradient-to-b from-gold to-gold/50",
   }[session.accent];
 
   const initialsBg = {
     forest: "bg-forest text-white",
-    forest: "bg-forest text-white",
+    rose: "bg-rose-500 text-white",
     gold: "bg-gold text-primary",
   }[session.accent];
 
@@ -1022,12 +1023,11 @@ function RightPanel({
   );
 }
 
-function PendingRow({ label, count, tone }: { label: string; count: number; tone: "rose" | "gold" | "forest" | "forest" }) {
+function PendingRow({ label, count, tone }: { label: string; count: number; tone: "rose" | "gold" | "forest" }) {
   const toneClass = {
     rose: "bg-rose-100 text-rose-700",
     gold: "bg-amber-100 text-amber-700",
     forest: "bg-forest/15 text-forest",
-    forest: "bg-forest/10 text-forest",
   }[tone];
   return (
     <li className="flex items-center justify-between group cursor-pointer hover:bg-cream/50 -mx-2 px-2 py-1 rounded-lg transition-colors">

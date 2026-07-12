@@ -1561,7 +1561,6 @@ function BookCoverArt({ book }: { book: (typeof ESSENTIAL_BOOKS)[number] }) {
 function LeticiaAutoralSection() {
   const accentMap = {
     forest: "bg-forest text-white",
-    forest: "bg-forest text-white",
     gold: "bg-gold text-forest",
     cream: "bg-cream text-forest border border-forest/10",
   } as const;
