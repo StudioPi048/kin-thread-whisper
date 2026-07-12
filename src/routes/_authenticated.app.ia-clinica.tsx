@@ -134,7 +134,9 @@ function IaClinicaPage() {
             <div className="space-y-2 text-[13px]">
               <div className="flex justify-between items-center py-1">
                 <span className="font-semibold text-primary">Paciente Exemplo A</span>
-                <Badge className="bg-forest/5 text-forest border-forest/10 text-[10px]">Ativo</Badge>
+                <Badge className="bg-forest/5 text-forest border-forest/10 text-[10px]">
+                  Ativo
+                </Badge>
               </div>
               <div className="flex justify-between items-center py-1">
                 <span className="font-semibold text-primary">Paciente Exemplo B</span>

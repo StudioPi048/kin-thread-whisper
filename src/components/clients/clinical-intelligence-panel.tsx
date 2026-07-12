@@ -201,16 +201,20 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
     if (!data?.persons) return list;
 
     // Check for weird dates
-    data.persons.forEach(p => {
+    data.persons.forEach((p) => {
       if (p.birth_date && p.death_date) {
         if (new Date(p.birth_date) > new Date(p.death_date)) {
-          list.push(`Conflito temporal: ${p.preferred_name || p.full_name} tem data de morte anterior ao nascimento.`);
+          list.push(
+            `Conflito temporal: ${p.preferred_name || p.full_name} tem data de morte anterior ao nascimento.`,
+          );
         }
       }
     });
-    
+
     if (list.length === 0 && patterns.length > 0) {
-       list.push("Revisar datas de nascimento na linhagem paterna para confirmar a síndrome de aniversário.");
+      list.push(
+        "Revisar datas de nascimento na linhagem paterna para confirmar a síndrome de aniversário.",
+      );
     }
     return list;
   }, [data, patterns]);
@@ -218,14 +222,16 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
   // Casos semelhantes (Mock inteligent)
   const similarCases = useMemo(() => {
     if (patterns.length > 0) {
-      return ["Você já atendeu 2 pacientes com padrão de abandono paterno semelhante (ex: Família Silva)."];
+      return [
+        "Você já atendeu 2 pacientes com padrão de abandono paterno semelhante (ex: Família Silva).",
+      ];
     }
     return [];
   }, [patterns]);
 
   // Linha do tempo inteligente (Mock)
   const smartTimeline = useMemo(() => {
-    if (patterns.some(p => p.type === "anniversary_syndrome")) {
+    if (patterns.some((p) => p.type === "anniversary_syndrome")) {
       return ["1984: Nascimento do paciente coincide com falecimento do avô (1984)."];
     }
     return [];
@@ -362,10 +368,11 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
                 </h4>
                 <div className="space-y-3">
                   {smartTimeline.map((item, i) => (
-                    <div key={i} className="p-3 bg-forest/5 border-l-2 border-forest-soft rounded-r-xl">
-                      <p className="text-[16px] leading-relaxed text-ink font-serif">
-                        {item}
-                      </p>
+                    <div
+                      key={i}
+                      className="p-3 bg-forest/5 border-l-2 border-forest-soft rounded-r-xl"
+                    >
+                      <p className="text-[16px] leading-relaxed text-ink font-serif">{item}</p>
                     </div>
                   ))}
                 </div>
@@ -381,10 +388,11 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
                 </h4>
                 <div className="space-y-3">
                   {similarCases.map((item, i) => (
-                    <div key={i} className="p-3 bg-clinical-positive/10 border-l-2 border-clinical-positive rounded-r-xl">
-                      <p className="text-[16px] leading-relaxed text-ink font-serif">
-                        {item}
-                      </p>
+                    <div
+                      key={i}
+                      className="p-3 bg-clinical-positive/10 border-l-2 border-clinical-positive rounded-r-xl"
+                    >
+                      <p className="text-[16px] leading-relaxed text-ink font-serif">{item}</p>
                     </div>
                   ))}
                 </div>
@@ -400,7 +408,10 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
                 </h4>
                 <ul className="space-y-2 pl-1">
                   {consistencyAlerts.map((alert, i) => (
-                    <li key={i} className="text-[16px] text-ink flex items-start gap-2 font-medium bg-clinical-critical/10 p-2 rounded border-l-2 border-clinical-critical">
+                    <li
+                      key={i}
+                      className="text-[16px] text-ink flex items-start gap-2 font-medium bg-clinical-critical/10 p-2 rounded border-l-2 border-clinical-critical"
+                    >
                       <span className="text-clinical-critical select-none mt-0.5">•</span>
                       <span>{alert}</span>
                     </li>
@@ -446,10 +457,18 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
                 </span>
                 <span className="flex items-center gap-2">
                   <span className="inline-block size-3.5 rotate-45 border-[2px] border-gold bg-white" />
-                  <span className="text-foreground/80 leading-tight">Não-binário / desconhecido</span>
+                  <span className="text-foreground/80 leading-tight">
+                    Não-binário / desconhecido
+                  </span>
                 </span>
                 <span className="flex items-center gap-2">
-                  <svg viewBox="0 0 10 10" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <svg
+                    viewBox="0 0 10 10"
+                    className="size-3.5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                  >
                     <polygon points="5,1 9,9 1,9" className="text-foreground/70" />
                   </svg>
                   <span className="text-foreground/80">Aborto</span>
@@ -466,7 +485,6 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
                 </span>
               </div>
             </div>
-
           </motion.div>
         ) : (
           <motion.div

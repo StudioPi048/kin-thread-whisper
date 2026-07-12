@@ -170,7 +170,12 @@ interface BuildOptions {
   positions?: NodePositionRow[];
 }
 
-export function buildLogicalGraph({ persons, rels, probandId, positions }: BuildOptions): LogicalGraph {
+export function buildLogicalGraph({
+  persons,
+  rels,
+  probandId,
+  positions,
+}: BuildOptions): LogicalGraph {
   const g: LogicalGraph = {
     probandId: null,
     persons: new Map(),
@@ -601,7 +606,7 @@ export function layoutGraph(g: LogicalGraph): Placement {
 
     // Satélites (irmãos) pendurados do lado correto, fora da bounding box dos pais
     const siblings = pu.children.filter((cid) => cid !== personId);
-    
+
     // Organiza os irmãos do mais velho para o mais novo
     siblings.sort((a, b) => {
       const pA = g.persons.get(a)?.row.birth_date;
@@ -688,18 +693,18 @@ export function layoutGraph(g: LogicalGraph): Placement {
       const pu = g.unions.get(parentUnionId);
       if (pu) {
         for (const partnerId of pu.partners) {
-           if (finalPersonPos.has(partnerId)) {
-             const ideal = personPos.get(partnerId);
-             const final = finalPersonPos.get(partnerId);
-             if (ideal && final) return { dx: final.x - ideal.x, dy: final.y - ideal.y };
-           }
+          if (finalPersonPos.has(partnerId)) {
+            const ideal = personPos.get(partnerId);
+            const final = finalPersonPos.get(partnerId);
+            if (ideal && final) return { dx: final.x - ideal.x, dy: final.y - ideal.y };
+          }
         }
       }
     }
     if (finalPersonPos.has(proband.id)) {
-       const ideal = personPos.get(proband.id);
-       const final = finalPersonPos.get(proband.id);
-       if (ideal && final) return { dx: final.x - ideal.x, dy: final.y - ideal.y };
+      const ideal = personPos.get(proband.id);
+      const final = finalPersonPos.get(proband.id);
+      if (ideal && final) return { dx: final.x - ideal.x, dy: final.y - ideal.y };
     }
     return { dx: 0, dy: 0 };
   };
@@ -717,16 +722,16 @@ export function layoutGraph(g: LogicalGraph): Placement {
       const union = g.unions.get(uid);
       if (union) {
         let shift = { dx: 0, dy: 0 };
-        const partnerAnchors = union.partners.filter(p => g.positions.has(p));
+        const partnerAnchors = union.partners.filter((p) => g.positions.has(p));
         if (partnerAnchors.length > 0) {
-           const pId = partnerAnchors[0];
-           const pIdeal = personPos.get(pId);
-           const pFinal = finalPersonPos.get(pId);
-           if (pIdeal && pFinal) shift = { dx: pFinal.x - pIdeal.x, dy: pFinal.y - pIdeal.y };
+          const pId = partnerAnchors[0];
+          const pIdeal = personPos.get(pId);
+          const pFinal = finalPersonPos.get(pId);
+          if (pIdeal && pFinal) shift = { dx: pFinal.x - pIdeal.x, dy: pFinal.y - pIdeal.y };
         } else if (finalPersonPos.has(proband.id)) {
-           const ideal = personPos.get(proband.id);
-           const final = finalPersonPos.get(proband.id);
-           if (ideal && final) shift = { dx: final.x - ideal.x, dy: final.y - ideal.y };
+          const ideal = personPos.get(proband.id);
+          const final = finalPersonPos.get(proband.id);
+          if (ideal && final) shift = { dx: final.x - ideal.x, dy: final.y - ideal.y };
         }
         finalUnionPos.set(uid, { x: idealPos.x + shift.dx, y: idealPos.y + shift.dy });
       } else {

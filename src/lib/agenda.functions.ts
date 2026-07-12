@@ -101,7 +101,11 @@ export const getAgendaData = createServerFn({ method: "GET" })
     }
 
     const today: AgendaSessionDTO[] = (todayRows ?? []).map((r, idx) => {
-      const client = r.clients as { id: string; full_name: string; preferred_name: string | null } | null;
+      const client = r.clients as {
+        id: string;
+        full_name: string;
+        preferred_name: string | null;
+      } | null;
       const patient = client?.preferred_name || client?.full_name || "Cliente";
       const start = new Date(r.session_date);
       const durMin = Math.max(30, Math.round((r.duration_seconds ?? 3600) / 60));
@@ -114,7 +118,6 @@ export const getAgendaData = createServerFn({ method: "GET" })
           ? Math.max(0, Math.floor((now.getTime() - hist.firstDate.getTime()) / 86_400_000))
           : null;
       void idx;
-
 
       const type: AgendaSessionDTO["type"] = isFirst
         ? "Primeira Consulta"
@@ -140,9 +143,6 @@ export const getAgendaData = createServerFn({ method: "GET" })
         status: (r.status as AgendaSessionDTO["status"]) ?? "scheduled",
       };
     });
-
-
-
 
     // Week counts
     const weekMap = new Map<string, number>();
@@ -213,4 +213,3 @@ function extractSummary(note: unknown): string | null {
   const s = n.resumo ?? n.summary;
   return typeof s === "string" && s.trim() ? s.trim() : null;
 }
-

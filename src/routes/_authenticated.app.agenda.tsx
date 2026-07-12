@@ -38,8 +38,11 @@ import { Button } from "@/components/ui/button";
 import { DocumentHeader } from "@/components/ui/document-header";
 import { Badge } from "@/components/ui/badge";
 import { getAgendaData, type AgendaSessionDTO, type OrphanClientDTO } from "@/lib/agenda.functions";
-import { getClientGenogram, type ClientGenogramDTO, type GenogramPersonDTO } from "@/lib/genogram.functions";
-
+import {
+  getClientGenogram,
+  type ClientGenogramDTO,
+  type GenogramPersonDTO,
+} from "@/lib/genogram.functions";
 
 export const Route = createFileRoute("/_authenticated/app/agenda")({
   component: AgendaPage,
@@ -58,14 +61,46 @@ type Seal =
   | "aniversario";
 
 const SEAL_META: Record<Seal, { label: string; className: string; Icon: typeof CircleDot }> = {
-  primeira: { label: "Primeira consulta", className: "bg-forest/10 text-forest border-forest/25", Icon: Sunrise },
-  retorno: { label: "Retorno", className: "bg-forest/8 text-forest border-forest/20", Icon: TimerReset },
-  crianca: { label: "Criança", className: "bg-amber-100/60 text-amber-700 border-amber-300/60", Icon: Baby },
-  prioridade: { label: "Alta prioridade", className: "bg-rose-100/60 text-rose-700 border-rose-300/60", Icon: Flame },
-  luto: { label: "Luto", className: "bg-slate-200/60 text-slate-700 border-slate-300/70", Icon: Moon },
-  evolucao: { label: "Evolução concluída", className: "bg-emerald-100/60 text-emerald-700 border-emerald-300/60", Icon: Leaf },
-  projeto: { label: "Projeto Sentido", className: "bg-sky-100/60 text-sky-700 border-sky-300/60", Icon: Waves },
-  aniversario: { label: "Síndrome de Aniversário", className: "bg-orange-100/60 text-orange-700 border-orange-300/60", Icon: Cake },
+  primeira: {
+    label: "Primeira consulta",
+    className: "bg-forest/10 text-forest border-forest/25",
+    Icon: Sunrise,
+  },
+  retorno: {
+    label: "Retorno",
+    className: "bg-forest/8 text-forest border-forest/20",
+    Icon: TimerReset,
+  },
+  crianca: {
+    label: "Criança",
+    className: "bg-amber-100/60 text-amber-700 border-amber-300/60",
+    Icon: Baby,
+  },
+  prioridade: {
+    label: "Alta prioridade",
+    className: "bg-rose-100/60 text-rose-700 border-rose-300/60",
+    Icon: Flame,
+  },
+  luto: {
+    label: "Luto",
+    className: "bg-slate-200/60 text-slate-700 border-slate-300/70",
+    Icon: Moon,
+  },
+  evolucao: {
+    label: "Evolução concluída",
+    className: "bg-emerald-100/60 text-emerald-700 border-emerald-300/60",
+    Icon: Leaf,
+  },
+  projeto: {
+    label: "Projeto Sentido",
+    className: "bg-sky-100/60 text-sky-700 border-sky-300/60",
+    Icon: Waves,
+  },
+  aniversario: {
+    label: "Síndrome de Aniversário",
+    className: "bg-orange-100/60 text-orange-700 border-orange-300/60",
+    Icon: Cake,
+  },
 };
 
 type Session = {
@@ -97,7 +132,8 @@ const FALLBACK_SESSIONS: Session[] = [
     type: "Retorno",
     sessionNumber: "Sessão 12",
     daysSinceFirst: 84,
-    lastEvolution: "Trabalhou resistência ao nome do pai. Identificada lealidade invisível com avô paterno.",
+    lastEvolution:
+      "Trabalhou resistência ao nome do pai. Identificada lealidade invisível com avô paterno.",
     seals: ["retorno", "aniversario", "projeto"],
     aiAlerts: [
       "Repetição de padrão detectada: separações aos 34 anos em 3 gerações consecutivas da linhagem materna.",
@@ -118,7 +154,8 @@ const FALLBACK_SESSIONS: Session[] = [
     type: "Anamnese Sistêmica",
     sessionNumber: "Sessão 3",
     daysSinceFirst: 21,
-    lastEvolution: "Primeira mencão ao irmão falecido. Abertura emocional significativa na segunda hora.",
+    lastEvolution:
+      "Primeira mencão ao irmão falecido. Abertura emocional significativa na segunda hora.",
     seals: ["retorno", "luto"],
     aiAlerts: [
       "Luto não elaborado identificado: óbito do irmão (2019) ainda não integrado narrativamente.",
@@ -138,7 +175,8 @@ const FALLBACK_SESSIONS: Session[] = [
     type: "Primeira Consulta",
     sessionNumber: "Sessão 1",
     daysSinceFirst: 0,
-    lastEvolution: "Primeiro contato. Queixa: dificuldade de vínculo afetivo recorrente desde os 20 anos.",
+    lastEvolution:
+      "Primeiro contato. Queixa: dificuldade de vínculo afetivo recorrente desde os 20 anos.",
     seals: ["primeira", "prioridade"],
     aiAlerts: [
       "Cliente nova: genossociograma ainda vazio. Sugerido: coleta de 3 gerações na sessão de hoje.",
@@ -176,7 +214,12 @@ function buildTimeline(sessions: Session[]): TimelineItem[] {
   });
   const last = sessions[sessions.length - 1];
   if (last) {
-    items.push({ time: shiftTime(last.end, 30), label: "Finalizar evoluções", kind: "gap", icon: CheckCircle2 });
+    items.push({
+      time: shiftTime(last.end, 30),
+      label: "Finalizar evoluções",
+      kind: "gap",
+      icon: CheckCircle2,
+    });
   }
   return items;
 }
@@ -191,7 +234,6 @@ function minutesBetween(a: string, b: string): number {
   const [bh, bm] = b.split(":").map(Number);
   return bh * 60 + bm - (ah * 60 + am);
 }
-
 
 const QUICK_ACTIONS = [
   { label: "Nova sessão", icon: Plus },
@@ -246,11 +288,11 @@ function AgendaPage() {
   return (
     <div className="min-h-[calc(100vh-64px)] bg-transparent">
       {/* Contextual Header */}
-      <ContextualHeader 
-        stats={stats} 
-        isLoading={query.isLoading} 
-        isFallback={isFallback} 
-        isError={query.isError} 
+      <ContextualHeader
+        stats={stats}
+        isLoading={query.isLoading}
+        isFallback={isFallback}
+        isError={query.isError}
       />
 
       {/* Quick Actions Bar */}
@@ -279,11 +321,7 @@ function AgendaPage() {
         />
 
         {/* CENTER — Featured session */}
-        {selected ? (
-          <FeaturedSession session={selected} sessions={sessions} />
-        ) : (
-          <EmptyCenter />
-        )}
+        {selected ? <FeaturedSession session={selected} sessions={sessions} /> : <EmptyCenter />}
 
         {/* RIGHT — IA + Painel */}
         <div className="lg:col-span-2 2xl:col-span-1">
@@ -310,16 +348,22 @@ function EmptyCenter() {
   );
 }
 
-
 /* --------------------------------- Header --------------------------------- */
 
-function ContextualHeader({ 
-  stats, 
-  isLoading, 
-  isFallback, 
-  isError 
-}: { 
-  stats: { total: number; primeira: number; retornos: number; aniversarios: number; ocupado: string; livre: string };
+function ContextualHeader({
+  stats,
+  isLoading,
+  isFallback,
+  isError,
+}: {
+  stats: {
+    total: number;
+    primeira: number;
+    retornos: number;
+    aniversarios: number;
+    ocupado: string;
+    livre: string;
+  };
   isLoading: boolean;
   isFallback: boolean;
   isError: boolean;
@@ -337,7 +381,7 @@ function ContextualHeader({
       }
       subtitle={
         <div className="font-sans font-normal text-ink/70 text-[15px]">
-          Hoje você acompanhará <strong>{stats.total} histórias familiares</strong>.<br/>
+          Hoje você acompanhará <strong>{stats.total} histórias familiares</strong>.<br />
           Um dos pacientes está em <strong>data ativa de Síndrome de Aniversário</strong>.
         </div>
       }
@@ -372,10 +416,30 @@ function ContextualHeader({
       }
     >
       <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
-        <HeaderStat icon={Users} label="Atendimentos" value={stats.total.toString()} accent="forest" />
-        <HeaderStat icon={Sunrise} label="Primeira consulta" value={stats.primeira.toString()} accent="gold" />
-        <HeaderStat icon={TimerReset} label="Retornos" value={stats.retornos.toString()} accent="forest" />
-        <HeaderStat icon={Cake} label="Aniversários" value={stats.aniversarios.toString()} accent="rose" />
+        <HeaderStat
+          icon={Users}
+          label="Atendimentos"
+          value={stats.total.toString()}
+          accent="forest"
+        />
+        <HeaderStat
+          icon={Sunrise}
+          label="Primeira consulta"
+          value={stats.primeira.toString()}
+          accent="gold"
+        />
+        <HeaderStat
+          icon={TimerReset}
+          label="Retornos"
+          value={stats.retornos.toString()}
+          accent="forest"
+        />
+        <HeaderStat
+          icon={Cake}
+          label="Aniversários"
+          value={stats.aniversarios.toString()}
+          accent="rose"
+        />
         <HeaderStat icon={Clock} label="Ocupado" value={stats.ocupado} accent="forest" />
         <HeaderStat icon={Leaf} label="Tempo livre" value={stats.livre} accent="gold" />
       </div>
@@ -383,7 +447,17 @@ function ContextualHeader({
   );
 }
 
-function HeaderStat({ icon: Icon, label, value, accent }: { icon: typeof Clock; label: string; value: string; accent: "forest" | "gold" | "rose" }) {
+function HeaderStat({
+  icon: Icon,
+  label,
+  value,
+  accent,
+}: {
+  icon: typeof Clock;
+  label: string;
+  value: string;
+  accent: "forest" | "gold" | "rose";
+}) {
   const accentClass = {
     forest: "text-ink/60",
     gold: "text-gold",
@@ -432,7 +506,6 @@ function TimelineColumn({
             const session = isSession ? sessions.find((s) => s.id === item.sessionId) : null;
             const isSelected = session?.id === selectedId;
             const Icon = isSession ? CircleDot : (item as { icon: typeof CircleDot }).icon;
-
 
             return (
               <li key={i}>
@@ -508,7 +581,10 @@ function TimelineColumn({
               <span className="font-serif text-sm font-bold">{d.n}</span>
               <div className="flex gap-0.5 mt-0.5">
                 {Array.from({ length: d.load }).map((_, i) => (
-                  <span key={i} className={`size-1 rounded-full ${d.active ? "bg-white/70" : "bg-forest/40"}`} />
+                  <span
+                    key={i}
+                    className={`size-1 rounded-full ${d.active ? "bg-white/70" : "bg-forest/40"}`}
+                  />
                 ))}
               </div>
             </div>
@@ -532,10 +608,7 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
   });
 
   const genogramAlerts = genogramQuery.data?.alerts ?? [];
-  const mergedAlerts = [
-    ...session.aiAlerts,
-    ...genogramAlerts.map((a) => a.message),
-  ];
+  const mergedAlerts = [...session.aiAlerts, ...genogramAlerts.map((a) => a.message)];
 
   const accentBar = {
     forest: "bg-gradient-to-b from-forest to-forest",
@@ -561,9 +634,13 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
           <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
             <div className="flex items-center gap-3">
               <div className="flex items-baseline gap-1 font-serif">
-                <span className="text-3xl font-bold text-primary tabular-nums">{session.start}</span>
+                <span className="text-3xl font-bold text-primary tabular-nums">
+                  {session.start}
+                </span>
                 <span className="text-muted-foreground text-sm">—</span>
-                <span className="text-2xl font-semibold text-muted-foreground tabular-nums">{session.end}</span>
+                <span className="text-2xl font-semibold text-muted-foreground tabular-nums">
+                  {session.end}
+                </span>
               </div>
               {session.status === "next" && (
                 <Badge className="bg-forest text-white border-transparent text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full animate-pulse">
@@ -639,21 +716,25 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
             {mergedAlerts.length > 0 ? (
               <ul className="space-y-2">
                 {mergedAlerts.map((alert, i) => (
-                  <li key={i} className="flex items-start gap-2.5 text-[13px] text-primary/85 leading-relaxed">
+                  <li
+                    key={i}
+                    className="flex items-start gap-2.5 text-[13px] text-primary/85 leading-relaxed"
+                  >
                     <AlertTriangle className="size-3.5 text-gold shrink-0 mt-1" />
                     <span>{alert}</span>
                   </li>
                 ))}
               </ul>
             ) : genogramQuery.isLoading ? (
-              <p className="text-[12px] text-muted-foreground italic">Analisando genossociograma…</p>
+              <p className="text-[12px] text-muted-foreground italic">
+                Analisando genossociograma…
+              </p>
             ) : (
               <p className="text-[12px] text-muted-foreground italic">
                 Nenhum padrão detectado — genossociograma completo e sem alertas por regra.
               </p>
             )}
           </div>
-
 
           {/* Protocols */}
           <div className="mt-5">
@@ -694,7 +775,13 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
                 Abrir Dossiê
               </Link>
             ) : (
-              <Button variant="ghost" size="lg" className="font-semibold" disabled title="Sessão sem cliente vinculado">
+              <Button
+                variant="ghost"
+                size="lg"
+                className="font-semibold"
+                disabled
+                title="Sessão sem cliente vinculado"
+              >
                 <FileText className="size-4" />
                 Prontuário
               </Button>
@@ -716,14 +803,26 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
 
       {/* Mini árvore preview + próximas */}
       <div className="grid md:grid-cols-2 gap-4">
-        <MiniTreePreview session={session} genogram={genogramQuery.data} isLoading={genogramQuery.isLoading} />
+        <MiniTreePreview
+          session={session}
+          genogram={genogramQuery.data}
+          isLoading={genogramQuery.isLoading}
+        />
         <UpcomingList currentId={session.id} sessions={sessions} />
       </div>
     </main>
   );
 }
 
-function MiniTreePreview({ session, genogram, isLoading }: { session: Session; genogram: ClientGenogramDTO | undefined; isLoading: boolean }) {
+function MiniTreePreview({
+  session,
+  genogram,
+  isLoading,
+}: {
+  session: Session;
+  genogram: ClientGenogramDTO | undefined;
+  isLoading: boolean;
+}) {
   const hasData = !!genogram && genogram.hasGenogram;
   const totalPersons = genogram?.totalPersons ?? 0;
 
@@ -757,9 +856,15 @@ function MiniTreePreview({ session, genogram, isLoading }: { session: Session; g
 
       <div className="mt-3 flex items-center justify-between text-[11px]">
         <div className="flex items-center gap-3 text-muted-foreground">
-          <span className="flex items-center gap-1"><Circle className="size-2 fill-gold text-gold" /> Paciente</span>
-          <span className="flex items-center gap-1"><Circle className="size-2 fill-forest text-forest" /> Masc.</span>
-          <span className="flex items-center gap-1"><Circle className="size-2 fill-forest text-forest" /> Fem.</span>
+          <span className="flex items-center gap-1">
+            <Circle className="size-2 fill-gold text-gold" /> Paciente
+          </span>
+          <span className="flex items-center gap-1">
+            <Circle className="size-2 fill-forest text-forest" /> Masc.
+          </span>
+          <span className="flex items-center gap-1">
+            <Circle className="size-2 fill-forest text-forest" /> Fem.
+          </span>
         </div>
         <Link
           to="/app/genossociogramas"
@@ -794,27 +899,64 @@ function RealMiniTree({ genogram, session }: { genogram: ClientGenogramDTO; sess
   }) => {
     if (!person) {
       return (
-        <circle cx={x} cy={y} r="10" className="fill-cream stroke-border" strokeWidth="1" strokeDasharray="2 2" />
+        <circle
+          cx={x}
+          cy={y}
+          r="10"
+          className="fill-cream stroke-border"
+          strokeWidth="1"
+          strokeDasharray="2 2"
+        />
       );
     }
-    const isMasc = person.gender?.toLowerCase().startsWith("m") ?? (person.role === "father" || person.role === "grandfather");
-    const isFem = person.gender?.toLowerCase().startsWith("f") ?? (person.role === "mother" || person.role === "grandmother");
-    const stroke = highlight ? "stroke-gold" : isMasc ? "stroke-forest/60" : isFem ? "stroke-forest/70" : "stroke-border";
-    const fill = highlight ? "fill-gold/25" : isMasc ? "fill-forest/12" : isFem ? "fill-forest/20" : "fill-cream";
+    const isMasc =
+      person.gender?.toLowerCase().startsWith("m") ??
+      (person.role === "father" || person.role === "grandfather");
+    const isFem =
+      person.gender?.toLowerCase().startsWith("f") ??
+      (person.role === "mother" || person.role === "grandmother");
+    const stroke = highlight
+      ? "stroke-gold"
+      : isMasc
+        ? "stroke-forest/60"
+        : isFem
+          ? "stroke-forest/70"
+          : "stroke-border";
+    const fill = highlight
+      ? "fill-gold/25"
+      : isMasc
+        ? "fill-forest/12"
+        : isFem
+          ? "fill-forest/20"
+          : "fill-cream";
     const sw = highlight ? 2 : 1.5;
     const commonProps = { className: `${fill} ${stroke}`, strokeWidth: sw } as const;
     return isFem && !isMasc ? (
       <>
         <circle cx={x} cy={y} r="11" {...commonProps} />
         {person.isDeceased && (
-          <line x1={x - 10} y1={y - 10} x2={x + 10} y2={y + 10} className="stroke-slate-500" strokeWidth="1.2" />
+          <line
+            x1={x - 10}
+            y1={y - 10}
+            x2={x + 10}
+            y2={y + 10}
+            className="stroke-slate-500"
+            strokeWidth="1.2"
+          />
         )}
       </>
     ) : (
       <>
         <rect x={x - 11} y={y - 11} width="22" height="22" rx="3" {...commonProps} />
         {person.isDeceased && (
-          <line x1={x - 11} y1={y - 11} x2={x + 11} y2={y + 11} className="stroke-slate-500" strokeWidth="1.2" />
+          <line
+            x1={x - 11}
+            y1={y - 11}
+            x2={x + 11}
+            y2={y + 11}
+            className="stroke-slate-500"
+            strokeWidth="1.2"
+          />
         )}
       </>
     );
@@ -847,7 +989,26 @@ function RealMiniTree({ genogram, session }: { genogram: ClientGenogramDTO; sess
       <line x1="150" y1="85" x2="150" y2="120" className="stroke-border" />
 
       {/* Proband */}
-      <Node person={proband ?? { ...({} as GenogramPersonDTO), id: "p", fullName: session.patient, preferredName: null, gender: null, isProband: true, isDeceased: false, hasBirthDate: false, hasDeathDate: false, relationshipTo: null, role: "proband" }} x={150} y={135} highlight />
+      <Node
+        person={
+          proband ?? {
+            ...({} as GenogramPersonDTO),
+            id: "p",
+            fullName: session.patient,
+            preferredName: null,
+            gender: null,
+            isProband: true,
+            isDeceased: false,
+            hasBirthDate: false,
+            hasDeathDate: false,
+            relationshipTo: null,
+            role: "proband",
+          }
+        }
+        x={150}
+        y={135}
+        highlight
+      />
       <text x={150} y={155} textAnchor="middle" className="fill-primary font-bold" fontSize="9">
         {session.initials}
       </text>
@@ -890,7 +1051,10 @@ function UpcomingList({ currentId, sessions }: { currentId: string; sessions: Se
                   {inner}
                 </Link>
               ) : (
-                <div className="flex items-center gap-3 py-2 opacity-70 cursor-not-allowed" title="Sessão sem cliente vinculado">
+                <div
+                  className="flex items-center gap-3 py-2 opacity-70 cursor-not-allowed"
+                  title="Sessão sem cliente vinculado"
+                >
                   {inner}
                 </div>
               )}
@@ -913,7 +1077,6 @@ function RightPanel({
   orphanClients: OrphanClientDTO[];
   prontuariosPendentes: number;
 }) {
-
   return (
     <aside className="grid gap-4 md:grid-cols-2 2xl:grid-cols-1">
       {/* IA Clínica briefing */}
@@ -928,19 +1091,26 @@ function RightPanel({
               <Brain className="size-4 text-gold" />
             </div>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gold">IA Clínica</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gold">
+                IA Clínica
+              </p>
               <p className="text-[11px] text-white/70">Briefing do dia</p>
             </div>
           </div>
 
           <p className="font-serif text-[14px] leading-relaxed text-white/90">
-            Preparei <strong className="text-gold">3 hipóteses clínicas</strong> para o atendimento das 09h com {session.patient.split(" ")[0]}. Há uma possível <strong className="text-gold">coincidência de datas</strong> a investigar com a linhagem paterna.
+            Preparei <strong className="text-gold">3 hipóteses clínicas</strong> para o atendimento
+            das 09h com {session.patient.split(" ")[0]}. Há uma possível{" "}
+            <strong className="text-gold">coincidência de datas</strong> a investigar com a linhagem
+            paterna.
           </p>
 
           <div className="mt-4 pt-4 border-t border-white/10 space-y-2 text-[12px] text-white/80">
             <div className="flex items-start gap-2">
               <CheckCircle2 className="size-3.5 text-gold shrink-0 mt-0.5" />
-              <span>Sugerido: <em>Mapa de Segredos</em> antes da 4ª sessão.</span>
+              <span>
+                Sugerido: <em>Mapa de Segredos</em> antes da 4ª sessão.
+              </span>
             </div>
             <div className="flex items-start gap-2">
               <CheckCircle2 className="size-3.5 text-gold shrink-0 mt-0.5" />
@@ -977,7 +1147,6 @@ function RightPanel({
           </ul>
         )}
       </div>
-
 
       {/* Receita + tempo */}
       <div className="rounded-2xl bg-white/80 backdrop-blur border border-border/50 shadow-sm p-5">
@@ -1023,7 +1192,15 @@ function RightPanel({
   );
 }
 
-function PendingRow({ label, count, tone }: { label: string; count: number; tone: "rose" | "gold" | "forest" }) {
+function PendingRow({
+  label,
+  count,
+  tone,
+}: {
+  label: string;
+  count: number;
+  tone: "rose" | "gold" | "forest";
+}) {
   const toneClass = {
     rose: "bg-rose-100 text-rose-700",
     gold: "bg-amber-100 text-amber-700",
@@ -1032,7 +1209,9 @@ function PendingRow({ label, count, tone }: { label: string; count: number; tone
   return (
     <li className="flex items-center justify-between group cursor-pointer hover:bg-cream/50 -mx-2 px-2 py-1 rounded-lg transition-colors">
       <span className="text-primary/85 font-medium">{label}</span>
-      <span className={`inline-flex items-center justify-center min-w-[26px] h-6 px-2 rounded-full text-[11px] font-black ${toneClass}`}>
+      <span
+        className={`inline-flex items-center justify-center min-w-[26px] h-6 px-2 rounded-full text-[11px] font-black ${toneClass}`}
+      >
         {count}
       </span>
     </li>
@@ -1051,7 +1230,8 @@ function mapDtosToSessions(dtos: AgendaSessionDTO[]): Session[] {
     if (d.status === "processing" || d.status === "failed") seals.push("prioridade");
 
     const startTs = new Date(d.startISO).getTime();
-    const isNext = startTs >= now && dtos.slice(0, i).every((p) => new Date(p.startISO).getTime() < now);
+    const isNext =
+      startTs >= now && dtos.slice(0, i).every((p) => new Date(p.startISO).getTime() < now);
 
     const protocols: string[] = d.isFirst
       ? ["Anamnese Sistêmica", "Coleta de 3 Gerações", "Mapa Inicial"]
@@ -1076,4 +1256,3 @@ function mapDtosToSessions(dtos: AgendaSessionDTO[]): Session[] {
     };
   });
 }
-

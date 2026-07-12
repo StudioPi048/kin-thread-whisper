@@ -29,7 +29,12 @@ export type PatientIdentityDTO = {
 
 export type JourneyDTO = {
   currentStage: JourneyStage;
-  stages: { key: JourneyStage; label: string; description: string; status: "done" | "current" | "future" }[];
+  stages: {
+    key: JourneyStage;
+    label: string;
+    description: string;
+    status: "done" | "current" | "future";
+  }[];
 };
 
 export type EvolutionDTO = {
@@ -128,7 +133,11 @@ const extractSummary = (note: unknown): string | null => {
   return typeof s === "string" && s.trim() ? s.trim() : null;
 };
 
-const deriveStage = (sessionCount: number, hasGenogram: boolean, patternCount: number): JourneyStage => {
+const deriveStage = (
+  sessionCount: number,
+  hasGenogram: boolean,
+  patternCount: number,
+): JourneyStage => {
   if (sessionCount === 0) return "primeira";
   if (sessionCount === 1) return "investigacao";
   if (!hasGenogram) return "investigacao";
@@ -142,7 +151,9 @@ const deriveStage = (sessionCount: number, hasGenogram: boolean, patternCount: n
 
 export const getPatientDossier = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { clientId: string }) => z.object({ clientId: z.string().uuid() }).parse(data))
+  .inputValidator((data: { clientId: string }) =>
+    z.object({ clientId: z.string().uuid() }).parse(data),
+  )
   .handler(async ({ data, context }): Promise<PatientDossierDTO> => {
     const { supabase, userId } = context;
     const clientId = data.clientId;
@@ -256,7 +267,12 @@ export const getPatientDossier = createServerFn({ method: "GET" })
       hasGenogram,
       totalPersons: persons.length,
       proband: proband
-        ? { id: proband.id, fullName: proband.full_name, gender: proband.gender, role: proband.role }
+        ? {
+            id: proband.id,
+            fullName: proband.full_name,
+            gender: proband.gender,
+            role: proband.role,
+          }
         : null,
       parents: enriched
         .filter((p) => p.role === "father" || p.role === "mother")
@@ -341,7 +357,9 @@ export const getPatientDossier = createServerFn({ method: "GET" })
           message: `Faltam ${2 - parents.length} figura(s) parental(is) no genograma.`,
         });
       }
-      const grandparents = enriched.filter((p) => p.role === "grandfather" || p.role === "grandmother");
+      const grandparents = enriched.filter(
+        (p) => p.role === "grandfather" || p.role === "grandmother",
+      );
       if (grandparents.length < 4) {
         clinicalAlerts.push({
           severity: "info",
@@ -364,7 +382,10 @@ export const getPatientDossier = createServerFn({ method: "GET" })
       }
     }
     if (evolutions.length === 0) {
-      clinicalAlerts.push({ severity: "info", message: "Nenhuma evolução registrada — primeira escuta pendente." });
+      clinicalAlerts.push({
+        severity: "info",
+        message: "Nenhuma evolução registrada — primeira escuta pendente.",
+      });
     }
 
     const briefing: BriefingDTO = {

@@ -1,9 +1,9 @@
 /**
  * DocumentHeader — Passo 2.8: Navegação Silenciosa
- * 
+ *
  * Substitui os headers pesados (com fundos escuros e logos repetidas)
  * por um cabeçalho contextual unificado.
- * 
+ *
  * Estrutura:
  * Instituto Liz / {breadcrumb}
  * {title}
@@ -20,7 +20,13 @@ export interface DocumentHeaderProps {
   children?: React.ReactNode;
 }
 
-export function DocumentHeader({ breadcrumb, title, subtitle, actions, children }: DocumentHeaderProps) {
+export function DocumentHeader({
+  breadcrumb,
+  title,
+  subtitle,
+  actions,
+  children,
+}: DocumentHeaderProps) {
   return (
     <div className="pt-8 pb-10">
       <div className="container-liz">
@@ -33,23 +39,13 @@ export function DocumentHeader({ breadcrumb, title, subtitle, actions, children 
               {title}
             </div>
             {subtitle && (
-              <div className="text-ink/60 text-lg font-serif italic mt-2">
-                {subtitle}
-              </div>
+              <div className="text-ink/60 text-lg font-serif italic mt-2">{subtitle}</div>
             )}
           </div>
-          
-          {actions && (
-            <div className="flex-shrink-0">
-              {actions}
-            </div>
-          )}
+
+          {actions && <div className="flex-shrink-0">{actions}</div>}
         </div>
-        {children && (
-          <div className="mt-4">
-            {children}
-          </div>
-        )}
+        {children && <div className="mt-4">{children}</div>}
       </div>
     </div>
   );

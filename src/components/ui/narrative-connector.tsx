@@ -52,22 +52,22 @@ export function GenealogicalMark({
       <line x1="12" y1="14" x2="7" y2="13" stroke={color} strokeWidth="0.7" />
       <line x1="12" y1="14" x2="17" y2="13" stroke={color} strokeWidth="0.7" />
       {/* Nós ancestrais */}
-      <circle cx="4"  cy="7" r="1" fill={color} />
+      <circle cx="4" cy="7" r="1" fill={color} />
       <circle cx="10" cy="7" r="1" fill={color} />
       <circle cx="14" cy="7" r="1" fill={color} />
       <circle cx="20" cy="7" r="1" fill={color} />
       {/* Linhas para ancestrais */}
-      <line x1="7"  y1="11.8" x2="4"  y2="7.9" stroke={color} strokeWidth="0.6" />
-      <line x1="7"  y1="11.8" x2="10" y2="7.9" stroke={color} strokeWidth="0.6" />
+      <line x1="7" y1="11.8" x2="4" y2="7.9" stroke={color} strokeWidth="0.6" />
+      <line x1="7" y1="11.8" x2="10" y2="7.9" stroke={color} strokeWidth="0.6" />
       <line x1="17" y1="11.8" x2="14" y2="7.9" stroke={color} strokeWidth="0.6" />
       <line x1="17" y1="11.8" x2="20" y2="7.9" stroke={color} strokeWidth="0.6" />
       {/* Nós de 3ª geração (extremos) */}
-      <circle cx="3"  cy="3" r="0.8" fill={color} />
-      <circle cx="5"  cy="3" r="0.8" fill={color} />
+      <circle cx="3" cy="3" r="0.8" fill={color} />
+      <circle cx="5" cy="3" r="0.8" fill={color} />
       <circle cx="19" cy="3" r="0.8" fill={color} />
       <circle cx="21" cy="3" r="0.8" fill={color} />
-      <line x1="4" y1="6.1"  x2="3"  y2="3.8" stroke={color} strokeWidth="0.5" />
-      <line x1="4" y1="6.1"  x2="5"  y2="3.8" stroke={color} strokeWidth="0.5" />
+      <line x1="4" y1="6.1" x2="3" y2="3.8" stroke={color} strokeWidth="0.5" />
+      <line x1="4" y1="6.1" x2="5" y2="3.8" stroke={color} strokeWidth="0.5" />
       <line x1="20" y1="6.1" x2="19" y2="3.8" stroke={color} strokeWidth="0.5" />
       <line x1="20" y1="6.1" x2="21" y2="3.8" stroke={color} strokeWidth="0.5" />
     </svg>
@@ -123,7 +123,13 @@ export function QuoteConnector({
       }}
     >
       {/* Linha esquerda */}
-      <div style={{ flex: 1, height: "1px", background: "var(--material-border, rgba(180,170,155,0.5))" }} />
+      <div
+        style={{
+          flex: 1,
+          height: "1px",
+          background: "var(--material-border, rgba(180,170,155,0.5))",
+        }}
+      />
 
       {/* Citação */}
       <div
@@ -140,30 +146,40 @@ export function QuoteConnector({
         }}
       >
         {/* Serif italic — único lugar onde é permitido aqui */}
-        <p style={{
-          fontFamily: "var(--font-serif)",
-          fontStyle: "italic",
-          fontSize: "13px",
-          color: "var(--ink-soft, #4A4540)",
-          lineHeight: 1.5,
-          margin: 0,
-        }}>
+        <p
+          style={{
+            fontFamily: "var(--font-serif)",
+            fontStyle: "italic",
+            fontSize: "13px",
+            color: "var(--ink-soft, #4A4540)",
+            lineHeight: 1.5,
+            margin: 0,
+          }}
+        >
           "{quote.text}"
         </p>
-        <span style={{
-          fontSize: "9px",
-          fontWeight: 800,
-          letterSpacing: "0.14em",
-          textTransform: "uppercase",
-          color: "var(--material-olive, #7D8060)",
-          fontFamily: "var(--font-sans)",
-        }}>
+        <span
+          style={{
+            fontSize: "9px",
+            fontWeight: 800,
+            letterSpacing: "0.14em",
+            textTransform: "uppercase",
+            color: "var(--material-olive, #7D8060)",
+            fontFamily: "var(--font-sans)",
+          }}
+        >
           {quote.author}
         </span>
       </div>
 
       {/* Linha direita */}
-      <div style={{ flex: 1, height: "1px", background: "var(--material-border, rgba(180,170,155,0.5))" }} />
+      <div
+        style={{
+          flex: 1,
+          height: "1px",
+          background: "var(--material-border, rgba(180,170,155,0.5))",
+        }}
+      />
     </div>
   );
 }
@@ -172,11 +188,7 @@ export function QuoteConnector({
  * `datemark` — referência histórica discreta com o GenealogicalMark
  * Para usar entre seções de conteúdo operacional.
  */
-export function DateMarkConnector({
-  label = "Arquivo ativo desde 2024",
-}: {
-  label?: string;
-}) {
+export function DateMarkConnector({ label = "Arquivo ativo desde 2024" }: { label?: string }) {
   return (
     <div
       role="separator"
@@ -187,23 +199,37 @@ export function DateMarkConnector({
         gap: "14px",
       }}
     >
-      <div style={{ flex: 1, height: "1px", background: "var(--material-border, rgba(180,170,155,0.3))" }} />
+      <div
+        style={{
+          flex: 1,
+          height: "1px",
+          background: "var(--material-border, rgba(180,170,155,0.3))",
+        }}
+      />
       <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
         <GenealogicalMark size={18} opacity={0.14} />
-        <span style={{
-          fontSize: "9px",
-          fontWeight: 800,
-          letterSpacing: "0.18em",
-          textTransform: "uppercase",
-          color: "var(--material-bronze, #8A6845)",
-          fontFamily: "var(--font-sans)",
-          opacity: 0.7,
-        }}>
+        <span
+          style={{
+            fontSize: "9px",
+            fontWeight: 800,
+            letterSpacing: "0.18em",
+            textTransform: "uppercase",
+            color: "var(--material-bronze, #8A6845)",
+            fontFamily: "var(--font-sans)",
+            opacity: 0.7,
+          }}
+        >
           {label}
         </span>
         <GenealogicalMark size={18} opacity={0.14} />
       </div>
-      <div style={{ flex: 1, height: "1px", background: "var(--material-border, rgba(180,170,155,0.3))" }} />
+      <div
+        style={{
+          flex: 1,
+          height: "1px",
+          background: "var(--material-border, rgba(180,170,155,0.3))",
+        }}
+      />
     </div>
   );
 }
@@ -212,7 +238,7 @@ export function DateMarkConnector({
  * `divider` — separador puro com GenealogicalMark centrado
  * Para usar no final de seções, antes do rodapé.
  */
-export function GenealogyDivider({ opacity = 0.10 }: { opacity?: number }) {
+export function GenealogyDivider({ opacity = 0.1 }: { opacity?: number }) {
   return (
     <div
       role="separator"

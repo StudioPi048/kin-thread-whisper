@@ -60,7 +60,9 @@ function PatientDossierPage() {
       <div className="min-h-[calc(100vh-64px)] bg-cream flex items-center justify-center p-8">
         <div className="max-w-md text-center space-y-4">
           <AlertTriangle className="size-10 text-rose-500 mx-auto" />
-          <h2 className="font-serif text-2xl font-bold text-primary">Não foi possível abrir o dossiê</h2>
+          <h2 className="font-serif text-2xl font-bold text-primary">
+            Não foi possível abrir o dossiê
+          </h2>
           <p className="text-sm text-muted-foreground">
             {q.error instanceof Error ? q.error.message : "Erro desconhecido"}
           </p>
@@ -81,7 +83,8 @@ function PatientDossierPage() {
 }
 
 function DossierView({ data }: { data: PatientDossierDTO }) {
-  const { identity, journey, summary, genogram, timeline, briefing, library, evolutions, counts } = data;
+  const { identity, journey, summary, genogram, timeline, briefing, library, evolutions, counts } =
+    data;
 
   return (
     <div className="min-h-[calc(100vh-64px)] bg-[radial-gradient(circle_at_20%_0%,oklch(0.97_0.02_295)_0%,transparent_45%),radial-gradient(circle_at_100%_100%,oklch(0.96_0.03_60/0.4)_0%,transparent_50%),var(--color-cream)] pb-24">
@@ -96,7 +99,8 @@ function DossierView({ data }: { data: PatientDossierDTO }) {
             <span className="text-forest">Dossiê Clínico</span>
           </div>
           <span className="text-[10px] font-semibold text-muted-foreground/70">
-            {counts.totalSessions} sessão(ões) · {counts.totalPersons} pessoas no genograma · {counts.totalPatterns} padrões
+            {counts.totalSessions} sessão(ões) · {counts.totalPersons} pessoas no genograma ·{" "}
+            {counts.totalPatterns} padrões
           </span>
         </div>
       </div>
@@ -116,7 +120,10 @@ function DossierView({ data }: { data: PatientDossierDTO }) {
             signatureNotes={summary.signatureNotes}
             presentingComplaint={identity.presentingComplaint}
           />
-          <GenogramShowcase genogram={genogram} patientName={identity.preferredName ?? identity.fullName} />
+          <GenogramShowcase
+            genogram={genogram}
+            patientName={identity.preferredName ?? identity.fullName}
+          />
           <FamilyTimeline events={timeline} />
           <RecentEvolutions evolutions={evolutions} />
         </div>
@@ -221,12 +228,23 @@ function PatientHeader({ identity }: { identity: PatientIdentityDTO }) {
 
 function StatusChip({ status }: { status: string }) {
   const map: Record<string, { label: string; className: string }> = {
-    active: { label: "Ativo", className: "bg-emerald-400/20 text-emerald-100 border-emerald-300/40" },
-    archived: { label: "Arquivado", className: "bg-slate-400/20 text-slate-100 border-slate-300/40" },
+    active: {
+      label: "Ativo",
+      className: "bg-emerald-400/20 text-emerald-100 border-emerald-300/40",
+    },
+    archived: {
+      label: "Arquivado",
+      className: "bg-slate-400/20 text-slate-100 border-slate-300/40",
+    },
   };
-  const m = map[status] ?? { label: status, className: "bg-white/10 text-white/80 border-white/20" };
+  const m = map[status] ?? {
+    label: status,
+    className: "bg-white/10 text-white/80 border-white/20",
+  };
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${m.className}`}>
+    <span
+      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${m.className}`}
+    >
       <Circle className="size-2 fill-current" /> {m.label}
     </span>
   );
@@ -236,7 +254,9 @@ function NextSessionCard({ iso }: { iso: string | null }) {
   if (!iso) {
     return (
       <div className="rounded-xl bg-white/[0.06] backdrop-blur border border-white/10 px-4 py-3 text-right">
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">Próxima sessão</p>
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">
+          Próxima sessão
+        </p>
         <p className="font-serif text-lg font-bold text-white/80 mt-1">Não agendada</p>
       </div>
     );
@@ -279,19 +299,29 @@ function JourneyStrip({ journey }: { journey: JourneyDTO }) {
               <div className="flex items-center gap-1">
                 <div
                   className={`size-6 rounded-full flex items-center justify-center shrink-0 text-white text-[10px] font-bold ${
-                    isCurrent ? "bg-forest ring-4 ring-forest/15" : isDone ? "bg-forest" : "bg-cream border border-border text-muted-foreground/60"
+                    isCurrent
+                      ? "bg-forest ring-4 ring-forest/15"
+                      : isDone
+                        ? "bg-forest"
+                        : "bg-cream border border-border text-muted-foreground/60"
                   }`}
                 >
                   {isDone ? <CheckCircle2 className="size-3.5" /> : i + 1}
                 </div>
                 {i < journey.stages.length - 1 && (
-                  <div className={`h-0.5 flex-1 rounded-full ${isDone ? "bg-forest" : "bg-border"}`} />
+                  <div
+                    className={`h-0.5 flex-1 rounded-full ${isDone ? "bg-forest" : "bg-border"}`}
+                  />
                 )}
               </div>
-              <p className={`mt-2 text-[11.5px] font-bold ${isCurrent ? "text-forest" : isDone ? "text-primary" : "text-muted-foreground"}`}>
+              <p
+                className={`mt-2 text-[11.5px] font-bold ${isCurrent ? "text-forest" : isDone ? "text-primary" : "text-muted-foreground"}`}
+              >
                 {s.label}
               </p>
-              <p className="text-[10.5px] text-muted-foreground/80 leading-tight mt-0.5">{s.description}</p>
+              <p className="text-[10.5px] text-muted-foreground/80 leading-tight mt-0.5">
+                {s.description}
+              </p>
             </div>
           );
         })}
@@ -324,7 +354,11 @@ function ClinicalSummary({
           {lastEvolution ? (
             <>
               <p className="text-[11px] text-muted-foreground font-semibold mb-1">
-                {new Date(lastEvolution.dateISO).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" })}
+                {new Date(lastEvolution.dateISO).toLocaleDateString("pt-BR", {
+                  day: "2-digit",
+                  month: "long",
+                  year: "numeric",
+                })}
                 {lastEvolution.title ? ` · ${lastEvolution.title}` : ""}
               </p>
               <p className="font-serif italic text-[14px] text-primary/90 leading-relaxed">
@@ -334,7 +368,10 @@ function ClinicalSummary({
           ) : null}
         </SummaryBlock>
 
-        <SummaryBlock title="Intenção do paciente" empty="Sem intenção declarada no formulário de acolhimento.">
+        <SummaryBlock
+          title="Intenção do paciente"
+          empty="Sem intenção declarada no formulário de acolhimento."
+        >
           {presentingIntention ? (
             <p className="text-[13px] text-primary/85 leading-relaxed">{presentingIntention}</p>
           ) : null}
@@ -348,7 +385,9 @@ function ClinicalSummary({
 
         <SummaryBlock title="Notas de assinatura" empty="Sem notas de assinatura da terapeuta.">
           {signatureNotes ? (
-            <p className="font-serif italic text-[13px] text-primary/80 leading-relaxed">{signatureNotes}</p>
+            <p className="font-serif italic text-[13px] text-primary/80 leading-relaxed">
+              {signatureNotes}
+            </p>
           ) : null}
         </SummaryBlock>
       </div>
@@ -356,11 +395,23 @@ function ClinicalSummary({
   );
 }
 
-function SummaryBlock({ title, empty, children }: { title: string; empty: string; children: React.ReactNode }) {
+function SummaryBlock({
+  title,
+  empty,
+  children,
+}: {
+  title: string;
+  empty: string;
+  children: React.ReactNode;
+}) {
   const isEmpty = !children;
   return (
-    <div className={`rounded-xl border p-4 ${isEmpty ? "border-dashed border-border/60 bg-cream/30" : "border-border/40 bg-cream/50"}`}>
-      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-2">{title}</p>
+    <div
+      className={`rounded-xl border p-4 ${isEmpty ? "border-dashed border-border/60 bg-cream/30" : "border-border/40 bg-cream/50"}`}
+    >
+      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-2">
+        {title}
+      </p>
       {isEmpty ? <p className="text-[12px] italic text-muted-foreground/80">{empty}</p> : children}
     </div>
   );
@@ -368,14 +419,23 @@ function SummaryBlock({ title, empty, children }: { title: string; empty: string
 
 /* ========================= Genogram Showcase =========================== */
 
-function GenogramShowcase({ genogram, patientName }: { genogram: DossierGenogramDTO; patientName: string }) {
+function GenogramShowcase({
+  genogram,
+  patientName,
+}: {
+  genogram: DossierGenogramDTO;
+  patientName: string;
+}) {
   return (
     <div className="rounded-3xl bg-white border border-border/60 shadow-[0_10px_40px_-25px_rgba(60,20,80,0.25)] overflow-hidden">
       <div className="flex items-center justify-between px-6 py-4 border-b border-border/40 bg-gradient-to-r from-forest/[0.03] to-forest/[0.05]">
         <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-forest flex items-center gap-2">
           <GitBranch className="size-3.5" /> Genossociograma
         </p>
-        <Link to="/app/genossociogramas" className="text-[11px] text-forest font-bold hover:underline flex items-center gap-1">
+        <Link
+          to="/app/genossociogramas"
+          className="text-[11px] text-forest font-bold hover:underline flex items-center gap-1"
+        >
           Abrir editor <ChevronRight className="size-3" />
         </Link>
       </div>
@@ -386,8 +446,12 @@ function GenogramShowcase({ genogram, patientName }: { genogram: DossierGenogram
         ) : (
           <div className="py-10 text-center">
             <GitBranch className="size-10 text-muted-foreground/40 mx-auto mb-3" />
-            <p className="font-serif text-lg font-bold text-primary">Genossociograma ainda não iniciado</p>
-            <p className="text-sm text-muted-foreground mt-1">Comece pelo paciente e vá subindo as gerações.</p>
+            <p className="font-serif text-lg font-bold text-primary">
+              Genossociograma ainda não iniciado
+            </p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Comece pelo paciente e vá subindo as gerações.
+            </p>
             <Link to="/app/genossociogramas">
               <Button variant="outline" className="mt-4">
                 <GitBranch className="size-4" />
@@ -426,28 +490,71 @@ function BigTree({ genogram, patientName }: { genogram: DossierGenogramDTO; pati
     highlight?: boolean;
   }) => {
     if (!person) {
-      return <circle cx={x} cy={y} r="14" className="fill-cream stroke-border" strokeWidth="1" strokeDasharray="3 3" />;
+      return (
+        <circle
+          cx={x}
+          cy={y}
+          r="14"
+          className="fill-cream stroke-border"
+          strokeWidth="1"
+          strokeDasharray="3 3"
+        />
+      );
     }
     const isFem = person.role === "mother" || person.role === "grandmother";
     const isMasc = person.role === "father" || person.role === "grandfather";
-    const stroke = highlight ? "stroke-gold" : isMasc ? "stroke-forest/70" : isFem ? "stroke-forest/80" : "stroke-border";
-    const fill = highlight ? "fill-gold/25" : isMasc ? "fill-forest/12" : isFem ? "fill-forest/20" : "fill-cream";
+    const stroke = highlight
+      ? "stroke-gold"
+      : isMasc
+        ? "stroke-forest/70"
+        : isFem
+          ? "stroke-forest/80"
+          : "stroke-border";
+    const fill = highlight
+      ? "fill-gold/25"
+      : isMasc
+        ? "fill-forest/12"
+        : isFem
+          ? "fill-forest/20"
+          : "fill-cream";
     const sw = highlight ? 2.5 : 1.75;
     const size = highlight ? 20 : 15;
-    const shape = isFem && !isMasc ? (
-      <circle cx={x} cy={y} r={size} className={`${fill} ${stroke}`} strokeWidth={sw} />
-    ) : (
-      <rect x={x - size} y={y - size} width={size * 2} height={size * 2} rx="4" className={`${fill} ${stroke}`} strokeWidth={sw} />
-    );
+    const shape =
+      isFem && !isMasc ? (
+        <circle cx={x} cy={y} r={size} className={`${fill} ${stroke}`} strokeWidth={sw} />
+      ) : (
+        <rect
+          x={x - size}
+          y={y - size}
+          width={size * 2}
+          height={size * 2}
+          rx="4"
+          className={`${fill} ${stroke}`}
+          strokeWidth={sw}
+        />
+      );
     const firstName = person.fullName.split(/\s+/)[0];
     const labelY = labelPos === "below" ? y + size + 14 : y - size - 6;
     return (
       <>
         {shape}
         {person.isDeceased && (
-          <line x1={x - size} y1={y - size} x2={x + size} y2={y + size} className="stroke-slate-600" strokeWidth="1.5" />
+          <line
+            x1={x - size}
+            y1={y - size}
+            x2={x + size}
+            y2={y + size}
+            className="stroke-slate-600"
+            strokeWidth="1.5"
+          />
         )}
-        <text x={x} y={labelY} textAnchor="middle" className={`fill-primary font-bold ${highlight ? "text-[11px]" : ""}`} fontSize={highlight ? 11 : 10}>
+        <text
+          x={x}
+          y={labelY}
+          textAnchor="middle"
+          className={`fill-primary font-bold ${highlight ? "text-[11px]" : ""}`}
+          fontSize={highlight ? 11 : 10}
+        >
           {firstName}
         </text>
       </>
@@ -459,7 +566,14 @@ function BigTree({ genogram, patientName }: { genogram: DossierGenogramDTO; pati
       <svg viewBox="0 0 600 340" className="w-full h-[320px]">
         {/* Row lines */}
         <line x1="60" y1="70" x2="540" y2="70" className="stroke-border/30" strokeDasharray="2 4" />
-        <line x1="140" y1="180" x2="460" y2="180" className="stroke-border/30" strokeDasharray="2 4" />
+        <line
+          x1="140"
+          y1="180"
+          x2="460"
+          y2="180"
+          className="stroke-border/30"
+          strokeDasharray="2 4"
+        />
 
         {/* Grandparents row */}
         <Node person={patGf ?? null} x={80} y={70} />
@@ -490,9 +604,15 @@ function BigTree({ genogram, patientName }: { genogram: DossierGenogramDTO; pati
 
       <div className="mt-4 flex items-center justify-between text-[11px] flex-wrap gap-2">
         <div className="flex items-center gap-4 text-muted-foreground">
-          <span className="flex items-center gap-1"><Circle className="size-2 fill-gold text-gold" /> Paciente</span>
-          <span className="flex items-center gap-1"><Circle className="size-2 fill-forest text-forest" /> Masculino</span>
-          <span className="flex items-center gap-1"><Circle className="size-2 fill-forest text-forest" /> Feminino</span>
+          <span className="flex items-center gap-1">
+            <Circle className="size-2 fill-gold text-gold" /> Paciente
+          </span>
+          <span className="flex items-center gap-1">
+            <Circle className="size-2 fill-forest text-forest" /> Masculino
+          </span>
+          <span className="flex items-center gap-1">
+            <Circle className="size-2 fill-forest text-forest" /> Feminino
+          </span>
           <span className="text-muted-foreground/70">✕ falecido</span>
         </div>
         <span className="text-muted-foreground/70">
@@ -541,14 +661,24 @@ function FamilyTimeline({ events }: { events: TimelineEventDTO[] }) {
                   <li key={i} className="flex items-start gap-3 -ml-[9px]">
                     <span
                       className={`size-4 rounded-full mt-0.5 shrink-0 border-2 border-white ${
-                        e.kind === "birth" ? "bg-emerald-500" : e.kind === "death" ? "bg-slate-500" : "bg-gold"
+                        e.kind === "birth"
+                          ? "bg-emerald-500"
+                          : e.kind === "death"
+                            ? "bg-slate-500"
+                            : "bg-gold"
                       }`}
                     />
                     <div className="min-w-0 flex-1">
                       <p className="text-[13px] text-primary font-semibold">
-                        <span className="tabular-nums text-muted-foreground font-normal">{e.year}</span> · {e.label}
+                        <span className="tabular-nums text-muted-foreground font-normal">
+                          {e.year}
+                        </span>{" "}
+                        · {e.label}
                         {e.personName && (
-                          <span className="text-muted-foreground font-normal"> — {e.personName}</span>
+                          <span className="text-muted-foreground font-normal">
+                            {" "}
+                            — {e.personName}
+                          </span>
                         )}
                       </p>
                     </div>
@@ -572,13 +702,17 @@ function RecentEvolutions({ evolutions }: { evolutions: EvolutionDTO[] }) {
         <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-forest flex items-center gap-2">
           <FileText className="size-3.5" /> Últimas evoluções
         </p>
-        <span className="text-[10px] text-muted-foreground/70">{evolutions.length}/8 mais recentes</span>
+        <span className="text-[10px] text-muted-foreground/70">
+          {evolutions.length}/8 mais recentes
+        </span>
       </div>
 
       {evolutions.length === 0 ? (
         <div className="py-8 text-center">
           <FileText className="size-8 text-muted-foreground/30 mx-auto mb-2" />
-          <p className="text-[12px] italic text-muted-foreground">Primeira sessão ainda não realizada.</p>
+          <p className="text-[12px] italic text-muted-foreground">
+            Primeira sessão ainda não realizada.
+          </p>
         </div>
       ) : (
         <ul className="divide-y divide-border/40">
@@ -589,7 +723,9 @@ function RecentEvolutions({ evolutions }: { evolutions: EvolutionDTO[] }) {
                   {new Date(e.dateISO).getDate().toString().padStart(2, "0")}
                 </p>
                 <p className="text-[10px] font-bold uppercase text-muted-foreground mt-0.5">
-                  {new Date(e.dateISO).toLocaleDateString("pt-BR", { month: "short" }).replace(".", "")}
+                  {new Date(e.dateISO)
+                    .toLocaleDateString("pt-BR", { month: "short" })
+                    .replace(".", "")}
                 </p>
               </div>
               <div className="flex-1 min-w-0">
@@ -602,7 +738,8 @@ function RecentEvolutions({ evolutions }: { evolutions: EvolutionDTO[] }) {
                   </Badge>
                 </div>
                 <p className="text-[12.5px] text-muted-foreground leading-snug mt-1 line-clamp-2">
-                  {e.summary ?? "Sem resumo estruturado — abra a evolução para ler o registro completo."}
+                  {e.summary ??
+                    "Sem resumo estruturado — abra a evolução para ler o registro completo."}
                 </p>
               </div>
               <ChevronRight className="size-4 text-muted-foreground/50 mt-3 shrink-0" />
@@ -632,7 +769,9 @@ function AiBriefing({ briefing }: { briefing: BriefingDTO }) {
       <div className="relative space-y-5">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-gold">Briefing IA</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-gold">
+              Briefing IA
+            </p>
             <p className="text-[12px] text-white/70 mt-0.5">Baseado nos padrões detectados</p>
           </div>
           <button
@@ -646,17 +785,25 @@ function AiBriefing({ briefing }: { briefing: BriefingDTO }) {
 
         {!hasContent && (
           <p className="text-[12px] text-white/70 italic">
-            Padrões clínicos e sugestões aparecerão à medida que sessões forem registradas e o genossociograma preenchido.
+            Padrões clínicos e sugestões aparecerão à medida que sessões forem registradas e o
+            genossociograma preenchido.
           </p>
         )}
 
         {briefing.clinicalAlerts.length > 0 && (
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-gold/90 mb-2">Pontos de atenção</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-gold/90 mb-2">
+              Pontos de atenção
+            </p>
             <ul className="space-y-1.5">
               {briefing.clinicalAlerts.map((a, i) => (
-                <li key={i} className="flex items-start gap-2 text-[13px] text-white/90 leading-relaxed">
-                  <AlertTriangle className={`size-3.5 shrink-0 mt-0.5 ${a.severity === "high" ? "text-rose-300" : a.severity === "warn" ? "text-gold" : "text-forest-mid"}`} />
+                <li
+                  key={i}
+                  className="flex items-start gap-2 text-[13px] text-white/90 leading-relaxed"
+                >
+                  <AlertTriangle
+                    className={`size-3.5 shrink-0 mt-0.5 ${a.severity === "high" ? "text-rose-300" : a.severity === "warn" ? "text-gold" : "text-forest-mid"}`}
+                  />
                   <span>{a.message}</span>
                 </li>
               ))}
@@ -666,12 +813,16 @@ function AiBriefing({ briefing }: { briefing: BriefingDTO }) {
 
         {briefing.hypotheses.length > 0 && (
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-gold/90 mb-2">Hipóteses clínicas</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-gold/90 mb-2">
+              Hipóteses clínicas
+            </p>
             <ul className="space-y-2">
               {briefing.hypotheses.map((h, i) => (
                 <li key={i} className="rounded-xl bg-white/[0.06] border border-white/10 px-3 py-2">
                   <p className="font-bold text-[13px] text-white">{h.title}</p>
-                  {h.description && <p className="text-[12px] text-white/70 mt-1 leading-snug">{h.description}</p>}
+                  {h.description && (
+                    <p className="text-[12px] text-white/70 mt-1 leading-snug">{h.description}</p>
+                  )}
                 </li>
               ))}
             </ul>
@@ -685,7 +836,10 @@ function AiBriefing({ briefing }: { briefing: BriefingDTO }) {
             </p>
             <ul className="space-y-1.5">
               {briefing.suggestedQuestions.map((q, i) => (
-                <li key={i} className="text-[12.5px] text-white/85 leading-relaxed font-serif italic">
+                <li
+                  key={i}
+                  className="text-[12.5px] text-white/85 leading-relaxed font-serif italic"
+                >
                   "{q}"
                 </li>
               ))}
@@ -700,7 +854,10 @@ function AiBriefing({ briefing }: { briefing: BriefingDTO }) {
             </p>
             <div className="flex flex-wrap gap-1.5">
               {briefing.suggestedProtocols.map((p) => (
-                <span key={p} className="rounded-full bg-white/[0.08] border border-white/15 px-2.5 py-1 text-[11.5px] font-semibold text-white/90">
+                <span
+                  key={p}
+                  className="rounded-full bg-white/[0.08] border border-white/15 px-2.5 py-1 text-[11.5px] font-semibold text-white/90"
+                >
                   {p}
                 </span>
               ))}
@@ -721,7 +878,10 @@ function ConnectedLibrary({ items }: { items: LibrarySuggestionDTO[] }) {
         <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-forest flex items-center gap-2">
           <BookOpen className="size-3.5" /> Biblioteca conectada
         </p>
-        <Link to="/app/biblioteca" className="text-[11px] text-forest font-bold hover:underline flex items-center gap-1">
+        <Link
+          to="/app/biblioteca"
+          className="text-[11px] text-forest font-bold hover:underline flex items-center gap-1"
+        >
           Ver tudo <ChevronRight className="size-3" />
         </Link>
       </div>
@@ -798,7 +958,9 @@ function DossierSkeleton() {
   return (
     <div className="min-h-[calc(100vh-64px)] bg-cream flex flex-col items-center justify-center gap-3">
       <Loader2 className="size-8 animate-spin text-forest" />
-      <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Carregando dossiê clínico…</p>
+      <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+        Carregando dossiê clínico…
+      </p>
     </div>
   );
 }

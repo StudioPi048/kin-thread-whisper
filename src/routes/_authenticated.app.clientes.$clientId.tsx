@@ -251,25 +251,29 @@ function ClientDossierPage() {
         subtitle={
           <div className="flex flex-wrap items-center gap-6 text-[13px] text-ink/70 not-italic mt-2 font-sans tracking-normal font-normal">
             <div className="flex items-center gap-2">
-              <Mail className="size-3.5 opacity-50" /> 
+              <Mail className="size-3.5 opacity-50" />
               <span className="font-medium">{client.email || "Sem e-mail"}</span>
             </div>
             <div className="flex items-center gap-2">
-              <Phone className="size-3.5 opacity-50" /> 
+              <Phone className="size-3.5 opacity-50" />
               <span className="font-medium">{client.phone || "Sem telefone"}</span>
             </div>
             <div className="flex items-center gap-2">
-              <MapPin className="size-3.5 opacity-50" /> 
+              <MapPin className="size-3.5 opacity-50" />
               <span className="font-medium">{client.birthplace || "Local não informado"}</span>
               <span className="opacity-40 mx-1">•</span>
               <span className="font-medium">{age !== null ? `${age} anos` : "Idade omitida"}</span>
             </div>
-            
+
             <div className="flex-1" />
-            
+
             <div className="flex items-center gap-4 bg-white/50 px-4 py-1.5 rounded-full border border-border/40">
-              <span className="flex items-center gap-1.5 text-[12px] font-semibold text-ink/80" title="Próxima sessão">
-                <CalendarDays className="size-3.5" /> {(client as { session_count?: number }).session_count || 0} sessões
+              <span
+                className="flex items-center gap-1.5 text-[12px] font-semibold text-ink/80"
+                title="Próxima sessão"
+              >
+                <CalendarDays className="size-3.5" />{" "}
+                {(client as { session_count?: number }).session_count || 0} sessões
               </span>
               <div className="w-px h-3 bg-border/60" />
               <span className="flex items-center gap-1.5 text-[12px] font-bold text-ink shadow-sm">
@@ -373,18 +377,18 @@ function ClientDossierPage() {
                 <div className="grid gap-6 xl:grid-cols-3">
                   <section className="xl:col-span-2 space-y-6">
                     {/* Bloco 2: Resumo IA Clínico (Fase 3.5A - Validado com Gramática) */}
-                    <ClinicalDocument 
-                      title="Hipótese Clínica (IA)" 
+                    <ClinicalDocument
+                      title="Hipótese Clínica (IA)"
                       grammar={{
-                        stage: 'investigada',
+                        stage: "investigada",
                         intensities: {
                           trauma: 0,
                           repetition: 2,
                           exclusion: 0,
                           loyalty: 0,
-                          secret: 0
+                          secret: 0,
                         },
-                        temporalAnchor: 'Idade Crítica: 64 anos'
+                        temporalAnchor: "Idade Crítica: 64 anos",
                       }}
                     >
                       <p className="font-serif">

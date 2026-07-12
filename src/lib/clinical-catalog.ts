@@ -2,18 +2,25 @@
 // Zero IA generativa — pura curadoria estática usada pelo briefing do Dossiê.
 
 export type JourneyStage =
-  | "primeira"
-  | "investigacao"
-  | "hipoteses"
-  | "elaboracao"
-  | "integracao"
-  | "alta";
+  "primeira" | "investigacao" | "hipoteses" | "elaboracao" | "integracao" | "alta";
 
 export const JOURNEY_STAGES: { key: JourneyStage; label: string; description: string }[] = [
-  { key: "primeira", label: "Primeira consulta", description: "Escuta inicial e vínculo terapêutico." },
-  { key: "investigacao", label: "Investigação", description: "Coleta transgeracional e mapeamento familiar." },
+  {
+    key: "primeira",
+    label: "Primeira consulta",
+    description: "Escuta inicial e vínculo terapêutico.",
+  },
+  {
+    key: "investigacao",
+    label: "Investigação",
+    description: "Coleta transgeracional e mapeamento familiar.",
+  },
   { key: "hipoteses", label: "Hipóteses", description: "Formulação de padrões e lealdades." },
-  { key: "elaboracao", label: "Elaboração", description: "Ressignificação e trabalho com protocolos." },
+  {
+    key: "elaboracao",
+    label: "Elaboração",
+    description: "Ressignificação e trabalho com protocolos.",
+  },
   { key: "integracao", label: "Integração", description: "Consolidação e novas escolhas." },
   { key: "alta", label: "Alta", description: "Encerramento e continuidade autônoma." },
 ];
@@ -90,10 +97,15 @@ export const LIBRARY_TAGS_BY_PATTERN: Record<string, string[]> = {
 
 export const normalizePatternKey = (raw: string | null | undefined): string => {
   if (!raw) return "default";
-  const k = raw.toLowerCase().trim().replace(/[-\s]+/g, "_").replace(/[^a-z_]/g, "");
+  const k = raw
+    .toLowerCase()
+    .trim()
+    .replace(/[-\s]+/g, "_")
+    .replace(/[^a-z_]/g, "");
   return k in QUESTIONS_BY_PATTERN ? k : "default";
 };
 
 export const questionsFor = (pattern: string) => QUESTIONS_BY_PATTERN[normalizePatternKey(pattern)];
 export const protocolsFor = (pattern: string) => PROTOCOLS_BY_PATTERN[normalizePatternKey(pattern)];
-export const libraryTagsFor = (pattern: string) => LIBRARY_TAGS_BY_PATTERN[normalizePatternKey(pattern)];
+export const libraryTagsFor = (pattern: string) =>
+  LIBRARY_TAGS_BY_PATTERN[normalizePatternKey(pattern)];

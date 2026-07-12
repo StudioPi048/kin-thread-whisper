@@ -1,4 +1,20 @@
-import { Feather, Ghost, HeartCrack, Link2, Target, Fingerprint, Building2, UserMinus, Anchor, Users, Baby, Lock, Dna, Scale, Clock } from "lucide-react";
+import {
+  Feather,
+  Ghost,
+  HeartCrack,
+  Link2,
+  Target,
+  Fingerprint,
+  Building2,
+  UserMinus,
+  Anchor,
+  Users,
+  Baby,
+  Lock,
+  Dna,
+  Scale,
+  Clock,
+} from "lucide-react";
 import leticiaAsset from "@/assets/leticia-baccin.png.asset.json";
 
 // ─────────────────────────────────────────────────────────────
@@ -193,8 +209,7 @@ export const AUTHORS: Array<{
     works: 30,
     concepts: 55,
     initials: "BH",
-    photo:
-      "https://commons.wikimedia.org/wiki/Special:FilePath/Bert_Hellinger.jpg?width=400",
+    photo: "https://commons.wikimedia.org/wiki/Special:FilePath/Bert_Hellinger.jpg?width=400",
     years: "1925–2019",
     nationality: "Alemanha",
   },
@@ -247,21 +262,87 @@ export const AUTHORS: Array<{
   },
 ];
 
-export const THEMES: Array<{ name: string; count: number; icon: typeof Feather; accent: string }> = [
-  { name: "Traumas", count: 42, icon: HeartCrack, accent: "bg-[#151A15] text-white border border-white/10" },
-  { name: "Lealdades", count: 28, icon: Link2, accent: "bg-[#1B211A] text-white border border-black/20" },
-  { name: "Doenças", count: 31, icon: Dna, accent: "bg-[#1B211A] text-white border border-black/20" },
-  { name: "Projeto Sentido", count: 19, icon: Target, accent: "bg-[#151A15] text-[#1B211A] border border-[#1B211A]/10" },
-  { name: "Nome", count: 12, icon: Fingerprint, accent: "bg-[#1B211A] text-white border border-black/20" },
-  { name: "Empresa Familiar", count: 15, icon: Building2, accent: "bg-[#1B211A] text-white border border-black/20" },
-  { name: "Abandono", count: 24, icon: UserMinus, accent: "bg-[#1B211A] text-white border border-black/20" },
-  { name: "Luto", count: 33, icon: Anchor, accent: "bg-[#D4AF37] text-[#1B211A] border border-[#D4AF37]/50" },
-  { name: "Exclusão", count: 21, icon: Users, accent: "bg-[#1B211A] text-white border border-black/20" },
-  { name: "Aborto", count: 18, icon: Baby, accent: "bg-[#1B211A] text-white border border-black/20" },
-  { name: "Segredos", count: 26, icon: Lock, accent: "bg-white/5 text-white border-l-4 border-l-[#D4AF37]" },
-  { name: "Epigenética", count: 14, icon: Dna, accent: "bg-[#1B211A] text-white border border-black/20" },
-  { name: "Ordens do Amor", count: 17, icon: Scale, accent: "bg-[#1B211A] text-white border border-black/20" },
-];
+export const THEMES: Array<{ name: string; count: number; icon: typeof Feather; accent: string }> =
+  [
+    {
+      name: "Traumas",
+      count: 42,
+      icon: HeartCrack,
+      accent: "bg-[#151A15] text-white border border-white/10",
+    },
+    {
+      name: "Lealdades",
+      count: 28,
+      icon: Link2,
+      accent: "bg-[#1B211A] text-white border border-black/20",
+    },
+    {
+      name: "Doenças",
+      count: 31,
+      icon: Dna,
+      accent: "bg-[#1B211A] text-white border border-black/20",
+    },
+    {
+      name: "Projeto Sentido",
+      count: 19,
+      icon: Target,
+      accent: "bg-[#151A15] text-[#1B211A] border border-[#1B211A]/10",
+    },
+    {
+      name: "Nome",
+      count: 12,
+      icon: Fingerprint,
+      accent: "bg-[#1B211A] text-white border border-black/20",
+    },
+    {
+      name: "Empresa Familiar",
+      count: 15,
+      icon: Building2,
+      accent: "bg-[#1B211A] text-white border border-black/20",
+    },
+    {
+      name: "Abandono",
+      count: 24,
+      icon: UserMinus,
+      accent: "bg-[#1B211A] text-white border border-black/20",
+    },
+    {
+      name: "Luto",
+      count: 33,
+      icon: Anchor,
+      accent: "bg-[#D4AF37] text-[#1B211A] border border-[#D4AF37]/50",
+    },
+    {
+      name: "Exclusão",
+      count: 21,
+      icon: Users,
+      accent: "bg-[#1B211A] text-white border border-black/20",
+    },
+    {
+      name: "Aborto",
+      count: 18,
+      icon: Baby,
+      accent: "bg-[#1B211A] text-white border border-black/20",
+    },
+    {
+      name: "Segredos",
+      count: 26,
+      icon: Lock,
+      accent: "bg-white/5 text-white border-l-4 border-l-[#D4AF37]",
+    },
+    {
+      name: "Epigenética",
+      count: 14,
+      icon: Dna,
+      accent: "bg-[#1B211A] text-white border border-black/20",
+    },
+    {
+      name: "Ordens do Amor",
+      count: 17,
+      icon: Scale,
+      accent: "bg-[#1B211A] text-white border border-black/20",
+    },
+  ];
 
 export const ESSENTIAL_BOOKS: Array<{
   title: string;
@@ -432,7 +513,8 @@ export const GLOSSARY: Array<{
     short: "Segredo inconfessável enterrado no psiquismo de uma geração.",
     icon: Lock,
     full: "Espaço psíquico onde um segredo indizível é encapsulado. A cripta impede a elaboração do luto e prepara o terreno para o fantasma nas gerações seguintes.",
-    history: "Conceito formulado por Nicolas Abraham e Maria Torok (1978) a partir da releitura de Freud.",
+    history:
+      "Conceito formulado por Nicolas Abraham e Maria Torok (1978) a partir da releitura de Freud.",
     authors: ["Nicolas Abraham", "Maria Torok"],
     related: ["Fantasma", "Segredo", "Não-dito"],
     books: ["A Casca e o Núcleo"],
@@ -506,7 +588,12 @@ export const PROTOCOLS = [
     indication: "Primeira sessão · anamnese sistêmica",
     duration: "45–60 min",
     complexity: 1,
-    steps: ["Nomes e datas por linhagem", "Causas de morte", "Rupturas e uniões", "Segredos e não-ditos"],
+    steps: [
+      "Nomes e datas por linhagem",
+      "Causas de morte",
+      "Rupturas e uniões",
+      "Segredos e não-ditos",
+    ],
     accent: "border-l-gold",
   },
   {
@@ -515,7 +602,12 @@ export const PROTOCOLS = [
     indication: "Sintoma sem causa aparente · idade-gatilho",
     duration: "30 min",
     complexity: 2,
-    steps: ["Idade atual do paciente", "Idades de morte dos avós", "Datas traumáticas do clã", "Coincidências ativas"],
+    steps: [
+      "Idade atual do paciente",
+      "Idades de morte dos avós",
+      "Datas traumáticas do clã",
+      "Coincidências ativas",
+    ],
     accent: "border-l-forest",
   },
   {
@@ -524,8 +616,12 @@ export const PROTOCOLS = [
     indication: "Sensação de vazio · repetições inexplicadas",
     duration: "60 min",
     complexity: 3,
-    steps: ["O que não é falado?", "Quem desapareceu da história?", "O que o corpo expressa?", "Ritual de nomeação"],
+    steps: [
+      "O que não é falado?",
+      "Quem desapareceu da história?",
+      "O que o corpo expressa?",
+      "Ritual de nomeação",
+    ],
     accent: "border-l-forest",
   },
 ];
-

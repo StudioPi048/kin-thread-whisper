@@ -61,7 +61,7 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
   ) {
     gender = "feminino";
   }
-  
+
   if (rawGender.includes("aborto") || rawName.includes("aborto") || rawPref.includes("aborto")) {
     gender = "aborto";
   }
@@ -122,11 +122,14 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
             className="pointer-events-none absolute inset-0 size-full"
             viewBox="0 0 100 100"
           >
-            <line 
-              x1="15" y1="85" x2="85" y2="15" 
-              stroke="#3A3A3A" 
-              strokeWidth="4" 
-              strokeLinecap="round" 
+            <line
+              x1="15"
+              y1="85"
+              x2="85"
+              y2="15"
+              stroke="#3A3A3A"
+              strokeWidth="4"
+              strokeLinecap="round"
             />
           </svg>
         )}

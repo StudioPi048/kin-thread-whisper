@@ -1,6 +1,6 @@
 /**
  * Vocabulário Oficial GeneaLiz - Tipagens Clínicas
- * 
+ *
  * Este arquivo contém o modelo de domínio (Fase 3.5A) focado na infraestrutura
  * estrutural da Gramática Visual, sem implementações visuais diretas.
  */
@@ -18,12 +18,12 @@ export type IntensityLevel = 0 | 1 | 2 | 3;
  * Ciclo de Maturação Clínica (Fase 4).
  * O ciclo de vida da informação clínica desde a percepção até o encerramento.
  */
-export type MaturationStage = 
-  | 'observada'     // A IA ou terapeuta nota um padrão
-  | 'investigada'   // Exploração ativa
-  | 'corroborada'   // Ganha força e liga-se a membros da família
-  | 'contestada'    // Descartada temporariamente, mantida no histórico
-  | 'arquivada';    // Ciclo fechado
+export type MaturationStage =
+  | "observada" // A IA ou terapeuta nota um padrão
+  | "investigada" // Exploração ativa
+  | "corroborada" // Ganha força e liga-se a membros da família
+  | "contestada" // Descartada temporariamente, mantida no histórico
+  | "arquivada"; // Ciclo fechado
 
 /**
  * Estado Clínico Base
@@ -32,7 +32,7 @@ export type MaturationStage =
 export interface ClinicalState {
   /** O estágio atual de investigação do dado */
   stage: MaturationStage;
-  
+
   /** Níveis de intensidade de cada conceito aplicável a este estado */
   intensities: {
     trauma: IntensityLevel;
@@ -44,7 +44,7 @@ export interface ClinicalState {
 
   /** IDs de nós conectados caso haja ligações (ex: lealdades invisíveis) */
   connectedNodes?: string[];
-  
+
   /** Marcação de tempo/idade relevante (ex: Síndrome de Aniversário) */
   temporalAnchor?: string | null;
 }
@@ -52,7 +52,7 @@ export interface ClinicalState {
 /**
  * Função utilitária para inicializar um estado clínico "zerado"
  */
-export function createEmptyClinicalState(stage: MaturationStage = 'observada'): ClinicalState {
+export function createEmptyClinicalState(stage: MaturationStage = "observada"): ClinicalState {
   return {
     stage,
     intensities: {
@@ -61,6 +61,6 @@ export function createEmptyClinicalState(stage: MaturationStage = 'observada'): 
       exclusion: 0,
       loyalty: 0,
       secret: 0,
-    }
+    },
   };
 }

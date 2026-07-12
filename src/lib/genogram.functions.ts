@@ -12,7 +12,16 @@ export type GenogramPersonDTO = {
   hasBirthDate: boolean;
   hasDeathDate: boolean;
   relationshipTo: string | null; // relationship_to_proband
-  role: "proband" | "father" | "mother" | "grandfather" | "grandmother" | "sibling" | "child" | "spouse" | "other";
+  role:
+    | "proband"
+    | "father"
+    | "mother"
+    | "grandfather"
+    | "grandmother"
+    | "sibling"
+    | "child"
+    | "spouse"
+    | "other";
 };
 
 export type GenogramAlert = {
@@ -58,7 +67,9 @@ const lastSurname = (fullName: string): string | null => {
 
 export const getClientGenogram = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { clientId: string }) => z.object({ clientId: z.string().uuid() }).parse(data))
+  .inputValidator((data: { clientId: string }) =>
+    z.object({ clientId: z.string().uuid() }).parse(data),
+  )
   .handler(async ({ data, context }): Promise<ClientGenogramDTO> => {
     const { supabase } = context;
 
@@ -87,20 +98,29 @@ export const getClientGenogram = createServerFn({ method: "GET" })
 
     const proband = persons.find((p) => p.role === "proband") ?? null;
     const parents = persons.filter((p) => p.role === "father" || p.role === "mother");
-    const grandparents = persons.filter((p) => p.role === "grandfather" || p.role === "grandmother");
+    const grandparents = persons.filter(
+      (p) => p.role === "grandfather" || p.role === "grandmother",
+    );
     const siblings = persons.filter((p) => p.role === "sibling");
     const others = persons.filter(
-      (p) => !["proband", "father", "mother", "grandfather", "grandmother", "sibling"].includes(p.role),
+      (p) =>
+        !["proband", "father", "mother", "grandfather", "grandmother", "sibling"].includes(p.role),
     );
 
     // ---- rule-based alerts ----
     const alerts: GenogramAlert[] = [];
 
     if (persons.length === 0) {
-      alerts.push({ severity: "high", message: "Genossociograma ainda não iniciado para este cliente." });
+      alerts.push({
+        severity: "high",
+        message: "Genossociograma ainda não iniciado para este cliente.",
+      });
     } else {
       if (!proband) {
-        alerts.push({ severity: "warn", message: "Nenhuma pessoa marcada como paciente (proband) no genograma." });
+        alerts.push({
+          severity: "warn",
+          message: "Nenhuma pessoa marcada como paciente (proband) no genograma.",
+        });
       }
       if (parents.length < 2) {
         alerts.push({
@@ -135,7 +155,11 @@ export const getClientGenogram = createServerFn({ method: "GET" })
         const ev = p._lifeEvents;
         if (Array.isArray(ev)) {
           ev.forEach((e) => {
-            if (e && typeof e === "object" && !("date" in e && (e as Record<string, unknown>).date)) {
+            if (
+              e &&
+              typeof e === "object" &&
+              !("date" in e && (e as Record<string, unknown>).date)
+            ) {
               eventsNoDate++;
             }
           });

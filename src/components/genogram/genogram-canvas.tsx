@@ -25,7 +25,18 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { UserPlus, Link2, Trash2, Printer, HelpCircle, Users, TreePine, Save, Lock, Unlock } from "lucide-react";
+import {
+  UserPlus,
+  Link2,
+  Trash2,
+  Printer,
+  HelpCircle,
+  Users,
+  TreePine,
+  Save,
+  Lock,
+  Unlock,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -82,14 +93,54 @@ const UnionNodeComponent = ({ data }: NodeProps) => {
           <path d="M20 22 L28 4" stroke="#3A3A3A" strokeWidth={2.5} strokeLinecap="round" />
         </svg>
       )}
-      <Handle id="top" type="source" position={Position.Top} className="opacity-0 pointer-events-none" />
-      <Handle id="bottom" type="source" position={Position.Bottom} className="opacity-0 pointer-events-none" />
-      <Handle id="left" type="source" position={Position.Left} className="opacity-0 pointer-events-none" />
-      <Handle id="right" type="source" position={Position.Right} className="opacity-0 pointer-events-none" />
-      <Handle id="top-target" type="target" position={Position.Top} className="opacity-0 pointer-events-none" />
-      <Handle id="bottom-target" type="target" position={Position.Bottom} className="opacity-0 pointer-events-none" />
-      <Handle id="left-target" type="target" position={Position.Left} className="opacity-0 pointer-events-none" />
-      <Handle id="right-target" type="target" position={Position.Right} className="opacity-0 pointer-events-none" />
+      <Handle
+        id="top"
+        type="source"
+        position={Position.Top}
+        className="opacity-0 pointer-events-none"
+      />
+      <Handle
+        id="bottom"
+        type="source"
+        position={Position.Bottom}
+        className="opacity-0 pointer-events-none"
+      />
+      <Handle
+        id="left"
+        type="source"
+        position={Position.Left}
+        className="opacity-0 pointer-events-none"
+      />
+      <Handle
+        id="right"
+        type="source"
+        position={Position.Right}
+        className="opacity-0 pointer-events-none"
+      />
+      <Handle
+        id="top-target"
+        type="target"
+        position={Position.Top}
+        className="opacity-0 pointer-events-none"
+      />
+      <Handle
+        id="bottom-target"
+        type="target"
+        position={Position.Bottom}
+        className="opacity-0 pointer-events-none"
+      />
+      <Handle
+        id="left-target"
+        type="target"
+        position={Position.Left}
+        className="opacity-0 pointer-events-none"
+      />
+      <Handle
+        id="right-target"
+        type="target"
+        position={Position.Right}
+        className="opacity-0 pointer-events-none"
+      />
     </div>
   );
 };
@@ -167,37 +218,37 @@ function StraightStepEdge({
 
   return (
     <>
-    <BaseEdge
-      path={path}
-      style={style}
-      markerEnd={markerEnd}
-      markerStart={markerStart}
-      label={label}
-      labelStyle={labelStyle}
-      labelShowBg={labelShowBg}
-      labelBgStyle={labelBgStyle}
-      labelBgPadding={labelBgPadding}
-      labelBgBorderRadius={labelBgBorderRadius}
-      interactionWidth={interactionWidth}
-      labelX={labelX}
-      labelY={labelY}
-    />
-    {showUnionBreakMark &&
-      Array.from({ length: breakMarkCount }).map((_, i) => {
-        const offset = breakMarkCount === 2 ? (i === 0 ? -5 : 5) : 0;
-        const x = labelX + offset;
-        return (
-          <path
-            key={i}
-            d={`M ${x - 7} ${breakY + 12} L ${x + 7} ${breakY - 12}`}
-            fill="none"
-            stroke="#3A3A3A"
-            strokeWidth={2.5}
-            strokeLinecap="round"
-            pointerEvents="none"
-          />
-        );
-      })}
+      <BaseEdge
+        path={path}
+        style={style}
+        markerEnd={markerEnd}
+        markerStart={markerStart}
+        label={label}
+        labelStyle={labelStyle}
+        labelShowBg={labelShowBg}
+        labelBgStyle={labelBgStyle}
+        labelBgPadding={labelBgPadding}
+        labelBgBorderRadius={labelBgBorderRadius}
+        interactionWidth={interactionWidth}
+        labelX={labelX}
+        labelY={labelY}
+      />
+      {showUnionBreakMark &&
+        Array.from({ length: breakMarkCount }).map((_, i) => {
+          const offset = breakMarkCount === 2 ? (i === 0 ? -5 : 5) : 0;
+          const x = labelX + offset;
+          return (
+            <path
+              key={i}
+              d={`M ${x - 7} ${breakY + 12} L ${x + 7} ${breakY - 12}`}
+              fill="none"
+              stroke="#3A3A3A"
+              strokeWidth={2.5}
+              strokeLinecap="round"
+              pointerEvents="none"
+            />
+          );
+        })}
     </>
   );
 }
@@ -209,13 +260,15 @@ function nodeShapeSize(node: Node | undefined): number {
 
 function nodeCenterX(node: Node | undefined): number {
   if (!node) return 0;
-  const measured = (node as Node & { measured?: { width?: number } }).measured?.width ?? node.width ?? NODE_W;
+  const measured =
+    (node as Node & { measured?: { width?: number } }).measured?.width ?? node.width ?? NODE_W;
   return node.position.x + measured / 2;
 }
 
 function nodeBottomY(node: Node | undefined): number {
   if (!node) return 0;
-  const measured = (node as Node & { measured?: { height?: number } }).measured?.height ?? node.height ?? NODE_H;
+  const measured =
+    (node as Node & { measured?: { height?: number } }).measured?.height ?? node.height ?? NODE_H;
   return node.position.y + measured;
 }
 
@@ -258,31 +311,27 @@ function PedigreeEdge({ style, markerEnd, markerStart, interactionWidth, data }:
   // minChildTop + shapeSize (76) + 12px (gap) + 72px (card) + 24px (gap to line)
   const shapeSize = 76;
   const cardHeight = 72;
-  const siblingBarY = unionY < minChildTop
-    ? minChildTop - 30
-    : minChildTop + shapeSize + 12 + cardHeight + 24;
+  const siblingBarY =
+    unionY < minChildTop ? minChildTop - 30 : minChildTop + shapeSize + 12 + cardHeight + 24;
 
   let path = "";
   path += `M ${barLeft} ${siblingBarY} L ${barRight} ${siblingBarY} `;
   for (const p of childPoints) {
     const childShapeSize = nodeShapeSize(p.node);
     const safeGap = 20;
-    
+
     // Conecta na base/topo do símbolo do filho respeitando os 20px de respiro
-    const childConnY = p.y < siblingBarY
-      ? p.y + childShapeSize + safeGap
-      : p.y - safeGap;
-      
+    const childConnY = p.y < siblingBarY ? p.y + childShapeSize + safeGap : p.y - safeGap;
+
     path += `M ${p.x} ${childConnY} L ${p.x} ${siblingBarY} `;
   }
-  
+
   // Conecta na união parental respeitando os 20px de respiro do símbolo
   const safeGap = 20;
   const unionHalfSize = 6; // UNION_SIZE / 2
-  const unionConnY = unionY < siblingBarY
-    ? unionY + unionHalfSize + safeGap
-    : unionY - unionHalfSize - safeGap;
-    
+  const unionConnY =
+    unionY < siblingBarY ? unionY + unionHalfSize + safeGap : unionY - unionHalfSize - safeGap;
+
   path += `M ${unionX} ${siblingBarY} L ${unionX} ${unionConnY}`;
 
   return (
@@ -316,11 +365,11 @@ function PartnerEdge({ style, interactionWidth, data }: EdgeProps) {
   const py = nodeUnionY(live.person);
   const ux = live.union.position.x;
   const uy = live.union.position.y;
-  
+
   const shapeSize = nodeShapeSize(live.person);
   const R = shapeSize / 2;
   const safeGap = 20;
-  
+
   let path = "";
   if (Math.abs(py - uy) < 1) {
     const startX = px < ux ? px + R + safeGap : px - R - safeGap;
@@ -329,7 +378,7 @@ function PartnerEdge({ style, interactionWidth, data }: EdgeProps) {
     const startY = py < uy ? py + R + safeGap : py - R - safeGap;
     path = `M ${px} ${startY} L ${px} ${uy} L ${ux} ${uy}`;
   }
-  
+
   return <BaseEdge path={path} style={style} interactionWidth={interactionWidth} />;
 }
 
@@ -366,7 +415,6 @@ function GenerationRuler() {
 function ShortcutsLegend() {
   return (
     <div className="w-[168px] overflow-hidden rounded-lg border border-forest/25 bg-white/95 shadow-lg backdrop-blur-md ring-1 ring-black/5">
-
       <div className="bg-forest/5 px-2.5 py-1.5 border-b border-forest/20">
         <p className="font-serif text-[16px] font-bold leading-tight text-forest">Atalhos</p>
       </div>
@@ -430,7 +478,6 @@ import {
   validateGraph,
 } from "@/lib/geno/build";
 
-
 /**
  * Constrói nós/edges React-Flow a partir do grafo lógico + layout.
  * Nenhuma decisão de conexão parte de posição; tudo vem do grafo lógico.
@@ -445,7 +492,7 @@ function buildRenderGraph(
   const validation = validateGraph(graph);
   if (!validation.ok) {
     // Não bloqueia o render; loga para o console pra manter a UX suave.
-    // eslint-disable-next-line no-console
+
     console.warn("[genograma] invariantes falharam:", validation.errors);
   }
   const placement = layoutGraph(graph);
@@ -538,10 +585,8 @@ function buildRenderGraph(
     });
   }
 
-
   return { nodes, edges };
 }
-
 
 function GenogramCanvasInner({ clientId }: CanvasProps) {
   const qc = useQueryClient();
@@ -552,7 +597,12 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
       const [persons, rels, layoutsResp] = await Promise.all([
         supabase.from("genogram_persons").select("*").eq("client_id", clientId),
         supabase.from("genogram_relationships").select("*").eq("client_id", clientId),
-        supabase.from("genogram_layouts").select("*").eq("client_id", clientId).order('updated_at', { ascending: false }).limit(1),
+        supabase
+          .from("genogram_layouts")
+          .select("*")
+          .eq("client_id", clientId)
+          .order("updated_at", { ascending: false })
+          .limit(1),
       ]);
       if (persons.error) throw persons.error;
       if (rels.error) throw rels.error;
@@ -562,7 +612,10 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
       let layout: LayoutRow | null = null;
       if (layoutsResp.data && layoutsResp.data.length > 0) {
         layout = layoutsResp.data[0] as LayoutRow;
-        const posResp = await supabase.from("genogram_node_positions").select("*").eq("layout_id", layout.id);
+        const posResp = await supabase
+          .from("genogram_node_positions")
+          .select("*")
+          .eq("layout_id", layout.id);
         if (!posResp.error) {
           positions = (posResp.data ?? []) as NodePositionRow[];
         }
@@ -591,7 +644,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
   const [layoutDirty, setLayoutDirty] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [isLayoutFixed, setIsLayoutFixed] = useState(false);
-  
+
   useEffect(() => {
     if (query.data?.layout) {
       setIsLayoutFixed(query.data.layout.is_fixed);
@@ -652,7 +705,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
       qualifiedPersons,
       query.data.rels,
       probandId,
-      query.data.positions
+      query.data.positions,
     );
 
     // Injeta o callback de quick-add nos nós de pessoa (função depende de state
@@ -671,8 +724,6 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
     setNodes(nodesWithHandlers);
     setEdges(layoutedEdges);
     setLayoutDirty(false);
-
-
 
     const centerTimer = window.setTimeout(() => {
       if (cancelled) return;
@@ -716,7 +767,6 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
       rfInstance.fitView({ padding: 0.08, duration: 600, minZoom: 0.2, maxZoom: 1.4 });
     }, 120);
 
-
     return () => {
       cancelled = true;
       window.clearTimeout(centerTimer);
@@ -726,7 +776,9 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
   // Lock dragging strictly to X axis
   const onNodesChangeCustom = useCallback(
     (changes: NodeChange[]) => {
-      const hasPositionChange = changes.some((change) => change.type === "position" && change.position);
+      const hasPositionChange = changes.some(
+        (change) => change.type === "position" && change.position,
+      );
       const nextChanges = changes.map((change) => {
         if (change.type === "position" && change.position) {
           const node = rfInstance.getNode(change.id);
@@ -888,7 +940,10 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
       const layoutId = query.data?.layout?.id;
       if (!layoutId) return false;
       const newValue = !isLayoutFixed;
-      const { error } = await supabase.from("genogram_layouts").update({ is_fixed: newValue }).eq("id", layoutId);
+      const { error } = await supabase
+        .from("genogram_layouts")
+        .update({ is_fixed: newValue })
+        .eq("id", layoutId);
       if (error) throw error;
       return newValue;
     },
@@ -957,7 +1012,9 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
             onClick={() => toggleLayoutFixed.mutate()}
             disabled={!query.data?.layout?.id || toggleLayoutFixed.isPending}
             className={`h-11 gap-2 border-white/25 normal-case tracking-normal font-semibold text-[16px] ${isLayoutFixed ? "bg-white/20 text-white" : "text-white hover:bg-white/10 hover:text-white"}`}
-            title={!query.data?.layout?.id ? "Salve o layout pelo menos uma vez para poder fixá-lo" : ""}
+            title={
+              !query.data?.layout?.id ? "Salve o layout pelo menos uma vez para poder fixá-lo" : ""
+            }
           >
             {isLayoutFixed ? <Lock className="size-4 text-gold" /> : <Unlock className="size-4" />}
             {isLayoutFixed ? "Fixo" : "Livre"}
@@ -1013,8 +1070,6 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
         </div>
       </div>
 
-
-
       {showGuide && (
         <div className="border-b border-border bg-forest-soft px-4 py-3">
           <div className="flex flex-wrap gap-6 text-[16px] text-foreground/70">
@@ -1038,11 +1093,8 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
 
       {/* Legenda movida para o painel lateral "Copiloto Clínico" */}
 
-
       {/* ── CANVAS ──────── */}
-      <div
-        className="absolute inset-0 z-0 bg-transparent shadow-[inset_0_0_120px_rgba(59,47,47,0.1)]"
-      >
+      <div className="absolute inset-0 z-0 bg-transparent shadow-[inset_0_0_120px_rgba(59,47,47,0.1)]">
         {query.isLoading ? (
           <div className="flex h-full flex-col items-center justify-center gap-3">
             <div className="h-11 w-11 animate-spin rounded-full border-2 border-forest border-t-transparent" />
@@ -1175,7 +1227,7 @@ function relToEdge(r: RelRow): Edge {
     labelBgStyle: { fill: "var(--color-card)", fillOpacity: 0.98, rx: 3, ry: 3 },
     labelBgPadding: [4, 6] as [number, number],
     animated: r.qualifier === "conflict",
-      data: { relationshipType: r.relationship_type, qualifier: r.qualifier, marriageOrder: order },
+    data: { relationshipType: r.relationship_type, qualifier: r.qualifier, marriageOrder: order },
     style: {
       stroke,
       strokeWidth: (thick ? 3 : 2) + unionExtra,

@@ -240,8 +240,7 @@ const AUTHORS: Array<{
     works: 30,
     concepts: 55,
     initials: "BH",
-    photo:
-      "https://commons.wikimedia.org/wiki/Special:FilePath/Bert_Hellinger.jpg?width=400",
+    photo: "https://commons.wikimedia.org/wiki/Special:FilePath/Bert_Hellinger.jpg?width=400",
     years: "1925–2019",
     nationality: "Alemanha",
   },
@@ -296,18 +295,53 @@ const AUTHORS: Array<{
 
 const THEMES: Array<{ name: string; count: number; icon: typeof Feather; accent: string }> = [
   { name: "Traumas", count: 42, icon: HeartCrack, accent: "bg-forest text-white" },
-  { name: "Lealdades", count: 28, icon: Link2, accent: "bg-white text-forest border border-forest/10" },
+  {
+    name: "Lealdades",
+    count: 28,
+    icon: Link2,
+    accent: "bg-white text-forest border border-forest/10",
+  },
   { name: "Doenças", count: 31, icon: Dna, accent: "bg-white text-forest border border-forest/10" },
   { name: "Projeto Sentido", count: 19, icon: Target, accent: "bg-forest text-white" },
-  { name: "Nome", count: 12, icon: Fingerprint, accent: "bg-white text-forest border border-forest/10" },
-  { name: "Empresa Familiar", count: 15, icon: Building2, accent: "bg-white text-forest border border-forest/10" },
-  { name: "Abandono", count: 24, icon: UserMinus, accent: "bg-white text-forest border border-forest/10" },
+  {
+    name: "Nome",
+    count: 12,
+    icon: Fingerprint,
+    accent: "bg-white text-forest border border-forest/10",
+  },
+  {
+    name: "Empresa Familiar",
+    count: 15,
+    icon: Building2,
+    accent: "bg-white text-forest border border-forest/10",
+  },
+  {
+    name: "Abandono",
+    count: 24,
+    icon: UserMinus,
+    accent: "bg-white text-forest border border-forest/10",
+  },
   { name: "Luto", count: 33, icon: Anchor, accent: "bg-gold text-forest" },
-  { name: "Exclusão", count: 21, icon: Users, accent: "bg-white text-forest border border-forest/10" },
+  {
+    name: "Exclusão",
+    count: 21,
+    icon: Users,
+    accent: "bg-white text-forest border border-forest/10",
+  },
   { name: "Aborto", count: 18, icon: Baby, accent: "bg-white text-forest border border-forest/10" },
   { name: "Segredos", count: 26, icon: Lock, accent: "bg-forest/90 text-white" },
-  { name: "Epigenética", count: 14, icon: Dna, accent: "bg-white text-forest border border-forest/10" },
-  { name: "Ordens do Amor", count: 17, icon: Scale, accent: "bg-white text-forest border border-forest/10" },
+  {
+    name: "Epigenética",
+    count: 14,
+    icon: Dna,
+    accent: "bg-white text-forest border border-forest/10",
+  },
+  {
+    name: "Ordens do Amor",
+    count: 17,
+    icon: Scale,
+    accent: "bg-white text-forest border border-forest/10",
+  },
 ];
 
 const ESSENTIAL_BOOKS: Array<{
@@ -479,7 +513,8 @@ const GLOSSARY: Array<{
     short: "Segredo inconfessável enterrado no psiquismo de uma geração.",
     icon: Lock,
     full: "Espaço psíquico onde um segredo indizível é encapsulado. A cripta impede a elaboração do luto e prepara o terreno para o fantasma nas gerações seguintes.",
-    history: "Conceito formulado por Nicolas Abraham e Maria Torok (1978) a partir da releitura de Freud.",
+    history:
+      "Conceito formulado por Nicolas Abraham e Maria Torok (1978) a partir da releitura de Freud.",
     authors: ["Nicolas Abraham", "Maria Torok"],
     related: ["Fantasma", "Segredo", "Não-dito"],
     books: ["A Casca e o Núcleo"],
@@ -553,7 +588,12 @@ const PROTOCOLS = [
     indication: "Primeira sessão · anamnese sistêmica",
     duration: "45–60 min",
     complexity: 1,
-    steps: ["Nomes e datas por linhagem", "Causas de morte", "Rupturas e uniões", "Segredos e não-ditos"],
+    steps: [
+      "Nomes e datas por linhagem",
+      "Causas de morte",
+      "Rupturas e uniões",
+      "Segredos e não-ditos",
+    ],
     accent: "border-l-gold",
   },
   {
@@ -562,7 +602,12 @@ const PROTOCOLS = [
     indication: "Sintoma sem causa aparente · idade-gatilho",
     duration: "30 min",
     complexity: 2,
-    steps: ["Idade atual do paciente", "Idades de morte dos avós", "Datas traumáticas do clã", "Coincidências ativas"],
+    steps: [
+      "Idade atual do paciente",
+      "Idades de morte dos avós",
+      "Datas traumáticas do clã",
+      "Coincidências ativas",
+    ],
     accent: "border-l-forest",
   },
   {
@@ -571,7 +616,12 @@ const PROTOCOLS = [
     indication: "Sensação de vazio · repetições inexplicadas",
     duration: "60 min",
     complexity: 3,
-    steps: ["O que não é falado?", "Quem desapareceu da história?", "O que o corpo expressa?", "Ritual de nomeação"],
+    steps: [
+      "O que não é falado?",
+      "Quem desapareceu da história?",
+      "O que o corpo expressa?",
+      "Ritual de nomeação",
+    ],
     accent: "border-l-forest",
   },
 ];
@@ -625,7 +675,6 @@ function BibliotecaPage() {
           {/* ── SEARCH AREA ───────────────────────────────────────── */}
           <section className="relative">
             <div className="relative z-10 space-y-6">
-
               <div className="group relative max-w-3xl">
                 <div className="absolute inset-0 rounded-[1.25rem] bg-gradient-to-r from-forest/30 to-gold/20 blur-xl opacity-60 group-focus-within:opacity-100 transition-opacity duration-500" />
                 <div className="relative flex items-center gap-3 rounded-[1.25rem] border border-forest/10 bg-white p-2 pl-5 shadow-[0_20px_60px_-30px_oklch(0.25_0.10_295/0.5)]">
@@ -668,7 +717,6 @@ function BibliotecaPage() {
           {/* ── HOJE NA BIBLIOTECA (BENTO) ─────────────────── */}
           <section className="space-y-6">
             <SectionHeader number="03" eyebrow="Descoberta diária" title="Hoje na Biblioteca" />
-
 
             <div className="grid grid-cols-4 gap-4 auto-rows-[minmax(180px,auto)]">
               {/* Concept of day — big */}
@@ -766,7 +814,6 @@ function BibliotecaPage() {
             </div>
           </section>
 
-
           {/* ── EXPLORAR POR TEMA ──────────────────────────── */}
           <section className="space-y-6">
             <SectionHeader number="05" eyebrow="Explorar por tema" title="Territórios clínicos" />
@@ -808,7 +855,6 @@ function BibliotecaPage() {
                 >
                   {/* Real cover with typographic fallback */}
                   <BookCoverArt book={b} />
-
 
                   {/* Meta */}
                   <div className="flex-1 min-w-0 flex flex-col">
@@ -877,9 +923,17 @@ function BibliotecaPage() {
                         ? "bg-forest/15 text-forest border border-forest/30"
                         : "bg-white text-forest border border-forest/10";
                 const authorColor =
-                  q.tone === "forest" ? "text-gold" : q.tone === "gold" ? "text-forest" : "text-forest";
+                  q.tone === "forest"
+                    ? "text-gold"
+                    : q.tone === "gold"
+                      ? "text-forest"
+                      : "text-forest";
                 const iconColor =
-                  q.tone === "forest" ? "text-white/20" : q.tone === "gold" ? "text-forest/20" : "text-forest/40";
+                  q.tone === "forest"
+                    ? "text-white/20"
+                    : q.tone === "gold"
+                      ? "text-forest/20"
+                      : "text-forest/40";
                 return (
                   <figure
                     key={i}
@@ -895,7 +949,9 @@ function BibliotecaPage() {
                     </blockquote>
                     <figcaption className="mt-4 flex items-center justify-between gap-2">
                       <div>
-                        <p className={`text-[11px] font-bold uppercase tracking-wider ${authorColor}`}>
+                        <p
+                          className={`text-[11px] font-bold uppercase tracking-wider ${authorColor}`}
+                        >
                           {q.author}
                         </p>
                         <p
@@ -979,7 +1035,10 @@ function BibliotecaPage() {
 
                   <ol className="mt-4 space-y-2">
                     {p.steps.map((s, i) => (
-                      <li key={s} className="flex items-start gap-2.5 text-[13px] text-foreground/80">
+                      <li
+                        key={s}
+                        className="flex items-start gap-2.5 text-[13px] text-foreground/80"
+                      >
                         <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-forest text-[10px] font-bold text-white">
                           {i + 1}
                         </span>
@@ -1092,9 +1151,7 @@ function SectionHeader({
           {number}
         </span>
         <div className="min-w-0">
-          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-forest">
-            {eyebrow}
-          </p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-forest">{eyebrow}</p>
           <h2 className="font-serif text-2xl md:text-3xl font-bold text-forest leading-tight mt-1">
             {title}
           </h2>
@@ -1112,13 +1169,7 @@ function SectionHeader({
   );
 }
 
-function GlossaryRow({
-  item,
-  onOpen,
-}: {
-  item: (typeof GLOSSARY)[number];
-  onOpen: () => void;
-}) {
+function GlossaryRow({ item, onOpen }: { item: (typeof GLOSSARY)[number]; onOpen: () => void }) {
   const Icon = item.icon;
   return (
     <button
@@ -1130,7 +1181,9 @@ function GlossaryRow({
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
-          <h4 className="font-serif text-[16px] font-bold text-forest leading-tight">{item.term}</h4>
+          <h4 className="font-serif text-[16px] font-bold text-forest leading-tight">
+            {item.term}
+          </h4>
           <ChevronRight className="size-4 text-muted-foreground/40 group-hover:text-forest group-hover:translate-x-0.5 transition-all shrink-0" />
         </div>
         <p className="mt-1 text-[12.5px] text-muted-foreground leading-snug line-clamp-1">
@@ -1203,10 +1256,7 @@ function GlossaryDetail({ item }: { item: (typeof GLOSSARY)[number] }) {
         <DetailBlock label="Bibliografia">
           <ul className="space-y-2">
             {item.books.map((b) => (
-              <li
-                key={b}
-                className="flex items-center gap-2.5 text-[13px] text-foreground/80"
-              >
+              <li key={b} className="flex items-center gap-2.5 text-[13px] text-foreground/80">
                 <BookOpen className="size-3.5 text-gold shrink-0" />
                 <span className="font-serif italic">{b}</span>
               </li>
@@ -1225,23 +1275,13 @@ function GlossaryDetail({ item }: { item: (typeof GLOSSARY)[number] }) {
 function DetailBlock({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-forest mb-2">
-        {label}
-      </p>
+      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-forest mb-2">{label}</p>
       {children}
     </div>
   );
 }
 
-function QuoteActions({
-  tone,
-  text,
-  author,
-}: {
-  tone: string;
-  text: string;
-  author: string;
-}) {
+function QuoteActions({ tone, text, author }: { tone: string; text: string; author: string }) {
   const iconClass =
     tone === "forest"
       ? "text-white/40 hover:text-gold"
@@ -1256,13 +1296,20 @@ function QuoteActions({
 
   return (
     <div className="flex items-center gap-1 shrink-0">
-      <button onClick={handleCopy} className={`p-1.5 rounded-md transition-colors ${iconClass}`} title="Copiar">
+      <button
+        onClick={handleCopy}
+        className={`p-1.5 rounded-md transition-colors ${iconClass}`}
+        title="Copiar"
+      >
         <Copy className="size-3.5" />
       </button>
       <button className={`p-1.5 rounded-md transition-colors ${iconClass}`} title="Salvar">
         <Bookmark className="size-3.5" />
       </button>
-      <button className={`p-1.5 rounded-md transition-colors ${iconClass}`} title="Adicionar às notas">
+      <button
+        className={`p-1.5 rounded-md transition-colors ${iconClass}`}
+        title="Adicionar às notas"
+      >
         <StickyNote className="size-3.5" />
       </button>
       <button className={`p-1.5 rounded-md transition-colors ${iconClass}`} title="Usar em sessão">
@@ -1394,9 +1441,7 @@ function ClinicalAiRail({ open, onToggle }: { open: boolean; onToggle: () => voi
 function AiBlock({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="rounded-lg bg-white/5 border border-white/10 p-3">
-      <p className="text-[9px] font-bold uppercase tracking-widest text-white/40 mb-1.5">
-        {label}
-      </p>
+      <p className="text-[9px] font-bold uppercase tracking-widest text-white/40 mb-1.5">{label}</p>
       <p className="text-[12px] leading-relaxed text-white/85">{children}</p>
     </div>
   );
@@ -1623,9 +1668,7 @@ function LeticiaAutoralSection() {
               Toda a produção científica, clínica e didática da{" "}
               <span className="italic text-forest">fundadora</span> da Academia.
             </h3>
-            <p className="text-[15px] leading-relaxed text-foreground/75 max-w-xl">
-              {LETICIA.bio}
-            </p>
+            <p className="text-[15px] leading-relaxed text-foreground/75 max-w-xl">{LETICIA.bio}</p>
           </div>
           <div className="mt-8 grid grid-cols-3 gap-3 border-t border-forest/10 pt-6">
             {[
@@ -1710,9 +1753,7 @@ function LeticiaAutoralSection() {
 
             {/* Meta */}
             <div className="p-4 space-y-3">
-              <p className="text-[12px] italic text-muted-foreground leading-snug">
-                {w.subtitle}
-              </p>
+              <p className="text-[12px] italic text-muted-foreground leading-snug">{w.subtitle}</p>
               <div className="flex items-center justify-between text-[11px] text-muted-foreground border-t border-border/40 pt-3">
                 <span>
                   <strong className="text-forest">{w.concepts}</strong> conceitos

@@ -25,19 +25,19 @@ function AppHome() {
     },
   });
 
-  const firstName = profile?.full_name?.split(" ")[0] ?? user.email?.split("@")[0] ?? "Pesquisadora";
-  
+  const firstName =
+    profile?.full_name?.split(" ")[0] ?? user.email?.split("@")[0] ?? "Pesquisadora";
+
   return (
     <div className="min-h-screen bg-transparent pb-20 font-serif text-ink selection:bg-gold-soft">
       {/* Header Contextual (Mesa Clínica) */}
-      <DocumentHeader 
+      <DocumentHeader
         breadcrumb="Instituto Liz / Mesa Clínica"
         title={`Bom dia, ${firstName}.`}
         subtitle="Sua mesa clínica está limpa e organizada para o dia de hoje."
       />
 
       <main className="container-liz max-w-4xl py-12 space-y-16">
-        
         {/* Prioridade Clínica (Empty State Editorial) */}
         <section>
           <h2 className="text-[11px] uppercase font-sans tracking-widest text-ink/40 font-bold mb-6">
@@ -50,7 +50,10 @@ function AppHome() {
           </div>
           <div className="mt-8">
             <Link to="/app/clientes">
-              <Button variant="ghost" className="text-forest hover:bg-forest/5 font-sans font-medium px-0 group">
+              <Button
+                variant="ghost"
+                className="text-forest hover:bg-forest/5 font-sans font-medium px-0 group"
+              >
                 Acessar arquivo de clientes
                 <ArrowRight className="size-4 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
@@ -81,9 +84,8 @@ function AppHome() {
             </p>
           </div>
         </section>
-
       </main>
-      
+
       {/* Fechamento editorial */}
       <div className="container-liz pt-16 pb-8">
         <GenealogyDivider opacity={0.2} />

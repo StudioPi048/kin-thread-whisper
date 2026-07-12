@@ -288,9 +288,7 @@ export function PersonFormDialog({
                     <SelectContent>
                       {genogramGenderOptions.map((g) => (
                         <SelectItem key={g.value} value={g.value}>
-                          <span className="mr-2 font-serif font-bold text-forest">
-                            {g.symbol}
-                          </span>{" "}
+                          <span className="mr-2 font-serif font-bold text-forest">{g.symbol}</span>{" "}
                           {g.label}
                         </SelectItem>
                       ))}
