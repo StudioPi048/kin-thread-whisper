@@ -51,6 +51,7 @@ import { motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ClinicalDocument } from "@/components/ui/clinical-document";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
@@ -65,6 +66,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { ClientFormDialog } from "@/components/clients/client-form-dialog";
 import { ClinicalIntelligencePanel } from "@/components/clients/clinical-intelligence-panel";
+import { DocumentHeader } from "@/components/ui/document-header";
 
 import { calcAge, formatBirthDate, genderOptions, initialsFrom } from "@/lib/clients";
 
@@ -208,129 +210,112 @@ function ClientDossierPage() {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pb-12">
-      {/* Editorial CRM-Style Forest Header */}
-      <div className="block-forest pb-6 pt-4 px-6 relative overflow-hidden">
-        {/* Giant decorative initial */}
-        <span className="section-number absolute -right-4 -bottom-10 opacity-[0.03] text-white select-none">
-          {initials}
-        </span>
-
-        <div className="container-liz relative z-10 space-y-3">
-          <nav className="flex items-center gap-1 text-[12px] uppercase tracking-[0.1em] font-bold text-white/50">
-            <Link
-              to="/app/clientes"
-              className="inline-flex items-center gap-1 hover:text-white transition-colors"
-            >
-              <ArrowLeft className="size-3.5" /> Clientes
+      <DocumentHeader
+        breadcrumb={
+          <>
+            <Link to="/app/clientes" className="hover:text-gold transition-colors">
+              Clientes
             </Link>
-            <ChevronRight className="size-3.5" />
-            <span className="truncate text-gold">{display}</span>
-          </nav>
+            <span className="mx-1.5 opacity-40">/</span>
+            {display}
+          </>
+        }
+        title={
+          <div className="flex items-center gap-4">
+            <motion.div
+              layoutId={`avatar-${client.id}`}
+              className="relative flex size-14 shrink-0 items-center justify-center rounded-lg bg-archive-old font-serif text-2xl font-bold text-ink shadow-sm overflow-hidden group cursor-pointer border border-border/40"
+            >
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <span>{initials}</span>
+              )}
 
-          <header className="flex flex-col gap-3">
-            <div className="flex flex-wrap items-center justify-between gap-6">
-              <div className="flex items-center gap-4">
-                <motion.div
-                  layoutId={`avatar-${client.id}`}
-                  className="relative flex size-16 shrink-0 items-center justify-center rounded-lg bg-forest font-serif text-2xl font-bold text-white shadow-lg overflow-hidden group cursor-pointer"
-                >
-                  {avatarUrl ? (
-                    <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-                  ) : (
-                    <span>{initials}</span>
-                  )}
-
-                  <label className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center cursor-pointer">
-                    <Camera className="size-4 text-white mb-0.5" />
-                    <span className="text-[8px] font-bold uppercase tracking-wider text-white">
-                      Trocar
-                    </span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleAvatarUpload}
-                    />
-                  </label>
-                </motion.div>
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-white/60">
-                    Dossiê Clínico
-                  </p>
-                  <div className="flex items-center gap-3">
-                    <h1 className="font-serif text-3xl font-bold text-white">{display}</h1>
-                    <div className="flex items-center gap-1 opacity-50 hover:opacity-100 transition-opacity">
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => setEditing(true)}
-                        className="text-white hover:bg-white/10"
-                        title="Editar"
-                      >
-                        <Pencil className="size-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => toggleArchive.mutate()}
-                        className="text-white hover:bg-white/10"
-                        title={client.status === "active" ? "Arquivar" : "Reativar"}
-                      >
-                        {client.status === "active" ? (
-                          <Archive className="size-3.5" />
-                        ) : (
-                          <ArchiveRestore className="size-3.5" />
-                        )}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        className="text-red-300 hover:bg-red-500/20 hover:text-red-200"
-                        onClick={() => setDeleting(true)}
-                        title="Excluir"
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Minimalist Info Bar */}
-            <div className="flex flex-wrap items-center gap-6 border-t border-white/10 pt-3 text-[13px] text-white/80">
-              <div className="flex items-center gap-2">
-                <Mail className="size-3.5 text-white/50" /> 
-                <span className="font-medium">{client.email || "Sem e-mail"}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Phone className="size-3.5 text-white/50" /> 
-                <span className="font-medium">{client.phone || "Sem telefone"}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <MapPin className="size-3.5 text-white/50" /> 
-                <span className="font-medium">{client.birthplace || "Local não informado"}</span>
-                <span className="text-white/40 mx-1">•</span>
-                <span className="font-medium">{age !== null ? `${age} anos` : "Idade omitida"}</span>
-              </div>
-              
-              <div className="flex-1" />
-              
-              <div className="flex items-center gap-4 bg-white/10 px-4 py-1.5 rounded-full border border-white/20">
-                <span className="flex items-center gap-1.5 text-[12px] font-semibold text-white/90" title="Próxima sessão">
-                  <CalendarDays className="size-3.5" /> {(client as { session_count?: number }).session_count || 0} sessões
+              <label className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center cursor-pointer">
+                <Camera className="size-4 text-white mb-0.5" />
+                <span className="text-[8px] font-bold uppercase tracking-wider text-white">
+                  Trocar
                 </span>
-                <div className="w-px h-3 bg-white/20" />
-                <span className="flex items-center gap-1.5 text-[12px] font-bold text-white shadow-sm">
-                  <Sparkles className="size-3.5 text-gold" /> IA Clínica Ativa
-                </span>
-              </div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarUpload}
+                />
+              </label>
+            </motion.div>
+            <span className="tracking-tight">{display}</span>
+          </div>
+        }
+        subtitle={
+          <div className="flex flex-wrap items-center gap-6 text-[13px] text-ink/70 not-italic mt-2 font-sans tracking-normal font-normal">
+            <div className="flex items-center gap-2">
+              <Mail className="size-3.5 opacity-50" /> 
+              <span className="font-medium">{client.email || "Sem e-mail"}</span>
             </div>
-          </header>
-        </div>
-      </div>
+            <div className="flex items-center gap-2">
+              <Phone className="size-3.5 opacity-50" /> 
+              <span className="font-medium">{client.phone || "Sem telefone"}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <MapPin className="size-3.5 opacity-50" /> 
+              <span className="font-medium">{client.birthplace || "Local não informado"}</span>
+              <span className="opacity-40 mx-1">•</span>
+              <span className="font-medium">{age !== null ? `${age} anos` : "Idade omitida"}</span>
+            </div>
+            
+            <div className="flex-1" />
+            
+            <div className="flex items-center gap-4 bg-white/50 px-4 py-1.5 rounded-full border border-border/40">
+              <span className="flex items-center gap-1.5 text-[12px] font-semibold text-ink/80" title="Próxima sessão">
+                <CalendarDays className="size-3.5" /> {(client as { session_count?: number }).session_count || 0} sessões
+              </span>
+              <div className="w-px h-3 bg-border/60" />
+              <span className="flex items-center gap-1.5 text-[12px] font-bold text-ink shadow-sm">
+                <Sparkles className="size-3.5 text-gold" /> IA Clínica
+              </span>
+            </div>
+          </div>
+        }
+        actions={
+          <div className="flex items-center gap-1 opacity-60 hover:opacity-100 transition-opacity bg-white/50 p-1 rounded-md border border-border/40">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => setEditing(true)}
+              className="hover:bg-black/5"
+              title="Editar"
+            >
+              <Pencil className="size-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => toggleArchive.mutate()}
+              className="hover:bg-black/5"
+              title={client.status === "active" ? "Arquivar" : "Reativar"}
+            >
+              {client.status === "active" ? (
+                <Archive className="size-3.5" />
+              ) : (
+                <ArchiveRestore className="size-3.5" />
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="text-red-700 hover:bg-red-50 hover:text-red-800"
+              onClick={() => setDeleting(true)}
+              title="Excluir"
+            >
+              <Trash2 className="size-3.5" />
+            </Button>
+          </div>
+        }
+      />
 
-      <div className="container-liz -mt-6 relative z-20 flex gap-6 items-start">
+      <div className="container-liz -mt-2 relative z-20 flex gap-6 items-start">
         {/* Main Content (Tabs) */}
         <div className="flex-1 min-w-0">
           <Tabs defaultValue="genogram" className="w-full">
@@ -353,7 +338,7 @@ function ClientDossierPage() {
                   value="timeline"
                   className="flex items-center gap-1.5 py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-forest data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
                 >
-                  <History className="size-3.5" /> Linha do tempo
+                  <History className="size-3.5" /> Linhas de Herança
                 </TabsTrigger>
                 <TabsTrigger
                   value="patterns"
@@ -387,20 +372,29 @@ function ClientDossierPage() {
               <TabsContent value="overview">
                 <div className="grid gap-6 xl:grid-cols-3">
                   <section className="xl:col-span-2 space-y-6">
-                    {/* Bloco 2: Resumo IA Clínico */}
-                    <Panel
-                      title="Análise IA: Resumo Sistêmico"
-                      accent="forest"
-                      icon={<Sparkles className="size-4 text-forest" />}
+                    {/* Bloco 2: Resumo IA Clínico (Fase 3.5A - Validado com Gramática) */}
+                    <ClinicalDocument 
+                      title="Hipótese Clínica (IA)" 
+                      grammar={{
+                        stage: 'investigada',
+                        intensities: {
+                          trauma: 0,
+                          repetition: 2,
+                          exclusion: 0,
+                          loyalty: 0,
+                          secret: 0
+                        },
+                        temporalAnchor: 'Idade Crítica: 64 anos'
+                      }}
                     >
-                      <p className="text-[14px] leading-relaxed text-foreground font-serif">
+                      <p className="font-serif">
                         O clã de <strong>{display}</strong> exibe repetições notáveis de queixas de
                         abandono nas três últimas gerações (particularmente na linhagem paterna). O
                         padrão de união em casamento coincide de forma significativa com mortes de
                         avós em idades próximas aos 64 anos. Recomenda-se focar na reabilitação
                         simbólica dos membros excluídos.
                       </p>
-                    </Panel>
+                    </ClinicalDocument>
 
                     <Panel title="Queixa apresentada" accent="forest">
                       {client.presenting_complaint ? (

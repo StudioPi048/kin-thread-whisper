@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { DocumentHeader } from "@/components/ui/document-header";
 
 export const Route = createFileRoute("/_authenticated/app/ia-clinica")({
   component: IaClinicaPage,
@@ -47,13 +48,11 @@ function IaClinicaPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-90px)]">
-      {/* Breadcrumb */}
-      <div className="border-b-2 border-border bg-cream px-6 py-3 shrink-0">
-        <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-muted-foreground">
-          Instituto Liz / IA Clínica
-        </p>
-      </div>
-
+      <DocumentHeader
+        breadcrumb="Instituto Liz / Inteligência Clínica"
+        title="Segundo Cérebro Clínico"
+        subtitle="Seu assistente especialista em Psicogenealogia para análise de repetições transgeracionais e hipóteses diagnósticas."
+      />
       {/* Main chat layout */}
       <div className="flex-1 flex overflow-hidden">
         {/* Chat area */}

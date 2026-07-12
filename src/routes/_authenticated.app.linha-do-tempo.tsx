@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { DocumentHeader } from "@/components/ui/document-header";
 
 export const Route = createFileRoute("/_authenticated/app/linha-do-tempo")({
   component: TimelinesPage,
@@ -32,28 +33,11 @@ function TimelinesPage() {
 
   return (
     <div>
-      {/* Breadcrumb */}
-      <div className="border-b-2 border-border bg-cream px-6 py-3">
-        <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-muted-foreground">
-          Instituto Liz / Linhas do Tempo
-        </p>
-      </div>
-
-      {/* Header */}
-      <div className="block-forest px-6 py-10">
-        <div className="container-liz flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.35em] text-forest-mid">
-              Estudos de Caso
-            </p>
-            <h1 className="mt-2 font-serif text-5xl font-bold text-white">Linhas do Tempo</h1>
-            <p className="mt-2 text-[14px] text-white/55">
-              Visualize acontecimentos marcantes, traumas e fatos históricos de forma cronológica
-              por caso.
-            </p>
-          </div>
-        </div>
-      </div>
+      <DocumentHeader
+        breadcrumb="Instituto Liz / Linhas de Herança"
+        title="Linhas de Herança"
+        subtitle="Visualize acontecimentos marcantes, traumas e fatos históricos de forma cronológica por caso."
+      />
 
       <div className="container-liz py-8 space-y-6">
         {/* Search */}

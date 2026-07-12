@@ -20,6 +20,7 @@ import { motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DocumentHeader } from "@/components/ui/document-header";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -172,69 +173,40 @@ function ClientesIndex() {
     <div style={{ background: "var(--surface-archive, #F4F1EB)", minHeight: "100vh" }}>
 
       {/* ── HEADER ─────────────────────────────────────────── */}
-      <div style={{
-        background: "var(--forest, #12291F)",
-        padding: "40px 0 36px",
-      }}>
-        <div className="container-liz" style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", justifyContent: "space-between", gap: "20px" }}>
-          <div>
-            {/* Eyebrow */}
-            <p style={{
-              fontSize: "9px", fontWeight: 800, letterSpacing: "0.22em",
-              textTransform: "uppercase", color: "var(--gold, #D4A843)",
-              fontFamily: "var(--font-sans)", margin: "0 0 10px",
-            }}>
-              Instituto Liz · Consultório
-            </p>
-            {/* Headline */}
-            <h1 style={{
-              fontFamily: "var(--font-serif)",
-              fontSize: "clamp(2.2rem, 4vw, 3.2rem)",
-              fontWeight: 700, color: "#fff",
-              margin: 0, lineHeight: 1.05,
-              letterSpacing: "-0.025em",
-            }}>
-              Clientes
-            </h1>
-            <p style={{
-              fontSize: "14px", color: "rgba(242,238,230,0.5)",
-              fontFamily: "var(--font-sans)", margin: "10px 0 0",
-              maxWidth: "480px", lineHeight: 1.55,
-            }}>
-              Cada dossiê reúne genograma, linha do tempo, sessões e anamnese em um único arquivo vivo.
-            </p>
-          </div>
-
-          {/* CTA Principal — o botão mais importante da página */}
+      <DocumentHeader
+        breadcrumb="Clientes"
+        title="Dossiês Clínicos"
+        subtitle="Todos os pacientes em acompanhamento."
+        actions={
           <button
             onClick={() => setCreating(true)}
             style={{
               display: "inline-flex", alignItems: "center", gap: "8px",
               background: "var(--gold, #D4A843)", color: "#12291F",
               border: "none", borderRadius: "10px",
-              padding: "13px 24px",
-              fontSize: "14px", fontWeight: 700,
+              padding: "11px 20px",
+              fontSize: "13px", fontWeight: 700,
               fontFamily: "var(--font-sans)",
               cursor: "pointer", letterSpacing: "0.02em",
               transition: "all 0.2s ease",
-              boxShadow: "0 4px 16px rgba(212,168,67,0.3), 0 1px 3px rgba(0,0,0,0.1)",
+              boxShadow: "0 2px 10px rgba(212,168,67,0.2), 0 1px 3px rgba(0,0,0,0.05)",
             }}
             onMouseEnter={e => {
               (e.currentTarget as HTMLButtonElement).style.background = "var(--gold-soft, #E8C068)";
               (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-1px)";
-              (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 6px 20px rgba(212,168,67,0.4), 0 2px 6px rgba(0,0,0,0.12)";
+              (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 4px 14px rgba(212,168,67,0.3), 0 2px 6px rgba(0,0,0,0.1)";
             }}
             onMouseLeave={e => {
               (e.currentTarget as HTMLButtonElement).style.background = "var(--gold, #D4A843)";
               (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
-              (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 4px 16px rgba(212,168,67,0.3), 0 1px 3px rgba(0,0,0,0.1)";
+              (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 2px 10px rgba(212,168,67,0.2), 0 1px 3px rgba(0,0,0,0.05)";
             }}
           >
             <Plus style={{ width: "16px", height: "16px" }} strokeWidth={2.5} />
             Novo cliente
           </button>
-        </div>
-      </div>
+        }
+      />
 
       {/* ── TOOLBAR ─────────────────────────────────────────── */}
       <div style={{

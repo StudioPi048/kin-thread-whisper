@@ -34,7 +34,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { DocumentHeader } from "@/components/ui/document-header";
 import { Badge } from "@/components/ui/badge";
 import { getAgendaData, type AgendaSessionDTO, type OrphanClientDTO } from "@/lib/agenda.functions";
 import { getClientGenogram, type ClientGenogramDTO, type GenogramPersonDTO } from "@/lib/genogram.functions";
@@ -244,30 +244,13 @@ function AgendaPage() {
 
   return (
     <div className="min-h-[calc(100vh-64px)] bg-transparent">
-      {/* Breadcrumb */}
-      <div className="border-b border-border/60 bg-white/60 backdrop-blur-sm px-6 py-3 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-muted-foreground">
-          Instituto Liz / Centro de Comando Clínico
-        </p>
-        {query.isLoading && (
-          <span className="text-[10px] font-bold uppercase tracking-widest text-forest/70 flex items-center gap-1.5 whitespace-nowrap">
-            <Loader2 className="size-3 animate-spin" /> Carregando agenda
-          </span>
-        )}
-        {!query.isLoading && isFallback && (
-          <span className="max-w-full text-[10px] font-bold uppercase tracking-[0.15em] text-amber-800 bg-amber-100 border border-amber-300 px-2.5 py-0.5 rounded-full whitespace-nowrap">
-            Dados de exemplo — nenhuma sessão hoje
-          </span>
-        )}
-        {query.isError && (
-          <span className="max-w-full text-[10px] font-bold uppercase tracking-[0.15em] text-rose-800 bg-rose-100 border border-rose-300 px-2.5 py-0.5 rounded-full whitespace-nowrap">
-            Falha ao carregar — exibindo exemplo
-          </span>
-        )}
-      </div>
-
       {/* Contextual Header */}
-      <ContextualHeader stats={stats} />
+      <ContextualHeader 
+        stats={stats} 
+        isLoading={query.isLoading} 
+        isFallback={isFallback} 
+        isError={query.isError} 
+      />
 
       {/* Quick Actions Bar */}
       <div className="container-liz -mt-6 relative z-10">
@@ -329,79 +312,89 @@ function EmptyCenter() {
 
 /* --------------------------------- Header --------------------------------- */
 
-function ContextualHeader({ stats }: { stats: { total: number; primeira: number; retornos: number; aniversarios: number; ocupado: string; livre: string } }) {
+function ContextualHeader({ 
+  stats, 
+  isLoading, 
+  isFallback, 
+  isError 
+}: { 
+  stats: { total: number; primeira: number; retornos: number; aniversarios: number; ocupado: string; livre: string };
+  isLoading: boolean;
+  isFallback: boolean;
+  isError: boolean;
+}) {
   return (
-    <div className="relative overflow-hidden">
-      <div className="block-forest px-6 pt-10 pb-16 relative">
-        {/* subtle grain */}
-        <div
-          aria-hidden
-          className="absolute inset-0 opacity-[0.05] mix-blend-overlay pointer-events-none"
-          style={{
-            backgroundImage:
-              "radial-gradient(circle at 1px 1px, white 1px, transparent 0)",
-            backgroundSize: "3px 3px",
-          }}
-        />
-        <div className="container-liz relative">
-          <div className="flex flex-wrap items-start justify-between gap-6">
-            <div className="max-w-2xl">
-              <div className="flex items-center gap-2 text-gold">
-                <Sunrise className="size-4" />
-                <p className="text-[11px] font-bold uppercase tracking-[0.35em]">
-                  Segunda-feira · 6 de julho
-                </p>
-              </div>
-              <h1 className="mt-3 font-serif text-4xl md:text-5xl font-bold text-archive leading-tight">
-                Bom dia, <span className="text-gold">Letícia</span>.
-              </h1>
-              <p className="mt-3 text-[15px] text-archive/70 leading-relaxed">
-                Hoje você acompanhará <strong className="text-archive">3 histórias familiares</strong>.
-                Um dos pacientes está em <strong className="text-gold">data ativa de Síndrome de Aniversário</strong> —
-                preparei hipóteses, protocolos e leituras para você.
-              </p>
-            </div>
-
-            <div className="flex flex-col items-end gap-3">
-              <div className="flex items-center gap-2 text-[12px] text-white/60 font-semibold">
-                <Sparkles className="size-4 text-gold" />
-                IA Clínica ativa
-              </div>
-              <Button size="lg" variant="hero" className="shadow-xl">
-                <Play className="size-4 fill-current" />
-                Iniciar dia
-              </Button>
-            </div>
+    <DocumentHeader
+      breadcrumb="Agenda Clínica"
+      title={
+        <div className="flex items-center gap-4">
+          <div className="flex items-center justify-center size-14 shrink-0 rounded-lg bg-forest text-gold font-serif text-3xl font-bold shadow-sm">
+            L
           </div>
-
-          {/* Stat pills */}
-          <div className="mt-8 grid grid-cols-2 md:grid-cols-6 gap-2">
-            <HeaderStat icon={Users} label="Atendimentos" value={stats.total.toString()} accent="forest" />
-            <HeaderStat icon={Sunrise} label="Primeira consulta" value={stats.primeira.toString()} accent="gold" />
-            <HeaderStat icon={TimerReset} label="Retornos" value={stats.retornos.toString()} accent="forest" />
-            <HeaderStat icon={Cake} label="Aniversários" value={stats.aniversarios.toString()} accent="rose" />
-            <HeaderStat icon={Clock} label="Ocupado" value={stats.ocupado} accent="forest" />
-            <HeaderStat icon={Leaf} label="Tempo livre" value={stats.livre} accent="gold" />
+          <span className="tracking-tight">Bom dia, Letícia.</span>
+        </div>
+      }
+      subtitle={
+        <div className="font-sans font-normal text-ink/70 text-[15px]">
+          Hoje você acompanhará <strong>{stats.total} histórias familiares</strong>.<br/>
+          Um dos pacientes está em <strong>data ativa de Síndrome de Aniversário</strong>.
+        </div>
+      }
+      actions={
+        <div className="flex flex-col items-end gap-3">
+          <div className="flex items-center gap-2 text-[12px] text-ink/60 font-semibold">
+            <Sparkles className="size-4 text-gold" />
+            IA Clínica pronta
+          </div>
+          <Button size="lg" variant="hero" className="shadow-sm">
+            <Play className="size-4 fill-current" />
+            Iniciar dia
+          </Button>
+          <div className="mt-1 flex justify-end">
+            {isLoading && (
+              <span className="text-[10px] font-bold uppercase tracking-widest text-ink/50 flex items-center gap-1.5 whitespace-nowrap">
+                <Loader2 className="size-3 animate-spin" /> Carregando
+              </span>
+            )}
+            {!isLoading && isFallback && (
+              <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-amber-800 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-full whitespace-nowrap">
+                Modo demonstração
+              </span>
+            )}
+            {isError && (
+              <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-rose-800 bg-rose-100 border border-rose-300 px-2 py-0.5 rounded-full whitespace-nowrap">
+                Erro de conexão
+              </span>
+            )}
           </div>
         </div>
+      }
+    >
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
+        <HeaderStat icon={Users} label="Atendimentos" value={stats.total.toString()} accent="forest" />
+        <HeaderStat icon={Sunrise} label="Primeira consulta" value={stats.primeira.toString()} accent="gold" />
+        <HeaderStat icon={TimerReset} label="Retornos" value={stats.retornos.toString()} accent="forest" />
+        <HeaderStat icon={Cake} label="Aniversários" value={stats.aniversarios.toString()} accent="rose" />
+        <HeaderStat icon={Clock} label="Ocupado" value={stats.ocupado} accent="forest" />
+        <HeaderStat icon={Leaf} label="Tempo livre" value={stats.livre} accent="gold" />
       </div>
-    </div>
+    </DocumentHeader>
   );
 }
 
 function HeaderStat({ icon: Icon, label, value, accent }: { icon: typeof Clock; label: string; value: string; accent: "forest" | "gold" | "rose" }) {
   const accentClass = {
-    forest: "text-archive/70",
+    forest: "text-ink/60",
     gold: "text-gold",
-    rose: "text-rose-300",
+    rose: "text-rose-600",
   }[accent];
   return (
-    <div className="rounded-xl bg-white/[0.06] backdrop-blur-sm border border-white/10 px-4 py-3 shadow-inner">
+    <div className="rounded-xl bg-white/60 backdrop-blur-sm border border-border/40 px-4 py-3 shadow-sm">
       <div className={`flex items-center gap-1.5 ${accentClass}`}>
         <Icon className="size-3.5" />
         <p className="text-[10px] font-bold uppercase tracking-[0.15em]">{label}</p>
       </div>
-      <p className="mt-2 font-serif text-2xl font-bold text-archive">{value}</p>
+      <p className="mt-2 font-serif text-2xl font-bold text-ink">{value}</p>
     </div>
   );
 }
