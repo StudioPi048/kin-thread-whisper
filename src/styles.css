@@ -69,6 +69,11 @@
   --color-terracotta:    var(--terracotta);
   --color-moss:          var(--moss);
 
+  /* ── Memória & Ancestralidade ───────────────────── */
+  --color-sepia:         var(--sepia);
+  --color-wood:          var(--wood);
+  --color-graphite:      var(--graphite);
+
   /* ── Neutros de Arquivo ─────────────────────────── */
   --color-archive:       var(--archive);
   --color-archive-old:   var(--archive-old);
@@ -134,6 +139,11 @@
   --olive:           #5C6644;  /* Verde oliva — badges, labels */
   --terracotta:      #A0522D;  /* Terracota — alertas, bordas especiais */
   --moss:            #3A4D30;  /* Musgo — accents visuais */
+
+  /* ── Memória & Ancestralidade (foto antiga, madeira, tinta) ── */
+  --sepia:           #6F4E37;  /* Sépia fotográfico — retratos antigos, ancestralidade */
+  --wood:            #5A4632;  /* Marrom-madeira — mesa de arquivo, molduras */
+  --graphite:        #3A3A3A;  /* Grafite neutro — traços estruturais, marca de falecido */
 
   /* ── Arquivo / Neutros Editoriais ────────────── */
   --archive:         #F7F5F0;  /* Fundo global — pergaminho suave */
@@ -214,6 +224,11 @@
   --archive:     #111510;
   --archive-old: #0E1210;
   --archive-doc: #161A14;
+
+  /* Memória & ancestralidade — clareados para contraste em fundo escuro */
+  --sepia:    #B08968;
+  --wood:     #8A6D52;
+  --graphite: #C9C7C4;
 
   --clinical-critical: #C0544A;
   --clinical-warning:  #D4A843;

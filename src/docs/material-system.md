@@ -1,12 +1,14 @@
 # Sistema de Materiais — Instituto Liz
 
-> Versão 1.1 · Passo 2.5 · Última atualização: 2026-07-12
+> Versão 1.2 · Última atualização: 2026-07-16
 
 Este documento é o **contrato de produto** do Sistema de Materiais.  
 Define quais superfícies existem, seu nível de maturidade, onde podem ser usadas, onde são proibidas e o que ainda está planejado.
 
 A premissa central:
-> A plataforma deve transmitir a sensação de um **arquivo histórico clínico de alta precisão** — não de um álbum vintage ou scrapbook.
+> A plataforma deve transmitir a sensação de um **arquivo vivo de histórias humanas** — memória, ancestralidade e cuidado clínico de alta precisão. Calorosa e afetiva, mas nunca decorativa a ponto de virar scrapbook ou fantasia vintage.
+
+> **Nota da v1.2:** a partir do briefing conceitual "arquivo vivo", as regras foram *relaxadas com moderação* para admitir textura de papel envelhecido, selos um pouco mais táteis e ornamentos botânicos discretos. As **regras de disciplina permanecem intactas** (máx. 3 materiais por tela, assinatura única por tela, teste do screenshot) — são elas que impedem a estética de degenerar em "coleção de cards decorativos".
 
 ---
 
@@ -96,14 +98,15 @@ O teste do screenshot é o único critério que não pode ser justificado por ar
 
 ## Princípio de Design
 
-A identidade visual de arquivo histórico opera de forma **subliminar**, nunca literal.
+A identidade visual de arquivo vivo opera de forma **subliminar e disciplinada** — evoca memória sem virar cenário. Calor sim, fantasia não.
 
 | ✅ Correto | ❌ Incorreto |
 |---|---|
-| Tons de marfim e bege quente | Textura de papel rasgado |
-| Borda esquerda em bronze | Fita adesiva em cards operacionais |
-| Carimbo SVG 48px, opacidade 0.72 | Carimbo > 64px ou rotacionado > 5° |
-| Sombra multi-camada discreta | Drop shadow com spread excessivo |
+| Tons de marfim e bege quente; sépia (`--sepia`) e madeira (`--wood`) como acentos de ancestralidade | Fundo inteiro tingido de sépia; página que parece um filtro de foto antiga |
+| Textura de papel envelhecido sutil (`.texture-paper`, opacidade ≤ 0.03) em superfícies de leitura | Papel visivelmente rasgado, amassado ou manchado |
+| Borda esquerda em bronze; ornamento botânico discreto como marca-d'água (opacidade ≤ 0.18) | Fita adesiva em cards operacionais; flores/folhas competindo com o conteúdo |
+| Selo/carimbo SVG até 56px, opacidade ≤ 0.72, rotação ≤ ±5° | Carimbo > 64px, rotação > 5° ou com aparência de borracha molhada |
+| Sombra multi-camada discreta simulando papel apoiado | Drop shadow com spread excessivo |
 | Serif italic em citações curtas (≤ 2 linhas) | Serif italic em blocos longos de prontuário |
 | Número de registro como metadado (Eyebrow) | Número de registro como título principal |
 

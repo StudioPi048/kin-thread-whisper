@@ -89,8 +89,8 @@ const UnionNodeComponent = ({ data }: NodeProps) => {
           style={{ left: -12, top: -8, width: 36, height: 28 }}
           viewBox="0 0 36 28"
         >
-          <path d="M8 22 L16 4" stroke="#3A3A3A" strokeWidth={2.5} strokeLinecap="round" />
-          <path d="M20 22 L28 4" stroke="#3A3A3A" strokeWidth={2.5} strokeLinecap="round" />
+          <path d="M8 22 L16 4" stroke="var(--graphite)" strokeWidth={2.5} strokeLinecap="round" />
+          <path d="M20 22 L28 4" stroke="var(--graphite)" strokeWidth={2.5} strokeLinecap="round" />
         </svg>
       )}
       <Handle
@@ -242,7 +242,7 @@ function StraightStepEdge({
               key={i}
               d={`M ${x - 7} ${breakY + 12} L ${x + 7} ${breakY - 12}`}
               fill="none"
-              stroke="#3A3A3A"
+              stroke="var(--graphite)"
               strokeWidth={2.5}
               strokeLinecap="round"
               pointerEvents="none"
@@ -962,7 +962,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
   const relCount = query.data?.rels.length ?? 0;
 
   return (
-    <div className="relative flex flex-col overflow-hidden rounded-[1.5rem] border border-border bg-slate-50/40 shadow-inner h-[800px] min-h-[calc(100vh-200px)]">
+    <div className="relative flex flex-col overflow-hidden rounded-[1.5rem] border border-border bg-surface-archive shadow-inner h-[800px] min-h-[calc(100vh-200px)]">
       {/* ── CONTÊINER SUPERIOR (BARRA DE AÇÕES + LEGENDA) ── */}
       <div className="absolute top-4 left-4 z-10 flex flex-col gap-2.5 pointer-events-none max-w-[calc(100%-32px)]">
         {/* BARRA DE AÇÕES */}
@@ -1026,7 +1026,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
               <strong className="text-white">{qualifiedCount}</strong>
               <span>no mapa</span>
               {incompleteCount > 0 && (
-                <span className="ml-1 rounded-full bg-amber-500/25 px-1.5 py-0.5 text-[14px] font-bold text-amber-300">
+                <span className="ml-1 rounded-full bg-gold/20 px-1.5 py-0.5 text-[14px] font-bold text-gold">
                   {incompleteCount} incompletos
                 </span>
               )}
@@ -1129,16 +1129,13 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
             fitViewOptions={{ padding: 0.2 }}
           >
             <Background
-              color="#cbd5e1"
+              color="#D8D0C0"
               variant={BackgroundVariant.Lines}
               gap={24}
               size={1}
-              style={{ opacity: 0.5 }}
+              style={{ opacity: 0.4 }}
             />
-            <Controls
-              className="bg-white border-none shadow-xl overflow-hidden rounded-xl [&>button]:border-b [&>button]:border-slate-100 [&>button]:hover:bg-slate-50 [&>button]:text-forest"
-              showInteractive={false}
-            />
+            <Controls className="shadow-xl overflow-hidden rounded-xl" showInteractive={false} />
           </ReactFlow>
         )}
         {!query.isLoading && persons.length > 0 && (

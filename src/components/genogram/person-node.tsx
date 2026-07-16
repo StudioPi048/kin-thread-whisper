@@ -127,7 +127,7 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
               y1="85"
               x2="85"
               y2="15"
-              stroke="#3A3A3A"
+              stroke="var(--graphite)"
               strokeWidth="4"
               strokeLinecap="round"
             />
@@ -202,9 +202,8 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
       {/* ── CARD DE INFORMAÇÃO — Independente e flutuante ── */}
       <div
         className={cn(
-          "mt-3 w-[140px] min-h-[72px] h-auto bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-sm px-2 py-1.5 flex flex-col justify-center items-center text-center select-none z-10 transition-all pb-2",
-          d.is_proband &&
-            "border-forest bg-white dark:bg-zinc-900 shadow-[0_0_0_1px_rgba(110,20,60,0.15)]",
+          "mt-3 w-[140px] min-h-[72px] h-auto bg-surface-dossier border border-material-border rounded-lg shadow-sm px-2 py-1.5 flex flex-col justify-center items-center text-center select-none z-10 transition-all pb-2",
+          d.is_proband && "border-forest shadow-[0_0_0_1px_rgba(110,20,60,0.15)]",
           selected && "ring-1 ring-forest border-forest",
         )}
       >
