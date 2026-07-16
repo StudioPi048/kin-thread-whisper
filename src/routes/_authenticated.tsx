@@ -57,7 +57,6 @@ function AuthenticatedLayout() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -129,57 +128,29 @@ function AuthenticatedLayout() {
     .join("");
 
   return (
-    <div
-      className="flex min-h-screen"
-      style={{ background: "var(--archive)", fontFamily: "var(--font-sans)" }}
-    >
+    <div className="flex min-h-screen bg-archive font-sans">
       {/* ═══════════════════════════════════════════════════
           SIDEBAR — 220px premium, Arc Browser-inspired
           ═══════════════════════════════════════════════════ */}
       <aside
-        style={{
-          width: isCollapsed ? "68px" : "210px",
-          minWidth: isCollapsed ? "68px" : "210px",
-          background: "var(--forest)",
-          transition:
-            "width 0.28s cubic-bezier(0.16,1,0.3,1), min-width 0.28s cubic-bezier(0.16,1,0.3,1)",
-          boxShadow: "6px 0 24px rgba(12,24,18,0.35), 1px 0 0 rgba(255,255,255,0.04)",
-          position: "relative",
-          zIndex: 40,
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-          flexShrink: 0,
-        }}
-        className="flex"
+        className={`relative z-40 flex shrink-0 flex-col overflow-hidden bg-forest shadow-[6px_0_24px_rgba(12,24,18,0.35),1px_0_0_rgba(255,255,255,0.04)] transition-[width,min-width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+          isCollapsed ? "w-[68px] min-w-[68px]" : "w-[210px] min-w-[210px]"
+        }`}
       >
         {/* Gradiente sutil no topo */}
         <div
           aria-hidden
-          style={{
-            position: "absolute",
-            inset: 0,
-            pointerEvents: "none",
-            zIndex: 0,
-            background: "linear-gradient(170deg, rgba(255,255,255,0.04) 0%, transparent 45%)",
-          }}
+          className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(170deg,rgba(255,255,255,0.04)_0%,transparent_45%)]"
         />
 
         {/* ── Logo ─────────────────────────────── */}
         <div
-          style={{
-            position: "relative",
-            zIndex: 10,
-            padding: isCollapsed ? "20px 0" : "20px 20px",
-            borderBottom: "1px solid rgba(255,255,255,0.07)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: isCollapsed ? "center" : "space-between",
-            minHeight: "72px",
-          }}
+          className={`relative z-10 flex min-h-[72px] items-center border-b border-white/[0.07] ${
+            isCollapsed ? "justify-center px-0 py-5" : "justify-between px-5 py-5"
+          }`}
         >
           {!isCollapsed && (
-            <Link to="/app" style={{ display: "flex", alignItems: "center", overflow: "hidden" }}>
+            <Link to="/app" className="flex items-center overflow-hidden">
               <LizLogoLockup variant="light" />
             </Link>
           )}
@@ -192,86 +163,30 @@ function AuthenticatedLayout() {
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
             title={isCollapsed ? "Expandir menu" : "Recolher menu"}
-            style={{
-              width: "24px",
-              height: "24px",
-              borderRadius: "6px",
-              border: "1px solid rgba(255,255,255,0.1)",
-              background: "rgba(255,255,255,0.06)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              color: "rgba(242,238,230,0.5)",
-              transition: "all 0.2s ease",
-              flexShrink: 0,
-              ...(isCollapsed
-                ? { position: "absolute", bottom: "-12px", right: "-12px", zIndex: 20 }
-                : {}),
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.color = "rgba(212,168,67,0.9)";
-              (e.currentTarget as HTMLButtonElement).style.background = "rgba(212,168,67,0.12)";
-              (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(212,168,67,0.2)";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.color = "rgba(242,238,230,0.5)";
-              (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.06)";
-              (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.1)";
-            }}
+            className={`flex size-6 shrink-0 items-center justify-center rounded-md border border-white/10 bg-white/[0.06] text-cream/50 transition-colors duration-200 hover:border-gold/20 hover:bg-gold/12 hover:text-gold/90 ${
+              isCollapsed ? "absolute -right-3 -bottom-3 z-20" : ""
+            }`}
           >
             {isCollapsed ? (
-              <ChevronRight style={{ width: "13px", height: "13px" }} strokeWidth={2} />
+              <ChevronRight className="size-[13px]" strokeWidth={2} />
             ) : (
-              <ChevronLeft style={{ width: "13px", height: "13px" }} strokeWidth={2} />
+              <ChevronLeft className="size-[13px]" strokeWidth={2} />
             )}
           </button>
         </div>
 
         {/* ── Busca Rápida ─────────────────────── */}
         {!isCollapsed && (
-          <div style={{ position: "relative", zIndex: 10, padding: "16px 16px 8px" }}>
+          <div className="relative z-10 px-4 pt-4 pb-2">
             <button
               onClick={() => setIsSearchOpen(true)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                width: "100%",
-                background: "rgba(255,255,255,0.05)",
-                border: "1px solid rgba(255,255,255,0.08)",
-                borderRadius: "8px",
-                padding: "8px 12px",
-                cursor: "pointer",
-                color: "rgba(242,238,230,0.4)",
-                fontSize: "12px",
-                fontFamily: "var(--font-sans)",
-                transition: "all 0.2s ease",
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.08)";
-                (e.currentTarget as HTMLButtonElement).style.color = "rgba(242,238,230,0.65)";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.05)";
-                (e.currentTarget as HTMLButtonElement).style.color = "rgba(242,238,230,0.4)";
-              }}
+              className="flex w-full items-center justify-between rounded-lg border border-white/[0.08] bg-white/5 px-3 py-2 text-xs text-cream/40 transition-colors duration-200 hover:bg-white/[0.08] hover:text-cream/65"
             >
-              <span style={{ display: "flex", alignItems: "center", gap: "7px" }}>
-                <Search style={{ width: "12px", height: "12px" }} strokeWidth={1.5} />
+              <span className="flex items-center gap-[7px]">
+                <Search className="size-3" strokeWidth={1.5} />
                 <span>Busca rápida...</span>
               </span>
-              <kbd
-                style={{
-                  background: "rgba(255,255,255,0.08)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  borderRadius: "4px",
-                  padding: "1px 5px",
-                  fontSize: "9px",
-                  fontFamily: "monospace",
-                  letterSpacing: "0.05em",
-                }}
-              >
+              <kbd className="rounded border border-white/10 bg-white/[0.08] px-[5px] py-px font-mono text-[9px] tracking-[0.05em]">
                 ⌘K
               </kbd>
             </button>
@@ -280,153 +195,69 @@ function AuthenticatedLayout() {
 
         {/* ── Ícone de busca (collapsed) ─────── */}
         {isCollapsed && (
-          <div
-            style={{
-              padding: "12px 0 4px",
-              display: "flex",
-              justifyContent: "center",
-              zIndex: 10,
-              position: "relative",
-            }}
-          >
+          <div className="relative z-10 flex justify-center px-0 pt-3 pb-1">
             <button
               onClick={() => setIsSearchOpen(true)}
               title="Busca rápida (⌘K)"
-              style={{
-                width: "36px",
-                height: "36px",
-                borderRadius: "8px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "rgba(242,238,230,0.4)",
-                cursor: "pointer",
-                background: "transparent",
-                border: "none",
-                transition: "all 0.2s ease",
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.08)";
-                (e.currentTarget as HTMLButtonElement).style.color = "rgba(242,238,230,0.8)";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-                (e.currentTarget as HTMLButtonElement).style.color = "rgba(242,238,230,0.4)";
-              }}
+              className="flex size-9 items-center justify-center rounded-lg bg-transparent text-cream/40 transition-colors duration-200 hover:bg-white/[0.08] hover:text-cream/80"
             >
-              <Search style={{ width: "16px", height: "16px" }} strokeWidth={1.5} />
+              <Search className="size-4" strokeWidth={1.5} />
             </button>
           </div>
         )}
 
         {/* ── Eyebrow label ────────────────────── */}
         {!isCollapsed && (
-          <div style={{ padding: "4px 20px 6px", position: "relative", zIndex: 10 }}>
-            <span
-              style={{
-                fontSize: "9px",
-                fontWeight: 800,
-                letterSpacing: "0.18em",
-                textTransform: "uppercase",
-                color: "rgba(242,238,230,0.22)",
-                fontFamily: "var(--font-sans)",
-              }}
-            >
+          <div className="relative z-10 px-5 pt-1 pb-1.5">
+            <span className="text-[9px] font-extrabold tracking-[0.18em] text-cream/22 uppercase">
               Navegação
             </span>
           </div>
         )}
 
         {/* ── Navegação ─────────────────────────── */}
-        <nav
-          style={{
-            flex: 1,
-            overflowY: "auto",
-            overflowX: "hidden",
-            padding: isCollapsed ? "4px 10px" : "4px 10px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "1px",
-            position: "relative",
-            zIndex: 10,
-          }}
-        >
+        <nav className="relative z-10 flex flex-1 flex-col gap-px overflow-x-hidden overflow-y-auto px-2.5 py-1">
           {nav.map((item) => {
             const active =
               "exact" in item && item.exact
                 ? location.pathname === item.to
                 : location.pathname.startsWith(item.to);
-            const isHovered = hoveredItem === item.to;
 
             return (
               <Link
                 key={item.to}
                 to={item.to as "/app"}
                 title={isCollapsed ? item.label : undefined}
-                onMouseEnter={() => setHoveredItem(item.to)}
-                onMouseLeave={() => setHoveredItem(null)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  padding: isCollapsed ? "10px 0" : "9px 12px",
-                  borderRadius: "8px",
-                  justifyContent: isCollapsed ? "center" : "flex-start",
-                  textDecoration: "none",
-                  position: "relative",
-                  fontFamily: "var(--font-sans)",
-                  fontSize: "13.5px",
-                  fontWeight: active ? 600 : 500,
-                  letterSpacing: "0.005em",
-                  transition: "all 0.18s cubic-bezier(0.16,1,0.3,1)",
-                  background: active
-                    ? "rgba(212,168,67,0.14)"
-                    : isHovered
-                      ? "rgba(255,255,255,0.06)"
-                      : "transparent",
-                  color: active
-                    ? "rgba(212,168,67,0.95)"
-                    : isHovered
-                      ? "rgba(242,238,230,0.88)"
-                      : "rgba(242,238,230,0.55)",
-                }}
+                className={`group relative flex items-center gap-2.5 rounded-lg text-[13.5px] tracking-[0.005em] no-underline transition-colors duration-[180ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                  isCollapsed ? "justify-center py-2.5" : "justify-start px-3 py-2.5"
+                } ${
+                  active
+                    ? "bg-gold/14 font-semibold text-gold/95"
+                    : "font-medium text-cream/55 hover:bg-white/[0.06] hover:text-cream/88"
+                }`}
               >
                 {/* Barra lateral de ativo */}
                 {active && (
                   <span
-                    style={{
-                      position: "absolute",
-                      left: 0,
-                      top: "6px",
-                      bottom: "6px",
-                      width: "2.5px",
-                      background: "var(--gold)",
-                      borderRadius: "0 2px 2px 0",
-                      boxShadow: "0 0 8px rgba(212,168,67,0.5)",
-                    }}
+                    aria-hidden
+                    className="absolute inset-y-1.5 left-0 w-[2.5px] rounded-r-[2px] bg-gold shadow-[0_0_8px_rgba(212,168,67,0.5)]"
                   />
                 )}
                 {/* Ícone com microanimação */}
                 <item.icon
-                  style={{
-                    width: "17px",
-                    height: "17px",
-                    flexShrink: 0,
-                    transition: "transform 0.22s cubic-bezier(0.16,1,0.3,1), opacity 0.18s ease",
-                    transform:
-                      isHovered && !active ? "rotate(3deg) scale(1.1)" : "rotate(0deg) scale(1)",
-                    opacity: active ? 1 : isHovered ? 0.9 : 0.55,
-                    color: active ? "var(--gold)" : "inherit",
-                  }}
+                  className={`size-[17px] shrink-0 transition-[transform,opacity] duration-[220ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                    active
+                      ? "text-gold opacity-100"
+                      : "opacity-55 group-hover:rotate-3 group-hover:scale-110 group-hover:opacity-90"
+                  }`}
                   strokeWidth={active ? 1.75 : 1.5}
                 />
                 {/* Label */}
                 {!isCollapsed && (
                   <span
-                    style={{
-                      transition: "transform 0.22s cubic-bezier(0.16,1,0.3,1)",
-                      transform: isHovered && !active ? "translateX(1px)" : "translateX(0)",
-                    }}
+                    className={`transition-transform duration-[220ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                      active ? "" : "group-hover:translate-x-px"
+                    }`}
                   >
                     {item.label}
                   </span>
@@ -438,90 +269,32 @@ function AuthenticatedLayout() {
 
         {/* ── Usuário ──────────────────────────── */}
         <div
-          style={{
-            position: "relative",
-            zIndex: 10,
-            borderTop: "1px solid rgba(255,255,255,0.07)",
-            padding: isCollapsed ? "12px 8px" : "12px 14px",
-          }}
+          className={`relative z-10 border-t border-white/[0.07] ${
+            isCollapsed ? "px-2 py-3" : "px-3.5 py-3"
+          }`}
         >
           <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: isCollapsed ? 0 : "10px",
-              justifyContent: isCollapsed ? "center" : "flex-start",
-              borderRadius: "8px",
-              padding: "6px",
-              background: "rgba(255,255,255,0.04)",
-            }}
+            className={`flex items-center rounded-lg bg-white/[0.04] p-1.5 ${
+              isCollapsed ? "justify-center gap-0" : "justify-start gap-2.5"
+            }`}
           >
             {/* Avatar */}
-            <div
-              style={{
-                width: "30px",
-                height: "30px",
-                flexShrink: 0,
-                borderRadius: "8px",
-                background: "var(--forest-mid)",
-                border: "1px solid rgba(212,168,67,0.3)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "11px",
-                fontWeight: 700,
-                color: "var(--gold-soft)",
-                fontFamily: "var(--font-sans)",
-              }}
-            >
+            <div className="flex size-[30px] shrink-0 items-center justify-center rounded-lg border border-gold/30 bg-forest-mid text-[11px] font-bold text-gold-soft">
               {initials || "?"}
             </div>
             {!isCollapsed && (
               <>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p
-                    style={{
-                      fontSize: "12px",
-                      fontWeight: 600,
-                      color: "rgba(242,238,230,0.88)",
-                      fontFamily: "var(--font-sans)",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                      margin: 0,
-                    }}
-                  >
+                <div className="min-w-0 flex-1">
+                  <p className="m-0 overflow-hidden text-xs font-semibold text-ellipsis whitespace-nowrap text-cream/88">
                     {displayName || user.email}
                   </p>
                 </div>
                 <button
                   onClick={handleSignOut}
                   title="Sair da plataforma"
-                  style={{
-                    width: "28px",
-                    height: "28px",
-                    flexShrink: 0,
-                    borderRadius: "6px",
-                    border: "none",
-                    background: "transparent",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "rgba(242,238,230,0.3)",
-                    transition: "all 0.2s ease",
-                  }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.color = "#F87171";
-                    (e.currentTarget as HTMLButtonElement).style.background =
-                      "rgba(248,113,113,0.1)";
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.color = "rgba(242,238,230,0.3)";
-                    (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-                  }}
+                  className="flex size-7 shrink-0 items-center justify-center rounded-md border-none bg-transparent text-cream/30 transition-colors duration-200 hover:bg-red-400/10 hover:text-red-400"
                 >
-                  <LogOut style={{ width: "13px", height: "13px" }} strokeWidth={1.75} />
+                  <LogOut className="size-[13px]" strokeWidth={1.75} />
                 </button>
               </>
             )}
@@ -532,18 +305,8 @@ function AuthenticatedLayout() {
       {/* ═══════════════════════════════════════════════════
           ÁREA DE CONTEÚDO (sem header fixo!)
           ═══════════════════════════════════════════════════ */}
-      <div
-        style={{
-          flex: 1,
-          minWidth: 0,
-          display: "flex",
-          flexDirection: "column",
-          background: "var(--archive)",
-          overflow: "hidden",
-          position: "relative",
-        }}
-      >
-        <main style={{ flex: 1, overflowY: "auto" }}>
+      <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-archive">
+        <main className="flex-1 overflow-y-auto">
           <Outlet />
         </main>
       </div>
