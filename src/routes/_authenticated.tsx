@@ -128,7 +128,7 @@ function AuthenticatedLayout() {
     .join("");
 
   return (
-    <div className="flex min-h-screen bg-archive font-sans">
+    <div className="flex min-h-screen font-sans">
       {/* ═══════════════════════════════════════════════════
           SIDEBAR — 220px premium, Arc Browser-inspired
           ═══════════════════════════════════════════════════ */}
@@ -305,7 +305,7 @@ function AuthenticatedLayout() {
       {/* ═══════════════════════════════════════════════════
           ÁREA DE CONTEÚDO (sem header fixo!)
           ═══════════════════════════════════════════════════ */}
-      <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-archive">
+      <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
         <main className="flex-1 overflow-y-auto">
           <Outlet />
         </main>

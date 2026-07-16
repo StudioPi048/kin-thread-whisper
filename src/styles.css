@@ -144,6 +144,7 @@
   --sepia:           #6F4E37;  /* Sépia fotográfico — retratos antigos, ancestralidade */
   --wood:            #5A4632;  /* Marrom-madeira — mesa de arquivo, molduras */
   --graphite:        #3A3A3A;  /* Grafite neutro — traços estruturais, marca de falecido */
+  --parchment:       #EDE6D7;  /* Pergaminho — fundo base do "arquivo vivo" */
 
   /* ── Arquivo / Neutros Editoriais ────────────── */
   --archive:         #F7F5F0;  /* Fundo global — pergaminho suave */
@@ -188,7 +189,7 @@
   --ring:            var(--forest-soft);
 
   /* ── Material Surface Tokens ────────────────────── */
-  --surface-archive:    #F4F1EB;  /* Pergaminho arquivístico — fundo base global */
+  --surface-archive:    #EDE6D7;  /* Pergaminho arquivístico — fundo base global */
   --surface-document:   #FAFAF7;  /* Documento clínico — superfície branca-quente */
   --surface-dossier:    #FAFAF4;  /* Pasta clínica — levemente mais quente que document */
   --surface-manuscript: #F0EDE5;  /* Manuscrito/anotação — levemente escurecido */
@@ -316,11 +317,27 @@
   }
 
   body {
-    background-color: var(--archive);
+    /* Papel envelhecido: base pergaminho quente + grão + vinheta de tinta nas bordas.
+       "Arquivo vivo" — o fundo respira memória sem virar textura literal. */
+    background-color: var(--surface-archive);
+    background-image:
+      radial-gradient(115% 90% at 12% -5%, rgba(212, 168, 67, 0.10) 0%, transparent 45%),
+      radial-gradient(120% 120% at 105% 108%, rgba(111, 78, 55, 0.12) 0%, transparent 50%),
+      radial-gradient(140% 120% at 50% 50%, transparent 55%, rgba(90, 70, 50, 0.06) 100%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)' opacity='0.06'/%3E%3C/svg%3E");
+    background-attachment: fixed;
     color: var(--ink);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     min-height: 100vh;
+  }
+
+  .dark body {
+    background-color: #0E1210;
+    background-image:
+      radial-gradient(115% 90% at 12% -5%, rgba(212, 168, 67, 0.07) 0%, transparent 45%),
+      radial-gradient(120% 120% at 105% 108%, rgba(111, 78, 55, 0.10) 0%, transparent 50%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)' opacity='0.06'/%3E%3C/svg%3E");
   }
 
   #root > * {
