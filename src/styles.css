@@ -144,12 +144,12 @@
   --sepia:           #6F4E37;  /* Sépia fotográfico — retratos antigos, ancestralidade */
   --wood:            #5A4632;  /* Marrom-madeira — mesa de arquivo, molduras */
   --graphite:        #3A3A3A;  /* Grafite neutro — traços estruturais, marca de falecido */
-  --parchment:       #EDE6D7;  /* Pergaminho — fundo base do "arquivo vivo" */
+  --parchment:       #E8E1D2;  /* Pergaminho — fundo base greige do "arquivo vivo" */
 
   /* ── Arquivo / Neutros Editoriais ────────────── */
   --archive:         #F7F5F0;  /* Fundo global — pergaminho suave */
   --archive-old:     #EFECE6;  /* Fundo de painéis/seções */
-  --archive-doc:     #FAFAF7;  /* Superfície de cards/dossiês */
+  --archive-doc:     #FBF9F3;  /* Superfície de cards/dossiês — marfim quente (papel) */
   --ink:             #1A1714;  /* Texto principal */
   --ink-soft:        #4A4540;  /* Texto secundário */
   --cream:           #F2EEE6;  /* Cream */
@@ -189,10 +189,10 @@
   --ring:            var(--forest-soft);
 
   /* ── Material Surface Tokens ────────────────────── */
-  --surface-archive:    #EDE6D7;  /* Pergaminho arquivístico — fundo base global */
-  --surface-document:   #FAFAF7;  /* Documento clínico — superfície branca-quente */
-  --surface-dossier:    #FAFAF4;  /* Pasta clínica — levemente mais quente que document */
-  --surface-manuscript: #F0EDE5;  /* Manuscrito/anotação — levemente escurecido */
+  --surface-archive:    #E8E1D2;  /* Pergaminho arquivístico — fundo base global */
+  --surface-document:   #FBF9F4;  /* Documento clínico — marfim quente (papel) */
+  --surface-dossier:    #FBF8F1;  /* Pasta clínica — marfim quente do dossiê */
+  --surface-manuscript: #F1ECE0;  /* Manuscrito/anotação — papel levemente escurecido */
   --surface-folder:     #EDE8DE;  /* Aba de pasta / tab secundária */
   --surface-book:       #E8E3D8;  /* Capa de livro — Biblioteca */
 
@@ -317,14 +317,14 @@
   }
 
   body {
-    /* Papel envelhecido: base pergaminho quente + grão + vinheta de tinta nas bordas.
-       "Arquivo vivo" — o fundo respira memória sem virar textura literal. */
+    /* Papel de arquivo: greige quente e sóbrio + grão finíssimo + vinheta de tinta discreta.
+       Sofisticado, não "filtro sépia". O fundo respira memória sem virar cenário. */
     background-color: var(--surface-archive);
     background-image:
-      radial-gradient(115% 90% at 12% -5%, rgba(212, 168, 67, 0.10) 0%, transparent 45%),
-      radial-gradient(120% 120% at 105% 108%, rgba(111, 78, 55, 0.12) 0%, transparent 50%),
-      radial-gradient(140% 120% at 50% 50%, transparent 55%, rgba(90, 70, 50, 0.06) 100%),
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)' opacity='0.06'/%3E%3C/svg%3E");
+      radial-gradient(130% 100% at 8% -8%, rgba(201, 162, 75, 0.055) 0%, transparent 40%),
+      radial-gradient(120% 120% at 106% 110%, rgba(111, 78, 55, 0.07) 0%, transparent 48%),
+      radial-gradient(150% 130% at 50% 45%, transparent 62%, rgba(74, 58, 42, 0.05) 100%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)' opacity='0.04'/%3E%3C/svg%3E");
     background-attachment: fixed;
     color: var(--ink);
     -webkit-font-smoothing: antialiased;
@@ -335,9 +335,9 @@
   .dark body {
     background-color: #0E1210;
     background-image:
-      radial-gradient(115% 90% at 12% -5%, rgba(212, 168, 67, 0.07) 0%, transparent 45%),
-      radial-gradient(120% 120% at 105% 108%, rgba(111, 78, 55, 0.10) 0%, transparent 50%),
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)' opacity='0.06'/%3E%3C/svg%3E");
+      radial-gradient(130% 100% at 8% -8%, rgba(201, 162, 75, 0.06) 0%, transparent 40%),
+      radial-gradient(120% 120% at 106% 110%, rgba(111, 78, 55, 0.09) 0%, transparent 48%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)' opacity='0.05'/%3E%3C/svg%3E");
   }
 
   #root > * {
@@ -438,43 +438,42 @@
    SOMBRAS MULTI-CAMADA (Apple-like, Profundidade Real)
    ══════════════════════════════════════════════════ */
 
+/* Sombra quente de papel — tinta marrom, suave, sem anel duro.
+   Sensação de documento apoiado sobre a mesa de arquivo. */
+
 /* Nível 1 — Card padrão (flutua levemente) */
 @utility shadow-surface {
   box-shadow:
-    0 1px 2px rgba(20, 16, 8, 0.04),
-    0 4px 8px rgba(20, 16, 8, 0.06),
-    0 12px 24px rgba(20, 16, 8, 0.06),
-    0 0 0 1px rgba(20, 16, 8, 0.03);
+    0 1px 2px rgba(58, 45, 30, 0.05),
+    0 3px 8px rgba(58, 45, 30, 0.06),
+    0 10px 22px -8px rgba(58, 45, 30, 0.10);
 }
 
 /* Nível 2 — Dossiê / Card elevado */
 @utility shadow-dossier {
   box-shadow:
-    0 1px 3px rgba(18, 41, 31, 0.04),
-    0 6px 16px rgba(18, 41, 31, 0.08),
-    0 24px 40px rgba(18, 41, 31, 0.08),
-    0 0 0 1px rgba(18, 41, 31, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    0 1px 2px rgba(58, 45, 30, 0.05),
+    0 5px 14px -2px rgba(58, 45, 30, 0.08),
+    0 20px 36px -12px rgba(58, 45, 30, 0.14),
+    inset 0 1px 0 rgba(255, 253, 248, 0.8);
 }
 
 /* Nível 3 — Modal / Painel principal (flutua muito) */
 @utility shadow-lifted {
   box-shadow:
-    0 2px 4px rgba(18, 41, 31, 0.04),
-    0 8px 20px rgba(18, 41, 31, 0.10),
-    0 32px 64px rgba(18, 41, 31, 0.12),
-    0 0 0 1px rgba(18, 41, 31, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    0 2px 4px rgba(58, 45, 30, 0.06),
+    0 10px 24px -6px rgba(58, 45, 30, 0.12),
+    0 34px 60px -16px rgba(58, 45, 30, 0.20),
+    inset 0 1px 0 rgba(255, 253, 248, 0.9);
 }
 
 /* Sombra de hover — adiciona quando :hover */
 @utility shadow-hover {
   box-shadow:
-    0 2px 6px rgba(18, 41, 31, 0.06),
-    0 12px 28px rgba(18, 41, 31, 0.14),
-    0 40px 80px rgba(18, 41, 31, 0.14),
-    0 0 0 1px rgba(18, 41, 31, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    0 3px 8px -2px rgba(58, 45, 30, 0.08),
+    0 14px 30px -6px rgba(58, 45, 30, 0.16),
+    0 44px 72px -20px rgba(58, 45, 30, 0.20),
+    inset 0 1px 0 rgba(255, 253, 248, 0.95);
 }
 
 /* Sombra ouro — para elementos em foco/destaque */
@@ -545,12 +544,12 @@
 
   &:hover {
     transform: translateY(-4px);
-    border-color: rgba(212, 168, 67, 0.35) !important;
+    border-color: rgba(201, 162, 75, 0.4) !important;
     box-shadow:
-      0 2px 6px rgba(18, 41, 31, 0.06),
-      0 12px 28px rgba(18, 41, 31, 0.14),
-      0 40px 80px rgba(18, 41, 31, 0.10),
-      inset 0 1px 0 rgba(255, 255, 255, 0.95);
+      0 3px 8px -2px rgba(58, 45, 30, 0.08),
+      0 14px 30px -6px rgba(58, 45, 30, 0.16),
+      0 44px 72px -20px rgba(58, 45, 30, 0.18),
+      inset 0 1px 0 rgba(255, 253, 248, 0.95);
   }
 }
 

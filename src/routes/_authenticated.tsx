@@ -133,14 +133,18 @@ function AuthenticatedLayout() {
           SIDEBAR — 220px premium, Arc Browser-inspired
           ═══════════════════════════════════════════════════ */}
       <aside
-        className={`relative z-40 flex shrink-0 flex-col overflow-hidden bg-forest shadow-[6px_0_24px_rgba(12,24,18,0.35),1px_0_0_rgba(255,255,255,0.04)] transition-[width,min-width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+        className={`relative z-40 flex shrink-0 flex-col overflow-hidden bg-gradient-to-b from-forest via-forest to-[#0D1F15] shadow-[7px_0_28px_-6px_rgba(12,24,18,0.5),1px_0_0_rgba(201,162,75,0.18)] transition-[width,min-width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
           isCollapsed ? "w-[68px] min-w-[68px]" : "w-[210px] min-w-[210px]"
         }`}
       >
-        {/* Gradiente sutil no topo */}
+        {/* Brilho de lombada no topo + filete dourado na borda direita */}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(170deg,rgba(255,255,255,0.04)_0%,transparent_45%)]"
+          className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(170deg,rgba(255,255,255,0.05)_0%,transparent_42%)]"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-y-0 right-0 z-0 w-px bg-gradient-to-b from-transparent via-gold/25 to-transparent"
         />
 
         {/* ── Logo ─────────────────────────────── */}

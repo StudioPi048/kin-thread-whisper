@@ -107,10 +107,12 @@ const STAMP_CFG: Record<
 
 function StatusStamp({ status, size = 48 }: { status: DossierStatus; size?: number }) {
   const cfg = STAMP_CFG[status];
-  const r1 = size / 2 - 2.5;
-  const r2 = size / 2 - 8;
+  const r1 = size / 2 - 2; // anel externo
+  const rDots = size / 2 - 5.5; // anel de perfurações
+  const r2 = size / 2 - 8.5; // anel interno fino
   const cx = size / 2;
   const fontSize = size < 44 ? 6 : 7;
+  const textDx = fontSize * (cfg.label.length * 0.32);
   return (
     <svg
       width={size}
@@ -121,22 +123,41 @@ function StatusStamp({ status, size = 48 }: { status: DossierStatus; size?: numb
       focusable="false"
       style={{
         transform: `rotate(${cfg.rotation}deg)`,
-        opacity: 0.72,
+        opacity: 0.75,
         pointerEvents: "none",
         flexShrink: 0,
         userSelect: "none",
       }}
     >
-      <circle cx={cx} cy={cx} r={r1} fill="none" stroke={cfg.color} strokeWidth="1.5" />
+      {/* Lavagem de tinta / cera */}
+      <circle cx={cx} cy={cx} r={r1} fill={cfg.color} fillOpacity="0.06" />
+      {/* Anel externo firme */}
+      <circle cx={cx} cy={cx} r={r1} fill="none" stroke={cfg.color} strokeWidth="1.6" />
+      {/* Anel de perfurações (selo oficial) */}
+      <circle
+        cx={cx}
+        cy={cx}
+        r={rDots}
+        fill="none"
+        stroke={cfg.color}
+        strokeWidth="1.1"
+        strokeDasharray="0.5 2.4"
+        strokeLinecap="round"
+        opacity="0.7"
+      />
+      {/* Anel interno fino */}
       <circle cx={cx} cy={cx} r={r2} fill="none" stroke={cfg.color} strokeWidth="0.6" />
+      {/* Marcas flanqueando o texto */}
+      <circle cx={cx - textDx} cy={cx} r="0.9" fill={cfg.color} />
+      <circle cx={cx + textDx} cy={cx} r="0.9" fill={cfg.color} />
       <text
         x={cx}
-        y={cx + fontSize * 0.55}
+        y={cx + fontSize * 0.35}
         textAnchor="middle"
         fontSize={fontSize}
         fontFamily="'Outfit', system-ui, sans-serif"
         fontWeight="800"
-        letterSpacing="1.6"
+        letterSpacing="1.4"
         fill={cfg.color}
       >
         {cfg.label}
@@ -266,32 +287,32 @@ export function DossierCard({
       style={{
         display: "flex",
         flexDirection: "column",
-        background: "var(--surface-dossier, #FAFAF4)",
+        background: "var(--surface-dossier, #FBF8F1)",
         border: "1px solid var(--material-border, rgba(180,170,155,0.5))",
         borderLeft: "3px solid var(--material-bronze, #8A6845)",
-        borderRadius: "12px",
+        borderRadius: "14px",
         overflow: "hidden",
         position: "relative",
         cursor: "pointer",
         height: "100%",
         boxShadow:
-          "0 1px 3px rgba(18,41,31,0.04), 0 4px 12px rgba(18,41,31,0.06), inset 0 1px 0 rgba(255,255,255,0.85)",
+          "0 1px 2px rgba(58,45,30,0.05), 0 4px 12px -2px rgba(58,45,30,0.09), 0 16px 30px -12px rgba(58,45,30,0.13), inset 0 1px 0 rgba(255,253,248,0.9)",
         transition:
-          "box-shadow 0.22s cubic-bezier(0.16,1,0.3,1), transform 0.22s cubic-bezier(0.16,1,0.3,1), border-color 0.18s ease",
+          "box-shadow 0.3s cubic-bezier(0.16,1,0.3,1), transform 0.3s cubic-bezier(0.16,1,0.3,1), border-color 0.18s ease",
         outline: "none",
       }}
       onMouseEnter={(e) => {
         const el = e.currentTarget;
-        el.style.transform = "translateY(-3px)";
+        el.style.transform = "translateY(-4px)";
         el.style.boxShadow =
-          "0 2px 8px rgba(18,41,31,0.06), 0 16px 32px rgba(18,41,31,0.11), inset 0 1px 0 rgba(255,255,255,0.95)";
+          "0 3px 8px -2px rgba(58,45,30,0.08), 0 16px 32px -8px rgba(58,45,30,0.14), 0 40px 60px -22px rgba(58,45,30,0.20), inset 0 1px 0 rgba(255,253,248,0.95)";
         el.style.borderLeftColor = "var(--material-gold, #C6A23A)";
       }}
       onMouseLeave={(e) => {
         const el = e.currentTarget;
         el.style.transform = "translateY(0)";
         el.style.boxShadow =
-          "0 1px 3px rgba(18,41,31,0.04), 0 4px 12px rgba(18,41,31,0.06), inset 0 1px 0 rgba(255,255,255,0.85)";
+          "0 1px 2px rgba(58,45,30,0.05), 0 4px 12px -2px rgba(58,45,30,0.09), 0 16px 30px -12px rgba(58,45,30,0.13), inset 0 1px 0 rgba(255,253,248,0.9)";
         el.style.borderLeftColor = "var(--material-bronze, #8A6845)";
       }}
       onFocus={(e) => {
