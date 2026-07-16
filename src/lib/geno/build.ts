@@ -741,10 +741,11 @@ export function layoutGraph(g: LogicalGraph): Placement {
   }
 
   const placement = { personPos: finalPersonPos, unionPos: finalUnionPos };
-  const violations = checkLayoutInvariants(g, placement);
-  console.log(violations.length === 0 ? "✅ Layout OK" : `❌ ${violations.length} violação(ões)`);
-  if (violations.length > 0) {
-    console.table(violations);
+  if (import.meta.env.DEV) {
+    const violations = checkLayoutInvariants(g, placement);
+    if (violations.length > 0) {
+      console.warn(`Genogram layout: ${violations.length} violação(ões)`, violations);
+    }
   }
 
   return placement;

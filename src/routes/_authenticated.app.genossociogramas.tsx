@@ -4,9 +4,9 @@ import {
   Search,
   GitBranch,
   ArrowRight,
-  Activity,
   Sparkles,
   CheckCircle2,
+  AlertTriangle,
 } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { DocumentHeader } from "@/components/ui/document-header";
+import { buildLogicalGraph, validateGraph } from "@/lib/geno/build";
+import { detectPatterns, type PersonRow, type RelationshipRow } from "@/lib/patterns";
 
 export const Route = createFileRoute("/_authenticated/app/genossociogramas")({
   component: GenogramsPage,
@@ -26,12 +28,43 @@ function GenogramsPage() {
   const { data: clients = [], isLoading } = useQuery({
     queryKey: ["genograms-list"],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data: clientRows } = await supabase
         .from("clients")
         .select("*")
         .eq("status", "active")
         .order("full_name");
-      return data ?? [];
+
+      const clientIds = (clientRows ?? []).map((c) => c.id);
+      if (clientIds.length === 0) return [];
+
+      const [{ data: personRows }, { data: relRows }] = await Promise.all([
+        supabase.from("genogram_persons").select("*").in("client_id", clientIds),
+        supabase.from("genogram_relationships").select("*").in("client_id", clientIds),
+      ]);
+
+      const personsByClient = new Map<string, PersonRow[]>();
+      for (const p of personRows ?? []) {
+        if (!personsByClient.has(p.client_id)) personsByClient.set(p.client_id, []);
+        personsByClient.get(p.client_id)!.push(p);
+      }
+      const relsByClient = new Map<string, RelationshipRow[]>();
+      for (const r of relRows ?? []) {
+        if (!relsByClient.has(r.client_id)) relsByClient.set(r.client_id, []);
+        relsByClient.get(r.client_id)!.push(r);
+      }
+
+      return (clientRows ?? []).map((c) => {
+        const persons = personsByClient.get(c.id) ?? [];
+        const rels = relsByClient.get(c.id) ?? [];
+        const proband = persons.find((p) => p.is_proband);
+        const graph = buildLogicalGraph({ persons, rels, probandId: proband?.id });
+        const generations = new Set(Array.from(graph.persons.values()).map((p) => p.generation))
+          .size;
+        const patternsCount = detectPatterns(persons, rels).length;
+        const consistent = validateGraph(graph).ok;
+
+        return { ...c, personCount: persons.length, generations, patternsCount, consistent };
+      });
     },
   });
 
@@ -89,28 +122,47 @@ function GenogramsPage() {
                     </h3>
                     <Badge
                       variant="outline"
-                      className="text-forest border-forest bg-forest/5 text-[10px] font-bold"
+                      className="text-forest border-forest bg-forest/5 text-[10px] font-bold shrink-0"
                     >
-                      74% completo
+                      {c.personCount === 0
+                        ? "Não iniciado"
+                        : `${c.personCount} ${c.personCount === 1 ? "pessoa" : "pessoas"}`}
                     </Badge>
                   </div>
 
                   <div className="space-y-1.5 text-[13px] text-muted-foreground">
                     <div className="flex items-center gap-2">
                       <GitBranch className="size-4 text-forest shrink-0" />
-                      <span>3 gerações mapeadas</span>
+                      <span>
+                        {c.generations === 0
+                          ? "Nenhuma geração mapeada"
+                          : `${c.generations} ${c.generations === 1 ? "geração mapeada" : "gerações mapeadas"}`}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Sparkles className="size-4 text-gold shrink-0" />
-                      <span>4 padrões transgeracionais ativos</span>
+                      <span>
+                        {c.patternsCount === 0
+                          ? "Nenhum padrão identificado"
+                          : `${c.patternsCount} ${c.patternsCount === 1 ? "padrão transgeracional ativo" : "padrões transgeracionais ativos"}`}
+                      </span>
                     </div>
                   </div>
                 </div>
 
                 <div className="mt-6 pt-4 border-t border-border/40 flex justify-between items-center">
                   <span className="text-[11px] text-muted-foreground font-semibold flex items-center gap-1">
-                    <CheckCircle2 className="size-3.5 text-emerald-600" />
-                    Consistente
+                    {c.personCount === 0 ? null : c.consistent ? (
+                      <>
+                        <CheckCircle2 className="size-3.5 text-emerald-600" />
+                        Consistente
+                      </>
+                    ) : (
+                      <>
+                        <AlertTriangle className="size-3.5 text-amber-600" />
+                        Pendências
+                      </>
+                    )}
                   </span>
 
                   <Link

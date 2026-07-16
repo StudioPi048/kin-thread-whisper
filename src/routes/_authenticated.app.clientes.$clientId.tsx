@@ -587,17 +587,11 @@ function Panel({
 }: {
   title: string;
   icon?: React.ReactNode;
-  accent?: "forest" | "gold" | "forest";
+  accent?: "forest" | "gold";
   children: React.ReactNode;
 }) {
   const accentClass =
-    accent === "forest"
-      ? "accent-bar-forest"
-      : accent === "gold"
-        ? "accent-bar-gold"
-        : accent === "forest"
-          ? "accent-bar-forest"
-          : "";
+    accent === "forest" ? "accent-bar-forest" : accent === "gold" ? "accent-bar-gold" : "";
 
   return (
     <section className={`rounded-[1rem] glass-card p-6 ${accentClass}`}>
