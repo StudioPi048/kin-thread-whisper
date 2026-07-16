@@ -29,10 +29,18 @@ function AppHome() {
     profile?.full_name?.split(" ")[0] ?? user.email?.split("@")[0] ?? "Pesquisadora";
 
   return (
-    <div className="min-h-screen bg-transparent pb-20 font-serif text-ink selection:bg-gold-soft">
+    <div className="relative min-h-screen overflow-hidden bg-transparent pb-20 font-serif text-ink selection:bg-gold-soft">
+      {/* Selo de cera — assinatura da mesa clínica (arte real "arquivo vivo") */}
+      <img
+        src="/assets/objects/wax_seal_tree.jpg"
+        alt=""
+        aria-hidden
+        className="pointer-events-none absolute top-4 right-6 hidden w-[168px] rotate-[-7deg] mix-blend-darken lg:block xl:right-20"
+      />
+
       {/* Header Contextual (Mesa Clínica) */}
       <DocumentHeader
-        breadcrumb="Instituto Liz / Mesa Clínica"
+        breadcrumb="Mesa Clínica"
         title={`Bom dia, ${firstName}.`}
         subtitle="Sua mesa clínica está limpa e organizada para o dia de hoje."
       />
