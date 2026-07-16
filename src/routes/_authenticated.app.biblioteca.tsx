@@ -162,7 +162,7 @@ const QUICK_SUGGESTIONS = [
 
 const TODAY = {
   concept: {
-    label: "Conceito do dia",
+    label: "Conceito em destaque",
     title: "Lealdade Invisível",
     body: "Compromisso inconsciente do descendente com a fidelidade ao sistema familiar de origem. Elaborado por Boszormenyi-Nagy: o membro do clã se autoboicota para 'não trair' os ancestrais.",
     related: ["Boszormenyi-Nagy", "Fantasma", "Missão de Vida"],
@@ -716,7 +716,11 @@ function BibliotecaPage() {
 
           {/* ── HOJE NA BIBLIOTECA (BENTO) ─────────────────── */}
           <section className="space-y-6">
-            <SectionHeader number="03" eyebrow="Descoberta diária" title="Hoje na Biblioteca" />
+            <SectionHeader
+              number="03"
+              eyebrow="Destaques do acervo"
+              title="Destaques da Biblioteca"
+            />
 
             <div className="grid grid-cols-4 gap-4 auto-rows-[minmax(180px,auto)]">
               {/* Concept of day — big */}
@@ -759,7 +763,7 @@ function BibliotecaPage() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">
-                    Autor da semana
+                    Autor em destaque
                   </p>
                   <h4 className="font-serif text-2xl font-bold leading-tight mt-1">
                     {TODAY.authorOfWeek.name}
@@ -828,7 +832,6 @@ function BibliotecaPage() {
                   >
                     <div className="flex items-start justify-between">
                       <Icon className="size-6 opacity-80 group-hover:opacity-100" />
-                      <span className="text-[10px] font-bold opacity-60">{t.count}</span>
                     </div>
                     <h4 className="mt-6 font-serif text-lg font-bold leading-tight">{t.name}</h4>
                     <ChevronRight className="mt-2 size-4 opacity-0 -translate-x-1 group-hover:opacity-70 group-hover:translate-x-0 transition-all" />
@@ -887,17 +890,7 @@ function BibliotecaPage() {
                     </div>
 
                     <div className="mt-auto pt-4 border-t border-border/50 flex items-center justify-between">
-                      <div className="flex items-center gap-4 text-[11px] text-muted-foreground">
-                        <span>
-                          <strong className="text-forest">{b.citations}</strong> citações
-                        </span>
-                        <span>
-                          <strong className="text-forest">{b.protocols}</strong> protocolos
-                        </span>
-                        <span>
-                          <strong className="text-forest">{b.cases}</strong> casos
-                        </span>
-                      </div>
+                      <span className="text-[11px] text-muted-foreground italic">{b.level}</span>
                       <button className="inline-flex items-center gap-1.5 rounded-lg bg-forest px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-white hover:bg-forest transition-colors">
                         Abrir
                       </button>
@@ -1348,9 +1341,9 @@ function ClinicalAiRail({ open, onToggle }: { open: boolean; onToggle: () => voi
                     <BrainCircuit className="size-5 text-white" />
                   </div>
                   <div>
-                    <h3 className="font-serif text-lg font-bold">IA Clínica</h3>
+                    <h3 className="font-serif text-lg font-bold">Sugestões do acervo</h3>
                     <p className="text-[10px] uppercase tracking-widest text-white/50 font-bold">
-                      Contextual · viva
+                      Conexões curadas
                     </p>
                   </div>
                 </div>
@@ -1429,7 +1422,7 @@ function ClinicalAiRail({ open, onToggle }: { open: boolean; onToggle: () => voi
               className="text-[10px] font-bold uppercase tracking-widest text-forest/60"
               style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
             >
-              IA Clínica
+              Sugestões
             </p>
           </motion.div>
         )}
@@ -1557,9 +1550,11 @@ function AuthorPortraitCard({
         <p className="mt-0.5 text-[10px] uppercase tracking-wider text-forest font-semibold">
           {author.field}
         </p>
-        <p className="mt-1 text-[10px] text-muted-foreground/60">
-          {author.works} obras · {author.concepts} conceitos
-        </p>
+        {(author.years || author.nationality) && (
+          <p className="mt-1 text-[10px] text-muted-foreground/60">
+            {[author.years, author.nationality].filter(Boolean).join(" · ")}
+          </p>
+        )}
       </div>
     </button>
   );
@@ -1674,12 +1669,12 @@ function LeticiaAutoralSection() {
             {[
               { n: LETICIA_WORKS.length, l: "Obras" },
               {
-                n: LETICIA_WORKS.reduce((s, w) => s + w.protocols, 0),
-                l: "Protocolos",
+                n: LETICIA_WORKS.filter((w) => w.kind === "Livro").length,
+                l: "Livros",
               },
               {
-                n: LETICIA_WORKS.reduce((s, w) => s + w.citations, 0),
-                l: "Citações",
+                n: new Set(LETICIA_WORKS.map((w) => w.kind)).size,
+                l: "Formatos",
               },
             ].map((s) => (
               <div key={s.l} className="min-w-0">
@@ -1755,14 +1750,8 @@ function LeticiaAutoralSection() {
             <div className="p-4 space-y-3">
               <p className="text-[12px] italic text-muted-foreground leading-snug">{w.subtitle}</p>
               <div className="flex items-center justify-between text-[11px] text-muted-foreground border-t border-border/40 pt-3">
-                <span>
-                  <strong className="text-forest">{w.concepts}</strong> conceitos
-                </span>
-                <span>
-                  <strong className="text-forest">{w.protocols}</strong> protocolos
-                </span>
-                <span>
-                  <strong className="text-forest">{w.citations}</strong> citações
+                <span className="uppercase tracking-wider font-semibold text-forest/70">
+                  {w.kind}
                 </span>
               </div>
               <button className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-forest py-2 text-[11px] font-bold uppercase tracking-wider text-white hover:bg-forest transition-colors">

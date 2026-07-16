@@ -9,9 +9,7 @@ import {
   AlertCircle,
   Layers,
   HelpCircle as QuestionIcon,
-  BookOpen as AuthorIcon,
   Clock,
-  Users,
   AlertTriangle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -195,7 +193,7 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
     return list.slice(0, 3);
   }, [patterns]);
 
-  // Alertas de consistência (Mock inteligent)
+  // Alertas de consistência — cálculo real sobre datas de nascimento/morte
   const consistencyAlerts = useMemo(() => {
     const list: string[] = [];
     if (!data?.persons) return list;
@@ -219,22 +217,10 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
     return list;
   }, [data, patterns]);
 
-  // Casos semelhantes (Mock inteligent)
-  const similarCases = useMemo(() => {
-    if (patterns.length > 0) {
-      return [
-        "Você já atendeu 2 pacientes com padrão de abandono paterno semelhante (ex: Família Silva).",
-      ];
-    }
-    return [];
-  }, [patterns]);
-
-  // Linha do tempo inteligente (Mock)
+  // Linha do tempo inteligente — descrições reais de síndrome de aniversário
+  // detectadas em detectPatterns (nomes e datas verdadeiros do próprio caso).
   const smartTimeline = useMemo(() => {
-    if (patterns.some((p) => p.type === "anniversary_syndrome")) {
-      return ["1984: Nascimento do paciente coincide com falecimento do avô (1984)."];
-    }
-    return [];
+    return patterns.filter((p) => p.type === "anniversary_syndrome").map((p) => p.description);
   }, [patterns]);
 
   if (isLoading) {
@@ -371,26 +357,6 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
                     <div
                       key={i}
                       className="p-3 bg-forest/5 border-l-2 border-forest-soft rounded-r-xl"
-                    >
-                      <p className="text-[16px] leading-relaxed text-ink font-serif">{item}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Casos Semelhantes */}
-            {similarCases.length > 0 && (
-              <div className="space-y-4">
-                <h4 className="text-[16px] font-bold uppercase tracking-widest text-clinical-positive flex items-center gap-2">
-                  <Users className="size-4" />
-                  Casos Semelhantes
-                </h4>
-                <div className="space-y-3">
-                  {similarCases.map((item, i) => (
-                    <div
-                      key={i}
-                      className="p-3 bg-clinical-positive/10 border-l-2 border-clinical-positive rounded-r-xl"
                     >
                       <p className="text-[16px] leading-relaxed text-ink font-serif">{item}</p>
                     </div>

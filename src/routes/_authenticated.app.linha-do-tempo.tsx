@@ -1,12 +1,26 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { History, Search, Calendar, Sparkles, AlertCircle, ArrowRight } from "lucide-react";
+import {
+  History,
+  Search,
+  Calendar,
+  Sparkles,
+  AlertCircle,
+  CheckCircle2,
+  ArrowRight,
+} from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { DocumentHeader } from "@/components/ui/document-header";
+import { buildLogicalGraph, validateGraph } from "@/lib/geno/build";
+import {
+  buildTimeline,
+  detectPatterns,
+  type PersonRow,
+  type RelationshipRow,
+} from "@/lib/patterns";
 
 export const Route = createFileRoute("/_authenticated/app/linha-do-tempo")({
   component: TimelinesPage,
@@ -18,12 +32,42 @@ function TimelinesPage() {
   const { data: clients = [], isLoading } = useQuery({
     queryKey: ["timelines-list"],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data: clientRows } = await supabase
         .from("clients")
         .select("*")
         .eq("status", "active")
         .order("full_name");
-      return data ?? [];
+
+      const clientIds = (clientRows ?? []).map((c) => c.id);
+      if (clientIds.length === 0) return [];
+
+      const [{ data: personRows }, { data: relRows }] = await Promise.all([
+        supabase.from("genogram_persons").select("*").in("client_id", clientIds),
+        supabase.from("genogram_relationships").select("*").in("client_id", clientIds),
+      ]);
+
+      const personsByClient = new Map<string, PersonRow[]>();
+      for (const p of personRows ?? []) {
+        if (!personsByClient.has(p.client_id)) personsByClient.set(p.client_id, []);
+        personsByClient.get(p.client_id)!.push(p);
+      }
+      const relsByClient = new Map<string, RelationshipRow[]>();
+      for (const r of relRows ?? []) {
+        if (!relsByClient.has(r.client_id)) relsByClient.set(r.client_id, []);
+        relsByClient.get(r.client_id)!.push(r);
+      }
+
+      return (clientRows ?? []).map((c) => {
+        const persons = personsByClient.get(c.id) ?? [];
+        const rels = relsByClient.get(c.id) ?? [];
+        const proband = persons.find((p) => p.is_proband);
+        const graph = buildLogicalGraph({ persons, rels, probandId: proband?.id });
+        const milestones = buildTimeline(persons).length;
+        const patternsCount = detectPatterns(persons, rels).length;
+        const consistent = validateGraph(graph).ok;
+
+        return { ...c, personCount: persons.length, milestones, patternsCount, consistent };
+      });
     },
   });
 
@@ -81,28 +125,47 @@ function TimelinesPage() {
                     </h3>
                     <Badge
                       variant="outline"
-                      className="text-forest border-forest bg-forest/5 text-[10px] font-bold"
+                      className="text-forest border-forest bg-forest/5 text-[10px] font-bold shrink-0"
                     >
-                      60% completa
+                      {c.personCount === 0
+                        ? "Não iniciada"
+                        : `${c.personCount} ${c.personCount === 1 ? "pessoa" : "pessoas"}`}
                     </Badge>
                   </div>
 
                   <div className="space-y-1.5 text-[13px] text-muted-foreground">
                     <div className="flex items-center gap-2">
                       <Calendar className="size-4 text-gold shrink-0" />
-                      <span>12 marcos históricos registrados</span>
+                      <span>
+                        {c.milestones === 0
+                          ? "Nenhum marco histórico registrado"
+                          : `${c.milestones} ${c.milestones === 1 ? "marco histórico registrado" : "marcos históricos registrados"}`}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Sparkles className="size-4 text-forest shrink-0" />
-                      <span>2 traumas principais mapeados</span>
+                      <span>
+                        {c.patternsCount === 0
+                          ? "Nenhum padrão mapeado"
+                          : `${c.patternsCount} ${c.patternsCount === 1 ? "padrão mapeado" : "padrões mapeados"}`}
+                      </span>
                     </div>
                   </div>
                 </div>
 
                 <div className="mt-6 pt-4 border-t border-border/40 flex justify-between items-center">
                   <span className="text-[11px] text-muted-foreground font-semibold flex items-center gap-1">
-                    <AlertCircle className="size-3.5 text-amber-600" />
-                    Pendente revisão
+                    {c.personCount === 0 ? null : c.consistent ? (
+                      <>
+                        <CheckCircle2 className="size-3.5 text-emerald-600" />
+                        Consistente
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle className="size-3.5 text-amber-600" />
+                        Pendente revisão
+                      </>
+                    )}
                   </span>
 
                   <Link

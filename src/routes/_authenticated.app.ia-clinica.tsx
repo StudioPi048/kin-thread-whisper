@@ -1,6 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Sparkles, Send, Bot, User, Brain, AlertTriangle } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { Send, Bot, User, Brain } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +14,19 @@ export const Route = createFileRoute("/_authenticated/app/ia-clinica")({
 
 function IaClinicaPage() {
   const [input, setInput] = useState("");
+
+  const { data: recentClients = [] } = useQuery({
+    queryKey: ["ia-clinica-recent-clients"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("clients")
+        .select("id, full_name, preferred_name, status")
+        .eq("status", "active")
+        .order("updated_at", { ascending: false })
+        .limit(5);
+      return data ?? [];
+    },
+  });
   const [messages, setMessages] = useState<Array<{ sender: "ai" | "user"; text: string }>>([
     {
       sender: "ai",
@@ -52,6 +67,11 @@ function IaClinicaPage() {
         breadcrumb="Instituto Liz / Inteligência Clínica"
         title="Segundo Cérebro Clínico"
         subtitle="Seu assistente especialista em Psicogenealogia para análise de repetições transgeracionais e hipóteses diagnósticas."
+        actions={
+          <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-amber-800 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-full whitespace-nowrap">
+            Protótipo · modo demonstração
+          </span>
+        }
       />
       {/* Main chat layout */}
       <div className="flex-1 flex overflow-hidden">
@@ -131,18 +151,29 @@ function IaClinicaPage() {
             <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
               Casos Recentes
             </h4>
-            <div className="space-y-2 text-[13px]">
-              <div className="flex justify-between items-center py-1">
-                <span className="font-semibold text-primary">Paciente Exemplo A</span>
-                <Badge className="bg-forest/5 text-forest border-forest/10 text-[10px]">
-                  Ativo
-                </Badge>
+            {recentClients.length === 0 ? (
+              <p className="text-[13px] text-muted-foreground italic font-serif">
+                Nenhum caso ativo ainda.
+              </p>
+            ) : (
+              <div className="space-y-2 text-[13px]">
+                {recentClients.map((c) => (
+                  <Link
+                    key={c.id}
+                    to="/app/clientes/$clientId"
+                    params={{ clientId: c.id }}
+                    className="flex justify-between items-center py-1 rounded-md px-1 -mx-1 hover:bg-forest/5 transition-colors"
+                  >
+                    <span className="font-semibold text-primary truncate">
+                      {c.preferred_name || c.full_name}
+                    </span>
+                    <Badge className="bg-forest/5 text-forest border-forest/10 text-[10px] shrink-0">
+                      Ativo
+                    </Badge>
+                  </Link>
+                ))}
               </div>
-              <div className="flex justify-between items-center py-1">
-                <span className="font-semibold text-primary">Paciente Exemplo B</span>
-                <Badge className="bg-slate-100 text-muted-foreground text-[10px]">Ativo</Badge>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

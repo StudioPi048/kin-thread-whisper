@@ -26,7 +26,6 @@ import {
   Waves,
   Sunrise,
   MessageSquare,
-  DollarSign,
   TimerReset,
   Users,
   ChevronRight,
@@ -37,6 +36,7 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DocumentHeader } from "@/components/ui/document-header";
 import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
 import { getAgendaData, type AgendaSessionDTO, type OrphanClientDTO } from "@/lib/agenda.functions";
 import {
   getClientGenogram,
@@ -247,6 +247,23 @@ const QUICK_ACTIONS = [
 /* ------------------------------ Page Component ---------------------------- */
 
 function AgendaPage() {
+  const { user } = Route.useRouteContext();
+
+  const { data: profile } = useQuery({
+    queryKey: ["profile", user.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .maybeSingle();
+      return data;
+    },
+  });
+
+  const firstName =
+    profile?.full_name?.split(" ")[0] ?? user.email?.split("@")[0] ?? "Pesquisadora";
+
   const query = useQuery({
     queryKey: ["agenda-data"],
     queryFn: () => getAgendaData(),
@@ -290,6 +307,7 @@ function AgendaPage() {
       {/* Contextual Header */}
       <ContextualHeader
         stats={stats}
+        firstName={firstName}
         isLoading={query.isLoading}
         isFallback={isFallback}
         isError={query.isError}
@@ -327,6 +345,7 @@ function AgendaPage() {
         <div className="lg:col-span-2 2xl:col-span-1">
           <RightPanel
             session={selected}
+            stats={stats}
             orphanClients={orphanClients}
             prontuariosPendentes={prontuariosPendentes}
           />
@@ -352,6 +371,7 @@ function EmptyCenter() {
 
 function ContextualHeader({
   stats,
+  firstName,
   isLoading,
   isFallback,
   isError,
@@ -364,6 +384,7 @@ function ContextualHeader({
     ocupado: string;
     livre: string;
   };
+  firstName: string;
   isLoading: boolean;
   isFallback: boolean;
   isError: boolean;
@@ -374,15 +395,23 @@ function ContextualHeader({
       title={
         <div className="flex items-center gap-4">
           <div className="flex items-center justify-center size-14 shrink-0 rounded-lg bg-forest text-gold font-serif text-3xl font-bold shadow-sm">
-            L
+            {firstName.charAt(0).toUpperCase()}
           </div>
-          <span className="tracking-tight">Bom dia, Letícia.</span>
+          <span className="tracking-tight">Bom dia, {firstName}.</span>
         </div>
       }
       subtitle={
         <div className="font-sans font-normal text-ink/70 text-[15px]">
-          Hoje você acompanhará <strong>{stats.total} histórias familiares</strong>.<br />
-          Um dos pacientes está em <strong>data ativa de Síndrome de Aniversário</strong>.
+          Hoje você acompanhará <strong>{stats.total} histórias familiares</strong>.
+          {stats.aniversarios > 0 && (
+            <>
+              <br />
+              {stats.aniversarios === 1
+                ? "Um dos pacientes está em "
+                : `${stats.aniversarios} pacientes estão em `}
+              <strong>data ativa de Síndrome de Aniversário</strong>.
+            </>
+          )}
         </div>
       }
       actions={
@@ -1070,16 +1099,28 @@ function UpcomingList({ currentId, sessions }: { currentId: string; sessions: Se
 
 function RightPanel({
   session,
+  stats,
   orphanClients,
   prontuariosPendentes,
 }: {
   session: Session;
+  stats: {
+    total: number;
+    primeira: number;
+    retornos: number;
+    aniversarios: number;
+    ocupado: string;
+    livre: string;
+  };
   orphanClients: OrphanClientDTO[];
   prontuariosPendentes: number;
 }) {
+  const WORKDAY_HOURS = 8;
+  const occupiedPct = Math.min(100, Math.round((stats.total / WORKDAY_HOURS) * 100));
+
   return (
     <aside className="grid gap-4 md:grid-cols-2 2xl:grid-cols-1">
-      {/* IA Clínica briefing */}
+      {/* Preparação do próximo atendimento — dados reais da sessão selecionada */}
       <div className="rounded-2xl bg-gradient-to-br from-forest via-forest to-forest/90 text-white p-5 shadow-lg relative overflow-hidden">
         <div
           aria-hidden
@@ -1092,36 +1133,41 @@ function RightPanel({
             </div>
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gold">
-                IA Clínica
+                Preparação
               </p>
-              <p className="text-[11px] text-white/70">Briefing do dia</p>
+              <p className="text-[11px] text-white/70">Atendimento selecionado</p>
             </div>
           </div>
 
           <p className="font-serif text-[14px] leading-relaxed text-white/90">
-            Preparei <strong className="text-gold">3 hipóteses clínicas</strong> para o atendimento
-            das 09h com {session.patient.split(" ")[0]}. Há uma possível{" "}
-            <strong className="text-gold">coincidência de datas</strong> a investigar com a linhagem
-            paterna.
+            {session.start} · <strong className="text-gold">{session.patient.split(" ")[0]}</strong>{" "}
+            — {session.type}
+            {session.sessionNumber ? ` · ${session.sessionNumber}` : ""}.
           </p>
 
-          <div className="mt-4 pt-4 border-t border-white/10 space-y-2 text-[12px] text-white/80">
-            <div className="flex items-start gap-2">
-              <CheckCircle2 className="size-3.5 text-gold shrink-0 mt-0.5" />
-              <span>
-                Sugerido: <em>Mapa de Segredos</em> antes da 4ª sessão.
-              </span>
+          {session.aiAlerts.length > 0 ? (
+            <div className="mt-4 pt-4 border-t border-white/10 space-y-2 text-[12px] text-white/80">
+              {session.aiAlerts.map((alert, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <CheckCircle2 className="size-3.5 text-gold shrink-0 mt-0.5" />
+                  <span>{alert}</span>
+                </div>
+              ))}
             </div>
-            <div className="flex items-start gap-2">
-              <CheckCircle2 className="size-3.5 text-gold shrink-0 mt-0.5" />
-              <span>2 clientes sem próxima sessão agendada.</span>
-            </div>
-          </div>
+          ) : (
+            <p className="mt-4 pt-4 border-t border-white/10 text-[12px] text-white/60 italic">
+              Nenhum sinal transgeracional registrado para esta sessão.
+            </p>
+          )}
 
-          <Button variant="hero" size="sm" className="mt-4 w-full font-bold">
-            <Wand2 className="size-3.5" />
-            Ver briefing completo
-          </Button>
+          {session.clientId && (
+            <Button variant="hero" size="sm" className="mt-4 w-full font-bold" asChild>
+              <Link to="/app/paciente/$id" params={{ id: session.clientId }}>
+                <Wand2 className="size-3.5" />
+                Abrir prontuário
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -1132,8 +1178,6 @@ function RightPanel({
         </p>
         <ul className="space-y-2.5 text-[13px]">
           <PendingRow label="Prontuários sem evolução" count={prontuariosPendentes} tone="rose" />
-          <PendingRow label="Checklists não preenchidos" count={2} tone="gold" />
-          <PendingRow label="Genogramas incompletos" count={3} tone="forest" />
           <PendingRow label="Clientes sem retorno" count={orphanClients.length} tone="forest" />
         </ul>
         {orphanClients.length > 0 && (
@@ -1141,14 +1185,20 @@ function RightPanel({
             {orphanClients.slice(0, 3).map((c) => (
               <li key={c.id} className="flex items-center justify-between text-[12px]">
                 <span className="text-primary/80 font-medium truncate">{c.name}</span>
-                <button className="text-forest font-bold hover:underline">Agendar</button>
+                <Link
+                  to="/app/paciente/$id"
+                  params={{ id: c.id }}
+                  className="text-forest font-bold hover:underline"
+                >
+                  Abrir
+                </Link>
               </li>
             ))}
           </ul>
         )}
       </div>
 
-      {/* Receita + tempo */}
+      {/* Balanço de tempo do dia */}
       <div className="rounded-2xl bg-white/80 backdrop-blur border border-border/50 shadow-sm p-5">
         <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">
           Balanço do dia
@@ -1156,24 +1206,21 @@ function RightPanel({
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <span className="flex items-center gap-2 text-[12px] text-primary/80 font-semibold">
-              <DollarSign className="size-3.5 text-emerald-600" /> Receita prevista
-            </span>
-            <span className="font-serif text-lg font-bold text-primary">R$ 1.350</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="flex items-center gap-2 text-[12px] text-primary/80 font-semibold">
               <Clock className="size-3.5 text-forest" /> Ocupado
             </span>
-            <span className="font-mono text-sm font-bold text-primary">4h 00m</span>
+            <span className="font-mono text-sm font-bold text-primary">{stats.ocupado}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="flex items-center gap-2 text-[12px] text-primary/80 font-semibold">
               <Leaf className="size-3.5 text-emerald-600" /> Tempo livre
             </span>
-            <span className="font-mono text-sm font-bold text-emerald-700">2h 40m</span>
+            <span className="font-mono text-sm font-bold text-emerald-700">{stats.livre}</span>
           </div>
           <div className="h-1.5 bg-cream rounded-full overflow-hidden mt-2">
-            <div className="h-full w-[60%] bg-gradient-to-r from-forest to-forest rounded-full" />
+            <div
+              className="h-full bg-gradient-to-r from-forest to-forest rounded-full transition-[width] duration-500"
+              style={{ width: `${occupiedPct}%` }}
+            />
           </div>
         </div>
       </div>
