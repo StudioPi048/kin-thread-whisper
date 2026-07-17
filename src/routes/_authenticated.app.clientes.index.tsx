@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -13,7 +13,6 @@ import {
   ArchiveRestore,
   FileCheck,
   AlertTriangle,
-  MapPin,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -42,7 +41,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { ClientFormDialog } from "@/components/clients/client-form-dialog";
-import { calcAge, initialsFrom } from "@/lib/clients";
+import { calcAge } from "@/lib/clients";
 import { DossierCard, DossierCardSkeleton } from "@/components/ui/dossier-card";
 import type { PatternItem } from "@/components/ui/dossier-card";
 import type { Database } from "@/integrations/supabase/types";
@@ -158,7 +157,7 @@ function ClientesIndex() {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("clients").delete().eq(id, id);
+      const { error } = await supabase.from("clients").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -170,70 +169,27 @@ function ClientesIndex() {
   });
 
   return (
-    <div style={{ background: "var(--surface-archive, #F4F1EB)", minHeight: "100vh" }}>
+    <div className="min-h-screen bg-surface-archive">
       {/* ── HEADER ─────────────────────────────────────────── */}
       <DocumentHeader
         breadcrumb="Clientes"
         title="Dossiês Clínicos"
         subtitle="Todos os pacientes em acompanhamento."
         actions={
-          <button
+          <Button
             onClick={() => setCreating(true)}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "8px",
-              background: "var(--gold, #D4A843)",
-              color: "#12291F",
-              border: "none",
-              borderRadius: "10px",
-              padding: "11px 20px",
-              fontSize: "13px",
-              fontWeight: 700,
-              fontFamily: "var(--font-sans)",
-              cursor: "pointer",
-              letterSpacing: "0.02em",
-              transition: "all 0.2s ease",
-              boxShadow: "0 2px 10px rgba(212,168,67,0.2), 0 1px 3px rgba(0,0,0,0.05)",
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.background = "var(--gold-soft, #E8C068)";
-              (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-1px)";
-              (e.currentTarget as HTMLButtonElement).style.boxShadow =
-                "0 4px 14px rgba(212,168,67,0.3), 0 2px 6px rgba(0,0,0,0.1)";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.background = "var(--gold, #D4A843)";
-              (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
-              (e.currentTarget as HTMLButtonElement).style.boxShadow =
-                "0 2px 10px rgba(212,168,67,0.2), 0 1px 3px rgba(0,0,0,0.05)";
-            }}
+            className="gap-2 rounded-[10px] bg-gold px-5 font-sans text-[13px] font-bold tracking-[0.02em] text-forest shadow-[0_2px_10px_rgba(212,168,67,0.2),0_1px_3px_rgba(0,0,0,0.05)] transition-all duration-200 hover:-translate-y-px hover:bg-gold-soft hover:shadow-[0_4px_14px_rgba(212,168,67,0.3),0_2px_6px_rgba(0,0,0,0.1)]"
           >
-            <Plus style={{ width: "16px", height: "16px" }} strokeWidth={2.5} />
+            <Plus className="size-4" strokeWidth={2.5} />
             Novo cliente
-          </button>
+          </Button>
         }
       />
 
       {/* ── TOOLBAR ─────────────────────────────────────────── */}
-      <div
-        style={{
-          background: "var(--surface-document, #FAFAF7)",
-          borderBottom: "1px solid var(--material-border, rgba(180,170,155,0.5))",
-          padding: "16px 0",
-        }}
-      >
-        <div
-          className="container-liz"
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "12px",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+      <div className="border-b border-material-border bg-surface-document py-4">
+        <div className="container-liz flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Tabs value={tab} onValueChange={(v) => setTab(v as "active" | "archived")}>
               <TabsList>
                 <TabsTrigger value="active">Ativos</TabsTrigger>
@@ -243,113 +199,67 @@ function ClientesIndex() {
 
             {/* View mode */}
             <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                border: "1px solid var(--material-border, rgba(180,170,155,0.5))",
-                borderRadius: "8px",
-                padding: "3px",
-                background: "var(--surface-archive, #F4F1EB)",
-              }}
+              role="group"
+              aria-label="Modo de visualização"
+              className="flex items-center rounded-lg border border-material-border bg-surface-archive p-[3px]"
             >
               <button
                 onClick={() => setViewMode("cards")}
                 title="Grade de Dossiês"
-                style={{
-                  width: "28px",
-                  height: "28px",
-                  borderRadius: "5px",
-                  border: "none",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  background:
-                    viewMode === "cards" ? "var(--surface-document, #FAFAF7)" : "transparent",
-                  color:
-                    viewMode === "cards" ? "var(--forest, #12291F)" : "var(--warm-gray, #6B6358)",
-                  transition: "all 0.15s ease",
-                  boxShadow: viewMode === "cards" ? "0 1px 3px rgba(18,41,31,0.08)" : "none",
-                }}
+                aria-label="Grade de Dossiês"
+                aria-pressed={viewMode === "cards"}
+                className={`flex size-7 items-center justify-center rounded-[5px] transition-all duration-150 ${
+                  viewMode === "cards"
+                    ? "bg-surface-document text-forest shadow-[0_1px_3px_rgba(18,41,31,0.08)]"
+                    : "text-warm-gray hover:text-ink"
+                }`}
               >
-                <LayoutGrid style={{ width: "14px", height: "14px" }} strokeWidth={1.75} />
+                <LayoutGrid className="size-3.5" strokeWidth={1.75} />
               </button>
               <button
                 onClick={() => setViewMode("list")}
                 title="Lista Compacta"
-                style={{
-                  width: "28px",
-                  height: "28px",
-                  borderRadius: "5px",
-                  border: "none",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  background:
-                    viewMode === "list" ? "var(--surface-document, #FAFAF7)" : "transparent",
-                  color:
-                    viewMode === "list" ? "var(--forest, #12291F)" : "var(--warm-gray, #6B6358)",
-                  transition: "all 0.15s ease",
-                  boxShadow: viewMode === "list" ? "0 1px 3px rgba(18,41,31,0.08)" : "none",
-                }}
+                aria-label="Lista Compacta"
+                aria-pressed={viewMode === "list"}
+                className={`flex size-7 items-center justify-center rounded-[5px] transition-all duration-150 ${
+                  viewMode === "list"
+                    ? "bg-surface-document text-forest shadow-[0_1px_3px_rgba(18,41,31,0.08)]"
+                    : "text-warm-gray hover:text-ink"
+                }`}
               >
-                <List style={{ width: "14px", height: "14px" }} strokeWidth={1.75} />
+                <List className="size-3.5" strokeWidth={1.75} />
               </button>
             </div>
 
             {/* Contagem */}
             {!isLoading && (
-              <span
-                style={{
-                  fontSize: "12px",
-                  color: "var(--warm-gray, #6B6358)",
-                  fontFamily: "var(--font-sans)",
-                }}
-              >
+              <span className="text-xs text-warm-gray">
                 {filtered.length} {filtered.length === 1 ? "dossiê" : "dossiês"}
               </span>
             )}
           </div>
 
           {/* Busca */}
-          <div style={{ position: "relative", width: "100%", maxWidth: "320px" }}>
+          <div className="relative w-full sm:max-w-[320px]">
             <Search
-              style={{
-                position: "absolute",
-                left: "12px",
-                top: "50%",
-                transform: "translateY(-50%)",
-                width: "14px",
-                height: "14px",
-                color: "var(--warm-gray, #6B6358)",
-                pointerEvents: "none",
-              }}
+              className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-warm-gray"
               strokeWidth={1.5}
             />
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Nome, queixa, tag..."
-              style={{ paddingLeft: "36px", height: "36px", fontSize: "13px" }}
+              aria-label="Buscar dossiês"
+              className="h-9 pl-9 text-[13px]"
             />
           </div>
         </div>
       </div>
 
       {/* ── GRID DE DOSSIÊS ─────────────────────────────────── */}
-      <div className="container-liz" style={{ paddingTop: "28px", paddingBottom: "48px" }}>
+      <div className="container-liz pt-7 pb-12">
         {isLoading ? (
-          <ul
-            style={{
-              display: "grid",
-              gap: "20px",
-              gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-              listStyle: "none",
-              margin: 0,
-              padding: 0,
-            }}
-          >
+          <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-5 p-0">
             {Array.from({ length: 6 }).map((_, i) => (
               <li key={i}>
                 <DossierCardSkeleton />
@@ -360,14 +270,7 @@ function ClientesIndex() {
           <EmptyState hasQuery={query.length > 0} onCreate={() => setCreating(true)} tab={tab} />
         ) : viewMode === "cards" ? (
           <motion.ul
-            style={{
-              display: "grid",
-              gap: "20px",
-              gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-              listStyle: "none",
-              margin: 0,
-              padding: 0,
-            }}
+            className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-5 p-0"
             initial="hidden"
             animate="visible"
             variants={{
@@ -420,213 +323,130 @@ function ClientesIndex() {
           </motion.ul>
         ) : (
           /* ── LISTA COMPACTA (alta densidade) ── */
-          <div
-            style={{
-              background: "var(--surface-document, #FAFAF7)",
-              border: "1px solid var(--material-border, rgba(180,170,155,0.5))",
-              borderRadius: "14px",
-              overflow: "hidden",
-              boxShadow: "0 1px 3px rgba(18,41,31,0.04), 0 6px 16px rgba(18,41,31,0.06)",
-            }}
-          >
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
-              <thead>
-                <tr
-                  style={{
-                    borderBottom: "1px solid var(--material-border, rgba(180,170,155,0.5))",
-                    background: "var(--surface-archive, #F4F1EB)",
-                  }}
-                >
-                  {["Cliente", "Contato", "Queixa", "Tags", "Consentimento", "Ações"].map(
-                    (h, i) => (
-                      <th
-                        key={h}
-                        style={{
-                          padding:
-                            i === 0
-                              ? "12px 16px 12px 20px"
-                              : i === 5
-                                ? "12px 20px 12px 16px"
-                                : "12px 16px",
-                          textAlign: i === 5 ? "right" : "left",
-                          fontSize: "9px",
-                          fontWeight: 800,
-                          letterSpacing: "0.14em",
-                          textTransform: "uppercase",
-                          color: "var(--warm-gray, #6B6358)",
-                          fontFamily: "var(--font-sans)",
-                        }}
+          <div className="overflow-hidden rounded-[14px] border border-material-border bg-surface-document shadow-[0_1px_3px_rgba(18,41,31,0.04),0_6px_16px_rgba(18,41,31,0.06)]">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-[13px]">
+                <thead>
+                  <tr className="border-b border-material-border bg-surface-archive">
+                    <Th className="pl-5">Cliente</Th>
+                    <Th className="hidden md:table-cell">Contato</Th>
+                    <Th className="hidden lg:table-cell">Queixa</Th>
+                    <Th className="hidden sm:table-cell">Tags</Th>
+                    <Th>Consentimento</Th>
+                    <Th className="pr-5 text-right">Ações</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((c) => {
+                    const age = calcAge(c.birth_date);
+                    return (
+                      <tr
+                        key={c.id}
+                        className="border-b border-material-border/50 transition-colors duration-100 hover:bg-surface-archive/60"
                       >
-                        {h}
-                      </th>
-                    ),
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((c) => {
-                  const age = calcAge(c.birth_date);
-                  return (
-                    <tr
-                      key={c.id}
-                      style={{
-                        borderBottom: "1px solid rgba(180,170,155,0.25)",
-                        transition: "background 0.12s ease",
-                      }}
-                      onMouseEnter={(e) =>
-                        ((e.currentTarget as HTMLTableRowElement).style.background =
-                          "rgba(244,241,235,0.6)")
-                      }
-                      onMouseLeave={(e) =>
-                        ((e.currentTarget as HTMLTableRowElement).style.background = "transparent")
-                      }
-                    >
-                      <td style={{ padding: "13px 16px 13px 20px" }}>
-                        <Link
-                          to="/app/clientes/$clientId"
-                          params={{ clientId: c.id }}
-                          style={{
-                            fontFamily: "var(--font-serif)",
-                            fontWeight: 700,
-                            fontSize: "15px",
-                            color: "var(--ink, #1A1714)",
-                            textDecoration: "none",
-                            display: "block",
-                          }}
-                        >
-                          {normalizeName(c.preferred_name || c.full_name)}
-                        </Link>
-                        <span
-                          style={{
-                            fontSize: "11px",
-                            color: "var(--warm-gray, #6B6358)",
-                            fontFamily: "var(--font-sans)",
-                          }}
-                        >
-                          {age !== null ? `${age} anos` : ""}
-                          {c.birthplace ? ` · ${c.birthplace}` : ""}
-                        </span>
-                      </td>
-                      <td
-                        style={{
-                          padding: "13px 16px",
-                          fontFamily: "monospace",
-                          fontSize: "11px",
-                          color: "var(--ink-soft, #4A4540)",
-                        }}
-                      >
-                        {c.email || "—"}
-                        <br />
-                        {c.phone || "—"}
-                      </td>
-                      <td style={{ padding: "13px 16px", maxWidth: "200px" }}>
-                        <span
-                          style={{
-                            fontSize: "13px",
-                            color: "var(--ink-soft, #4A4540)",
-                            fontFamily: "var(--font-sans)",
-                            display: "-webkit-box",
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: "vertical",
-                            overflow: "hidden",
-                          }}
-                        >
-                          {c.presenting_complaint || "—"}
-                        </span>
-                      </td>
-                      <td style={{ padding: "13px 16px" }}>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
-                          {c.tags?.slice(0, 3).map((t) => (
-                            <Badge
-                              key={t}
-                              variant="secondary"
-                              style={{ fontSize: "9px", fontWeight: 700, padding: "2px 6px" }}
-                            >
-                              {t}
-                            </Badge>
-                          ))}
-                        </div>
-                      </td>
-                      <td style={{ padding: "13px 16px" }}>
-                        <span
-                          style={{
-                            fontSize: "11px",
-                            fontWeight: 600,
-                            color: c.consent_given_at
-                              ? "var(--forest-soft, #26543E)"
-                              : "var(--terracotta, #A8654D)",
-                            fontFamily: "var(--font-sans)",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "4px",
-                          }}
-                        >
-                          {c.consent_given_at ? (
-                            <>
-                              <FileCheck style={{ width: "12px", height: "12px" }} aria-hidden />{" "}
-                              Assinado
-                            </>
-                          ) : (
-                            <>
-                              <AlertTriangle
-                                style={{ width: "12px", height: "12px" }}
-                                aria-hidden
-                              />{" "}
-                              Pendente
-                            </>
-                          )}
-                        </span>
-                      </td>
-                      <td style={{ padding: "13px 20px 13px 16px", textAlign: "right" }}>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              className="size-8"
-                              aria-label={`Ações para ${c.full_name}`}
-                            >
-                              <MoreHorizontal style={{ width: "14px", height: "14px" }} />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => setEditing(c)}>
-                              <Pencil style={{ width: "13px", height: "13px" }} /> Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() =>
-                                setStatus.mutate({
-                                  id: c.id,
-                                  status: c.status === "active" ? "archived" : "active",
-                                })
-                              }
-                            >
-                              {c.status === "active" ? (
-                                <>
-                                  <Archive style={{ width: "13px", height: "13px" }} /> Arquivar
-                                </>
-                              ) : (
-                                <>
-                                  <ArchiveRestore style={{ width: "13px", height: "13px" }} />{" "}
-                                  Reativar
-                                </>
-                              )}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-destructive focus:text-destructive"
-                              onClick={() => setDeleting(c)}
-                            >
-                              <Trash2 style={{ width: "13px", height: "13px" }} /> Excluir
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        <td className="py-3 pr-4 pl-5">
+                          <Link
+                            to="/app/clientes/$clientId"
+                            params={{ clientId: c.id }}
+                            className="block font-serif text-[15px] font-bold text-ink no-underline hover:text-forest-soft"
+                          >
+                            {normalizeName(c.preferred_name || c.full_name)}
+                          </Link>
+                          <span className="text-[11px] text-warm-gray">
+                            {age !== null ? `${age} anos` : ""}
+                            {c.birthplace ? ` · ${c.birthplace}` : ""}
+                          </span>
+                        </td>
+                        <td className="hidden px-4 py-3 font-mono text-[11px] text-ink-soft md:table-cell">
+                          {c.email || "—"}
+                          <br />
+                          {c.phone || "—"}
+                        </td>
+                        <td className="hidden max-w-[200px] px-4 py-3 lg:table-cell">
+                          <span className="line-clamp-2 text-[13px] text-ink-soft">
+                            {c.presenting_complaint || "—"}
+                          </span>
+                        </td>
+                        <td className="hidden px-4 py-3 sm:table-cell">
+                          <div className="flex flex-wrap gap-1">
+                            {c.tags?.slice(0, 3).map((t) => (
+                              <Badge
+                                key={t}
+                                variant="secondary"
+                                className="px-1.5 py-0.5 text-[9px] font-bold"
+                              >
+                                {t}
+                              </Badge>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`flex items-center gap-1 text-[11px] font-semibold ${
+                              c.consent_given_at ? "text-forest-soft" : "text-material-terracotta"
+                            }`}
+                          >
+                            {c.consent_given_at ? (
+                              <>
+                                <FileCheck className="size-3" aria-hidden /> Assinado
+                              </>
+                            ) : (
+                              <>
+                                <AlertTriangle className="size-3" aria-hidden /> Pendente
+                              </>
+                            )}
+                          </span>
+                        </td>
+                        <td className="py-3 pr-5 pl-4 text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                className="size-8"
+                                aria-label={`Ações para ${c.full_name}`}
+                              >
+                                <MoreHorizontal className="size-3.5" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => setEditing(c)}>
+                                <Pencil className="size-[13px]" /> Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  setStatus.mutate({
+                                    id: c.id,
+                                    status: c.status === "active" ? "archived" : "active",
+                                  })
+                                }
+                              >
+                                {c.status === "active" ? (
+                                  <>
+                                    <Archive className="size-[13px]" /> Arquivar
+                                  </>
+                                ) : (
+                                  <>
+                                    <ArchiveRestore className="size-[13px]" /> Reativar
+                                  </>
+                                )}
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onClick={() => setDeleting(c)}
+                              >
+                                <Trash2 className="size-[13px]" /> Excluir
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
@@ -643,7 +463,7 @@ function ClientesIndex() {
       <AlertDialog open={Boolean(deleting)} onOpenChange={(o) => !o && setDeleting(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle style={{ fontFamily: "var(--font-serif)", color: "var(--ink)" }}>
+            <AlertDialogTitle className="font-serif text-ink">
               Excluir dossiê permanentemente?
             </AlertDialogTitle>
             <AlertDialogDescription>
@@ -655,7 +475,7 @@ function ClientesIndex() {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => deleting && remove.mutate(deleting.id)}
-              style={{ background: "var(--clinical-critical)", color: "#fff" }}
+              className="bg-clinical-critical text-white hover:bg-clinical-critical/90"
             >
               Excluir definitivamente
             </AlertDialogAction>
@@ -663,6 +483,16 @@ function ClientesIndex() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+function Th({ className = "", children }: { className?: string; children: ReactNode }) {
+  return (
+    <th
+      className={`px-4 py-3 text-left text-[9px] font-extrabold tracking-[0.14em] text-warm-gray uppercase ${className}`}
+    >
+      {children}
+    </th>
   );
 }
 
@@ -680,111 +510,32 @@ function EmptyState({
 }) {
   if (hasQuery) {
     return (
-      <div
-        style={{
-          background: "var(--surface-document)",
-          border: "1px solid var(--material-border)",
-          borderLeft: "3px solid var(--material-bronze)",
-          borderRadius: "12px",
-          padding: "64px 48px",
-          textAlign: "center",
-        }}
-      >
-        <p
-          style={{
-            fontFamily: "var(--font-serif)",
-            fontSize: "1.5rem",
-            fontWeight: 700,
-            color: "var(--ink)",
-            margin: 0,
-          }}
-        >
-          Nada encontrado
-        </p>
-        <p
-          style={{
-            fontFamily: "var(--font-sans)",
-            fontSize: "14px",
-            color: "var(--warm-gray)",
-            margin: "8px 0 0",
-            lineHeight: 1.6,
-          }}
-        >
+      <div className="rounded-xl border border-material-border border-l-[3px] border-l-material-bronze bg-surface-document px-6 py-16 text-center sm:px-12">
+        <p className="m-0 font-serif text-2xl font-bold text-ink">Nada encontrado</p>
+        <p className="mt-2 mb-0 text-sm leading-relaxed text-warm-gray">
           Tente outro termo ou remova o filtro.
         </p>
       </div>
     );
   }
   return (
-    <div
-      style={{
-        background: "var(--surface-document)",
-        border: "1px solid var(--material-border)",
-        borderLeft: "3px solid var(--forest)",
-        borderRadius: "12px",
-        padding: "64px 48px",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "flex-start",
-        gap: "24px",
-        maxWidth: "560px",
-      }}
-    >
-      <p
-        style={{
-          fontFamily: "var(--font-serif)",
-          fontSize: "1.75rem",
-          fontWeight: 700,
-          color: "var(--ink)",
-          margin: 0,
-          lineHeight: 1.2,
-        }}
-      >
+    <div className="flex max-w-[560px] flex-col items-start gap-6 rounded-xl border border-material-border border-l-[3px] border-l-forest bg-surface-document px-6 py-16 sm:px-12">
+      <p className="m-0 font-serif text-[1.75rem] leading-tight font-bold text-ink">
         {tab === "active" ? "A jornada começa aqui" : "Nenhum dossiê arquivado"}
       </p>
-      <p
-        style={{
-          fontFamily: "var(--font-sans)",
-          fontSize: "15px",
-          color: "var(--ink-soft)",
-          margin: 0,
-          lineHeight: 1.7,
-          maxWidth: "440px",
-        }}
-      >
+      <p className="m-0 max-w-[440px] text-[15px] leading-relaxed text-ink-soft">
         {tab === "active"
           ? "Todo caso começa por um nome. O genograma, as sessões e os padrões sistêmicos se constroem a partir do paciente-índice."
           : "Quando arquivar um dossiê, ele aparecerá aqui para consulta histórica."}
       </p>
       {tab === "active" && (
-        <button
+        <Button
           onClick={onCreate}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "8px",
-            background: "var(--forest)",
-            color: "#fff",
-            border: "none",
-            borderRadius: "10px",
-            padding: "12px 22px",
-            fontSize: "14px",
-            fontWeight: 700,
-            fontFamily: "var(--font-sans)",
-            cursor: "pointer",
-            letterSpacing: "0.02em",
-            transition: "all 0.2s ease",
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.background = "var(--forest-mid)";
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.background = "var(--forest)";
-          }}
+          className="gap-2 rounded-[10px] bg-forest px-5 py-3 text-sm font-bold tracking-[0.02em] text-white hover:bg-forest-mid"
         >
-          <Plus style={{ width: "15px", height: "15px" }} strokeWidth={2.5} />
+          <Plus className="size-[15px]" strokeWidth={2.5} />
           Cadastrar primeiro cliente
-        </button>
+        </Button>
       )}
     </div>
   );

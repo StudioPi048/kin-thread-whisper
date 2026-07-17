@@ -32,12 +32,12 @@ export function LizLogoLockup({
   variant?: "default" | "light";
 }) {
   return (
-    <div className={cn("flex items-center gap-3", className)}>
-      <LizLogo size={40} />
+    <div className={cn("flex items-center gap-2.5", className)}>
+      <LizLogo size={36} />
       <div className="leading-tight">
         <p
           className={cn(
-            "font-serif text-lg tracking-tight",
+            "font-serif text-base tracking-tight whitespace-nowrap",
             variant === "light" ? "text-sidebar-foreground" : "text-primary",
           )}
         >
@@ -45,7 +45,7 @@ export function LizLogoLockup({
         </p>
         <p
           className={cn(
-            "text-[14px] uppercase tracking-[0.28em]",
+            "text-[10px] uppercase tracking-[0.24em] whitespace-nowrap",
             variant === "light" ? "text-sidebar-foreground" : "text-muted-foreground",
           )}
         >

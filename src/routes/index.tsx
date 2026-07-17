@@ -13,7 +13,7 @@ import {
   PlayCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { LizLogoLockup } from "@/components/liz-logo";
+import { LizLogo, LizLogoLockup } from "@/components/liz-logo";
 
 export const Route = createFileRoute("/")({
   component: LandingPage,
@@ -105,14 +105,19 @@ export default function LandingPage() {
           }}
         >
           <Link to="/" aria-label="Instituto Liz">
-            <LizLogoLockup />
+            <span className="sm:hidden">
+              <LizLogo size={36} />
+            </span>
+            <span className="hidden sm:block">
+              <LizLogoLockup />
+            </span>
           </Link>
-          <nav style={{ display: "flex", alignItems: "center", gap: "2rem" }}>
+          <nav className="flex items-center gap-4 sm:gap-8">
             <Link
               to="/auth"
+              className="text-[13px] sm:text-[15px]"
               style={{
                 fontFamily: "'Outfit', sans-serif",
-                fontSize: "15px",
                 fontWeight: 700,
                 letterSpacing: "0.12em",
                 textTransform: "uppercase",
@@ -127,16 +132,15 @@ export default function LandingPage() {
             <Link
               to="/auth"
               search={{ mode: "signup" }}
+              className="px-4 py-2 text-[13px] whitespace-nowrap sm:px-6 sm:py-2.5 sm:text-[15px]"
               style={{
                 fontFamily: "'Outfit', sans-serif",
-                fontSize: "15px",
                 fontWeight: 700,
                 letterSpacing: "0.1em",
                 textTransform: "uppercase",
                 color: "#3B2F2F",
                 border: "1.5px solid #3B2F2F",
                 borderRadius: "999px",
-                padding: "10px 24px",
                 textDecoration: "none",
                 transition: "all 0.2s",
               }}
@@ -151,17 +155,11 @@ export default function LandingPage() {
           HERO — metade esquerda texto / metade direita foto
       ════════════════════════════════════════════════════ */}
       <section
-        style={{ display: "flex", minHeight: "100vh", paddingTop: "68px", background: "#1B211A" }}
+        className="flex flex-col lg:min-h-screen lg:flex-row"
+        style={{ paddingTop: "68px", background: "#1B211A" }}
       >
         {/* Coluna Texto */}
-        <div
-          style={{
-            flex: "0 0 42%",
-            display: "flex",
-            alignItems: "center",
-            padding: "80px 40px 80px 6vw",
-          }}
-        >
+        <div className="flex items-center px-6 py-16 lg:flex-[0_0_42%] lg:py-20 lg:pr-10 lg:pl-[6vw]">
           <div style={{ maxWidth: "440px" }}>
             {/* Label */}
             <div
@@ -268,7 +266,8 @@ export default function LandingPage() {
 
         {/* Coluna Foto — composição única full-bleed */}
         <div
-          style={{ flex: "0 0 58%", position: "relative", overflow: "hidden", minHeight: "600px" }}
+          className="min-h-[420px] lg:min-h-[600px] lg:flex-[0_0_58%]"
+          style={{ position: "relative", overflow: "hidden" }}
         >
           <img
             src="/assets/hero/hero_composition.jpg"
@@ -352,9 +351,8 @@ export default function LandingPage() {
       >
         <div className="container-liz" style={{ maxWidth: "1120px" }}>
           <div
+            className="flex flex-col md:flex-row"
             style={{
-              display: "flex",
-              flexDirection: "row",
               background: "#1A201A",
               border: "1px solid rgba(255,255,255,0.04)",
               borderRadius: "16px",
@@ -364,14 +362,10 @@ export default function LandingPage() {
           >
             {/* Esquerda — "03" + título */}
             <div
+              className="flex flex-col justify-center p-8 sm:p-12 md:flex-[0_0_38%]"
               style={{
-                flex: "0 0 38%",
                 background: "#151A15",
-                padding: "56px 48px",
                 position: "relative",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "center",
               }}
             >
               {/* Número decorativo GRANDE */}
@@ -424,14 +418,9 @@ export default function LandingPage() {
 
             {/* Direita — 4 pilares */}
             <div
+              className="grid flex-1 grid-cols-1 items-start gap-8 p-8 sm:grid-cols-2 sm:gap-10 sm:p-12"
               style={{
-                flex: 1,
                 background: "#1C201B",
-                padding: "56px 48px",
-                display: "grid",
-                gridTemplateColumns: "repeat(2, 1fr)",
-                gap: "40px",
-                alignItems: "start",
               }}
             >
               {ETHICS.map(({ Icon, n, text }) => (
@@ -505,17 +494,14 @@ export default function LandingPage() {
         </div>
 
         <div
-          className="container-liz"
+          className="container-liz flex flex-col items-center gap-10 md:flex-row"
           style={{
             position: "relative",
             zIndex: 1,
-            display: "flex",
-            alignItems: "center",
-            gap: "40px",
           }}
         >
           {/* Coluna Texto */}
-          <div style={{ flex: "0 0 26%", minWidth: 0 }}>
+          <div className="w-full md:w-auto md:flex-[0_0_26%]" style={{ minWidth: 0 }}>
             <p
               style={{
                 fontFamily: "'Outfit', sans-serif",
@@ -578,7 +564,10 @@ export default function LandingPage() {
           </div>
 
           {/* Foto Central — terapeuta com laptop */}
-          <div style={{ flex: "0 0 30%", position: "relative" }}>
+          <div
+            className="w-full max-w-[340px] md:w-auto md:max-w-none md:flex-[0_0_30%]"
+            style={{ position: "relative" }}
+          >
             <div
               style={{
                 position: "relative",
@@ -612,7 +601,7 @@ export default function LandingPage() {
           </div>
 
           {/* Card de papel — features + botanicals */}
-          <div style={{ flex: 1, minWidth: 0, position: "relative" }}>
+          <div className="w-full flex-1 md:w-auto" style={{ minWidth: 0, position: "relative" }}>
             <div
               style={{
                 position: "relative",
@@ -694,22 +683,18 @@ export default function LandingPage() {
       <section style={{ padding: "40px 24px 60px" }}>
         <div className="container-liz" style={{ maxWidth: "1120px" }}>
           <div
+            className="flex flex-col items-center gap-8 p-6 sm:p-10 md:flex-row md:gap-12 md:p-14"
             style={{
-              display: "flex",
-              flexDirection: "row",
-              alignItems: "center",
-              gap: "48px",
               background: "#1B211A",
               borderRadius: "24px",
-              padding: "48px 56px",
               overflow: "hidden",
               boxShadow: "0 20px 50px rgba(0,0,0,0.3)",
             }}
           >
             {/* Foto */}
             <div
+              className="w-full md:w-auto md:flex-[0_0_42%]"
               style={{
-                flex: "0 0 42%",
                 borderRadius: "12px",
                 overflow: "hidden",
                 boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
@@ -1017,6 +1002,8 @@ export default function LandingPage() {
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            flexWrap: "wrap",
+            gap: "16px",
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "12px", opacity: 0.8 }}>

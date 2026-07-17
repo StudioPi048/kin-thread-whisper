@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 
 import { supabase } from "@/integrations/supabase/client";
+import { DocumentHeader } from "@/components/ui/document-header";
 
 export const Route = createFileRoute("/_authenticated/app/configuracoes")({
   component: ConfigPage,
@@ -29,23 +30,28 @@ function ConfigPage() {
   });
 
   return (
-    <div className="container-liz py-12">
-      <p className="text-xs uppercase tracking-[0.3em] text-gold">Perfil</p>
-      <h1 className="mt-3 font-serif text-4xl text-primary">Configurações</h1>
+    <div className="min-h-screen bg-surface-archive">
+      <DocumentHeader
+        breadcrumb="Configurações"
+        title="Sua conta"
+        subtitle="Dados profissionais registrados na plataforma."
+      />
 
-      <div className="mt-10 max-w-2xl space-y-6">
-        <div className="rounded-lg border border-border bg-card p-6">
-          <h2 className="font-serif text-2xl text-primary">Sua conta</h2>
-          <dl className="mt-4 space-y-3 text-sm">
-            <Row label="Nome" value={profile?.full_name ?? "—"} />
-            <Row label="E-mail" value={profile?.email ?? user.email ?? "—"} />
-            <Row label="Formação" value={profile?.formation ?? "—"} />
-            <Row label="Cidade" value={profile?.city ?? "—"} />
-            <Row label="Papel" value={roles?.map((r) => r.role).join(", ") || "professional"} />
-          </dl>
-          <p className="mt-6 text-xs text-muted-foreground">
-            A edição de perfil chega na Etapa 2, junto do cadastro completo de clientes.
-          </p>
+      <div className="container-liz pb-16">
+        <div className="max-w-2xl space-y-6">
+          <div className="rounded-[14px] border border-material-border bg-surface-document p-6 shadow-surface sm:p-8">
+            <h2 className="m-0 font-serif text-2xl text-ink">Perfil profissional</h2>
+            <dl className="mt-5 space-y-3 text-sm">
+              <Row label="Nome" value={profile?.full_name ?? "—"} />
+              <Row label="E-mail" value={profile?.email ?? user.email ?? "—"} />
+              <Row label="Formação" value={profile?.formation ?? "—"} />
+              <Row label="Cidade" value={profile?.city ?? "—"} />
+              <Row label="Papel" value={roles?.map((r) => r.role).join(", ") || "professional"} />
+            </dl>
+            <p className="mt-6 mb-0 text-xs text-muted-foreground">
+              A edição de perfil chega na Etapa 2, junto do cadastro completo de clientes.
+            </p>
+          </div>
         </div>
       </div>
     </div>
@@ -54,9 +60,9 @@ function ConfigPage() {
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between gap-4 border-b border-border/60 pb-2 last:border-none">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="text-foreground">{value}</dd>
+    <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 border-b border-material-border/60 pb-2 last:border-none">
+      <dt className="text-warm-gray">{label}</dt>
+      <dd className="m-0 text-right text-ink">{value}</dd>
     </div>
   );
 }
