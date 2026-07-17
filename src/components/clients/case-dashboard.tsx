@@ -123,7 +123,7 @@ export function CaseDashboard({ clientId }: Props) {
 function Stat({ label, value, full }: { label: string; value: number; full?: boolean }) {
   return (
     <div
-      className={`bg-white/50 backdrop-blur-sm p-4 transition-colors hover:bg-white/80 ${full ? "col-span-2" : ""}`}
+      className={`bg-surface-document/60 backdrop-blur-sm p-4 transition-colors hover:bg-surface-document/90 ${full ? "col-span-2" : ""}`}
     >
       <p className="text-[14px] font-bold text-muted-foreground uppercase tracking-[0.05em]">
         {label}

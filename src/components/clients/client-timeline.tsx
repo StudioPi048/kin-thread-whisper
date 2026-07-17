@@ -88,7 +88,7 @@ export function ClientTimeline({ clientId }: Props) {
             </div>
 
             {/* Timeline Dot */}
-            <div className="relative mt-3.5 z-10 flex size-3.5 items-center justify-center rounded-full bg-white border-[3px] border-forest shadow-sm" />
+            <div className="relative mt-3.5 z-10 flex size-3.5 items-center justify-center rounded-full bg-surface-document border-[3px] border-forest shadow-sm" />
 
             {/* Cards Column */}
             <div className="space-y-4 pt-1">
@@ -110,9 +110,9 @@ function TimelineCard({ item }: { item: TimelineItem }) {
 
   // Editorial tones based on event
   const accentClass = isDeath
-    ? "accent-bar-forest bg-white"
+    ? "accent-bar-forest bg-surface-document"
     : isBirth
-      ? "accent-bar-gold bg-white"
+      ? "accent-bar-gold bg-surface-document"
       : "accent-bar-forest bg-forest-soft/20";
 
   const iconColor = isDeath ? "text-forest" : isBirth ? "text-gold" : "text-forest";

@@ -103,7 +103,7 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
         ) : (
           <div
             className={cn(
-              "size-full bg-[#FAF8F5] transition-all",
+              "size-full bg-surface-document transition-all",
               "border-2",
               borderColor,
               isMale && "rounded-2xl",
@@ -203,7 +203,7 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
       <div
         className={cn(
           "mt-3 w-[140px] min-h-[72px] h-auto bg-surface-dossier border border-material-border rounded-lg shadow-sm px-2 py-1.5 flex flex-col justify-center items-center text-center select-none z-10 transition-all pb-2",
-          d.is_proband && "border-forest shadow-[0_0_0_1px_rgba(110,20,60,0.15)]",
+          d.is_proband && "border-forest shadow-[0_0_0_1px_rgba(18,41,31,0.15)]",
           selected && "ring-1 ring-forest border-forest",
         )}
       >

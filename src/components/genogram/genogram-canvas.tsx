@@ -414,7 +414,7 @@ function GenerationRuler() {
 
 function ShortcutsLegend() {
   return (
-    <div className="w-[168px] overflow-hidden rounded-lg border border-forest/25 bg-white/95 shadow-lg backdrop-blur-md ring-1 ring-black/5">
+    <div className="w-[168px] overflow-hidden rounded-lg border border-forest/25 bg-popover/95 shadow-lg backdrop-blur-md ring-1 ring-black/5">
       <div className="bg-forest/5 px-2.5 py-1.5 border-b border-forest/20">
         <p className="font-serif text-[16px] font-bold leading-tight text-forest">Atalhos</p>
       </div>
@@ -1081,7 +1081,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
               ["Scroll", "Zoom in/out"],
             ].map(([key, desc]) => (
               <span key={key} className="flex items-center gap-2">
-                <kbd className="rounded border border-border bg-white px-1.5 py-0.5 text-[14px] font-mono font-semibold">
+                <kbd className="rounded border border-border bg-card px-1.5 py-0.5 text-[14px] font-mono font-semibold">
                   {key}
                 </kbd>
                 {desc}

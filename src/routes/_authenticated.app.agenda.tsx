@@ -48,7 +48,7 @@ export const Route = createFileRoute("/_authenticated/app/agenda")({
   component: AgendaPage,
 });
 
-/* ------------------------------- Mock Data ------------------------------- */
+/* ------------------------------ Selos Clínicos ---------------------------- */
 
 type Seal =
   | "primeira"
@@ -73,32 +73,32 @@ const SEAL_META: Record<Seal, { label: string; className: string; Icon: typeof C
   },
   crianca: {
     label: "Criança",
-    className: "bg-amber-100/60 text-amber-700 border-amber-300/60",
+    className: "bg-gold-muted/50 text-bronze border-gold/40",
     Icon: Baby,
   },
   prioridade: {
     label: "Alta prioridade",
-    className: "bg-rose-100/60 text-rose-700 border-rose-300/60",
+    className: "bg-clinical-critical/10 text-clinical-critical border-clinical-critical/30",
     Icon: Flame,
   },
   luto: {
     label: "Luto",
-    className: "bg-slate-200/60 text-slate-700 border-slate-300/70",
+    className: "bg-graphite/10 text-graphite border-graphite/25",
     Icon: Moon,
   },
   evolucao: {
     label: "Evolução concluída",
-    className: "bg-emerald-100/60 text-emerald-700 border-emerald-300/60",
+    className: "bg-clinical-positive/10 text-clinical-positive border-clinical-positive/25",
     Icon: Leaf,
   },
   projeto: {
     label: "Projeto Sentido",
-    className: "bg-sky-100/60 text-sky-700 border-sky-300/60",
+    className: "bg-olive/10 text-olive border-olive/30",
     Icon: Waves,
   },
   aniversario: {
     label: "Síndrome de Aniversário",
-    className: "bg-orange-100/60 text-orange-700 border-orange-300/60",
+    className: "bg-terracotta/10 text-terracotta border-terracotta/30",
     Icon: Cake,
   },
 };
@@ -120,73 +120,6 @@ type Session = {
   status: "upcoming" | "next" | "later";
   accent: "forest" | "rose" | "gold";
 };
-
-const FALLBACK_SESSIONS: Session[] = [
-  {
-    id: "s1",
-    clientId: null,
-    start: "09:00",
-    end: "10:00",
-    patient: "Paciente Exemplo A",
-    initials: "PA",
-    type: "Retorno",
-    sessionNumber: "Sessão 12",
-    daysSinceFirst: 84,
-    lastEvolution:
-      "Trabalhou resistência ao nome do pai. Identificada lealidade invisível com avô paterno.",
-    seals: ["retorno", "aniversario", "projeto"],
-    aiAlerts: [
-      "Repetição de padrão detectada: separações aos 34 anos em 3 gerações consecutivas da linhagem materna.",
-      "Coincidência de datas: data do divórcio (14/03) coincide com óbito do bisavô — investigar síndrome de aniversário.",
-      "Lacuna no genossociograma: ramo paterno entre 1952–1961 sem dados. Sugerido: protocolo 'Mapa de Segredos'.",
-    ],
-    protocols: ["Mapa de Segredos", "Lealidade Invisível", "Entrevista Transgeracional"],
-    status: "next",
-    accent: "forest",
-  },
-  {
-    id: "s2",
-    clientId: null,
-    start: "11:30",
-    end: "12:30",
-    patient: "Paciente Exemplo B",
-    initials: "PB",
-    type: "Anamnese Sistêmica",
-    sessionNumber: "Sessão 3",
-    daysSinceFirst: 21,
-    lastEvolution:
-      "Primeira mencão ao irmão falecido. Abertura emocional significativa na segunda hora.",
-    seals: ["retorno", "luto"],
-    aiAlerts: [
-      "Luto não elaborado identificado: óbito do irmão (2019) ainda não integrado narrativamente.",
-      "Padrão preliminar: figuras masculinas ausêntes em 2 gerações — pai emigrou, avô faleceu precocemente.",
-    ],
-    protocols: ["Entrevista Transgeracional", "Linha do Tempo", "Projeto Sentido"],
-    status: "later",
-    accent: "forest",
-  },
-  {
-    id: "s3",
-    clientId: null,
-    start: "15:00",
-    end: "16:00",
-    patient: "Paciente Exemplo C",
-    initials: "PC",
-    type: "Primeira Consulta",
-    sessionNumber: "Sessão 1",
-    daysSinceFirst: 0,
-    lastEvolution:
-      "Primeiro contato. Queixa: dificuldade de vínculo afetivo recorrente desde os 20 anos.",
-    seals: ["primeira", "prioridade"],
-    aiAlerts: [
-      "Cliente nova: genossociograma ainda vazio. Sugerido: coleta de 3 gerações na sessão de hoje.",
-      "Queixa de vínculo recorrente pode indicar padrão de abandono — verificar histórico de adoes/separações na família.",
-    ],
-    protocols: ["Anamnese Sistêmica", "Coleta de 3 Gerações", "Mapa Inicial"],
-    status: "later",
-    accent: "gold",
-  },
-];
 
 type TimelineItem =
   | { time: string; label: string; kind: "session"; sessionId: string }
@@ -235,14 +168,13 @@ function minutesBetween(a: string, b: string): number {
   return bh * 60 + bm - (ah * 60 + am);
 }
 
+/* Atalhos apenas para destinos que existem — a interface não promete o que não entrega */
 const QUICK_ACTIONS = [
-  { label: "Nova sessão", icon: Plus },
-  { label: "Nova evolução", icon: FileText },
-  { label: "Novo genograma", icon: GitBranch },
-  { label: "Gravar sessão", icon: Mic },
-  { label: "Preparar atendimento", icon: Wand2 },
-  { label: "Abrir biblioteca", icon: BookOpen },
-];
+  { label: "Arquivo de clientes", icon: Users, to: "/app/clientes" },
+  { label: "Novo genograma", icon: GitBranch, to: "/app/genossociogramas" },
+  { label: "Linhas de herança", icon: TimerReset, to: "/app/linha-do-tempo" },
+  { label: "Abrir biblioteca", icon: BookOpen, to: "/app/biblioteca" },
+] as const;
 
 /* ------------------------------ Page Component ---------------------------- */
 
@@ -270,21 +202,12 @@ function AgendaPage() {
     staleTime: 60_000,
   });
 
-  const { sessions, isFallback, orphanClients, prontuariosPendentes } = useMemo(() => {
+  const { sessions, orphanClients, prontuariosPendentes } = useMemo(() => {
     const dto = query.data;
-    if (dto && dto.today.length > 0) {
-      return {
-        sessions: mapDtosToSessions(dto.today),
-        isFallback: false,
-        orphanClients: dto.orphanClients,
-        prontuariosPendentes: dto.stats.prontuariosPendentes,
-      };
-    }
     return {
-      sessions: FALLBACK_SESSIONS,
-      isFallback: true,
-      orphanClients: [] as OrphanClientDTO[],
-      prontuariosPendentes: 1,
+      sessions: dto ? mapDtosToSessions(dto.today) : [],
+      orphanClients: dto?.orphanClients ?? ([] as OrphanClientDTO[]),
+      prontuariosPendentes: dto?.stats.prontuariosPendentes ?? 0,
     };
   }, [query.data]);
 
@@ -302,6 +225,8 @@ function AgendaPage() {
     livre: `${Math.max(0, 8 - sessions.length)}h`,
   };
 
+  const hasSessions = sessions.length > 0;
+
   return (
     <div className="min-h-[calc(100vh-64px)] bg-transparent">
       {/* Contextual Header */}
@@ -309,72 +234,139 @@ function AgendaPage() {
         stats={stats}
         firstName={firstName}
         isLoading={query.isLoading}
-        isFallback={isFallback}
         isError={query.isError}
+        hasSessions={hasSessions}
       />
 
       {/* Quick Actions Bar */}
       <div className="container-liz -mt-6 relative z-10">
-        <div className="rounded-2xl border border-border/50 bg-white/90 backdrop-blur shadow-[0_10px_40px_-20px_rgba(60,20,80,0.25)] px-3 py-2 flex flex-wrap gap-1">
+        <div className="surface shadow-surface flex flex-wrap gap-1 rounded-2xl px-3 py-2 backdrop-blur">
           {QUICK_ACTIONS.map((a) => (
-            <button
+            <Link
               key={a.label}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl text-[12px] font-semibold text-primary/80 hover:text-forest hover:bg-forest-soft/50 transition-colors"
+              to={a.to}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl text-[12px] font-semibold text-primary/80 no-underline hover:text-forest hover:bg-forest-soft/50 transition-colors"
             >
               <a.icon className="size-3.5" />
               {a.label}
-            </button>
+            </Link>
           ))}
         </div>
       </div>
 
-      {/* Three-column workspace */}
-      <div className="container-liz py-6 grid gap-5 2xl:grid-cols-[260px_minmax(0,1fr)_320px] lg:grid-cols-[240px_minmax(0,1fr)] grid-cols-1">
-        {/* LEFT — Timeline */}
-        <TimelineColumn
-          timeline={timeline}
-          sessions={sessions}
-          selectedId={activeId}
-          onSelect={setSelectedId}
-        />
-
-        {/* CENTER — Featured session */}
-        {selected ? <FeaturedSession session={selected} sessions={sessions} /> : <EmptyCenter />}
-
-        {/* RIGHT — IA + Painel */}
-        <div className="lg:col-span-2 2xl:col-span-1">
-          <RightPanel
-            session={selected}
-            stats={stats}
-            orphanClients={orphanClients}
-            prontuariosPendentes={prontuariosPendentes}
+      {hasSessions && selected ? (
+        /* Three-column workspace */
+        <div className="container-liz py-6 grid gap-5 2xl:grid-cols-[260px_minmax(0,1fr)_320px] lg:grid-cols-[240px_minmax(0,1fr)] grid-cols-1">
+          {/* LEFT — Timeline */}
+          <TimelineColumn
+            timeline={timeline}
+            sessions={sessions}
+            selectedId={activeId}
+            onSelect={setSelectedId}
           />
+
+          {/* CENTER — Featured session */}
+          <FeaturedSession session={selected} sessions={sessions} />
+
+          {/* RIGHT — IA + Painel */}
+          <div className="lg:col-span-2 2xl:col-span-1">
+            <RightPanel
+              session={selected}
+              stats={stats}
+              orphanClients={orphanClients}
+              prontuariosPendentes={prontuariosPendentes}
+            />
+          </div>
         </div>
-      </div>
+      ) : (
+        <EmptyDay isLoading={query.isLoading} orphanClients={orphanClients} />
+      )}
     </div>
   );
 }
 
-function EmptyCenter() {
+/* Estado vazio editorial — nenhum dado fictício */
+function EmptyDay({
+  isLoading,
+  orphanClients,
+}: {
+  isLoading: boolean;
+  orphanClients: OrphanClientDTO[];
+}) {
+  if (isLoading) {
+    return (
+      <div className="container-liz max-w-4xl py-12">
+        <div className="skeleton h-8 w-2/3" />
+        <div className="skeleton mt-4 h-24 w-full" />
+      </div>
+    );
+  }
   return (
-    <div className="rounded-3xl bg-white/70 border border-dashed border-border/60 p-12 text-center">
-      <CalendarIcon className="size-10 text-muted-foreground/40 mx-auto mb-3" />
-      <h3 className="font-serif text-xl font-bold text-primary">Nenhuma sessão agendada</h3>
-      <p className="text-sm text-muted-foreground mt-2">
-        Quando você criar uma nova sessão, ela aparecerá aqui com todos os detalhes clínicos.
-      </p>
+    <div className="container-liz max-w-4xl py-12">
+      <section>
+        <h2 className="mb-6 font-sans text-[11px] font-bold tracking-widest text-ink/40 uppercase">
+          Sessões de hoje
+        </h2>
+        <div className="border-b border-ink/10 py-4">
+          <p className="m-0 font-serif text-xl text-ink/40 italic md:text-2xl">
+            Nenhuma sessão registrada para hoje. O dia está aberto para pesquisa e escrita.
+          </p>
+        </div>
+        <div className="mt-8">
+          <Link to="/app/clientes">
+            <Button
+              variant="ghost"
+              className="group px-0 font-sans font-medium text-forest hover:bg-forest/5"
+            >
+              Acessar arquivo de clientes
+              <ChevronRight className="ml-1 size-4 transition-transform group-hover:translate-x-1" />
+            </Button>
+          </Link>
+        </div>
+      </section>
+
+      {orphanClients.length > 0 && (
+        <section className="mt-14">
+          <h2 className="mb-6 font-sans text-[11px] font-bold tracking-widest text-ink/40 uppercase">
+            Clientes sem retorno marcado
+          </h2>
+          <ul className="m-0 list-none p-0">
+            {orphanClients.slice(0, 5).map((c) => (
+              <li key={c.id} className="border-b border-ink/10 py-3.5">
+                <Link
+                  to="/app/paciente/$id"
+                  params={{ id: c.id }}
+                  className="group flex items-center justify-between gap-4 no-underline"
+                >
+                  <span className="font-serif text-lg text-ink transition-colors group-hover:text-forest-soft">
+                    {c.name}
+                  </span>
+                  <ChevronRight className="size-4 shrink-0 text-ink/30 transition-transform group-hover:translate-x-1" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }
 
 /* --------------------------------- Header --------------------------------- */
 
+function greetingByHour(): string {
+  const h = new Date().getHours();
+  if (h < 12) return "Bom dia";
+  if (h < 18) return "Boa tarde";
+  return "Boa noite";
+}
+
 function ContextualHeader({
   stats,
   firstName,
   isLoading,
-  isFallback,
   isError,
+  hasSessions,
 }: {
   stats: {
     total: number;
@@ -386,8 +378,8 @@ function ContextualHeader({
   };
   firstName: string;
   isLoading: boolean;
-  isFallback: boolean;
   isError: boolean;
+  hasSessions: boolean;
 }) {
   return (
     <DocumentHeader
@@ -397,81 +389,80 @@ function ContextualHeader({
           <div className="flex items-center justify-center size-14 shrink-0 rounded-lg bg-forest text-gold font-serif text-3xl font-bold shadow-sm">
             {firstName.charAt(0).toUpperCase()}
           </div>
-          <span className="tracking-tight">Bom dia, {firstName}.</span>
+          <span className="tracking-tight">
+            {greetingByHour()}, {firstName}.
+          </span>
         </div>
       }
       subtitle={
         <div className="font-sans font-normal text-ink/70 text-[15px]">
-          Hoje você acompanhará <strong>{stats.total} histórias familiares</strong>.
-          {stats.aniversarios > 0 && (
+          {hasSessions ? (
             <>
-              <br />
-              {stats.aniversarios === 1
-                ? "Um dos pacientes está em "
-                : `${stats.aniversarios} pacientes estão em `}
-              <strong>data ativa de Síndrome de Aniversário</strong>.
+              Hoje você acompanhará{" "}
+              <strong>
+                {stats.total} {stats.total === 1 ? "história familiar" : "histórias familiares"}
+              </strong>
+              .
+              {stats.aniversarios > 0 && (
+                <>
+                  <br />
+                  {stats.aniversarios === 1
+                    ? "Um dos pacientes está em "
+                    : `${stats.aniversarios} pacientes estão em `}
+                  <strong>data ativa de Síndrome de Aniversário</strong>.
+                </>
+              )}
             </>
+          ) : (
+            <>Nenhuma sessão marcada para hoje.</>
           )}
         </div>
       }
       actions={
-        <div className="flex flex-col items-end gap-3">
-          <div className="flex items-center gap-2 text-[12px] text-ink/60 font-semibold">
-            <Sparkles className="size-4 text-gold" />
-            IA Clínica pronta
-          </div>
-          <Button size="lg" variant="hero" className="shadow-sm">
-            <Play className="size-4 fill-current" />
-            Iniciar dia
-          </Button>
-          <div className="mt-1 flex justify-end">
-            {isLoading && (
-              <span className="text-[10px] font-bold uppercase tracking-widest text-ink/50 flex items-center gap-1.5 whitespace-nowrap">
-                <Loader2 className="size-3 animate-spin" /> Carregando
-              </span>
-            )}
-            {!isLoading && isFallback && (
-              <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-amber-800 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-full whitespace-nowrap">
-                Modo demonstração
-              </span>
-            )}
-            {isError && (
-              <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-rose-800 bg-rose-100 border border-rose-300 px-2 py-0.5 rounded-full whitespace-nowrap">
-                Erro de conexão
-              </span>
-            )}
-          </div>
+        <div className="flex justify-end">
+          {isLoading && (
+            <span className="text-[10px] font-bold uppercase tracking-widest text-ink/50 flex items-center gap-1.5 whitespace-nowrap">
+              <Loader2 className="size-3 animate-spin" /> Carregando
+            </span>
+          )}
+          {isError && (
+            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-clinical-critical bg-clinical-critical/10 border border-clinical-critical/30 px-2 py-0.5 rounded-full whitespace-nowrap">
+              Erro de conexão — tentando de novo
+            </span>
+          )}
         </div>
       }
     >
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
-        <HeaderStat
-          icon={Users}
-          label="Atendimentos"
-          value={stats.total.toString()}
-          accent="forest"
-        />
-        <HeaderStat
-          icon={Sunrise}
-          label="Primeira consulta"
-          value={stats.primeira.toString()}
-          accent="gold"
-        />
-        <HeaderStat
-          icon={TimerReset}
-          label="Retornos"
-          value={stats.retornos.toString()}
-          accent="forest"
-        />
-        <HeaderStat
-          icon={Cake}
-          label="Aniversários"
-          value={stats.aniversarios.toString()}
-          accent="rose"
-        />
-        <HeaderStat icon={Clock} label="Ocupado" value={stats.ocupado} accent="forest" />
-        <HeaderStat icon={Leaf} label="Tempo livre" value={stats.livre} accent="gold" />
-      </div>
+      {hasSessions && (
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
+          <HeaderStat
+            icon={Users}
+            label="Atendimentos"
+            value={stats.total.toString()}
+            accent="forest"
+          />
+          <HeaderStat
+            icon={Sunrise}
+            label="Primeira consulta"
+            value={stats.primeira.toString()}
+            accent="gold"
+          />
+          <HeaderStat
+            icon={TimerReset}
+            label="Retornos"
+            value={stats.retornos.toString()}
+            accent="forest"
+          />
+          <HeaderStat
+            icon={Cake}
+            label="Aniversários"
+            value={stats.aniversarios.toString()}
+            accent="terracotta"
+          />
+          <HeaderStat icon={Clock} label="Ocupado" value={stats.ocupado} accent="forest" />
+          <HeaderStat icon={Leaf} label="Tempo livre" value={stats.livre} accent="gold" />
+        </div>
+      )}
     </DocumentHeader>
   );
 }
@@ -485,15 +476,15 @@ function HeaderStat({
   icon: typeof Clock;
   label: string;
   value: string;
-  accent: "forest" | "gold" | "rose";
+  accent: "forest" | "gold" | "terracotta";
 }) {
   const accentClass = {
     forest: "text-ink/60",
     gold: "text-gold",
-    rose: "text-rose-600",
+    terracotta: "text-terracotta",
   }[accent];
   return (
-    <div className="rounded-xl bg-white/60 backdrop-blur-sm border border-border/40 px-4 py-3 shadow-sm">
+    <div className="rounded-xl bg-surface-document/70 backdrop-blur-sm border border-border/40 px-4 py-3 shadow-sm">
       <div className={`flex items-center gap-1.5 ${accentClass}`}>
         <Icon className="size-3.5" />
         <p className="text-[10px] font-bold uppercase tracking-[0.15em]">{label}</p>
@@ -525,7 +516,7 @@ function TimelineColumn({
         <span className="text-[10px] text-muted-foreground/70 font-semibold">Hoje</span>
       </div>
 
-      <div className="relative rounded-2xl bg-white/70 backdrop-blur border border-border/50 shadow-sm p-4">
+      <div className="relative rounded-2xl bg-surface-document/80 backdrop-blur border border-border/50 shadow-sm p-4">
         {/* vertical line */}
         <div className="absolute left-[38px] top-6 bottom-6 w-px bg-gradient-to-b from-transparent via-border to-transparent" />
 
@@ -557,7 +548,7 @@ function TimelineColumn({
                       isSession
                         ? isSelected
                           ? "bg-forest text-white border-forest"
-                          : "bg-white border-forest/30 text-forest"
+                          : "bg-surface-document border-forest/30 text-forest"
                         : "bg-cream border-border text-muted-foreground/70"
                     }`}
                   >
@@ -586,40 +577,6 @@ function TimelineColumn({
           })}
         </ul>
       </div>
-
-      {/* Mini weekly overview */}
-      <div className="rounded-2xl bg-white/70 backdrop-blur border border-border/50 shadow-sm p-4">
-        <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">
-          Semana
-        </p>
-        <div className="grid grid-cols-5 gap-1">
-          {[
-            { d: "S", n: 6, active: true, load: 3 },
-            { d: "T", n: 7, load: 2 },
-            { d: "Q", n: 8, load: 4 },
-            { d: "Q", n: 9, load: 1 },
-            { d: "S", n: 10, load: 3 },
-          ].map((d) => (
-            <div
-              key={d.n}
-              className={`aspect-square rounded-lg flex flex-col items-center justify-center text-center ${
-                d.active ? "bg-forest text-white" : "bg-cream text-primary"
-              }`}
-            >
-              <span className="text-[9px] font-bold opacity-70">{d.d}</span>
-              <span className="font-serif text-sm font-bold">{d.n}</span>
-              <div className="flex gap-0.5 mt-0.5">
-                {Array.from({ length: d.load }).map((_, i) => (
-                  <span
-                    key={i}
-                    className={`size-1 rounded-full ${d.active ? "bg-white/70" : "bg-forest/40"}`}
-                  />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
     </aside>
   );
 }
@@ -641,20 +598,20 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
 
   const accentBar = {
     forest: "bg-gradient-to-b from-forest to-forest",
-    rose: "bg-rose-500",
+    rose: "bg-clinical-critical",
     gold: "bg-gradient-to-b from-gold to-gold/50",
   }[session.accent];
 
   const initialsBg = {
     forest: "bg-forest text-white",
-    rose: "bg-rose-500 text-white",
+    rose: "bg-clinical-critical text-white",
     gold: "bg-gold text-primary",
   }[session.accent];
 
   return (
     <main className="space-y-5">
       {/* Rich patient card */}
-      <article className="relative rounded-3xl bg-white border border-border/60 shadow-[0_20px_60px_-30px_rgba(60,20,80,0.35)] overflow-hidden">
+      <article className="relative rounded-3xl bg-surface-document border border-border/60 shadow-dossier overflow-hidden">
         {/* accent bar */}
         <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${accentBar}`} />
 
@@ -699,7 +656,7 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
               className={`size-20 md:size-24 rounded-2xl ${initialsBg} flex items-center justify-center font-serif text-2xl md:text-3xl font-bold shadow-lg shrink-0 relative`}
             >
               {session.initials}
-              <div className="absolute -bottom-1 -right-1 size-6 rounded-full bg-white border-2 border-cream flex items-center justify-center">
+              <div className="absolute -bottom-1 -right-1 size-6 rounded-full bg-surface-document border-2 border-cream flex items-center justify-center">
                 <CircleDot className="size-3 text-forest" />
               </div>
             </div>
@@ -765,44 +722,33 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
             )}
           </div>
 
-          {/* Protocols */}
+          {/* Protocols — sugestões de leitura, não botões */}
           <div className="mt-5">
             <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-2.5">
               Protocolos sugeridos
             </p>
             <div className="flex flex-wrap gap-2">
               {session.protocols.map((p) => (
-                <button
+                <span
                   key={p}
-                  className="group inline-flex items-center gap-2 rounded-full border border-forest/30 bg-forest-soft/40 px-3.5 py-1.5 text-[12.5px] font-semibold text-forest hover:bg-forest/15 hover:border-forest/50 transition-all"
+                  className="inline-flex items-center gap-2 rounded-full border border-forest/30 bg-forest-soft/40 px-3.5 py-1.5 text-[12.5px] font-semibold text-forest"
                 >
                   <ClipboardList className="size-3.5" />
                   {p}
-                  <ChevronRight className="size-3 opacity-0 -ml-1 group-hover:opacity-100 group-hover:ml-0 transition-all" />
-                </button>
+                </span>
               ))}
             </div>
           </div>
 
-          {/* Actions */}
+          {/* Actions — apenas destinos reais */}
           <div className="mt-7 flex flex-wrap gap-2 pt-5 border-t border-border/40">
-            <Button size="lg" className="font-bold shadow-md">
-              <Play className="size-4 fill-current" />
-              Iniciar sala
-            </Button>
-            <Button variant="outline" size="lg" className="font-bold">
-              <Wand2 className="size-4" />
-              Preparar sessão
-            </Button>
             {session.clientId ? (
-              <Link
-                to="/app/paciente/$id"
-                params={{ id: session.clientId }}
-                className="inline-flex items-center gap-2 h-11 px-4 rounded-md text-[14px] font-semibold text-primary/80 hover:text-forest hover:bg-forest-soft/50 transition-colors"
-              >
-                <FileText className="size-4" />
-                Abrir Dossiê
-              </Link>
+              <Button size="lg" className="font-bold shadow-md" asChild>
+                <Link to="/app/paciente/$id" params={{ id: session.clientId }}>
+                  <FileText className="size-4" />
+                  Abrir Dossiê
+                </Link>
+              </Button>
             ) : (
               <Button
                 variant="ghost"
@@ -812,7 +758,7 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
                 title="Sessão sem cliente vinculado"
               >
                 <FileText className="size-4" />
-                Prontuário
+                Sem cliente vinculado
               </Button>
             )}
             <Link
@@ -822,10 +768,6 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
               <GitBranch className="size-4" />
               Genossociograma
             </Link>
-            <Button variant="ghost" size="lg" className="font-semibold">
-              <ArrowRight className="size-4" />
-              Agendar retorno
-            </Button>
           </div>
         </div>
       </article>
@@ -856,7 +798,7 @@ function MiniTreePreview({
   const totalPersons = genogram?.totalPersons ?? 0;
 
   return (
-    <div className="rounded-2xl bg-white/80 backdrop-blur border border-border/50 shadow-sm p-5">
+    <div className="rounded-2xl bg-surface-document/85 backdrop-blur border border-border/50 shadow-sm p-5">
       <div className="flex items-center justify-between mb-4">
         <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground flex items-center gap-2">
           <GitBranch className="size-3.5" /> Genossociograma
@@ -969,7 +911,7 @@ function RealMiniTree({ genogram, session }: { genogram: ClientGenogramDTO; sess
             y1={y - 10}
             x2={x + 10}
             y2={y + 10}
-            className="stroke-slate-500"
+            className="stroke-graphite"
             strokeWidth="1.2"
           />
         )}
@@ -983,7 +925,7 @@ function RealMiniTree({ genogram, session }: { genogram: ClientGenogramDTO; sess
             y1={y - 11}
             x2={x + 11}
             y2={y + 11}
-            className="stroke-slate-500"
+            className="stroke-graphite"
             strokeWidth="1.2"
           />
         )}
@@ -1049,7 +991,7 @@ function UpcomingList({ currentId, sessions }: { currentId: string; sessions: Se
   const others = sessions.filter((s) => s.id !== currentId);
 
   return (
-    <div className="rounded-2xl bg-white/80 backdrop-blur border border-border/50 shadow-sm p-5">
+    <div className="rounded-2xl bg-surface-document/85 backdrop-blur border border-border/50 shadow-sm p-5">
       <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4 flex items-center gap-2">
         <Clock className="size-3.5" /> Próximas hoje
       </p>
@@ -1172,7 +1114,7 @@ function RightPanel({
       </div>
 
       {/* Pendências */}
-      <div className="rounded-2xl bg-white/80 backdrop-blur border border-border/50 shadow-sm p-5">
+      <div className="rounded-2xl bg-surface-document/85 backdrop-blur border border-border/50 shadow-sm p-5">
         <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3 flex items-center gap-2">
           <ClipboardList className="size-3.5" /> Pendências
         </p>
@@ -1199,7 +1141,7 @@ function RightPanel({
       </div>
 
       {/* Balanço de tempo do dia */}
-      <div className="rounded-2xl bg-white/80 backdrop-blur border border-border/50 shadow-sm p-5">
+      <div className="rounded-2xl bg-surface-document/85 backdrop-blur border border-border/50 shadow-sm p-5">
         <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">
           Balanço do dia
         </p>
@@ -1212,9 +1154,11 @@ function RightPanel({
           </div>
           <div className="flex items-center justify-between">
             <span className="flex items-center gap-2 text-[12px] text-primary/80 font-semibold">
-              <Leaf className="size-3.5 text-emerald-600" /> Tempo livre
+              <Leaf className="size-3.5 text-clinical-positive" /> Tempo livre
             </span>
-            <span className="font-mono text-sm font-bold text-emerald-700">{stats.livre}</span>
+            <span className="font-mono text-sm font-bold text-clinical-positive">
+              {stats.livre}
+            </span>
           </div>
           <div className="h-1.5 bg-cream rounded-full overflow-hidden mt-2">
             <div
@@ -1225,17 +1169,48 @@ function RightPanel({
         </div>
       </div>
 
-      {/* Notas rápidas */}
-      <div className="rounded-2xl bg-gradient-to-br from-cream to-white border border-border/50 shadow-sm p-5">
-        <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-2 flex items-center gap-2">
+      {/* Notas rápidas — persistem neste dispositivo */}
+      <QuickNote />
+    </aside>
+  );
+}
+
+const QUICK_NOTE_KEY = "genealiz.agenda.quick-note";
+
+function QuickNote() {
+  const [note, setNote] = useState(() => {
+    try {
+      return localStorage.getItem(QUICK_NOTE_KEY) ?? "";
+    } catch {
+      return "";
+    }
+  });
+
+  return (
+    <div className="rounded-2xl bg-gradient-to-br from-cream to-surface-document border border-border/50 shadow-sm p-5">
+      <div className="mb-2 flex items-center justify-between">
+        <p className="m-0 text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground flex items-center gap-2">
           <FileText className="size-3.5" /> Nota rápida
         </p>
-        <textarea
-          placeholder="Uma linha, uma intuição, uma hipótese..."
-          className="w-full bg-transparent text-[13px] font-serif text-primary/90 placeholder:text-muted-foreground/60 resize-none focus:outline-none min-h-[60px]"
-        />
+        <span className="text-[9px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/60">
+          Salva neste dispositivo
+        </span>
       </div>
-    </aside>
+      <textarea
+        value={note}
+        onChange={(e) => {
+          setNote(e.target.value);
+          try {
+            localStorage.setItem(QUICK_NOTE_KEY, e.target.value);
+          } catch {
+            /* armazenamento indisponível — nota vive só na sessão */
+          }
+        }}
+        placeholder="Uma linha, uma intuição, uma hipótese..."
+        aria-label="Nota rápida"
+        className="w-full bg-transparent text-[13px] font-serif text-primary/90 placeholder:text-muted-foreground/60 resize-none focus:outline-none min-h-[60px]"
+      />
+    </div>
   );
 }
 
@@ -1249,8 +1224,8 @@ function PendingRow({
   tone: "rose" | "gold" | "forest";
 }) {
   const toneClass = {
-    rose: "bg-rose-100 text-rose-700",
-    gold: "bg-amber-100 text-amber-700",
+    rose: "bg-clinical-critical/10 text-clinical-critical",
+    gold: "bg-gold-muted/60 text-bronze",
     forest: "bg-forest/15 text-forest",
   }[tone];
   return (

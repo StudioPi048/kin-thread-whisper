@@ -352,10 +352,10 @@ function SessionCard({
     ? "bg-destructive text-white"
     : isProcessing
       ? "bg-forest text-white"
-      : "bg-emerald-600 text-white";
+      : "bg-clinical-positive text-white";
 
   return (
-    <article className="rounded-sm border border-border bg-white shadow-sm overflow-hidden accent-bar-forest transition-shadow hover:shadow-md">
+    <article className="rounded-sm border border-border bg-surface-document shadow-sm overflow-hidden accent-bar-forest transition-shadow hover:shadow-md">
       {/* Header */}
       <div className="border-b border-border/40 bg-background/50 px-6 py-4 flex flex-wrap items-start justify-between gap-4">
         <div>

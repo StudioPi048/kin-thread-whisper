@@ -59,19 +59,21 @@ function PatientDossierPage() {
     return (
       <div className="min-h-[calc(100vh-64px)] bg-cream flex items-center justify-center p-8">
         <div className="max-w-md text-center space-y-4">
-          <AlertTriangle className="size-10 text-rose-500 mx-auto" />
+          <AlertTriangle className="size-10 text-clinical-critical mx-auto" />
           <h2 className="font-serif text-2xl font-bold text-primary">
             Não foi possível abrir o dossiê
           </h2>
           <p className="text-sm text-muted-foreground">
             {q.error instanceof Error ? q.error.message : "Erro desconhecido"}
           </p>
-          <div className="flex gap-2 justify-center">
+          <div className="flex flex-col items-stretch justify-center gap-2 sm:flex-row sm:items-center">
             <Button variant="outline" onClick={() => router.invalidate()}>
               Tentar novamente
             </Button>
-            <Link to="/app/agenda">
-              <Button variant="ghost">Voltar para a agenda</Button>
+            <Link to="/app/agenda" className="flex">
+              <Button variant="ghost" className="flex-1">
+                Voltar para a agenda
+              </Button>
             </Link>
           </div>
         </div>
@@ -87,9 +89,9 @@ function DossierView({ data }: { data: PatientDossierDTO }) {
     data;
 
   return (
-    <div className="min-h-[calc(100vh-64px)] bg-[radial-gradient(circle_at_20%_0%,oklch(0.97_0.02_295)_0%,transparent_45%),radial-gradient(circle_at_100%_100%,oklch(0.96_0.03_60/0.4)_0%,transparent_50%),var(--color-cream)] pb-24">
+    <div className="min-h-[calc(100vh-64px)] bg-transparent pb-28">
       {/* Breadcrumb */}
-      <div className="border-b border-border/60 bg-white/60 backdrop-blur-sm px-6 py-3">
+      <div className="border-b border-border/60 bg-surface-document/70 backdrop-blur-sm px-6 py-3">
         <div className="container-liz flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.25em] text-muted-foreground">
             <Link to="/app/agenda" className="hover:text-forest flex items-center gap-1.5">
@@ -230,11 +232,11 @@ function StatusChip({ status }: { status: string }) {
   const map: Record<string, { label: string; className: string }> = {
     active: {
       label: "Ativo",
-      className: "bg-emerald-400/20 text-emerald-100 border-emerald-300/40",
+      className: "bg-gold/20 text-gold-soft border-gold/40",
     },
     archived: {
       label: "Arquivado",
-      className: "bg-slate-400/20 text-slate-100 border-slate-300/40",
+      className: "bg-white/10 text-cream/80 border-white/20",
     },
   };
   const m = map[status] ?? {
@@ -281,7 +283,7 @@ function NextSessionCard({ iso }: { iso: string | null }) {
 
 function JourneyStrip({ journey }: { journey: JourneyDTO }) {
   return (
-    <div className="rounded-2xl bg-white/80 backdrop-blur border border-border/50 shadow-sm p-5">
+    <div className="rounded-2xl bg-surface-document/85 backdrop-blur border border-border/50 shadow-sm p-5">
       <div className="flex items-center justify-between mb-4">
         <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground flex items-center gap-2">
           <Feather className="size-3.5" /> Jornada clínica
@@ -344,7 +346,7 @@ function ClinicalSummary({
   presentingComplaint: string | null;
 }) {
   return (
-    <div className="rounded-3xl bg-white border border-border/60 shadow-[0_20px_60px_-30px_rgba(60,20,80,0.35)] p-6 md:p-7">
+    <div className="rounded-3xl bg-surface-document border border-border/60 shadow-dossier p-6 md:p-7">
       <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-forest flex items-center gap-2 mb-4">
         <Sparkles className="size-3.5" /> Resumo clínico vivo
       </p>
@@ -427,7 +429,7 @@ function GenogramShowcase({
   patientName: string;
 }) {
   return (
-    <div className="rounded-3xl bg-white border border-border/60 shadow-[0_10px_40px_-25px_rgba(60,20,80,0.25)] overflow-hidden">
+    <div className="rounded-3xl bg-surface-document border border-border/60 shadow-surface overflow-hidden">
       <div className="flex items-center justify-between px-6 py-4 border-b border-border/40 bg-gradient-to-r from-forest/[0.03] to-forest/[0.05]">
         <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-forest flex items-center gap-2">
           <GitBranch className="size-3.5" /> Genossociograma
@@ -544,7 +546,7 @@ function BigTree({ genogram, patientName }: { genogram: DossierGenogramDTO; pati
             y1={y - size}
             x2={x + size}
             y2={y + size}
-            className="stroke-slate-600"
+            className="stroke-graphite"
             strokeWidth="1.5"
           />
         )}
@@ -637,7 +639,7 @@ function FamilyTimeline({ events }: { events: TimelineEventDTO[] }) {
   }, [events]);
 
   return (
-    <div className="rounded-3xl bg-white border border-border/60 shadow-[0_10px_40px_-25px_rgba(60,20,80,0.2)] p-6">
+    <div className="rounded-3xl bg-surface-document border border-border/60 shadow-surface p-6">
       <div className="flex items-center justify-between mb-5">
         <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-forest flex items-center gap-2">
           <Clock className="size-3.5" /> Linha do tempo familiar
@@ -660,11 +662,11 @@ function FamilyTimeline({ events }: { events: TimelineEventDTO[] }) {
                 {list.map((e, i) => (
                   <li key={i} className="flex items-start gap-3 -ml-[9px]">
                     <span
-                      className={`size-4 rounded-full mt-0.5 shrink-0 border-2 border-white ${
+                      className={`size-4 rounded-full mt-0.5 shrink-0 border-2 border-surface-document ${
                         e.kind === "birth"
-                          ? "bg-emerald-500"
+                          ? "bg-clinical-positive"
                           : e.kind === "death"
-                            ? "bg-slate-500"
+                            ? "bg-graphite"
                             : "bg-gold"
                       }`}
                     />
@@ -697,7 +699,7 @@ function FamilyTimeline({ events }: { events: TimelineEventDTO[] }) {
 
 function RecentEvolutions({ evolutions }: { evolutions: EvolutionDTO[] }) {
   return (
-    <div className="rounded-3xl bg-white border border-border/60 shadow-[0_10px_40px_-25px_rgba(60,20,80,0.2)] p-6">
+    <div className="rounded-3xl bg-surface-document border border-border/60 shadow-surface p-6">
       <div className="flex items-center justify-between mb-4">
         <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-forest flex items-center gap-2">
           <FileText className="size-3.5" /> Últimas evoluções
@@ -761,7 +763,7 @@ function AiBriefing({ briefing }: { briefing: BriefingDTO }) {
     briefing.clinicalAlerts.length > 0;
 
   return (
-    <div className="rounded-3xl bg-gradient-to-br from-forest via-forest to-forest/95 text-white p-6 shadow-[0_20px_60px_-30px_rgba(60,20,80,0.6)] relative overflow-hidden">
+    <div className="rounded-3xl bg-gradient-to-br from-forest via-forest to-forest/95 text-white p-6 shadow-dossier relative overflow-hidden">
       <div
         aria-hidden
         className="absolute -top-16 -right-16 size-52 rounded-full bg-gold/20 blur-3xl pointer-events-none"
@@ -802,7 +804,7 @@ function AiBriefing({ briefing }: { briefing: BriefingDTO }) {
                   className="flex items-start gap-2 text-[13px] text-white/90 leading-relaxed"
                 >
                   <AlertTriangle
-                    className={`size-3.5 shrink-0 mt-0.5 ${a.severity === "high" ? "text-rose-300" : a.severity === "warn" ? "text-gold" : "text-forest-mid"}`}
+                    className={`size-3.5 shrink-0 mt-0.5 ${a.severity === "high" ? "text-gold-soft" : a.severity === "warn" ? "text-gold" : "text-forest-mid"}`}
                   />
                   <span>{a.message}</span>
                 </li>
@@ -873,7 +875,7 @@ function AiBriefing({ briefing }: { briefing: BriefingDTO }) {
 
 function ConnectedLibrary({ items }: { items: LibrarySuggestionDTO[] }) {
   return (
-    <div className="rounded-3xl bg-white border border-border/60 shadow-[0_10px_40px_-25px_rgba(60,20,80,0.2)] p-6">
+    <div className="rounded-3xl bg-surface-document border border-border/60 shadow-surface p-6">
       <div className="flex items-center justify-between mb-4">
         <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-forest flex items-center gap-2">
           <BookOpen className="size-3.5" /> Biblioteca conectada
@@ -921,31 +923,28 @@ function ConnectedLibrary({ items }: { items: LibrarySuggestionDTO[] }) {
 /* ============================= Action Bar ============================== */
 
 function ActionBar({ clientId }: { clientId: string }) {
-  void clientId;
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border/60 bg-white/95 backdrop-blur-lg shadow-[0_-8px_30px_-15px_rgba(60,20,80,0.25)]">
+    <div className="fixed right-0 bottom-[calc(60px+env(safe-area-inset-bottom))] left-0 z-30 border-t border-border/60 bg-surface-document/95 shadow-lifted backdrop-blur-lg lg:bottom-0">
       <div className="container-liz py-3 flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+        <div className="hidden items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-muted-foreground sm:flex">
           <Users className="size-3.5 text-forest" /> Ações do dossiê
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button size="lg" className="font-bold shadow-md">
-            <Play className="size-4 fill-current" /> Preparar sessão
-          </Button>
-          <Button variant="outline" size="lg" className="font-bold">
-            <FileText className="size-4" /> Registrar evolução
+          <Button size="lg" className="font-bold shadow-md" asChild>
+            <Link to="/app/clientes/$clientId" params={{ clientId }}>
+              <FileText className="size-4" /> Abrir dossiê completo
+            </Link>
           </Button>
           <Link to="/app/genossociogramas">
             <Button variant="ghost" size="lg" className="font-semibold">
               <GitBranch className="size-4" /> Genossociograma
             </Button>
           </Link>
-          <Button variant="ghost" size="lg" className="font-semibold">
-            <Clock className="size-4" /> Linha do tempo
-          </Button>
-          <Button variant="ghost" size="lg" className="font-semibold">
-            <ArrowRight className="size-4" /> Agendar retorno
-          </Button>
+          <Link to="/app/linha-do-tempo" className="hidden sm:block">
+            <Button variant="ghost" size="lg" className="font-semibold">
+              <Clock className="size-4" /> Linha do tempo
+            </Button>
+          </Link>
         </div>
       </div>
     </div>

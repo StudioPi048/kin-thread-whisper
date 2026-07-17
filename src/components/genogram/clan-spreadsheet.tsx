@@ -501,7 +501,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
             size="sm"
             onClick={() => removeEmptyPersons.mutate()}
             disabled={removeEmptyPersons.isPending}
-            className="font-bold border-amber-500/20 text-amber-600 hover:bg-amber-500/5"
+            className="font-bold border-clinical-warning/25 text-clinical-warning hover:bg-clinical-warning/5"
             title="Remove linhas sem nome e data"
           >
             {removeEmptyPersons.isPending ? (
@@ -553,7 +553,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-sm border-2 border-dashed border-border bg-white shadow-sm p-12 text-center relative overflow-hidden"
+          className="rounded-sm border-2 border-dashed border-border bg-surface-document shadow-sm p-12 text-center relative overflow-hidden"
         >
           <div className="absolute top-0 right-0 opacity-10 pointer-events-none">
             <img src="/data_import.png" alt="" className="w-[300px] h-[300px] object-cover" />
@@ -591,7 +591,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
             ))}
           </datalist>
 
-          <div className="overflow-x-auto rounded-sm border-2 border-border/80 bg-white shadow-sm">
+          <div className="overflow-x-auto rounded-sm border-2 border-border/80 bg-surface-document shadow-sm">
             <table className="w-full min-w-[1500px] border-collapse text-[16px]">
               <thead className="bg-forest-soft/40 text-[14px] font-bold uppercase tracking-[0.15em] text-forest border-b-2 border-border/80">
                 <tr>
@@ -633,13 +633,13 @@ export function ClanSpreadsheet({ clientId }: Props) {
                           onChange={(v) => scheduleSave(r.id, { relationship_to_proband: v })}
                           className={
                             !r.relationship_to_proband?.trim() && r.full_name?.trim()
-                              ? "pr-8 border-red-300 bg-red-50/30"
+                              ? "pr-8 border-clinical-critical/40 bg-clinical-critical/5"
                               : ""
                           }
                         />
                         {!r.relationship_to_proband?.trim() && r.full_name?.trim() && (
                           <div
-                            className="absolute right-2 text-red-500"
+                            className="absolute right-2 text-clinical-critical"
                             title="Vínculo pendente! Esta pessoa não aparecerá conectada na árvore."
                           >
                             <AlertCircle className="size-4" />

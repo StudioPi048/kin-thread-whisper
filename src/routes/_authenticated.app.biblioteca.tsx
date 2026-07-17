@@ -635,7 +635,7 @@ function BibliotecaPage() {
   const [openTerm, setOpenTerm] = useState<(typeof GLOSSARY)[number] | null>(null);
   const [aiOpen, setAiOpen] = useState(true);
 
-  const { data: entries = [] } = useQuery({
+  const { data: entries = [], isLoading: entriesLoading } = useQuery({
     queryKey: ["library-entries"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -677,7 +677,7 @@ function BibliotecaPage() {
             <div className="relative z-10 space-y-6">
               <div className="group relative max-w-3xl">
                 <div className="absolute inset-0 rounded-[1.25rem] bg-gradient-to-r from-forest/30 to-gold/20 blur-xl opacity-60 group-focus-within:opacity-100 transition-opacity duration-500" />
-                <div className="relative flex items-center gap-3 rounded-[1.25rem] border border-forest/10 bg-white p-2 pl-5 shadow-[0_20px_60px_-30px_oklch(0.25_0.10_295/0.5)]">
+                <div className="relative flex items-center gap-3 rounded-[1.25rem] border border-forest/10 bg-surface-document p-2 pl-5 shadow-dossier">
                   <Search className="size-5 text-forest shrink-0" />
                   <input
                     value={q}
@@ -1054,7 +1054,29 @@ function BibliotecaPage() {
           </section>
 
           {/* ── ACERVO INTELIGENTE (BASE DE DADOS) ─────────── */}
-          {entries.length > 0 && (
+          {entriesLoading && (
+            <section className="space-y-6">
+              <SectionHeader number="10" eyebrow="Acervo inteligente" title="Carregando acervo…" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="skeleton h-36 rounded-[1.25rem]" />
+                ))}
+              </div>
+            </section>
+          )}
+          {!entriesLoading && entries.length > 0 && filteredEntries.length === 0 && q.trim() && (
+            <section className="space-y-6">
+              <SectionHeader
+                number="10"
+                eyebrow="Acervo inteligente"
+                title={`Resultados para "${q}"`}
+              />
+              <p className="font-serif text-lg text-ink/45 italic">
+                Nenhum verbete encontrado para este termo. Tente um autor, conceito ou escola.
+              </p>
+            </section>
+          )}
+          {!entriesLoading && filteredEntries.length > 0 && (
             <section className="space-y-6">
               <SectionHeader
                 number="10"
@@ -1068,7 +1090,7 @@ function BibliotecaPage() {
                     key={e.id}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="rounded-[1.25rem] bg-white border border-forest/10 p-5 hover:shadow-lg transition-all"
+                    className="rounded-[1.25rem] bg-surface-document border border-forest/10 p-5 hover:shadow-lg transition-all"
                   >
                     <div className="flex items-baseline justify-between gap-3">
                       <h4 className="font-serif text-lg font-bold text-forest">{e.author}</h4>

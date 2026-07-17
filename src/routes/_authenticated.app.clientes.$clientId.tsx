@@ -144,6 +144,32 @@ function ClientDossierPage() {
     },
   });
 
+  // Padrões reais detectados pelo motor — alimentam a hipótese clínica sem inventar dados
+  const { data: patterns = [] } = useQuery({
+    queryKey: ["client-patterns", clientId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("patterns_detected")
+        .select("id, title, pattern_type, severity, acknowledged_at")
+        .eq("client_id", clientId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const { data: sessionCount = 0 } = useQuery({
+    queryKey: ["client-session-count", clientId],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("clinical_sessions")
+        .select("id", { count: "exact", head: true })
+        .eq("client_id", clientId);
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+
   const toggleArchive = useMutation({
     mutationFn: async () => {
       if (!client) return;
@@ -208,6 +234,32 @@ function ClientDossierPage() {
   const genderLabel = genderOptions.find((g) => g.value === client.gender)?.label ?? "—";
   const initials = initialsFrom(client.full_name);
 
+  // Gramática visual derivada dos padrões reais (nunca inventada)
+  const REPETITION_TYPES = new Set([
+    "shared_death_age",
+    "shared_cause_of_death",
+    "shared_health_condition",
+    "shared_occupation",
+    "anniversary_syndrome",
+  ]);
+  const clamp3 = (n: number) => Math.min(3, n) as 0 | 1 | 2 | 3;
+  const repetitionCount = patterns.filter((p) => REPETITION_TYPES.has(p.pattern_type)).length;
+  const ruptureCount = patterns.filter((p) => p.pattern_type === "relationship_ruptures").length;
+  const anniversary = patterns.find((p) => p.pattern_type === "anniversary_syndrome");
+  const hypothesisGrammar = {
+    stage: patterns.some((p) => p.acknowledged_at)
+      ? ("investigada" as const)
+      : ("observada" as const),
+    intensities: {
+      trauma: clamp3(ruptureCount),
+      repetition: clamp3(repetitionCount),
+      exclusion: 0 as const,
+      loyalty: 0 as const,
+      secret: 0 as const,
+    },
+    temporalAnchor: anniversary ? anniversary.title : null,
+  };
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pb-12">
       <DocumentHeader
@@ -267,13 +319,13 @@ function ClientDossierPage() {
 
             <div className="flex-1" />
 
-            <div className="flex items-center gap-4 bg-white/50 px-4 py-1.5 rounded-full border border-border/40">
+            <div className="flex items-center gap-4 bg-surface-document/60 px-4 py-1.5 rounded-full border border-border/40">
               <span
                 className="flex items-center gap-1.5 text-[12px] font-semibold text-ink/80"
-                title="Próxima sessão"
+                title="Sessões registradas"
               >
-                <CalendarDays className="size-3.5" />{" "}
-                {(client as { session_count?: number }).session_count || 0} sessões
+                <CalendarDays className="size-3.5" /> {sessionCount}{" "}
+                {sessionCount === 1 ? "sessão" : "sessões"}
               </span>
               <div className="w-px h-3 bg-border/60" />
               <span className="flex items-center gap-1.5 text-[12px] font-bold text-ink shadow-sm">
@@ -283,7 +335,7 @@ function ClientDossierPage() {
           </div>
         }
         actions={
-          <div className="flex items-center gap-1 opacity-60 hover:opacity-100 transition-opacity bg-white/50 p-1 rounded-md border border-border/40">
+          <div className="flex items-center gap-1 opacity-60 hover:opacity-100 transition-opacity bg-surface-document/60 p-1 rounded-md border border-border/40">
             <Button
               variant="ghost"
               size="icon-sm"
@@ -309,7 +361,7 @@ function ClientDossierPage() {
             <Button
               variant="ghost"
               size="icon-sm"
-              className="text-red-700 hover:bg-red-50 hover:text-red-800"
+              className="text-clinical-critical hover:bg-clinical-critical/10 hover:text-clinical-critical"
               onClick={() => setDeleting(true)}
               title="Excluir"
             >
@@ -323,52 +375,31 @@ function ClientDossierPage() {
         {/* Main Content (Tabs) */}
         <div className="flex-1 min-w-0">
           <Tabs defaultValue="genogram" className="w-full">
-            {/* STICKY NAV TABS */}
-            <div className="sticky top-0 z-30 py-2 bg-slate-50/80 backdrop-blur-md border-b border-border/40">
-              <TabsList className="w-fit justify-start h-auto p-1 bg-white shadow-md rounded-full flex gap-1 border border-border/40">
-                <TabsTrigger
-                  value="overview"
-                  className="flex items-center gap-1.5 py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-forest data-[state=state]:bg-forest data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
-                >
-                  <FileText className="size-3.5" /> Visão geral
-                </TabsTrigger>
-                <TabsTrigger
-                  value="genogram"
-                  className="flex items-center gap-1.5 py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-forest data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
-                >
-                  <TreePine className="size-3.5" /> Genossociograma
-                </TabsTrigger>
-                <TabsTrigger
-                  value="timeline"
-                  className="flex items-center gap-1.5 py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-forest data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
-                >
-                  <History className="size-3.5" /> Linhas de Herança
-                </TabsTrigger>
-                <TabsTrigger
-                  value="patterns"
-                  className="flex items-center gap-1.5 py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-forest data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
-                >
-                  <Activity className="size-3.5" /> Padrões
-                </TabsTrigger>
-                <TabsTrigger
-                  value="intake"
-                  className="py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-forest data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
-                >
-                  Anamnese
-                </TabsTrigger>
-                <TabsTrigger
-                  value="sessions"
-                  className="py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-forest data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
-                >
-                  Sessões
-                </TabsTrigger>
-                <TabsTrigger
-                  value="clan"
-                  className="py-2 px-4 rounded-full text-muted-foreground font-semibold data-[state=active]:bg-forest data-[state=active]:text-white text-[12px] transition-all cursor-pointer"
-                >
-                  Planilha
-                </TabsTrigger>
-              </TabsList>
+            {/* STICKY NAV TABS — rolagem horizontal no mobile */}
+            <div className="sticky top-0 z-30 -mx-6 border-b border-border/40 bg-surface-archive/85 px-6 py-2 backdrop-blur-md sm:mx-0 sm:px-0">
+              <div className="overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <TabsList className="flex h-auto w-max flex-nowrap justify-start gap-1 rounded-full border border-border/40 bg-surface-document p-1 shadow-md">
+                  {(
+                    [
+                      { value: "overview", label: "Visão geral", Icon: FileText },
+                      { value: "genogram", label: "Genossociograma", Icon: TreePine },
+                      { value: "timeline", label: "Linhas de Herança", Icon: History },
+                      { value: "patterns", label: "Padrões", Icon: Activity },
+                      { value: "intake", label: "Anamnese", Icon: null },
+                      { value: "sessions", label: "Sessões", Icon: null },
+                      { value: "clan", label: "Planilha", Icon: null },
+                    ] as const
+                  ).map(({ value, label, Icon }) => (
+                    <TabsTrigger
+                      key={value}
+                      value={value}
+                      className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-4 py-2 text-[12px] font-semibold whitespace-nowrap text-muted-foreground transition-all data-[state=active]:bg-forest data-[state=active]:text-white"
+                    >
+                      {Icon && <Icon className="size-3.5" />} {label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </div>
             </div>
 
             <div className="mt-6">
@@ -376,29 +407,38 @@ function ClientDossierPage() {
               <TabsContent value="overview">
                 <div className="grid gap-6 xl:grid-cols-3">
                   <section className="xl:col-span-2 space-y-6">
-                    {/* Bloco 2: Resumo IA Clínico (Fase 3.5A - Validado com Gramática) */}
-                    <ClinicalDocument
-                      title="Hipótese Clínica (IA)"
-                      grammar={{
-                        stage: "investigada",
-                        intensities: {
-                          trauma: 0,
-                          repetition: 2,
-                          exclusion: 0,
-                          loyalty: 0,
-                          secret: 0,
-                        },
-                        temporalAnchor: "Idade Crítica: 64 anos",
-                      }}
-                    >
-                      <p className="font-serif">
-                        O clã de <strong>{display}</strong> exibe repetições notáveis de queixas de
-                        abandono nas três últimas gerações (particularmente na linhagem paterna). O
-                        padrão de união em casamento coincide de forma significativa com mortes de
-                        avós em idades próximas aos 64 anos. Recomenda-se focar na reabilitação
-                        simbólica dos membros excluídos.
-                      </p>
-                    </ClinicalDocument>
+                    {/* Hipótese clínica alimentada pelos padrões reais do motor */}
+                    {patterns.length > 0 ? (
+                      <ClinicalDocument title="Hipótese Clínica (IA)" grammar={hypothesisGrammar}>
+                        <p className="font-serif">
+                          O motor de padrões identificou{" "}
+                          <strong>
+                            {patterns.length}{" "}
+                            {patterns.length === 1 ? "padrão sistêmico" : "padrões sistêmicos"}
+                          </strong>{" "}
+                          no clã de {display}:{" "}
+                          {patterns
+                            .slice(0, 3)
+                            .map((p) => p.title)
+                            .join("; ")}
+                          {patterns.length > 3 ? "…" : "."}
+                        </p>
+                        <p className="mt-3 font-sans text-[12px] text-muted-foreground">
+                          Hipóteses são provisórias e dependem da sua validação clínica. Veja os
+                          detalhes na aba Padrões.
+                        </p>
+                      </ClinicalDocument>
+                    ) : (
+                      <section className="border-l-[3px] border-l-material-olive bg-surface-manuscript px-5 py-4">
+                        <h3 className="m-0 font-serif text-lg font-bold text-ink">
+                          Hipótese Clínica
+                        </h3>
+                        <p className="mt-2 mb-0 font-serif text-[15px] text-ink/55 italic">
+                          Nenhum padrão sistêmico detectado até aqui. A hipótese se formará conforme
+                          o genossociograma e as sessões ganharem profundidade.
+                        </p>
+                      </section>
+                    )}
 
                     <Panel title="Queixa apresentada" accent="forest">
                       {client.presenting_complaint ? (
@@ -458,9 +498,9 @@ function ClientDossierPage() {
                       title="Consentimento LGPD"
                       icon={
                         client.consent_given_at ? (
-                          <ShieldCheck className="size-4 text-emerald-600" />
+                          <ShieldCheck className="size-4 text-clinical-positive" />
                         ) : (
-                          <ShieldAlert className="size-4 text-amber-600" />
+                          <ShieldAlert className="size-4 text-clinical-warning" />
                         )
                       }
                     >
@@ -468,7 +508,7 @@ function ClientDossierPage() {
                         <>
                           <p className="text-[13px] text-foreground font-medium">
                             Consentimento registrado em{" "}
-                            <strong className="text-emerald-700">
+                            <strong className="text-clinical-positive">
                               {new Date(client.consent_given_at).toLocaleDateString("pt-BR")}
                             </strong>
                           </p>
@@ -479,7 +519,7 @@ function ClientDossierPage() {
                           )}
                         </>
                       ) : (
-                        <p className="text-[13px] font-bold text-amber-700">
+                        <p className="text-[13px] font-bold text-clinical-warning">
                           Sem consentimento registrado. Registre antes de anotar dados sensíveis.
                         </p>
                       )}
@@ -594,7 +634,7 @@ function Panel({
     accent === "forest" ? "accent-bar-forest" : accent === "gold" ? "accent-bar-gold" : "";
 
   return (
-    <section className={`rounded-[1rem] glass-card p-6 ${accentClass}`}>
+    <section className={`surface shadow-surface rounded-[1rem] p-6 ${accentClass}`}>
       <div className="mb-4 flex items-center gap-2 border-b border-border/50 pb-2">
         {icon}
         <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
