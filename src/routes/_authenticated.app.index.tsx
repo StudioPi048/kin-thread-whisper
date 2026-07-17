@@ -4,7 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { DocumentHeader } from "@/components/ui/document-header";
-import { GenealogyDivider } from "@/components/ui/narrative-connector";
+import {
+  GenealogyDivider,
+  QuoteConnector,
+  GENEALOGY_QUOTES,
+} from "@/components/ui/narrative-connector";
 
 export const Route = createFileRoute("/_authenticated/app/")({
   component: AppHome,
@@ -105,6 +109,14 @@ function AppHome() {
         className="pointer-events-none absolute top-4 right-6 hidden w-[168px] rotate-[-7deg] mix-blend-darken lg:block xl:right-20"
       />
 
+      {/* Herbário do arquivo — botânicas prensadas, quase invisíveis, no rodapé */}
+      <img
+        src="/assets/photos/section2_botanicals.jpg"
+        alt=""
+        aria-hidden
+        className="pointer-events-none absolute bottom-0 left-0 hidden w-[420px] opacity-[0.07] mix-blend-multiply [mask-image:linear-gradient(to_top_right,black_30%,transparent_75%)] lg:block"
+      />
+
       {/* Header Contextual (Mesa Clínica) */}
       <DocumentHeader
         breadcrumb="Mesa Clínica"
@@ -128,6 +140,9 @@ function AppHome() {
           <span className="font-serif text-lg font-bold text-ink/80">{pendingConsent.length}</span>{" "}
           {pendingConsent.length === 1 ? "consentimento pendente" : "consentimentos pendentes"}
         </p>
+
+        {/* Fio editorial — citação real do campo */}
+        <QuoteConnector quote={GENEALOGY_QUOTES[0]} />
 
         {/* Prioridade Clínica — sessões de hoje */}
         <section>

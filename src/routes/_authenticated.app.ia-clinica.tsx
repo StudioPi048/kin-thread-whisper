@@ -64,11 +64,11 @@ function IaClinicaPage() {
   return (
     <div className="flex flex-col h-[calc(100vh-90px)]">
       <DocumentHeader
-        breadcrumb="Instituto Liz / Inteligência Clínica"
+        breadcrumb="Inteligência Clínica"
         title="Segundo Cérebro Clínico"
         subtitle="Seu assistente especialista em Psicogenealogia para análise de repetições transgeracionais e hipóteses diagnósticas."
         actions={
-          <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-amber-800 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-full whitespace-nowrap">
+          <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-clinical-warning bg-clinical-warning/10 border border-clinical-warning/30 px-2 py-0.5 rounded-full whitespace-nowrap">
             Protótipo · modo demonstração
           </span>
         }
@@ -76,7 +76,7 @@ function IaClinicaPage() {
       {/* Main chat layout */}
       <div className="flex-1 flex overflow-hidden">
         {/* Chat area */}
-        <div className="flex-1 flex flex-col bg-slate-50/[0.3] p-6 gap-4 overflow-hidden h-full">
+        <div className="flex-1 flex flex-col bg-transparent p-6 gap-4 overflow-hidden h-full">
           {/* Chat messages */}
           <div className="flex-1 overflow-y-auto space-y-4 pr-2">
             {messages.map((msg, i) => (
@@ -97,7 +97,7 @@ function IaClinicaPage() {
                   className={`p-4 rounded-2xl shadow-sm text-[14px] leading-relaxed font-serif ${
                     msg.sender === "user"
                       ? "bg-forest text-white rounded-tr-none"
-                      : "bg-white border border-border/50 text-primary rounded-tl-none"
+                      : "bg-surface-document border border-border/50 text-primary rounded-tl-none"
                   }`}
                 >
                   {msg.text}
@@ -113,7 +113,7 @@ function IaClinicaPage() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
               placeholder="Pergunte à IA Clínica (ex: 'Quais padrões investigar?' ou 'O que é Síndrome de Aniversário?')..."
-              className="flex-1 h-12 text-[14px] bg-white border-border/60"
+              className="flex-1 h-12 text-[14px] bg-surface-document border-border/60"
             />
             <Button
               onClick={handleSend}
@@ -125,7 +125,7 @@ function IaClinicaPage() {
         </div>
 
         {/* Sidebar right (Context details) */}
-        <div className="w-[300px] border-l border-border/50 bg-white p-6 hidden lg:block space-y-6 overflow-y-auto">
+        <div className="w-[300px] border-l border-border/50 bg-surface-document p-6 hidden lg:block space-y-6 overflow-y-auto">
           <div className="flex items-center gap-2 pb-4 border-b border-border/40">
             <Brain className="size-5 text-forest" />
             <h3 className="font-serif text-lg font-bold text-primary">Cérebro Clínico</h3>
@@ -135,14 +135,26 @@ function IaClinicaPage() {
             <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
               Diretrizes de Análise
             </h4>
-            <div className="p-3.5 bg-slate-50 border border-border/60 rounded-xl space-y-2 text-[12px] text-muted-foreground leading-relaxed">
-              <p>
-                🟢 <strong>Sempre uma hipótese:</strong> A IA sugere caminhos transgeracionais que o
-                terapeuta deve validar na relação clínica.
+            <div className="p-3.5 bg-surface-manuscript border border-material-border rounded-xl space-y-2.5 text-[12px] text-muted-foreground leading-relaxed">
+              <p className="flex gap-2">
+                <span
+                  aria-hidden
+                  className="mt-1.5 inline-block size-1.5 shrink-0 rotate-45 bg-material-olive"
+                />
+                <span>
+                  <strong>Sempre uma hipótese:</strong> a IA sugere caminhos transgeracionais que o
+                  terapeuta valida na relação clínica.
+                </span>
               </p>
-              <p>
-                🟢 <strong>Foco Sistêmico:</strong> Cruza ocupações, perdas, causas de morte, idades
-                e coincidências de datas.
+              <p className="flex gap-2">
+                <span
+                  aria-hidden
+                  className="mt-1.5 inline-block size-1.5 shrink-0 rotate-45 bg-material-olive"
+                />
+                <span>
+                  <strong>Foco sistêmico:</strong> cruza ocupações, perdas, causas de morte, idades
+                  e coincidências de datas.
+                </span>
               </p>
             </div>
           </div>

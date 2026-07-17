@@ -302,6 +302,10 @@
   50%  { transform: rotate(3deg)   scale(1.12); }
   100% { transform: rotate(0deg)   scale(1); }
 }
+/* Gravura genealógica: o traço "seca" como tinta ao entrar na tela */
+@keyframes ink-draw {
+  to { stroke-dashoffset: 0; }
+}
 
 /* ══════════════════════════════════════════════════
    BASE LAYER

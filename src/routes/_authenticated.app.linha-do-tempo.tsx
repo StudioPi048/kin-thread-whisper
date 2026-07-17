@@ -14,6 +14,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { DocumentHeader } from "@/components/ui/document-header";
+import { ArchiveEmptyState } from "@/components/ui/archive-empty-state";
+import { Button } from "@/components/ui/button";
 import { buildLogicalGraph, validateGraph } from "@/lib/geno/build";
 import {
   buildTimeline,
@@ -78,7 +80,7 @@ function TimelinesPage() {
   return (
     <div>
       <DocumentHeader
-        breadcrumb="Instituto Liz / Linhas de Herança"
+        breadcrumb="Linhas de Herança"
         title="Linhas de Herança"
         subtitle="Visualize acontecimentos marcantes, traumas e fatos históricos de forma cronológica por caso."
       />
@@ -105,18 +107,35 @@ function TimelinesPage() {
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border bg-white p-12 text-center">
-            <History className="size-10 text-forest/50 mx-auto" />
-            <p className="font-serif text-lg font-bold text-primary mt-2">
-              Nenhuma linha do tempo encontrada
-            </p>
-          </div>
+          <ArchiveEmptyState
+            eyebrow="Linhas de herança"
+            title={
+              search
+                ? "Nenhuma linha do tempo com esse nome."
+                : "O tempo desta família ainda não foi desenhado."
+            }
+            description={
+              search
+                ? "Confira a grafia ou limpe a busca para ver todas as linhas ativas."
+                : "Nascimentos, uniões, perdas e recomeços ganham uma cronologia própria assim que as datas entram no genossociograma."
+            }
+            action={
+              !search && (
+                <Link to="/app/clientes">
+                  <Button className="gap-2 bg-forest font-bold text-white hover:bg-forest-mid">
+                    <History className="size-4" />
+                    Abrir arquivo de clientes
+                  </Button>
+                </Link>
+              )
+            }
+          />
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {filtered.map((c) => (
               <div
                 key={c.id}
-                className="rounded-2xl border border-border/50 bg-white p-6 shadow-sm flex flex-col justify-between hover-lift accent-bar-forest"
+                className="rounded-2xl border border-border/50 bg-surface-document p-6 shadow-surface flex flex-col justify-between hover-lift accent-bar-forest"
               >
                 <div className="space-y-3">
                   <div className="flex justify-between items-start gap-2">
@@ -157,12 +176,12 @@ function TimelinesPage() {
                   <span className="text-[11px] text-muted-foreground font-semibold flex items-center gap-1">
                     {c.personCount === 0 ? null : c.consistent ? (
                       <>
-                        <CheckCircle2 className="size-3.5 text-emerald-600" />
+                        <CheckCircle2 className="size-3.5 text-clinical-positive" />
                         Consistente
                       </>
                     ) : (
                       <>
-                        <AlertCircle className="size-3.5 text-amber-600" />
+                        <AlertCircle className="size-3.5 text-clinical-warning" />
                         Pendente revisão
                       </>
                     )}
