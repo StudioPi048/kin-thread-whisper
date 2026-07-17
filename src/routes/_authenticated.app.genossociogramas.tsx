@@ -104,6 +104,8 @@ function GenogramsPage() {
           </div>
         ) : filtered.length === 0 ? (
           <ArchiveEmptyState
+            image="/assets/renders/arvore-genealogica-bronze.jpg"
+            withSeal={false}
             eyebrow="Arquivo de árvores"
             title={
               search

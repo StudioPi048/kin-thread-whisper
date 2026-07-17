@@ -302,12 +302,20 @@ function EmptyDay({
     );
   }
   return (
-    <div className="container-liz max-w-4xl py-12">
+    <div className="container-liz relative max-w-4xl py-12">
+      {/* Relógio de bolso do acervo — o tempo do dia em aberto */}
+      <img
+        src="/assets/renders/relogio-de-bolso.jpg"
+        alt=""
+        aria-hidden
+        loading="lazy"
+        className="pointer-events-none absolute top-6 right-0 hidden w-[210px] mix-blend-darken [mask-image:radial-gradient(120%_120%_at_50%_45%,black_58%,transparent_90%)] md:block"
+      />
       <section>
         <h2 className="mb-6 font-sans text-[11px] font-bold tracking-widest text-ink/40 uppercase">
           Sessões de hoje
         </h2>
-        <div className="border-b border-ink/10 py-4">
+        <div className="border-b border-ink/10 py-4 md:pr-56">
           <p className="m-0 font-serif text-xl text-ink/40 italic md:text-2xl">
             Nenhuma sessão registrada para hoje. O dia está aberto para pesquisa e escrita.
           </p>

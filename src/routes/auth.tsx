@@ -103,12 +103,19 @@ function AuthPage() {
   return (
     <div className="grid min-h-screen md:grid-cols-[1fr_1fr]">
       {/* ── PAINEL ESQUERDO — Manifesto editorial ───────── */}
-      <aside className="block-forest hidden md:flex md:flex-col md:justify-between md:p-12">
-        <Link to="/" className="flex items-center gap-3">
+      <aside className="block-forest relative hidden overflow-hidden md:flex md:flex-col md:justify-between md:p-12">
+        {/* Constelação familiar — teia dourada quase invisível sobre a floresta */}
+        <img
+          src="/assets/renders/constelacao-floresta.jpg"
+          alt=""
+          aria-hidden
+          className="pointer-events-none absolute inset-0 size-full object-cover opacity-60 mix-blend-screen"
+        />
+        <Link to="/" className="relative flex items-center gap-3">
           <LizLogoLockup variant="light" />
         </Link>
 
-        <div>
+        <div className="relative">
           {/* Número decorativo */}
           <span
             aria-hidden
@@ -142,7 +149,7 @@ function AuthPage() {
           </div>
         </div>
 
-        <p className="text-[11px] text-white/22">Beta fechado · Instituto Liz · 2026</p>
+        <p className="relative text-[11px] text-white/22">Beta fechado · Instituto Liz · 2026</p>
       </aside>
 
       {/* ── PAINEL DIREITO — Formulário ──────────────────── */}

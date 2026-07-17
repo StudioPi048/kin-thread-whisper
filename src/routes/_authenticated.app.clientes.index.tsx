@@ -43,6 +43,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ClientFormDialog } from "@/components/clients/client-form-dialog";
 import { calcAge } from "@/lib/clients";
 import { DossierCard, DossierCardSkeleton } from "@/components/ui/dossier-card";
+import { ArchiveEmptyState } from "@/components/ui/archive-empty-state";
 import type { PatternItem } from "@/components/ui/dossier-card";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -510,33 +511,37 @@ function EmptyState({
 }) {
   if (hasQuery) {
     return (
-      <div className="rounded-xl border border-material-border border-l-[3px] border-l-material-bronze bg-surface-document px-6 py-16 text-center sm:px-12">
-        <p className="m-0 font-serif text-2xl font-bold text-ink">Nada encontrado</p>
-        <p className="mt-2 mb-0 text-sm leading-relaxed text-warm-gray">
-          Tente outro termo ou remova o filtro.
-        </p>
-      </div>
+      <ArchiveEmptyState
+        image="/assets/renders/lupa-documentos.jpg"
+        withSeal={false}
+        eyebrow="Busca no arquivo"
+        title="Nada encontrado nas fichas."
+        description="Tente outro termo — nome, queixa ou tag — ou remova o filtro para ver todos os dossiês."
+      />
     );
   }
   return (
-    <div className="flex max-w-[560px] flex-col items-start gap-6 rounded-xl border border-material-border border-l-[3px] border-l-forest bg-surface-document px-6 py-16 sm:px-12">
-      <p className="m-0 font-serif text-[1.75rem] leading-tight font-bold text-ink">
-        {tab === "active" ? "A jornada começa aqui" : "Nenhum dossiê arquivado"}
-      </p>
-      <p className="m-0 max-w-[440px] text-[15px] leading-relaxed text-ink-soft">
-        {tab === "active"
+    <ArchiveEmptyState
+      image="/assets/renders/gaveta-arquivo.jpg"
+      withSeal={false}
+      eyebrow={tab === "active" ? "Arquivo de dossiês" : "Dossiês arquivados"}
+      title={tab === "active" ? "A jornada começa aqui." : "Nenhum dossiê arquivado."}
+      description={
+        tab === "active"
           ? "Todo caso começa por um nome. O genograma, as sessões e os padrões sistêmicos se constroem a partir do paciente-índice."
-          : "Quando arquivar um dossiê, ele aparecerá aqui para consulta histórica."}
-      </p>
-      {tab === "active" && (
-        <Button
-          onClick={onCreate}
-          className="gap-2 rounded-[10px] bg-forest px-5 py-3 text-sm font-bold tracking-[0.02em] text-white hover:bg-forest-mid"
-        >
-          <Plus className="size-[15px]" strokeWidth={2.5} />
-          Cadastrar primeiro cliente
-        </Button>
-      )}
-    </div>
+          : "Quando arquivar um dossiê, ele aparecerá aqui para consulta histórica."
+      }
+      action={
+        tab === "active" && (
+          <Button
+            onClick={onCreate}
+            className="gap-2 rounded-[10px] bg-forest px-5 py-3 text-sm font-bold tracking-[0.02em] text-white hover:bg-forest-mid"
+          >
+            <Plus className="size-[15px]" strokeWidth={2.5} />
+            Cadastrar primeiro cliente
+          </Button>
+        )
+      }
+    />
   );
 }

@@ -916,6 +916,7 @@ export default function LandingPage() {
           FOOTER
       ════════════════════════════════════════════════════ */}
       <footer
+        className="relative overflow-hidden"
         style={{
           background: "#1B211A",
           borderTop: "3px solid #D4AF37",
@@ -923,9 +924,18 @@ export default function LandingPage() {
           paddingBottom: "32px",
         }}
       >
+        {/* Mesa de madeira do arquivo — o chão do encerramento */}
+        <img
+          src="/assets/renders/mesa-de-madeira.jpg"
+          alt=""
+          aria-hidden
+          loading="lazy"
+          className="pointer-events-none absolute inset-0 size-full object-cover opacity-30 [mask-image:linear-gradient(to_bottom,transparent_0%,black_55%)]"
+        />
         <div
           className="container-liz"
           style={{
+            position: "relative",
             display: "flex",
             flexDirection: "row",
             alignItems: "flex-end",
@@ -996,6 +1006,7 @@ export default function LandingPage() {
         <div
           className="container-liz"
           style={{
+            position: "relative",
             marginTop: "48px",
             paddingTop: "24px",
             borderTop: "1px solid rgba(255,255,255,0.1)",

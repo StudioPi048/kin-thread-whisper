@@ -154,14 +154,14 @@ function PatientHeader({ identity }: { identity: PatientIdentityDTO }) {
 
   return (
     <div className="relative overflow-hidden">
-      <div className="block-forest px-6 pt-10 pb-14 relative">
-        <div
+      <div className="block-forest px-6 pt-10 pb-14 relative overflow-hidden">
+        {/* Constelação familiar — a teia de vínculos por trás da identidade */}
+        <img
+          src="/assets/renders/constelacao-floresta.jpg"
+          alt=""
           aria-hidden
-          className="absolute inset-0 opacity-[0.05] mix-blend-overlay pointer-events-none"
-          style={{
-            backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)",
-            backgroundSize: "3px 3px",
-          }}
+          loading="lazy"
+          className="pointer-events-none absolute inset-0 size-full object-cover opacity-50 mix-blend-screen"
         />
         <div className="container-liz relative">
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-6 sm:flex sm:flex-wrap sm:justify-between">
@@ -447,7 +447,13 @@ function GenogramShowcase({
           <BigTree genogram={genogram} patientName={patientName} />
         ) : (
           <div className="py-10 text-center">
-            <GitBranch className="size-10 text-muted-foreground/40 mx-auto mb-3" />
+            <img
+              src="/assets/renders/medalhao-retrato.jpg"
+              alt=""
+              aria-hidden
+              loading="lazy"
+              className="mx-auto mb-4 w-[180px] mix-blend-darken [mask-image:radial-gradient(120%_120%_at_50%_45%,black_58%,transparent_90%)]"
+            />
             <p className="font-serif text-lg font-bold text-primary">
               Genossociograma ainda não iniciado
             </p>
@@ -764,6 +770,13 @@ function AiBriefing({ briefing }: { briefing: BriefingDTO }) {
 
   return (
     <div className="rounded-3xl bg-gradient-to-br from-forest via-forest to-forest/95 text-white p-6 shadow-dossier relative overflow-hidden">
+      <img
+        src="/assets/renders/constelacao-floresta.jpg"
+        alt=""
+        aria-hidden
+        loading="lazy"
+        className="pointer-events-none absolute inset-0 size-full object-cover opacity-40 mix-blend-screen"
+      />
       <div
         aria-hidden
         className="absolute -top-16 -right-16 size-52 rounded-full bg-gold/20 blur-3xl pointer-events-none"

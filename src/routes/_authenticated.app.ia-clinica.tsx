@@ -131,6 +131,15 @@ function IaClinicaPage() {
             <h3 className="font-serif text-lg font-bold text-primary">Cérebro Clínico</h3>
           </div>
 
+          {/* Gravura do acervo — cérebro que se dissolve em raízes */}
+          <img
+            src="/assets/renders/cerebro-raizes.jpg"
+            alt=""
+            aria-hidden
+            loading="lazy"
+            className="mx-auto w-[190px] mix-blend-darken [mask-image:radial-gradient(120%_120%_at_50%_45%,black_58%,transparent_90%)]"
+          />
+
           <div className="space-y-4">
             <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
               Diretrizes de Análise

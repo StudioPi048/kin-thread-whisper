@@ -108,6 +108,8 @@ function TimelinesPage() {
           </div>
         ) : filtered.length === 0 ? (
           <ArchiveEmptyState
+            image="/assets/renders/fio-heranca.jpg"
+            withSeal={false}
             eyebrow="Linhas de herança"
             title={
               search

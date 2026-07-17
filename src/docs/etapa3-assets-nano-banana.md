@@ -1,5 +1,14 @@
 # Etapa 3 — Acervo de renders (Nano Banana)
 
+> **STATUS (17/07/2026):** todos os 10 renders foram gerados pelo Pietro,
+> otimizados (JPG, 55–670 KB) e integrados às telas. Os arquivos finais
+> vivem em `public/assets/renders/*.jpg`. Este documento permanece como
+> receita para regenerar ou expandir o acervo.
+>
+> Nota técnica: objetos fundem ao pergaminho com `mix-blend-darken` +
+> máscara radial. Cuidado com ancestrais que criam stacking context
+> (z-index/opacity/transform) — eles quebram o blend contra o fundo.
+
 ## Como funciona
 
 1. Gere cada imagem no Nano Banana com o prompt indicado.

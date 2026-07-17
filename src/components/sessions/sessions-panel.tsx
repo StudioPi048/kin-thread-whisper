@@ -209,9 +209,14 @@ export function SessionsPanel({ clientId }: Props) {
     <div className="space-y-8">
       {/* Recorder Panel - Editorial Style */}
       <section className="rounded-sm border-2 border-forest bg-forest text-white shadow-lg relative overflow-hidden">
-        <span className="section-number absolute -right-4 -bottom-10 opacity-[0.05] text-white">
-          🎙️
-        </span>
+        {/* Constelação familiar — textura de fundo do painel floresta */}
+        <img
+          src="/assets/renders/constelacao-floresta.jpg"
+          alt=""
+          aria-hidden
+          loading="lazy"
+          className="pointer-events-none absolute inset-0 size-full object-cover opacity-45 mix-blend-screen"
+        />
         <div className="p-8 md:p-10 relative z-10 flex flex-col md:flex-row items-center gap-6 justify-between">
           <div className="flex-1 text-center md:text-left">
             <h3 className="font-serif text-3xl font-bold">Gravar Relato da Sessão</h3>
@@ -270,7 +275,13 @@ export function SessionsPanel({ clientId }: Props) {
             animate={{ opacity: 1, y: 0 }}
             className="rounded-sm border border-dashed border-border bg-forest-soft/40 p-16 text-center"
           >
-            <AudioLines className="mx-auto size-10 text-forest opacity-60" />
+            <img
+              src="/assets/renders/tinteiro-pena.jpg"
+              alt=""
+              aria-hidden
+              loading="lazy"
+              className="mx-auto w-[170px] mix-blend-darken [mask-image:radial-gradient(120%_120%_at_50%_45%,black_58%,transparent_90%)]"
+            />
             <p className="mt-4 font-serif text-2xl font-bold text-primary">
               Nenhuma sessão gravada
             </p>

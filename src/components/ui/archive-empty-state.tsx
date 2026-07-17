@@ -76,6 +76,11 @@ export interface ArchiveEmptyStateProps {
   action?: ReactNode;
   /** Exibe o selo de cera fotográfico do acervo. */
   withSeal?: boolean;
+  /**
+   * Render do acervo (public/assets/renders). Fotografado em fundo branco;
+   * o mix-blend-darken funde o branco ao pergaminho. Substitui a gravura SVG.
+   */
+  image?: string;
 }
 
 export function ArchiveEmptyState({
@@ -84,10 +89,11 @@ export function ArchiveEmptyState({
   description,
   action,
   withSeal = true,
+  image,
 }: ArchiveEmptyStateProps) {
   return (
-    <section className="relative overflow-hidden rounded-[14px] border border-material-border border-l-[3px] border-l-material-bronze bg-surface-manuscript shadow-surface">
-      <div className="relative z-10 grid gap-8 px-7 py-12 sm:px-12 sm:py-16 md:grid-cols-[minmax(0,1fr)_240px] md:items-center">
+    <section className="relative overflow-hidden rounded-[14px] border border-material-border border-l-[3px] border-l-material-bronze bg-surface-manuscript bg-[radial-gradient(120%_90%_at_100%_110%,rgba(111,78,55,0.08)_0%,transparent_55%)] shadow-surface">
+      <div className="grid gap-8 px-7 py-12 sm:px-12 sm:py-16 md:grid-cols-[minmax(0,1fr)_240px] md:items-center">
         <div className="max-w-[520px]">
           <p className="m-0 font-sans text-[10px] font-extrabold tracking-[0.22em] text-material-bronze uppercase">
             {eyebrow}
@@ -101,9 +107,19 @@ export function ArchiveEmptyState({
           {action && <div className="mt-8">{action}</div>}
         </div>
 
-        {/* Gravura — visível também no mobile, menor */}
+        {/* Relíquia do acervo (render) ou gravura — visível também no mobile, menor */}
         <div className="relative mx-auto w-[190px] md:w-[240px]">
-          <EngravedLineage className="w-full opacity-[0.55]" />
+          {image ? (
+            <img
+              src={image}
+              alt=""
+              aria-hidden
+              loading="lazy"
+              className="w-full mix-blend-darken [mask-image:radial-gradient(120%_120%_at_50%_45%,black_62%,transparent_92%)]"
+            />
+          ) : (
+            <EngravedLineage className="w-full opacity-[0.55]" />
+          )}
           {withSeal && (
             <img
               src="/assets/objects/wax_seal_tree.jpg"
@@ -114,12 +130,6 @@ export function ArchiveEmptyState({
           )}
         </div>
       </div>
-
-      {/* Vinheta de tinta no canto — profundidade de papel */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_90%_at_100%_110%,rgba(111,78,55,0.08)_0%,transparent_55%)]"
-      />
     </section>
   );
 }
