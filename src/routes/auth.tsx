@@ -112,12 +112,12 @@ function AuthPage() {
           {/* Número decorativo */}
           <span
             aria-hidden
-            className="mb-4 block font-serif text-9xl font-bold leading-none text-forest/10 select-none"
+            className="mb-4 block font-serif text-9xl font-bold leading-none text-white/[0.07] select-none"
           >
             Liz
           </span>
 
-          <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-forest-mid mb-6">
+          <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-gold mb-6">
             Beta fechado
           </p>
 
@@ -134,8 +134,8 @@ function AuthPage() {
               "Motor de padrões transgeracionais automático",
               "Dados criptografados. LGPD. Sigilo profissional.",
             ].map((f) => (
-              <p key={f} className="flex items-start gap-2 text-[14px] text-white/60">
-                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-forest" />
+              <p key={f} className="flex items-start gap-2 text-[14px] text-white/70">
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-gold" />
                 {f}
               </p>
             ))}
