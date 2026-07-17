@@ -14,6 +14,7 @@ export const Route = createFileRoute("/_authenticated/app/ia-clinica")({
 
 function IaClinicaPage() {
   const [input, setInput] = useState("");
+  const [thinking, setThinking] = useState(false);
 
   const { data: recentClients = [] } = useQuery({
     queryKey: ["ia-clinica-recent-clients"],
@@ -35,10 +36,11 @@ function IaClinicaPage() {
   ]);
 
   const handleSend = () => {
-    if (!input.trim()) return;
+    if (!input.trim() || thinking) return;
     const userMsg = input.trim();
     setMessages((prev) => [...prev, { sender: "user", text: userMsg }]);
     setInput("");
+    setThinking(true);
 
     // Simulate AI response based on keyword matching
     setTimeout(() => {
@@ -58,6 +60,7 @@ function IaClinicaPage() {
       }
 
       setMessages((prev) => [...prev, { sender: "ai", text: aiText }]);
+      setThinking(false);
     }, 1000);
   };
 
@@ -77,6 +80,12 @@ function IaClinicaPage() {
       <div className="flex-1 flex overflow-hidden">
         {/* Chat area */}
         <div className="flex-1 flex flex-col bg-transparent p-6 gap-4 overflow-hidden h-full">
+          {/* Aviso permanente — Princípio da Explicabilidade */}
+          <div className="shrink-0 rounded-lg border border-clinical-warning/30 bg-clinical-warning/8 px-4 py-2.5 text-[12px] leading-relaxed text-clinical-warning">
+            <strong>Modo demonstração:</strong> as respostas abaixo são exemplos fixos, não análise
+            clínica real. A IA conectada ao seu acervo chega em etapa futura.
+          </div>
+
           {/* Chat messages */}
           <div className="flex-1 overflow-y-auto space-y-4 pr-2">
             {messages.map((msg, i) => (
@@ -100,10 +109,29 @@ function IaClinicaPage() {
                       : "bg-surface-document border border-border/50 text-primary rounded-tl-none"
                   }`}
                 >
+                  {msg.sender === "ai" && (
+                    <span className="mb-2 block w-fit rounded-sm border border-material-border bg-surface-manuscript px-1.5 py-0.5 font-sans text-[9px] font-bold tracking-[0.12em] text-warm-gray uppercase">
+                      Demonstração
+                    </span>
+                  )}
                   {msg.text}
                 </div>
               </div>
             ))}
+            {thinking && (
+              <div className="mr-auto flex max-w-[80%] items-center gap-3">
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-full border border-forest/10 bg-forest/5 text-forest">
+                  <Bot className="size-4" />
+                </div>
+                <div className="rounded-2xl rounded-tl-none border border-border/50 bg-surface-document px-4 py-3 shadow-sm">
+                  <span className="inline-flex gap-1" aria-label="Preparando resposta">
+                    <span className="size-1.5 animate-pulse rounded-full bg-warm-gray/60" />
+                    <span className="size-1.5 animate-pulse rounded-full bg-warm-gray/60 [animation-delay:150ms]" />
+                    <span className="size-1.5 animate-pulse rounded-full bg-warm-gray/60 [animation-delay:300ms]" />
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Chat input */}
@@ -113,10 +141,14 @@ function IaClinicaPage() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
               placeholder="Pergunte à IA Clínica (ex: 'Quais padrões investigar?' ou 'O que é Síndrome de Aniversário?')..."
+              aria-label="Mensagem para a IA Clínica"
+              disabled={thinking}
               className="flex-1 h-12 text-[14px] bg-surface-document border-border/60"
             />
             <Button
               onClick={handleSend}
+              disabled={thinking}
+              aria-label="Enviar mensagem"
               className="h-12 w-12 p-0 flex items-center justify-center shrink-0"
             >
               <Send className="size-4 fill-current" />

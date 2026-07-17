@@ -312,11 +312,11 @@ function EmptyDay({
         className="pointer-events-none absolute top-6 right-0 hidden w-[210px] mix-blend-darken [mask-image:radial-gradient(120%_120%_at_50%_45%,black_58%,transparent_90%)] md:block"
       />
       <section>
-        <h2 className="mb-6 font-sans text-[11px] font-bold tracking-widest text-ink/40 uppercase">
+        <h2 className="mb-6 font-sans text-[11px] font-bold tracking-widest text-warm-gray uppercase">
           Sessões de hoje
         </h2>
         <div className="border-b border-ink/10 py-4 md:pr-56">
-          <p className="m-0 font-serif text-xl text-ink/40 italic md:text-2xl">
+          <p className="m-0 font-serif text-xl text-ink/55 italic md:text-2xl">
             Nenhuma sessão registrada para hoje. O dia está aberto para pesquisa e escrita.
           </p>
         </div>
@@ -335,7 +335,7 @@ function EmptyDay({
 
       {orphanClients.length > 0 && (
         <section className="mt-14">
-          <h2 className="mb-6 font-sans text-[11px] font-bold tracking-widest text-ink/40 uppercase">
+          <h2 className="mb-6 font-sans text-[11px] font-bold tracking-widest text-warm-gray uppercase">
             Clientes sem retorno marcado
           </h2>
           <ul className="m-0 list-none p-0">
@@ -701,7 +701,7 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
                 <Sparkles className="size-3 text-forest" />
               </div>
               <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-forest">
-                IA Clínica detectou
+                Padrões detectados
               </p>
               {genogramQuery.isLoading && session.clientId && (
                 <Loader2 className="size-3 animate-spin text-forest/60 ml-1" />

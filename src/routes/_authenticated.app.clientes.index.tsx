@@ -209,7 +209,7 @@ function ClientesIndex() {
                 title="Grade de Dossiês"
                 aria-label="Grade de Dossiês"
                 aria-pressed={viewMode === "cards"}
-                className={`flex size-7 items-center justify-center rounded-[5px] transition-all duration-150 ${
+                className={`flex size-9 items-center justify-center rounded-[6px] transition-all duration-150 ${
                   viewMode === "cards"
                     ? "bg-surface-document text-forest shadow-[0_1px_3px_rgba(18,41,31,0.08)]"
                     : "text-warm-gray hover:text-ink"
@@ -222,7 +222,7 @@ function ClientesIndex() {
                 title="Lista Compacta"
                 aria-label="Lista Compacta"
                 aria-pressed={viewMode === "list"}
-                className={`flex size-7 items-center justify-center rounded-[5px] transition-all duration-150 ${
+                className={`flex size-9 items-center justify-center rounded-[6px] transition-all duration-150 ${
                   viewMode === "list"
                     ? "bg-surface-document text-forest shadow-[0_1px_3px_rgba(18,41,31,0.08)]"
                     : "text-warm-gray hover:text-ink"
@@ -384,7 +384,7 @@ function ClientesIndex() {
                         <td className="px-4 py-3">
                           <span
                             className={`flex items-center gap-1 text-[11px] font-semibold ${
-                              c.consent_given_at ? "text-forest-soft" : "text-material-terracotta"
+                              c.consent_given_at ? "text-forest-soft" : "text-clinical-critical"
                             }`}
                           >
                             {c.consent_given_at ? (

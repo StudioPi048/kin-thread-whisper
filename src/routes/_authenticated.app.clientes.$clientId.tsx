@@ -84,13 +84,29 @@ function TabSuspense({ children }: { children: React.ReactNode }) {
   );
 }
 
+const DOSSIER_TABS = [
+  "overview",
+  "genogram",
+  "timeline",
+  "patterns",
+  "intake",
+  "sessions",
+  "clan",
+] as const;
+type DossierTab = (typeof DOSSIER_TABS)[number];
+
 export const Route = createFileRoute("/_authenticated/app/clientes/$clientId")({
+  validateSearch: (search: Record<string, unknown>): { tab?: DossierTab } => {
+    const tab = search.tab as string | undefined;
+    return DOSSIER_TABS.includes(tab as DossierTab) ? { tab: tab as DossierTab } : {};
+  },
   component: ClientDossierPage,
   notFoundComponent: ClientNotFound,
 });
 
 function ClientDossierPage() {
   const { clientId } = Route.useParams();
+  const { tab: tabFromUrl } = Route.useSearch();
   const { user } = Route.useRouteContext();
   const qc = useQueryClient();
   const navigate = useNavigate();
@@ -374,7 +390,7 @@ function ClientDossierPage() {
       <div className="container-liz -mt-2 relative z-20 flex gap-6 items-start">
         {/* Main Content (Tabs) */}
         <div className="flex-1 min-w-0">
-          <Tabs defaultValue="genogram" className="w-full">
+          <Tabs defaultValue={tabFromUrl ?? "genogram"} className="w-full">
             {/* STICKY NAV TABS — rolagem horizontal no mobile */}
             <div className="sticky top-0 z-30 -mx-6 border-b border-border/40 bg-surface-archive/85 px-6 py-2 backdrop-blur-md sm:mx-0 sm:px-0">
               <div className="overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">

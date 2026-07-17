@@ -75,7 +75,7 @@ export default function LandingPage() {
     <div
       style={{
         fontFamily: "'Cormorant Garamond', Georgia, serif",
-        background: "#FCF9F4",
+        background: "var(--archive)",
         color: "#3B2F2F",
         overflowX: "hidden",
       }}
@@ -115,17 +115,14 @@ export default function LandingPage() {
           <nav className="flex items-center gap-4 sm:gap-8">
             <Link
               to="/auth"
-              className="text-[13px] sm:text-[15px]"
+              className="text-[13px] text-[#3B2F2F] transition-colors hover:text-bronze sm:text-[15px]"
               style={{
                 fontFamily: "'Outfit', sans-serif",
                 fontWeight: 700,
                 letterSpacing: "0.12em",
                 textTransform: "uppercase",
-                color: "#3B2F2F",
                 textDecoration: "none",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "#846221")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "#3B2F2F")}
             >
               Entrar
             </Link>
@@ -156,7 +153,7 @@ export default function LandingPage() {
       ════════════════════════════════════════════════════ */}
       <section
         className="flex flex-col lg:min-h-screen lg:flex-row"
-        style={{ paddingTop: "68px", background: "#1B211A" }}
+        style={{ paddingTop: "68px", background: "var(--forest)" }}
       >
         {/* Coluna Texto */}
         <div className="flex items-center px-6 py-16 lg:flex-[0_0_42%] lg:py-20 lg:pr-10 lg:pl-[6vw]">
@@ -166,7 +163,7 @@ export default function LandingPage() {
               style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "28px" }}
             >
               <ShieldCheck
-                style={{ width: "20px", height: "20px", color: "#D4AF37", flexShrink: 0 }}
+                style={{ width: "20px", height: "20px", color: "var(--gold)", flexShrink: 0 }}
                 strokeWidth={1}
               />
               <span
@@ -176,7 +173,7 @@ export default function LandingPage() {
                   fontWeight: 700,
                   letterSpacing: "0.18em",
                   textTransform: "uppercase",
-                  color: "#D4AF37",
+                  color: "var(--gold)",
                 }}
               >
                 Ética & LGPD
@@ -194,7 +191,8 @@ export default function LandingPage() {
                 margin: "0 0 28px",
               }}
             >
-              Dados clínicos são <em style={{ fontStyle: "italic", color: "#D4AF37" }}>fundação</em>
+              Dados clínicos são{" "}
+              <em style={{ fontStyle: "italic", color: "var(--gold)" }}>fundação</em>
               , <br />
               não feature.
             </h1>
@@ -221,7 +219,7 @@ export default function LandingPage() {
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
-                  background: "#D4AF37",
+                  background: "var(--gold)",
                   color: "#000",
                   fontFamily: "'Outfit', sans-serif",
                   fontSize: "16px",
@@ -237,29 +235,6 @@ export default function LandingPage() {
               >
                 Solicitar acesso beta →
               </Link>
-              <button
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  fontFamily: "'Outfit', sans-serif",
-                  fontSize: "16px",
-                  fontWeight: 700,
-                  letterSpacing: "0.12em",
-                  textTransform: "uppercase",
-                  color: "rgba(255,255,255,0.75)",
-                  padding: 0,
-                }}
-              >
-                <PlayCircle
-                  style={{ width: "24px", height: "24px", color: "#D4AF37" }}
-                  strokeWidth={1}
-                />
-                Ver como funciona
-              </button>
             </div>
           </div>
         </div>
@@ -287,7 +262,7 @@ export default function LandingPage() {
               position: "absolute",
               inset: 0,
               background:
-                "linear-gradient(to right, #1B211A 0%, rgba(27,33,26,0.4) 30%, transparent 60%)",
+                "linear-gradient(to right, var(--forest) 0%, rgba(27,33,26,0.4) 30%, transparent 60%)",
             }}
           />
           {/* Gradiente inferior */}
@@ -295,7 +270,7 @@ export default function LandingPage() {
             style={{
               position: "absolute",
               inset: 0,
-              background: "linear-gradient(to top, #1B211A 0%, transparent 40%)",
+              background: "linear-gradient(to top, var(--forest) 0%, transparent 40%)",
             }}
           />
 
@@ -392,7 +367,7 @@ export default function LandingPage() {
                   fontWeight: 700,
                   letterSpacing: "0.18em",
                   textTransform: "uppercase",
-                  color: "#D4AF37",
+                  color: "var(--gold)",
                   marginBottom: "20px",
                   position: "relative",
                   zIndex: 1,
@@ -412,7 +387,7 @@ export default function LandingPage() {
                 }}
               >
                 Ética, segurança e inteligência a{" "}
-                <em style={{ fontStyle: "italic", color: "#D4AF37" }}>serviço da vida.</em>
+                <em style={{ fontStyle: "italic", color: "var(--gold)" }}>serviço da vida.</em>
               </h2>
             </div>
 
@@ -526,7 +501,7 @@ export default function LandingPage() {
             >
               Gestão <br />
               impecável <br />
-              para <em style={{ fontStyle: "italic", color: "#846221" }}>histórias</em>
+              para <em style={{ fontStyle: "italic", color: "var(--bronze)" }}>histórias</em>
               <br />
               complexas.
             </h2>
@@ -547,7 +522,7 @@ export default function LandingPage() {
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                background: "#1B211A",
+                background: "var(--forest)",
                 color: "#fff",
                 fontFamily: "'Outfit', sans-serif",
                 fontSize: "16px",
@@ -638,7 +613,12 @@ export default function LandingPage() {
                     }}
                   >
                     <Icon
-                      style={{ width: "20px", height: "20px", color: "#846221", flexShrink: 0 }}
+                      style={{
+                        width: "20px",
+                        height: "20px",
+                        color: "var(--bronze)",
+                        flexShrink: 0,
+                      }}
                       strokeWidth={1.2}
                     />
                     <span style={{ fontSize: "19px", color: "#3B2F2F", lineHeight: 1.4 }}>
@@ -685,7 +665,7 @@ export default function LandingPage() {
           <div
             className="flex flex-col items-center gap-8 p-6 sm:p-10 md:flex-row md:gap-12 md:p-14"
             style={{
-              background: "#1B211A",
+              background: "var(--forest)",
               borderRadius: "24px",
               overflow: "hidden",
               boxShadow: "0 20px 50px rgba(0,0,0,0.3)",
@@ -723,7 +703,7 @@ export default function LandingPage() {
                   fontWeight: 700,
                   letterSpacing: "0.18em",
                   textTransform: "uppercase",
-                  color: "#D4AF37",
+                  color: "var(--gold)",
                   marginBottom: "20px",
                 }}
               >
@@ -740,7 +720,8 @@ export default function LandingPage() {
                 }}
               >
                 Conecte gerações, com{" "}
-                <em style={{ fontStyle: "italic", color: "#D4AF37" }}>profundidade</em> e leveza.
+                <em style={{ fontStyle: "italic", color: "var(--gold)" }}>profundidade</em> e
+                leveza.
               </h3>
               <p
                 style={{
@@ -918,8 +899,8 @@ export default function LandingPage() {
       <footer
         className="relative overflow-hidden"
         style={{
-          background: "#1B211A",
-          borderTop: "3px solid #D4AF37",
+          background: "var(--forest)",
+          borderTop: "3px solid var(--gold)",
           paddingTop: "64px",
           paddingBottom: "32px",
         }}
@@ -953,7 +934,7 @@ export default function LandingPage() {
                 fontWeight: 700,
                 letterSpacing: "0.18em",
                 textTransform: "uppercase",
-                color: "#D4AF37",
+                color: "var(--gold)",
                 marginBottom: "16px",
               }}
             >
@@ -968,7 +949,7 @@ export default function LandingPage() {
                 marginBottom: "16px",
               }}
             >
-              Pronta para <em style={{ fontStyle: "italic", color: "#D4AF37" }}>começar?</em>
+              Pronta para <em style={{ fontStyle: "italic", color: "var(--gold)" }}>começar?</em>
             </h2>
             <p style={{ fontSize: "20px", color: "rgba(255,255,255,0.6)", lineHeight: 1.75 }}>
               Acesso restrito a psicogenealogistas. Vagas limitadas.
@@ -983,7 +964,7 @@ export default function LandingPage() {
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                background: "#D4AF37",
+                background: "var(--gold)",
                 color: "#000",
                 fontFamily: "'Outfit', sans-serif",
                 fontSize: "16px",

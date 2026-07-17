@@ -146,7 +146,7 @@ function AppHome() {
 
         {/* Prioridade Clínica — sessões de hoje */}
         <section>
-          <h2 className="mb-6 font-sans text-[11px] font-bold tracking-widest text-ink/40 uppercase">
+          <h2 className="mb-6 font-sans text-[11px] font-bold tracking-widest text-warm-gray uppercase">
             Prioridade Clínica
           </h2>
           {hasPriorities ? (
@@ -174,7 +174,7 @@ function AppHome() {
             </ul>
           ) : (
             <div className="border-b border-ink/10 py-4">
-              <p className="m-0 font-serif text-xl text-ink/40 italic md:text-2xl">
+              <p className="m-0 font-serif text-xl text-ink/55 italic md:text-2xl">
                 Nenhuma prioridade clínica urgente registrada para hoje.
               </p>
             </div>
@@ -194,7 +194,7 @@ function AppHome() {
 
         {/* Segundo Cérebro & Hipóteses — padrões não reconhecidos */}
         <section>
-          <h2 className="mb-6 font-sans text-[11px] font-bold tracking-widest text-ink/40 uppercase">
+          <h2 className="mb-6 font-sans text-[11px] font-bold tracking-widest text-warm-gray uppercase">
             Segundo Cérebro &amp; Hipóteses
           </h2>
           {openPatterns.length > 0 ? (
@@ -226,7 +226,7 @@ function AppHome() {
             </ul>
           ) : (
             <div className="border-b border-ink/10 py-4">
-              <p className="m-0 font-serif text-lg text-ink/40 italic">
+              <p className="m-0 font-serif text-lg text-ink/60 italic">
                 Nenhuma hipótese transgeracional em fase de investigação no momento.
               </p>
             </div>
@@ -235,7 +235,7 @@ function AppHome() {
 
         {/* Pendências Clínicas — consentimentos em aberto */}
         <section>
-          <h2 className="mb-6 font-sans text-[11px] font-bold tracking-widest text-ink/40 uppercase">
+          <h2 className="mb-6 font-sans text-[11px] font-bold tracking-widest text-warm-gray uppercase">
             Pendências Clínicas
           </h2>
           {hasPendencies ? (
@@ -250,7 +250,7 @@ function AppHome() {
                     <span className="font-serif text-lg text-ink transition-colors group-hover:text-forest-soft">
                       {c.preferred_name || c.full_name}
                     </span>
-                    <span className="flex shrink-0 items-center gap-1.5 font-sans text-[12px] font-semibold text-material-terracotta">
+                    <span className="flex shrink-0 items-center gap-1.5 font-sans text-[12px] font-semibold text-clinical-critical">
                       <ScrollText className="size-3.5" aria-hidden />
                       Consentimento pendente
                     </span>
@@ -270,7 +270,7 @@ function AppHome() {
             </ul>
           ) : (
             <div className="border-b border-ink/10 py-4">
-              <p className="m-0 font-serif text-lg text-ink/40 italic">
+              <p className="m-0 font-serif text-lg text-ink/60 italic">
                 Seus prontuários e anotações estão em dia.
               </p>
             </div>

@@ -90,6 +90,7 @@ function GenogramsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar por cliente..."
+              aria-label="Buscar por cliente"
               className="pl-9 h-10 text-[14px]"
             />
           </div>
@@ -188,6 +189,7 @@ function GenogramsPage() {
                   <Link
                     to="/app/clientes/$clientId"
                     params={{ clientId: c.id }}
+                    search={{ tab: "genogram" }}
                     className="font-bold text-[12px] uppercase tracking-wider text-forest hover:text-forest flex items-center gap-1"
                   >
                     Ver Árvore <ArrowRight className="size-3.5" />

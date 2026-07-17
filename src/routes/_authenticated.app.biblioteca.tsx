@@ -1336,7 +1336,7 @@ function QuoteActions({ tone, text, author }: { tone: string; text: string; auth
 
 function ClinicalAiRail({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   return (
-    <aside className="relative shrink-0 hidden xl:block transition-all duration-300">
+    <aside className="relative shrink-0 hidden lg:block transition-all duration-300">
       <button
         onClick={onToggle}
         className="absolute -left-3 top-16 z-50 flex size-7 items-center justify-center rounded-full border border-forest/15 bg-white text-forest shadow-md hover:scale-105 transition-transform"

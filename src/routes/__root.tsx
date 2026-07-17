@@ -13,17 +13,23 @@ import { Toaster } from "sonner";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { supabase } from "@/integrations/supabase/client";
+import { GenealogicalMark } from "@/components/ui/narrative-connector";
 
 function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <p className="text-sm uppercase tracking-[0.3em] text-gold">Instituto Liz</p>
+        <p className="text-sm uppercase tracking-[0.3em] text-material-bronze">Instituto Liz</p>
         <h1 className="mt-6 font-serif text-7xl text-primary">404</h1>
-        <h2 className="mt-4 font-serif text-2xl text-foreground">Página não encontrada</h2>
+        <h2 className="mt-4 font-serif text-2xl text-foreground">
+          Esta página não consta no arquivo
+        </h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          A página que você procura não existe ou foi movida.
+          O endereço que você procura não existe ou foi movido.
         </p>
+        <div className="mt-6 flex justify-center">
+          <GenealogicalMark size={28} opacity={0.25} />
+        </div>
         <div className="mt-8">
           <Link
             to="/"
@@ -47,11 +53,14 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <p className="text-sm uppercase tracking-[0.3em] text-gold">Instituto Liz</p>
+        <p className="text-sm uppercase tracking-[0.3em] text-material-bronze">Instituto Liz</p>
         <h1 className="mt-6 font-serif text-3xl text-foreground">Esta página não carregou</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Algo deu errado do nosso lado. Você pode tentar novamente ou voltar ao início.
+          O erro foi do nosso lado, não do seu. Tente novamente — se persistir, volte ao início.
         </p>
+        <div className="mt-6 flex justify-center">
+          <GenealogicalMark size={28} opacity={0.25} />
+        </div>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <button
             onClick={() => {

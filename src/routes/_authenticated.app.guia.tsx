@@ -11,7 +11,7 @@ function GuiaClinicoPage() {
     <div className="min-h-screen bg-transparent pb-20 font-serif text-ink selection:bg-gold-soft">
       {/* Header Contextual */}
       <DocumentHeader
-        breadcrumb="Instituto Liz / Manual Clínico"
+        breadcrumb="Manual Clínico"
         title="Guia de Operação Clínica"
         subtitle="Princípios, gramática visual e diretrizes para extrair o máximo do seu novo ambiente de trabalho."
       />

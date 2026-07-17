@@ -101,7 +101,7 @@ export function ArchiveEmptyState({
           <h2 className="mt-3 mb-0 font-serif text-[1.9rem] leading-tight font-bold text-ink text-balance">
             {title}
           </h2>
-          <p className="mt-4 mb-0 font-serif text-[17px] leading-relaxed text-ink/55 italic">
+          <p className="mt-4 mb-0 font-serif text-[17px] leading-relaxed text-ink/70 italic">
             {description}
           </p>
           {action && <div className="mt-8">{action}</div>}
@@ -115,7 +115,7 @@ export function ArchiveEmptyState({
               alt=""
               aria-hidden
               loading="lazy"
-              className="w-full mix-blend-darken [mask-image:radial-gradient(120%_120%_at_50%_45%,black_62%,transparent_92%)]"
+              className="aspect-[4/3] w-full object-contain mix-blend-darken [mask-image:radial-gradient(120%_120%_at_50%_45%,black_62%,transparent_92%)]"
             />
           ) : (
             <EngravedLineage className="w-full opacity-[0.55]" />

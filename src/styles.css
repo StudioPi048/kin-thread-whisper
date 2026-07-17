@@ -156,7 +156,7 @@
 
   /* ── Semântica Clínica ───────────────────────── */
   --clinical-critical: #8B3A3A;
-  --clinical-warning:  #B8860B;
+  --clinical-warning:  #8A6407; /* âmbar escurecido — 5,1:1 sobre cartão (WCAG AA) */
   --clinical-positive: #1B3D2D;
 
   /* ── Sistema de Design (shadcn) ──────────────── */

@@ -198,7 +198,7 @@ function AuthenticatedLayout() {
             onClick={() => setIsCollapsed(!isCollapsed)}
             title={isCollapsed ? "Expandir menu" : "Recolher menu"}
             aria-label={isCollapsed ? "Expandir menu" : "Recolher menu"}
-            className={`flex size-6 shrink-0 items-center justify-center rounded-md border border-white/10 bg-white/[0.06] text-cream/50 transition-colors duration-200 hover:border-gold/20 hover:bg-gold/12 hover:text-gold/90 ${
+            className={`flex size-8 shrink-0 items-center justify-center rounded-md border border-white/10 bg-white/[0.06] text-cream/50 transition-colors duration-200 hover:border-gold/20 hover:bg-gold/12 hover:text-gold/90 ${
               isCollapsed ? "absolute -right-3 -bottom-3 z-20" : ""
             }`}
           >
@@ -466,7 +466,7 @@ function AuthenticatedLayout() {
         <CommandInput
           value={searchQuery}
           onValueChange={setSearchQuery}
-          placeholder="Busque clientes, sessões, padrões..."
+          placeholder="Buscar clientes ativos..."
         />
         <CommandList>
           <CommandEmpty>
