@@ -73,9 +73,9 @@ function Tape({ rotate = "0deg", w = "64px" }: { rotate?: string; w?: string }) 
 export default function LandingPage() {
   return (
     <div
+      className="home-paper"
       style={{
         fontFamily: "'Cormorant Garamond', Georgia, serif",
-        background: "var(--archive)",
         color: "#3B2F2F",
         overflowX: "hidden",
       }}
@@ -129,18 +129,7 @@ export default function LandingPage() {
             <Link
               to="/auth"
               search={{ mode: "signup" }}
-              className="px-4 py-2 text-[13px] whitespace-nowrap sm:px-6 sm:py-2.5 sm:text-[15px]"
-              style={{
-                fontFamily: "'Outfit', sans-serif",
-                fontWeight: 700,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                color: "#3B2F2F",
-                border: "1.5px solid #3B2F2F",
-                borderRadius: "999px",
-                textDecoration: "none",
-                transition: "all 0.2s",
-              }}
+              className="cta-outline px-4 py-2 text-[13px] whitespace-nowrap sm:px-6 sm:py-2.5 sm:text-[15px]"
             >
               Acesso beta →
             </Link>
@@ -213,27 +202,8 @@ export default function LandingPage() {
 
             {/* CTAs */}
             <div style={{ display: "flex", flexWrap: "wrap", gap: "20px", alignItems: "center" }}>
-              <Link
-                to="/auth"
-                search={{ mode: "signup" }}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  background: "var(--gold)",
-                  color: "#000",
-                  fontFamily: "'Outfit', sans-serif",
-                  fontSize: "16px",
-                  fontWeight: 700,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  padding: "18px 36px",
-                  borderRadius: "2px",
-                  textDecoration: "none",
-                  boxShadow: "0 4px 20px rgba(212,175,55,0.35)",
-                  transition: "background 0.2s",
-                }}
-              >
-                Solicitar acesso beta →
+              <Link to="/auth" search={{ mode: "signup" }} className="cta-gold">
+                Solicitar acesso beta <span data-arrow>→</span>
               </Link>
             </div>
           </div>
@@ -516,25 +486,8 @@ export default function LandingPage() {
             >
               Organize seus casos, enxergue padrões e acesse memórias que transformam gerações.
             </p>
-            <Link
-              to="/auth"
-              search={{ mode: "signup" }}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                background: "var(--forest)",
-                color: "#fff",
-                fontFamily: "'Outfit', sans-serif",
-                fontSize: "16px",
-                fontWeight: 700,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                padding: "16px 32px",
-                borderRadius: "2px",
-                textDecoration: "none",
-              }}
-            >
-              Começar agora →
+            <Link to="/auth" search={{ mode: "signup" }} className="cta-forest">
+              Começar agora <span data-arrow>→</span>
             </Link>
           </div>
 
@@ -958,27 +911,8 @@ export default function LandingPage() {
 
           {/* Centro — CTA (Selo e Árvore removidos por legibilidade/distorção) */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flex: 1 }}>
-            <Link
-              to="/auth"
-              search={{ mode: "signup" }}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                background: "var(--gold)",
-                color: "#000",
-                fontFamily: "'Outfit', sans-serif",
-                fontSize: "16px",
-                fontWeight: 700,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                padding: "18px 36px",
-                borderRadius: "2px",
-                textDecoration: "none",
-                boxShadow: "0 4px 20px rgba(212,175,55,0.3)",
-                flexShrink: 0,
-              }}
-            >
-              Solicitar acesso beta →
+            <Link to="/auth" search={{ mode: "signup" }} className="cta-gold shrink-0">
+              Solicitar acesso beta <span data-arrow>→</span>
             </Link>
           </div>
         </div>

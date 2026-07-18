@@ -701,6 +701,123 @@
 }
 
 /* ══════════════════════════════════════════════════
+   HOMEPAGE — CTAs unificados (ouro editorial)
+   Um só raio, hover/active com física, foco visível.
+   ══════════════════════════════════════════════════ */
+.cta-gold {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: "Outfit", sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #2A2205;
+  padding: 16px 34px;
+  border-radius: 10px;
+  text-decoration: none;
+  background: linear-gradient(180deg, #E8C068 0%, #D4A843 52%, #C6982F 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 248, 224, 0.6),
+    0 2px 6px rgba(139, 105, 20, 0.25),
+    0 12px 28px -10px rgba(139, 105, 20, 0.45);
+  transition:
+    transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.2s ease;
+}
+.cta-gold:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.03);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 248, 224, 0.7),
+    0 4px 10px rgba(139, 105, 20, 0.3),
+    0 20px 40px -12px rgba(139, 105, 20, 0.55);
+}
+.cta-gold:active {
+  transform: translateY(0);
+}
+.cta-gold :where(svg),
+.cta-gold :where(span[data-arrow]) {
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.cta-gold:hover :where(span[data-arrow]) {
+  transform: translateX(4px);
+}
+
+.cta-forest {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: "Outfit", sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--archive);
+  padding: 16px 32px;
+  border-radius: 10px;
+  text-decoration: none;
+  background: linear-gradient(180deg, var(--forest-mid) 0%, var(--forest) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 12px 28px -12px rgba(12, 24, 18, 0.6);
+  transition:
+    transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.cta-forest:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 20px 40px -14px rgba(12, 24, 18, 0.7);
+}
+.cta-forest:active {
+  transform: translateY(0);
+}
+
+.cta-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: "Outfit", sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #3B2F2F;
+  border: 1.5px solid #3B2F2F;
+  border-radius: 10px;
+  text-decoration: none;
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease,
+    transform 0.25s ease;
+}
+.cta-outline:hover {
+  background-color: #3B2F2F;
+  color: var(--archive);
+  transform: translateY(-1px);
+}
+
+:where(.cta-gold, .cta-forest, .cta-outline):focus-visible {
+  outline: 2px solid var(--forest-soft);
+  outline-offset: 3px;
+}
+.cta-forest:focus-visible {
+  outline-color: var(--gold);
+}
+
+/* Grão de papel da homepage — continuidade com a "mesa de arquivo" do app */
+.home-paper {
+  background-color: var(--archive);
+  background-image:
+    radial-gradient(120% 70% at 50% -5%, rgba(255, 251, 240, 0.5) 0%, transparent 55%),
+    radial-gradient(130% 120% at 100% 100%, rgba(111, 78, 55, 0.05) 0%, transparent 55%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)' opacity='0.05'/%3E%3C/svg%3E");
+}
+
+/* ══════════════════════════════════════════════════
    IMPRESSÃO (A3)
    ══════════════════════════════════════════════════ */
 @media print {
