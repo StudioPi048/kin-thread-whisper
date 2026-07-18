@@ -1,14 +1,17 @@
+import type { ReactNode } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, ScrollText } from "lucide-react";
+import {
+  ArrowRight,
+  ScrollText,
+  Users,
+  Sparkles,
+  ClipboardCheck,
+  CalendarClock,
+} from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 import { DocumentHeader } from "@/components/ui/document-header";
-import {
-  GenealogyDivider,
-  QuoteConnector,
-  GENEALOGY_QUOTES,
-} from "@/components/ui/narrative-connector";
+import { GENEALOGY_QUOTES } from "@/components/ui/narrative-connector";
 
 export const Route = createFileRoute("/_authenticated/app/")({
   component: AppHome,
@@ -100,23 +103,7 @@ function AppHome() {
     : "Sua mesa clínica está limpa e organizada para o dia de hoje.";
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-transparent pb-20 font-serif text-ink selection:bg-gold-soft">
-      {/* Selo de cera — assinatura da mesa clínica (arte real "arquivo vivo") */}
-      <img
-        src="/assets/objects/wax_seal_tree.jpg"
-        alt=""
-        aria-hidden
-        className="pointer-events-none absolute top-4 right-6 hidden w-[168px] rotate-[-7deg] mix-blend-darken lg:block xl:right-20"
-      />
-
-      {/* Herbário do arquivo — botânicas prensadas, quase invisíveis, no rodapé */}
-      <img
-        src="/assets/photos/section2_botanicals.jpg"
-        alt=""
-        aria-hidden
-        className="pointer-events-none absolute bottom-0 left-0 hidden w-[420px] opacity-[0.07] mix-blend-multiply [mask-image:linear-gradient(to_top_right,black_30%,transparent_75%)] lg:block"
-      />
-
+    <div className="min-h-screen bg-transparent pb-16 text-ink">
       {/* Header Contextual (Mesa Clínica) */}
       <DocumentHeader
         breadcrumb="Mesa Clínica"
@@ -124,164 +111,228 @@ function AppHome() {
         subtitle={subtitle}
       />
 
-      <main className="container-liz max-w-4xl space-y-16 py-12">
-        {/* Resumo do arquivo — linha editorial, sem cards de KPI */}
-        <p className="font-sans text-[13px] tracking-[0.01em] text-ink/50">
-          <span className="font-serif text-lg font-bold text-ink/80">{clients.length}</span>{" "}
-          {clients.length === 1 ? "cliente ativo" : "clientes ativos"}
-          <span aria-hidden className="mx-3 text-ink/25">
-            ·
-          </span>
-          <span className="font-serif text-lg font-bold text-ink/80">{openPatterns.length}</span>{" "}
-          {openPatterns.length === 1 ? "padrão em aberto" : "padrões em aberto"}
-          <span aria-hidden className="mx-3 text-ink/25">
-            ·
-          </span>
-          <span className="font-serif text-lg font-bold text-ink/80">{pendingConsent.length}</span>{" "}
-          {pendingConsent.length === 1 ? "consentimento pendente" : "consentimentos pendentes"}
-        </p>
+      <main className="container-liz space-y-6 py-2">
+        {/* Linha de indicadores — cards brancos */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <StatCard
+            icon={Users}
+            value={clients.length}
+            label={clients.length === 1 ? "Cliente ativo" : "Clientes ativos"}
+            to="/app/clientes"
+          />
+          <StatCard
+            icon={Sparkles}
+            value={openPatterns.length}
+            label={openPatterns.length === 1 ? "Padrão em aberto" : "Padrões em aberto"}
+            accent={openPatterns.length > 0 ? "olive" : "muted"}
+          />
+          <StatCard
+            icon={ClipboardCheck}
+            value={pendingConsent.length}
+            label={
+              pendingConsent.length === 1 ? "Consentimento pendente" : "Consentimentos pendentes"
+            }
+            accent={pendingConsent.length > 0 ? "critical" : "positive"}
+            to="/app/clientes"
+          />
+        </div>
 
-        {/* Fio editorial — citação real do campo */}
-        <QuoteConnector quote={GENEALOGY_QUOTES[0]} />
-
-        {/* Prioridade Clínica — sessões de hoje */}
-        <section>
-          <h2 className="mb-6 font-sans text-[11px] font-bold tracking-widest text-warm-gray uppercase">
-            Prioridade Clínica
-          </h2>
-          {hasPriorities ? (
-            <ul className="m-0 list-none p-0">
-              {todaySessions.map((s) => (
-                <li key={s.id} className="border-b border-ink/10 py-4">
-                  <Link
-                    to="/app/clientes/$clientId"
-                    params={{ clientId: s.client_id }}
-                    className="group flex items-baseline justify-between gap-4 no-underline"
-                  >
-                    <span className="font-serif text-xl text-ink transition-colors group-hover:text-forest-soft md:text-2xl">
-                      {clientName(s.client_id)}
-                      {s.title && <span className="text-ink/45 italic"> — {s.title}</span>}
-                    </span>
-                    <span className="shrink-0 font-sans text-[13px] font-semibold text-ink/50 tabular-nums">
-                      {new Date(s.session_date).toLocaleTimeString("pt-BR", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="border-b border-ink/10 py-4">
-              <p className="m-0 font-serif text-xl text-ink/55 italic md:text-2xl">
-                Nenhuma prioridade clínica urgente registrada para hoje.
-              </p>
-            </div>
-          )}
-          <div className="mt-8">
-            <Link to="/app/clientes">
-              <Button
-                variant="ghost"
-                className="group px-0 font-sans font-medium text-forest hover:bg-forest/5"
-              >
-                Acessar arquivo de clientes
-                <ArrowRight className="ml-2 size-4 transition-transform group-hover:translate-x-1" />
-              </Button>
-            </Link>
-          </div>
-        </section>
-
-        {/* Segundo Cérebro & Hipóteses — padrões não reconhecidos */}
-        <section>
-          <h2 className="mb-6 font-sans text-[11px] font-bold tracking-widest text-warm-gray uppercase">
-            Segundo Cérebro &amp; Hipóteses
-          </h2>
-          {openPatterns.length > 0 ? (
-            <ul className="m-0 list-none space-y-4 p-0">
-              {openPatterns.map((p) => (
-                <li
-                  key={p.id}
-                  className={`bg-surface-manuscript py-4 pr-4 pl-5 ${
-                    p.severity === "high" || p.severity === "alta"
-                      ? "border-l-[3px] border-l-material-terracotta"
-                      : "border-l-[3px] border-l-material-olive"
-                  }`}
+        {/* Corpo — duas colunas que ocupam a largura */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          {/* Coluna principal */}
+          <div className="space-y-6 lg:col-span-2">
+            <Panel
+              icon={CalendarClock}
+              title="Prioridade Clínica"
+              action={
+                <Link
+                  to="/app/clientes"
+                  className="inline-flex items-center gap-1 font-sans text-[12px] font-semibold text-forest no-underline hover:underline"
                 >
-                  <Link
-                    to="/app/clientes/$clientId"
-                    params={{ clientId: p.client_id }}
-                    className="group block no-underline"
-                  >
-                    <p className="m-0 font-serif text-lg text-ink italic transition-colors group-hover:text-forest-soft">
-                      {p.title}
-                    </p>
-                    <p className="mt-1 mb-0 font-sans text-[13px] text-ink/55">
-                      {clientName(p.client_id)}
-                      {p.description ? ` — ${p.description}` : ""}
-                    </p>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="border-b border-ink/10 py-4">
-              <p className="m-0 font-serif text-lg text-ink/60 italic">
-                Nenhuma hipótese transgeracional em fase de investigação no momento.
-              </p>
-            </div>
-          )}
-        </section>
-
-        {/* Pendências Clínicas — consentimentos em aberto */}
-        <section>
-          <h2 className="mb-6 font-sans text-[11px] font-bold tracking-widest text-warm-gray uppercase">
-            Pendências Clínicas
-          </h2>
-          {hasPendencies ? (
-            <ul className="m-0 list-none p-0">
-              {pendingConsent.slice(0, 4).map((c) => (
-                <li key={c.id} className="border-b border-ink/10 py-4">
-                  <Link
-                    to="/app/clientes/$clientId"
-                    params={{ clientId: c.id }}
-                    className="group flex items-center justify-between gap-4 no-underline"
-                  >
-                    <span className="font-serif text-lg text-ink transition-colors group-hover:text-forest-soft">
-                      {c.preferred_name || c.full_name}
-                    </span>
-                    <span className="flex shrink-0 items-center gap-1.5 font-sans text-[12px] font-semibold text-clinical-critical">
-                      <ScrollText className="size-3.5" aria-hidden />
-                      Consentimento pendente
-                    </span>
-                  </Link>
-                </li>
-              ))}
-              {pendingConsent.length > 4 && (
-                <li className="py-3">
-                  <Link
-                    to="/app/clientes"
-                    className="font-sans text-[13px] font-medium text-forest no-underline hover:underline"
-                  >
-                    Ver todos os {pendingConsent.length} consentimentos pendentes
-                  </Link>
-                </li>
+                  Arquivo de clientes
+                  <ArrowRight className="size-3.5" />
+                </Link>
+              }
+            >
+              {hasPriorities ? (
+                <ul className="m-0 list-none divide-y divide-border p-0">
+                  {todaySessions.map((s) => (
+                    <li key={s.id}>
+                      <Link
+                        to="/app/clientes/$clientId"
+                        params={{ clientId: s.client_id }}
+                        className="group flex items-baseline justify-between gap-4 py-3 no-underline first:pt-0"
+                      >
+                        <span className="font-serif text-lg text-ink transition-colors group-hover:text-forest-soft">
+                          {clientName(s.client_id)}
+                          {s.title && <span className="text-ink-soft italic"> — {s.title}</span>}
+                        </span>
+                        <span className="shrink-0 font-sans text-[13px] font-semibold text-warm-gray tabular-nums">
+                          {new Date(s.session_date).toLocaleTimeString("pt-BR", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <EmptyLine>Nenhuma sessão registrada para hoje.</EmptyLine>
               )}
-            </ul>
-          ) : (
-            <div className="border-b border-ink/10 py-4">
-              <p className="m-0 font-serif text-lg text-ink/60 italic">
-                Seus prontuários e anotações estão em dia.
-              </p>
-            </div>
-          )}
-        </section>
-      </main>
+            </Panel>
 
-      {/* Fechamento editorial */}
-      <div className="container-liz pt-16 pb-8">
-        <GenealogyDivider opacity={0.2} />
-      </div>
+            <Panel icon={ScrollText} title="Pendências Clínicas">
+              {hasPendencies ? (
+                <ul className="m-0 list-none divide-y divide-border p-0">
+                  {pendingConsent.slice(0, 5).map((c) => (
+                    <li key={c.id}>
+                      <Link
+                        to="/app/clientes/$clientId"
+                        params={{ clientId: c.id }}
+                        className="group flex items-center justify-between gap-4 py-3 no-underline first:pt-0"
+                      >
+                        <span className="font-serif text-lg text-ink transition-colors group-hover:text-forest-soft">
+                          {c.preferred_name || c.full_name}
+                        </span>
+                        <span className="flex shrink-0 items-center gap-1.5 font-sans text-[12px] font-semibold text-clinical-critical">
+                          <ScrollText className="size-3.5" aria-hidden />
+                          Consentimento pendente
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                  {pendingConsent.length > 5 && (
+                    <li className="pt-3">
+                      <Link
+                        to="/app/clientes"
+                        className="font-sans text-[13px] font-medium text-forest no-underline hover:underline"
+                      >
+                        Ver todos os {pendingConsent.length} consentimentos pendentes
+                      </Link>
+                    </li>
+                  )}
+                </ul>
+              ) : (
+                <EmptyLine>Seus prontuários e anotações estão em dia.</EmptyLine>
+              )}
+            </Panel>
+          </div>
+
+          {/* Coluna lateral */}
+          <div className="space-y-6">
+            <Panel icon={Sparkles} title="Segundo Cérebro & Hipóteses">
+              {openPatterns.length > 0 ? (
+                <ul className="m-0 list-none space-y-3 p-0">
+                  {openPatterns.map((p) => (
+                    <li key={p.id}>
+                      <Link
+                        to="/app/clientes/$clientId"
+                        params={{ clientId: p.client_id }}
+                        className={`group block rounded-lg border-l-[3px] bg-surface-manuscript py-3 pr-3 pl-4 no-underline ${
+                          p.severity === "high" || p.severity === "alta"
+                            ? "border-l-clinical-critical"
+                            : "border-l-material-olive"
+                        }`}
+                      >
+                        <p className="m-0 font-serif text-[15px] text-ink italic transition-colors group-hover:text-forest-soft">
+                          {p.title}
+                        </p>
+                        <p className="mt-1 mb-0 font-sans text-[12px] text-warm-gray">
+                          {clientName(p.client_id)}
+                          {p.description ? ` — ${p.description}` : ""}
+                        </p>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <EmptyLine>Nenhuma hipótese em investigação no momento.</EmptyLine>
+              )}
+            </Panel>
+
+            {/* Citação editorial — acento de marca */}
+            <figure className="m-0 rounded-2xl border border-border bg-forest px-6 py-7 text-cream shadow-surface">
+              <blockquote className="m-0 font-serif text-lg leading-relaxed text-cream italic">
+                "{GENEALOGY_QUOTES[0].text}"
+              </blockquote>
+              <figcaption className="mt-3 font-sans text-[10px] font-bold tracking-[0.16em] text-gold uppercase">
+                {GENEALOGY_QUOTES[0].author}
+              </figcaption>
+            </figure>
+          </div>
+        </div>
+      </main>
     </div>
   );
+}
+
+/* ── Componentes locais ─────────────────────────────────────── */
+
+function StatCard({
+  icon: Icon,
+  value,
+  label,
+  accent = "muted",
+  to,
+}: {
+  icon: typeof Users;
+  value: number;
+  label: string;
+  accent?: "muted" | "olive" | "critical" | "positive";
+  to?: "/app/clientes";
+}) {
+  const dot = {
+    muted: "text-warm-gray",
+    olive: "text-material-olive",
+    critical: "text-clinical-critical",
+    positive: "text-clinical-positive",
+  }[accent];
+
+  const inner = (
+    <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-surface-document px-5 py-4 shadow-surface transition-shadow hover:shadow-dossier">
+      <div>
+        <p className="m-0 font-serif text-3xl font-bold text-ink tabular-nums">{value}</p>
+        <p className="mt-0.5 font-sans text-[12px] font-medium text-warm-gray">{label}</p>
+      </div>
+      <Icon className={`size-6 shrink-0 ${dot}`} strokeWidth={1.5} />
+    </div>
+  );
+
+  return to ? (
+    <Link to={to} className="no-underline">
+      {inner}
+    </Link>
+  ) : (
+    inner
+  );
+}
+
+function Panel({
+  icon: Icon,
+  title,
+  action,
+  children,
+}: {
+  icon: typeof Users;
+  title: string;
+  action?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl border border-border bg-surface-document p-6 shadow-surface">
+      <div className="mb-4 flex items-center justify-between gap-3 border-b border-border pb-3">
+        <h2 className="flex items-center gap-2 font-sans text-[11px] font-bold tracking-[0.14em] text-warm-gray uppercase">
+          <Icon className="size-3.5 text-material-bronze" strokeWidth={1.75} />
+          {title}
+        </h2>
+        {action}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function EmptyLine({ children }: { children: ReactNode }) {
+  return <p className="m-0 py-1 font-serif text-[15px] text-warm-gray italic">{children}</p>;
 }

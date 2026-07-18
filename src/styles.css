@@ -134,8 +134,8 @@
 
   /* ── Paleta Rica de Apoio ────────────────────── */
   --bronze:          #8B6914;  /* Bronze envelhecido — links, ênfase */
-  --ivory:           #FAFAF5;  /* Branco quente — superfícies de cards */
-  --warm-gray:       #6B6358;  /* Cinza quente — texto secundário */
+  --ivory:           #FFFFFF;  /* Branco puro — superfícies de cards */
+  --warm-gray:       #5B6467;  /* Cinza frio — texto secundário (AA em branco) */
   --olive:           #5C6644;  /* Verde oliva — badges, labels */
   --terracotta:      #A0522D;  /* Terracota — alertas, bordas especiais */
   --moss:            #3A4D30;  /* Musgo — accents visuais */
@@ -144,15 +144,15 @@
   --sepia:           #6F4E37;  /* Sépia fotográfico — retratos antigos, ancestralidade */
   --wood:            #5A4632;  /* Marrom-madeira — mesa de arquivo, molduras */
   --graphite:        #3A3A3A;  /* Grafite neutro — traços estruturais, marca de falecido */
-  --parchment:       #E8E1D2;  /* Pergaminho — fundo base greige do "arquivo vivo" */
+  --parchment:       #E8E1D2;  /* Pergaminho — reservado a acentos específicos */
 
-  /* ── Arquivo / Neutros Editoriais ────────────── */
-  --archive:         #F7F5F0;  /* Fundo global — pergaminho suave */
-  --archive-old:     #EFECE6;  /* Fundo de painéis/seções */
-  --archive-doc:     #FBF9F3;  /* Superfície de cards/dossiês — marfim quente (papel) */
-  --ink:             #1A1714;  /* Texto principal */
-  --ink-soft:        #4A4540;  /* Texto secundário */
-  --cream:           #F2EEE6;  /* Cream */
+  /* ── Neutros — Branco/Cinza Frio Profissional ─── */
+  --archive:         #F4F5F6;  /* Fundo global — cinza claro frio */
+  --archive-old:     #EDEFF1;  /* Fundo de painéis/seções */
+  --archive-doc:     #FFFFFF;  /* Superfície de cards/dossiês — branco puro */
+  --ink:             #16191B;  /* Texto principal — quase-preto frio */
+  --ink-soft:        #454B4E;  /* Texto secundário */
+  --cream:           #F1F3F4;  /* Cinza claríssimo */
 
   /* ── Semântica Clínica ───────────────────────── */
   --clinical-critical: #8B3A3A;
@@ -184,20 +184,20 @@
   --destructive:     var(--clinical-critical);
   --destructive-foreground: var(--ivory);
 
-  --border:          #E5E0D7;
-  --input:           #EAE5DC;
+  --border:          #E3E6E8;
+  --input:           #E9ECEE;
   --ring:            var(--forest-soft);
 
-  /* ── Material Surface Tokens ────────────────────── */
-  --surface-archive:    #E8E1D2;  /* Pergaminho arquivístico — fundo base global */
-  --surface-document:   #FBF9F4;  /* Documento clínico — marfim quente (papel) */
-  --surface-dossier:    #FBF8F1;  /* Pasta clínica — marfim quente do dossiê */
-  --surface-manuscript: #F1ECE0;  /* Manuscrito/anotação — papel levemente escurecido */
-  --surface-folder:     #EDE8DE;  /* Aba de pasta / tab secundária */
-  --surface-book:       #E8E3D8;  /* Capa de livro — Biblioteca */
+  /* ── Material Surface Tokens (branco/cinza frio) ── */
+  --surface-archive:    #F0F2F3;  /* Fundo base global — cinza claro frio */
+  --surface-document:   #FFFFFF;  /* Documento clínico — branco puro */
+  --surface-dossier:    #FFFFFF;  /* Pasta clínica — branco puro */
+  --surface-manuscript: #F3F5F6;  /* Superfície secundária — cinza claríssimo */
+  --surface-folder:     #ECEEF0;  /* Aba de pasta / tab secundária */
+  --surface-book:       #E8EBED;  /* Capa de livro — Biblioteca */
 
   /* ── Material Ornament Tokens ────────────────────── */
-  --material-border:     rgba(180, 170, 155, 0.5);  /* Borda arquivística universal */
+  --material-border:     rgba(70, 82, 88, 0.18);  /* Borda hairline fria universal */
   --material-bronze:     #8A6845;  /* Bronze envelhecido — accent bar, número de registro */
   --material-gold:       #C6A23A;  /* Ouro editorial — hover, selos dourados */
   --material-olive:      #7D8060;  /* Oliva — label IA, categorias secundárias */
@@ -325,11 +325,7 @@
        Sofisticado, não "filtro sépia". O fundo respira memória sem virar cenário. */
     background-color: var(--surface-archive);
     background-image:
-      radial-gradient(120% 80% at 50% -10%, rgba(255, 251, 240, 0.55) 0%, transparent 55%),
-      radial-gradient(130% 100% at 8% -8%, rgba(201, 162, 75, 0.07) 0%, transparent 42%),
-      radial-gradient(120% 120% at 106% 110%, rgba(111, 78, 55, 0.09) 0%, transparent 50%),
-      radial-gradient(150% 130% at 50% 42%, transparent 55%, rgba(74, 58, 42, 0.08) 100%),
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)' opacity='0.055'/%3E%3C/svg%3E");
+      radial-gradient(120% 70% at 50% -12%, rgba(255, 255, 255, 0.7) 0%, transparent 58%);
     background-attachment: fixed;
     color: var(--ink);
     -webkit-font-smoothing: antialiased;
