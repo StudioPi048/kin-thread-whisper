@@ -105,8 +105,8 @@ const SYSTEM_KEYS = new Set(
     "Irmã(o)",
     "Pai",
     "Mãe",
-    "Tio(a) paterno(a)",
-    "Tio(a) materno(a)",
+    "Irmã(o) do Pai",
+    "Irmã(o) da Mãe",
     "Avô paterno",
     "Avó paterna",
     "Avô materno",
@@ -123,8 +123,14 @@ const SYSTEM_KEYS = new Set(
     "Irmã(o) da avó paterna",
     "Irmã(o) do avô materno",
     "Irmã(o) da avó materna",
-    "Irmã(o) do bisavô paterno",
-    "Irmã(o) do bisavô materno",
+    "Irmã(o) do Bisavô paterno (pai do avô)",
+    "Irmã(o) da Bisavó paterna (mãe do avô)",
+    "Irmã(o) do Bisavô paterno (pai da avó)",
+    "Irmã(o) da Bisavó paterna (mãe da avó)",
+    "Irmã(o) do Bisavô materno (pai do avô)",
+    "Irmã(o) da Bisavó materna (mãe do avô)",
+    "Irmã(o) do Bisavô materno (pai da avó)",
+    "Irmã(o) da Bisavó materna (mãe da avó)",
     "Cônjuge",
     "Filho(a)",
     "Aborto",
@@ -269,8 +275,8 @@ export function buildLogicalGraph({
   const irmaos = get("Irmã(o)");
   irmaos.forEach((s) => addPerson(s, 0, "proband"));
 
-  const tiosPat = get("Tio(a) paterno(a)");
-  const tiosMat = get("Tio(a) materno(a)");
+  const tiosPat = get("Irmã(o) do Pai");
+  const tiosMat = get("Irmã(o) da Mãe");
   if (pai) addPerson(pai, 1, "paternal");
   if (mae) addPerson(mae, 1, "maternal");
   tiosPat.forEach((t) => addPerson(t, 1, "paternal"));
@@ -305,10 +311,43 @@ export function buildLogicalGraph({
   [bp1, bp2, bp3, bp4].forEach((p) => p && addPerson(p, 3, "paternal"));
   [bm1, bm2, bm3, bm4].forEach((p) => p && addPerson(p, 3, "maternal"));
 
+  // ── Irmãos dos bisavós (tios-bisavós) ───────────────────────
+  // Um tag por bisavô/bisavó real (mesma desambiguação "pai do avô" / "mãe
+  // do avô" / "pai da avó" / "mãe da avó" já usada nos bisavós), então cada
+  // grupo de irmãos ancora exatamente na pessoa certa — sem chute.
+  // Sem trisavós no sistema, a união-satélite nasce sem parceiros (addUnion
+  // já aceita isso — só bloqueia quando partners E children estão vazios).
+  const addSiblingGroup = (
+    id: string,
+    anchor: PersonRow | undefined,
+    siblings: PersonRow[],
+    generation: number,
+    branchId: BranchId,
+  ) => {
+    siblings.forEach((p) => addPerson(p, generation, branchId));
+    if (!anchor || siblings.length === 0) return;
+    addUnion({ id, partners: [], children: [anchor, ...siblings], generation, branchId });
+  };
+  addSiblingGroup("u_sib_bp1", bp1, get("Irmã(o) do Bisavô paterno (pai do avô)"), 3, "paternal");
+  addSiblingGroup("u_sib_bp2", bp2, get("Irmã(o) da Bisavó paterna (mãe do avô)"), 3, "paternal");
+  addSiblingGroup("u_sib_bp3", bp3, get("Irmã(o) do Bisavô paterno (pai da avó)"), 3, "paternal");
+  addSiblingGroup("u_sib_bp4", bp4, get("Irmã(o) da Bisavó paterna (mãe da avó)"), 3, "paternal");
+  addSiblingGroup("u_sib_bm1", bm1, get("Irmã(o) do Bisavô materno (pai do avô)"), 3, "maternal");
+  addSiblingGroup("u_sib_bm2", bm2, get("Irmã(o) da Bisavó materna (mãe do avô)"), 3, "maternal");
+  addSiblingGroup("u_sib_bm3", bm3, get("Irmã(o) do Bisavô materno (pai da avó)"), 3, "maternal");
+  addSiblingGroup("u_sib_bm4", bm4, get("Irmã(o) da Bisavó materna (mãe da avó)"), 3, "maternal");
+
+  // ── Garantia "todos aparecem": ninguém cadastrado some do desenho ──
+  // Quem não bateu em nenhum parentesco reconhecido (texto livre, erro de
+  // digitação) ainda precisa aparecer — melhor visível ao lado do paciente
+  // do que invisível, já que o canvas só desenha quem tem posição no layout.
+  const unclassified = persons.filter((p) => !g.persons.has(p.id));
+  unclassified.forEach((p) => addPerson(p, 0, "other"));
+
   // ── União central: Pai ⟷ Mãe (sintetizada mesmo sem RelRow) ─
   const rootPartners = [pai, mae].filter(Boolean) as PersonRow[];
-  const probandChildren = [proband, ...irmaos];
-  if (rootPartners.length > 0) {
+  const probandChildren = [proband, ...irmaos, ...unclassified];
+  if (rootPartners.length > 0 || probandChildren.length > 1) {
     addUnion({
       id: `u_root_${proband.id}`,
       partners: rootPartners,
@@ -372,13 +411,6 @@ export function buildLogicalGraph({
   addGgpUnion("u_ggp_pat_ava", bp3, bp4, avoPatF, tioAvoPatAva, "paternal");
   addGgpUnion("u_ggp_mat_avo", bm1, bm2, avoMat, tioAvoMatAvo, "maternal");
   addGgpUnion("u_ggp_mat_ava", bm3, bm4, avoMatF, tioAvoMatAva, "maternal");
-
-  // ── Pessoas sem tag: entram como "other" na geração 1 ───────
-  for (const p of persons) {
-    if (!g.persons.has(p.id)) {
-      addPerson(p, 1, "other");
-    }
-  }
 
   return g;
 }

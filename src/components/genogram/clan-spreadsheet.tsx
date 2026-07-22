@@ -29,41 +29,41 @@ const RELATIONSHIP_TEMPLATE = [
   "Irmã(o)",
   "Irmã(o)",
   "Pai",
-  "Tio(a) paterno(a)",
-  "Tio(a) paterno(a)",
-  "Tio(a) paterno(a)",
+  "Irmã(o) do Pai",
+  "Irmã(o) do Pai",
+  "Irmã(o) do Pai",
   "Avô paterno",
   "Irmã(o) do avô paterno",
   "Irmã(o) do avô paterno",
   "Bisavô paterno (pai do avô)",
-  "Irmã(o) do bisavô paterno",
+  "Irmã(o) do Bisavô paterno (pai do avô)",
   "Bisavó paterna (mãe do avô)",
-  "Irmã(o) da bisavó paterna",
+  "Irmã(o) da Bisavó paterna (mãe do avô)",
   "Avó paterna",
   "Irmã(o) da avó paterna",
   "Irmã(o) da avó paterna",
   "Bisavô paterno (pai da avó)",
-  "Irmã(o) do bisavô paterno",
+  "Irmã(o) do Bisavô paterno (pai da avó)",
   "Bisavó paterna (mãe da avó)",
-  "Irmã(o) da bisavó paterna",
+  "Irmã(o) da Bisavó paterna (mãe da avó)",
   "Mãe",
-  "Tio(a) materno(a)",
-  "Tio(a) materno(a)",
-  "Tio(a) materno(a)",
+  "Irmã(o) da Mãe",
+  "Irmã(o) da Mãe",
+  "Irmã(o) da Mãe",
   "Avô materno",
   "Irmã(o) do avô materno",
   "Irmã(o) do avô materno",
   "Bisavô materno (pai do avô)",
-  "Irmã(o) do bisavô materno",
+  "Irmã(o) do Bisavô materno (pai do avô)",
   "Bisavó materna (mãe do avô)",
-  "Irmã(o) da bisavó materna",
+  "Irmã(o) da Bisavó materna (mãe do avô)",
   "Avó materna",
   "Irmã(o) da avó materna",
   "Irmã(o) da avó materna",
   "Bisavô materno (pai da avó)",
-  "Irmã(o) do bisavô materno",
+  "Irmã(o) do Bisavô materno (pai da avó)",
   "Bisavó materna (mãe da avó)",
-  "Irmã(o) da bisavó materna",
+  "Irmã(o) da Bisavó materna (mãe da avó)",
 ] as const;
 
 const RELATIONSHIP_OPTIONS = Array.from(new Set(RELATIONSHIP_TEMPLATE));
@@ -336,7 +336,11 @@ export function ClanSpreadsheet({ clientId }: Props) {
               lowerRel === "irmaos"
             ) {
               if (currentContext !== "Consulente" && currentContext !== "Paciente") {
-                rawRel = `Irmão(ã) do(a) ${currentContext}`;
+                // Preposição precisa bater com o gênero da âncora (do Pai / da
+                // Mãe / do Avô / da Avó...), senão o normalizador não reconhece
+                // o texto e a pessoa desaparece da árvore.
+                const prep = /mãe|avó|bisavó/i.test(currentContext) ? "da" : "do";
+                rawRel = `Irmã(o) ${prep} ${currentContext}`;
               }
             }
 

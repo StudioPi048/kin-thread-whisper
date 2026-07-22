@@ -85,45 +85,47 @@ const RULES: TagRule[] = [
     ],
   },
 
-  // ── TIOS PATERNOS (Irmãos do Pai) ───────────────────────────
+  // ── IRMÃOS DO PAI (antigos "tios paternos") ─────────────────
+  // Nomenclatura explícita: o nome já diz de quem a pessoa é irmã(o),
+  // deixando o vínculo óbvio para quem preenche a planilha.
   {
-    tag: "Tio(a) paterno(a)",
+    tag: "Irmã(o) do Pai",
     keywords: [
-      "tio paterno",
-      "tia paterna",
-      "tio do pai",
-      "tia do pai",
       "irmao do pai",
       "irmaos do pai",
       "irma do pai",
       "irmaa do pai",
       "irmas do pai",
+      "tio paterno",
+      "tia paterna",
+      "tio do pai",
+      "tia do pai",
       "uncle father",
       "paternal uncle",
       "paternal aunt",
     ],
   },
 
-  // ── TIOS MATERNOS (Irmãos da Mãe) ───────────────────────────
+  // ── IRMÃOS DA MÃE (antigos "tios maternos") ─────────────────
   {
-    tag: "Tio(a) materno(a)",
+    tag: "Irmã(o) da Mãe",
     keywords: [
-      "tio materno",
-      "tia materna",
-      "tio da mae",
-      "tia da mae",
       "irmao da mae",
       "irmaos da mae",
       "irma da mae",
       "irmas da mae",
+      "tio materno",
+      "tia materna",
+      "tio da mae",
+      "tia da mae",
       "uncle mother",
       "maternal uncle",
       "maternal aunt",
     ],
   },
 
-  // ── TIOS (GENÉRICO sem lado) ────────────────────────────────
-  { tag: "Tio(a) paterno(a)", keywords: ["tio", "tia", "uncle", "aunt"] }, // fallback → paterno
+  // ── TIOS (GENÉRICO sem lado, texto legado) ──────────────────
+  { tag: "Irmã(o) do Pai", keywords: ["tio", "tia", "uncle", "aunt"] }, // fallback → lado paterno
 
   // ── AVÔS PATERNOS ───────────────────────────────────────────
   {
@@ -324,26 +326,61 @@ const RULES: TagRule[] = [
     ],
   },
 
-  // ── IRMÃOS DOS BISAVÔS ──────────────────────────────────────
+  // ── IRMÃOS DOS BISAVÔS (um tag por bisavô/bisavó real) ──────
+  // Espelha exatamente a mesma desambiguação "(pai do avô)"/"(mãe do avô)"/
+  // "(pai da avó)"/"(mãe da avó)" já usada nos bisavós, para que o vínculo
+  // de cada irmão(ã) fique explícito e não ambíguo entre os 4 bisavós do lado.
   {
-    tag: "Irmã(o) do bisavô paterno",
+    tag: "Irmã(o) do Bisavô paterno (pai do avô)",
     keywords: [
-      "irmao do bisavo paterno",
-      "irmao do bisavo",
-      "irmao da bisavo",
-      "irma da bisavo",
-      "irmao da bisavo paterna",
+      "irmao do bisavo paterno pai do avo",
+      "irma do bisavo paterno pai do avo",
+      "irmao do bisavo pai do avo",
+      "irma do bisavo pai do avo",
     ],
   },
   {
-    tag: "Irmã(o) do bisavô materno",
+    tag: "Irmã(o) da Bisavó paterna (mãe do avô)",
     keywords: [
-      "irmao do bisavo materno",
-      "irmao do bisavo materno",
-      "irmao da bisavo materna",
-      "irmao da bisavo materna",
-      "irma da bisavo materna",
+      "irmao da bisavo paterna mae do avo",
+      "irma da bisavo paterna mae do avo",
+      "irmao da bisavo mae do avo",
+      "irma da bisavo mae do avo",
     ],
+  },
+  {
+    tag: "Irmã(o) do Bisavô paterno (pai da avó)",
+    keywords: [
+      "irmao do bisavo paterno pai da avo",
+      "irma do bisavo paterno pai da avo",
+      "irmao do bisavo pai da avo",
+      "irma do bisavo pai da avo",
+    ],
+  },
+  {
+    tag: "Irmã(o) da Bisavó paterna (mãe da avó)",
+    keywords: [
+      "irmao da bisavo paterna mae da avo",
+      "irma da bisavo paterna mae da avo",
+      "irmao da bisavo mae da avo",
+      "irma da bisavo mae da avo",
+    ],
+  },
+  {
+    tag: "Irmã(o) do Bisavô materno (pai do avô)",
+    keywords: ["irmao do bisavo materno pai do avo", "irma do bisavo materno pai do avo"],
+  },
+  {
+    tag: "Irmã(o) da Bisavó materna (mãe do avô)",
+    keywords: ["irmao da bisavo materna mae do avo", "irma da bisavo materna mae do avo"],
+  },
+  {
+    tag: "Irmã(o) do Bisavô materno (pai da avó)",
+    keywords: ["irmao do bisavo materno pai da avo", "irma do bisavo materno pai da avo"],
+  },
+  {
+    tag: "Irmã(o) da Bisavó materna (mãe da avó)",
+    keywords: ["irmao da bisavo materna mae da avo", "irma da bisavo materna mae da avo"],
   },
 
   // ── CÔNJUGE / PARCEIRO(A) ───────────────────────────────────
@@ -424,29 +461,37 @@ export function smartNormalizeRelationship(input: string | null | undefined): st
  * Menor número = mais próximo do consulente = aparece primeiro.
  */
 export function genealogicalOrder(tag: string | null | undefined): number {
-  const t = (tag ?? "").toLowerCase();
+  // Usa clean() (mesmo normalizador de acentos/marcadores do resto do arquivo)
+  // para que a ordenação funcione com qualquer grafia (com ou sem "(o)"/"(a)",
+  // com ou sem acento) sem precisar listar cada variante manualmente.
+  const t = clean(tag ?? "");
+  // Ordem das chaves importa: frases compostas ("irma do pai") precisam ser
+  // checadas ANTES das genéricas ("irma", "pai"), senão "Irmã(o) do Pai"
+  // cairia junto dos irmãos diretos do consulente.
   const ORDER: [string, number][] = [
     ["consulente", 0],
     ["paciente", 0],
-    ["irmã", 1],
-    ["irmao", 1],
     ["filho", 2],
-    ["pai", 10],
-    ["mãe", 10],
-    ["mae", 10],
+    ["irma do pai", 20],
+    ["irma da mae", 20],
     ["tio", 20],
     ["tia", 20],
-    ["avô paterno", 30],
-    ["avó paterna", 31],
-    ["avô materno", 32],
-    ["avó materna", 33],
-    ["irmão do avô", 35],
-    ["irmã do avô", 35],
-    ["irmão da avó", 36],
-    ["irmã da avó", 36],
-    ["bisavô", 40],
-    ["bisavó", 41],
-    ["cônjuge", 50],
+    ["irma do avo", 35],
+    ["irma da avo", 36],
+    ["irma do bisavo", 42],
+    ["irma da bisavo", 43],
+    ["pai", 10],
+    ["mae", 10],
+    ["avo paterno", 30],
+    ["avo paterna", 31],
+    ["avo materno", 32],
+    ["avo materna", 33],
+    ["bisavo paterno", 40],
+    ["bisavo paterna", 40],
+    ["bisavo materno", 41],
+    ["bisavo materna", 41],
+    ["irma", 1],
+    ["conjuge", 50],
   ];
   for (const [key, order] of ORDER) {
     if (t.includes(key)) return order;
