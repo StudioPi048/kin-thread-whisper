@@ -233,12 +233,16 @@ const RULES: TagRule[] = [
   },
 
   // ── BISAVÔS MATERNOS (avô) ──────────────────────────────────
+  // "...avo mat" abreviado (sem "materno"/"materna" por extenso) foi removido
+  // daqui: "avô" e "avó" colapsam pro mesmo "avo" depois de tirar acento, e
+  // sem a terminação completa "materno"/"materna" pra desambiguar por
+  // concordância de gênero, esse atalho colidia bisavô com bisavó distintos
+  // (dois cadastros reais bateram na mesma pessoa por causa disso).
   {
     tag: "Bisavô materno (pai do avô)",
     keywords: [
       "bisavo materno pai do avo",
       "bisavo materno masculino",
-      "bisavo pai avo mat",
       "bisavo pai avo materno",
       "pai do avo materno",
       "great-grandfather maternal grandfather",
@@ -249,7 +253,6 @@ const RULES: TagRule[] = [
     keywords: [
       "bisavo materna mae do avo",
       "bisava materna do avo",
-      "bisavo mae avo mat",
       "bisavo mae avo materno",
       "mae do avo materno",
       "great-grandmother maternal grandfather",

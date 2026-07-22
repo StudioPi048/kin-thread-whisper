@@ -324,8 +324,11 @@ export function buildLogicalGraph({
     generation: number,
     branchId: BranchId,
   ) => {
-    siblings.forEach((p) => addPerson(p, generation, branchId));
+    // Sem âncora, não registra aqui — melhor deixar cair no fallback "todos
+    // aparecem" (satélite do paciente) do que marcar como "já processado"
+    // sem nunca ganhar união/posição, o que os deixaria invisíveis de vez.
     if (!anchor || siblings.length === 0) return;
+    siblings.forEach((p) => addPerson(p, generation, branchId));
     addUnion({ id, partners: [], children: [anchor, ...siblings], generation, branchId });
   };
   addSiblingGroup("u_sib_bp1", bp1, get("Irmã(o) do Bisavô paterno (pai do avô)"), 3, "paternal");
@@ -336,27 +339,6 @@ export function buildLogicalGraph({
   addSiblingGroup("u_sib_bm2", bm2, get("Irmã(o) da Bisavó materna (mãe do avô)"), 3, "maternal");
   addSiblingGroup("u_sib_bm3", bm3, get("Irmã(o) do Bisavô materno (pai da avó)"), 3, "maternal");
   addSiblingGroup("u_sib_bm4", bm4, get("Irmã(o) da Bisavó materna (mãe da avó)"), 3, "maternal");
-
-  // ── Garantia "todos aparecem": ninguém cadastrado some do desenho ──
-  // Quem não bateu em nenhum parentesco reconhecido (texto livre, erro de
-  // digitação) ainda precisa aparecer — melhor visível ao lado do paciente
-  // do que invisível, já que o canvas só desenha quem tem posição no layout.
-  const unclassified = persons.filter((p) => !g.persons.has(p.id));
-  unclassified.forEach((p) => addPerson(p, 0, "other"));
-
-  // ── União central: Pai ⟷ Mãe (sintetizada mesmo sem RelRow) ─
-  const rootPartners = [pai, mae].filter(Boolean) as PersonRow[];
-  const probandChildren = [proband, ...irmaos, ...unclassified];
-  if (rootPartners.length > 0 || probandChildren.length > 1) {
-    addUnion({
-      id: `u_root_${proband.id}`,
-      partners: rootPartners,
-      children: probandChildren,
-      generation: 1,
-      branchId: "proband",
-      rel: findUnionRel(pai, mae),
-    });
-  }
 
   // ── União dos avós paternos → pai + tios paternos ───────────
   const patGpPartners = [avoPat, avoPatF].filter(Boolean) as PersonRow[];
@@ -411,6 +393,66 @@ export function buildLogicalGraph({
   addGgpUnion("u_ggp_pat_ava", bp3, bp4, avoPatF, tioAvoPatAva, "paternal");
   addGgpUnion("u_ggp_mat_avo", bm1, bm2, avoMat, tioAvoMatAvo, "maternal");
   addGgpUnion("u_ggp_mat_ava", bm3, bm4, avoMatF, tioAvoMatAva, "maternal");
+
+  // ── Garantia "todos aparecem": ninguém cadastrado some do desenho ──
+  // tiosPat/tiosMat/tios-avós/bisavós-satélite foram adicionados a g.persons
+  // mais cedo mesmo quando a âncora (avós/bisavós) não existe — nesse caso
+  // eles nunca ganham união e ficariam presos sem posição (nem "reconhecido"
+  // nem "satélite"). Em vez de caçar cada caso hardcoded, caminha a partir
+  // de pai/mãe pelas uniões já construídas: quem não é alcançável dali —
+  // seja por nunca ter batido em nenhum parentesco, seja por ter ficado
+  // "registrado" sem união de verdade — vira satélite do paciente. O canvas
+  // só desenha quem tem posição no layout, então visível-mas-solto é sempre
+  // melhor que invisível.
+  const adjacency = new Map<string, Set<string>>();
+  for (const u of g.unions.values()) {
+    const members = [...u.partners, ...u.children];
+    for (const a of members) {
+      let set = adjacency.get(a);
+      if (!set) {
+        set = new Set();
+        adjacency.set(a, set);
+      }
+      for (const b of members) if (a !== b) set.add(b);
+    }
+  }
+  const reachableFromParents = new Set<string>();
+  if (pai) reachableFromParents.add(pai.id);
+  if (mae) reachableFromParents.add(mae.id);
+  const queue = [...reachableFromParents];
+  while (queue.length > 0) {
+    const cur = queue.shift()!;
+    for (const next of adjacency.get(cur) ?? []) {
+      if (!reachableFromParents.has(next)) {
+        reachableFromParents.add(next);
+        queue.push(next);
+      }
+    }
+  }
+  const irmaoIds = new Set(irmaos.map((s) => s.id));
+  const orphans = persons.filter(
+    (p) =>
+      p.id !== proband.id &&
+      p.id !== pai?.id &&
+      p.id !== mae?.id &&
+      !irmaoIds.has(p.id) &&
+      !reachableFromParents.has(p.id),
+  );
+  orphans.forEach((p) => addPerson(p, 0, "other"));
+
+  // ── União central: Pai ⟷ Mãe (sintetizada mesmo sem RelRow) ─
+  const rootPartners = [pai, mae].filter(Boolean) as PersonRow[];
+  const probandChildren = [proband, ...irmaos, ...orphans];
+  if (rootPartners.length > 0 || probandChildren.length > 1) {
+    addUnion({
+      id: `u_root_${proband.id}`,
+      partners: rootPartners,
+      children: probandChildren,
+      generation: 1,
+      branchId: "proband",
+      rel: findUnionRel(pai, mae),
+    });
+  }
 
   return g;
 }
