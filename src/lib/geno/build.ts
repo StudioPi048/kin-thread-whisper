@@ -352,6 +352,11 @@ export function buildLogicalGraph({
       branchId: "paternal",
       rel: findUnionRel(avoPat, avoPatF),
     });
+  } else {
+    // Sem nenhum avô/avó paterno cadastrado: tios paternos ainda precisam
+    // ancorar no pai (nível dele), senão caem no fallback "todos aparecem"
+    // e ficam lado a lado com o paciente — parecendo irmãos dele.
+    addSiblingGroup("u_sib_pai", pai, tiosPat, 1, "paternal");
   }
 
   // ── União dos avós maternos → mãe + tios maternos ───────────
@@ -366,6 +371,8 @@ export function buildLogicalGraph({
       branchId: "maternal",
       rel: findUnionRel(avoMat, avoMatF),
     });
+  } else {
+    addSiblingGroup("u_sib_mae", mae, tiosMat, 1, "maternal");
   }
 
   // ── União dos bisavós → avô/avó + tios-avós correspondentes ─
@@ -393,6 +400,12 @@ export function buildLogicalGraph({
   addGgpUnion("u_ggp_pat_ava", bp3, bp4, avoPatF, tioAvoPatAva, "paternal");
   addGgpUnion("u_ggp_mat_avo", bm1, bm2, avoMat, tioAvoMatAvo, "maternal");
   addGgpUnion("u_ggp_mat_ava", bm3, bm4, avoMatF, tioAvoMatAva, "maternal");
+  // Mesmo problema um nível acima: sem nenhum bisavô cadastrado, os tios-avós
+  // ancoram no avô/avó correspondente em vez de virar satélite do paciente.
+  if (!bp1 && !bp2) addSiblingGroup("u_sib_avoPat", avoPat, tioAvoPatAvo, 2, "paternal");
+  if (!bp3 && !bp4) addSiblingGroup("u_sib_avoPatF", avoPatF, tioAvoPatAva, 2, "paternal");
+  if (!bm1 && !bm2) addSiblingGroup("u_sib_avoMat", avoMat, tioAvoMatAvo, 2, "maternal");
+  if (!bm3 && !bm4) addSiblingGroup("u_sib_avoMatF", avoMatF, tioAvoMatAva, 2, "maternal");
 
   // ── Garantia "todos aparecem": ninguém cadastrado some do desenho ──
   // tiosPat/tiosMat/tios-avós/bisavós-satélite foram adicionados a g.persons

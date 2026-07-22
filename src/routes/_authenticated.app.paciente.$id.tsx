@@ -974,7 +974,7 @@ function DossierSkeleton() {
 
 function formatMonths(m: number): string {
   if (m < 1) return "menos de 1 mês";
-  if (m < 12) return `${m} mês${m > 1 ? "es" : ""}`;
+  if (m < 12) return `${m} ${m > 1 ? "meses" : "mês"}`;
   const years = Math.floor(m / 12);
   const rest = m % 12;
   if (rest === 0) return `${years} ano${years > 1 ? "s" : ""}`;

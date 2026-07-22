@@ -72,6 +72,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
   const qc = useQueryClient();
   const [drafts, setDrafts] = useState<Record<string, Partial<Person>>>({});
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const pendingPatch = useRef<Record<string, TablesUpdate<"genogram_persons">>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isImporting, setIsImporting] = useState(false);
 
@@ -123,6 +124,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["genogram-persons", clientId] }),
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao remover pessoa"),
   });
 
   const removeEmptyPersons = useMutation({
@@ -159,9 +161,15 @@ export function ClanSpreadsheet({ clientId }: Props) {
 
   const scheduleSave = (id: string, patch: TablesUpdate<"genogram_persons">) => {
     setDrafts((d) => ({ ...d, [id]: { ...d[id], ...patch } }));
+    // Acumula num ref (síncrono) em vez de confiar no `patch` capturado pelo
+    // closure do setTimeout — senão, editar dois campos em menos de 900ms
+    // faz o timer do primeiro ser cancelado e só o último campo é salvo.
+    pendingPatch.current[id] = { ...pendingPatch.current[id], ...patch };
     if (timers.current[id]) clearTimeout(timers.current[id]);
     timers.current[id] = setTimeout(() => {
-      savePerson.mutate({ id, patch });
+      const fullPatch = pendingPatch.current[id];
+      delete pendingPatch.current[id];
+      savePerson.mutate({ id, patch: fullPatch });
     }, 900);
   };
 

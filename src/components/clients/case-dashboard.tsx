@@ -47,8 +47,10 @@ export function CaseDashboard({ clientId }: Props) {
   if (!data) return null;
 
   const { persons, relationships, patterns, sessions } = data;
-  const female = persons.filter((p) => p.gender === "female").length;
-  const male = persons.filter((p) => p.gender === "male").length;
+  // "feminino"/"masculino" é o que o formulário principal de pessoa grava;
+  // "female"/"male" só aparece em pessoas criadas via planilha/importação.
+  const female = persons.filter((p) => p.gender === "feminino" || p.gender === "female").length;
+  const male = persons.filter((p) => p.gender === "masculino" || p.gender === "male").length;
   const unknown = persons.length - (female + male);
 
   const deceased = persons.filter((p) => p.is_deceased).length;
