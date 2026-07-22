@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Loader2,
@@ -9,15 +9,30 @@ import {
   Upload,
   Sparkles,
   AlertCircle,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Command,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+} from "@/components/ui/command";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables, TablesUpdate } from "@/integrations/supabase/types";
 
-import { smartNormalizeRelationship, genealogicalOrder } from "@/lib/relationship-normalizer";
+import {
+  smartNormalizeRelationship,
+  genealogicalOrder,
+  RELATIONSHIP_GROUPS,
+} from "@/lib/relationship-normalizer";
 import { ensureProband } from "@/lib/ensure-proband";
 import { buildLogicalGraph } from "@/lib/geno/build";
 
@@ -67,8 +82,6 @@ const RELATIONSHIP_TEMPLATE = [
   "Irmã(o) da Bisavó materna (mãe da avó)",
 ] as const;
 
-const RELATIONSHIP_OPTIONS = Array.from(new Set(RELATIONSHIP_TEMPLATE));
-
 export function ClanSpreadsheet({ clientId }: Props) {
   const qc = useQueryClient();
   const [drafts, setDrafts] = useState<Record<string, Partial<Person>>>({});
@@ -76,6 +89,15 @@ export function ClanSpreadsheet({ clientId }: Props) {
   const pendingPatch = useRef<Record<string, TablesUpdate<"genogram_persons">>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const toggleExpanded = (id: string) => {
+    setExpandedRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const { data: persons, isLoading } = useQuery({
     queryKey: ["genogram-persons", clientId],
@@ -608,161 +630,187 @@ export function ClanSpreadsheet({ clientId }: Props) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
         >
-          <datalist id="relationship-suggestions">
-            {RELATIONSHIP_OPTIONS.map((r) => (
-              <option key={r} value={r} />
-            ))}
-          </datalist>
-
           <div className="overflow-x-auto rounded-sm border-2 border-border/80 bg-surface-document shadow-sm">
-            <table className="w-full min-w-[1500px] border-collapse text-[16px]">
+            <table className="w-full min-w-[760px] border-collapse text-[16px]">
               <thead className="bg-forest-soft/40 text-[14px] font-bold uppercase tracking-[0.15em] text-forest border-b-2 border-border/80">
                 <tr>
                   <Th w="w-11">#</Th>
-                  <Th w="min-w-[180px]">Nome</Th>
-                  <Th w="min-w-[180px]">Parentesco</Th>
-                  <Th w="w-36">Nascimento</Th>
-                  <Th w="w-24">Gestação</Th>
-                  <Th w="w-36">Morte</Th>
-                  <Th w="min-w-[160px]">Enfermidades</Th>
-                  <Th w="min-w-[140px]">Profissão</Th>
-                  <Th w="min-w-[120px]">Vícios</Th>
-                  <Th w="min-w-[120px]">Temperamento</Th>
-                  <Th w="w-16">Ordem</Th>
-                  <Th w="min-w-[240px]">Observações</Th>
+                  <Th w="min-w-[170px]" sticky>
+                    Nome
+                  </Th>
+                  <Th w="min-w-[220px]">Parentesco</Th>
+                  <Th w="w-32">Nascimento</Th>
+                  <Th w="w-32">Morte</Th>
+                  <Th w="w-14"></Th>
                   <Th w="w-10"></Th>
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r, i) => (
-                  <tr
-                    key={r.id}
-                    className="border-b border-border/40 hover:bg-forest-soft/20 transition-colors"
-                  >
-                    <td className="px-3 text-center text-[14px] font-mono font-medium text-muted-foreground">
-                      {i + 1}
-                    </td>
-                    <Td>
-                      <CellInput
-                        value={r.full_name ?? ""}
-                        onChange={(v) => scheduleSave(r.id, { full_name: v })}
-                      />
-                    </Td>
-                    <Td>
-                      <div className="relative flex w-full items-center">
-                        <CellInput
-                          list="relationship-suggestions"
-                          value={r.relationship_to_proband ?? ""}
-                          onChange={(v) => scheduleSave(r.id, { relationship_to_proband: v })}
-                          className={
-                            (!r.relationship_to_proband?.trim() && r.full_name?.trim()) ||
-                            warningsByPersonId.has(r.id)
-                              ? "pr-8 border-clinical-critical/40 bg-clinical-critical/5"
-                              : ""
-                          }
-                        />
-                        {!r.relationship_to_proband?.trim() && r.full_name?.trim() && (
-                          <div
-                            className="absolute right-2 text-clinical-critical"
-                            title="Vínculo pendente! Esta pessoa não aparecerá conectada na árvore."
-                          >
-                            <AlertCircle className="size-4" />
+                {rows.map((r, i) => {
+                  const expanded = expandedRows.has(r.id);
+                  const hasSecondaryData = !!(
+                    r.gestational_weeks?.trim() ||
+                    (r.health_conditions ?? []).length > 0 ||
+                    r.occupation?.trim() ||
+                    r.vices?.trim() ||
+                    r.temperament?.trim() ||
+                    r.birth_order != null ||
+                    r.notes?.trim()
+                  );
+                  return (
+                    <Fragment key={r.id}>
+                      <tr className="border-b border-border/40 hover:bg-forest-soft/20 transition-colors">
+                        <td className="px-3 text-center text-[14px] font-mono font-medium text-muted-foreground">
+                          {i + 1}
+                        </td>
+                        <td className="px-1 py-1 sticky left-0 z-10 bg-surface-document">
+                          <CellInput
+                            value={r.full_name ?? ""}
+                            onChange={(v) => scheduleSave(r.id, { full_name: v })}
+                          />
+                        </td>
+                        <Td>
+                          <div className="relative flex w-full items-center">
+                            <RelationshipCombobox
+                              value={r.relationship_to_proband ?? ""}
+                              onChange={(v) => scheduleSave(r.id, { relationship_to_proband: v })}
+                              hasWarning={
+                                (!r.relationship_to_proband?.trim() && !!r.full_name?.trim()) ||
+                                warningsByPersonId.has(r.id)
+                              }
+                            />
+                            {!r.relationship_to_proband?.trim() && r.full_name?.trim() && (
+                              <div
+                                className="absolute right-2 text-clinical-critical"
+                                title="Vínculo pendente! Esta pessoa não aparecerá conectada na árvore."
+                              >
+                                <AlertCircle className="size-4" />
+                              </div>
+                            )}
+                            {warningsByPersonId.has(r.id) && (
+                              <div
+                                className="absolute right-2 text-clinical-critical"
+                                title={warningsByPersonId.get(r.id)}
+                              >
+                                <AlertCircle className="size-4" />
+                              </div>
+                            )}
                           </div>
-                        )}
-                        {warningsByPersonId.has(r.id) && (
-                          <div
-                            className="absolute right-2 text-clinical-critical"
-                            title={warningsByPersonId.get(r.id)}
+                        </Td>
+                        <Td>
+                          <CellInput
+                            type="date"
+                            value={r.birth_date ?? ""}
+                            onChange={(v) => scheduleSave(r.id, { birth_date: v || null })}
+                          />
+                        </Td>
+                        <Td>
+                          <CellInput
+                            type="date"
+                            value={r.death_date ?? ""}
+                            onChange={(v) =>
+                              scheduleSave(r.id, { death_date: v || null, is_deceased: !!v })
+                            }
+                          />
+                        </Td>
+                        <td className="px-1 text-center">
+                          <button
+                            onClick={() => toggleExpanded(r.id)}
+                            className="relative rounded h-11 w-11 flex items-center justify-center text-muted-foreground transition-colors hover:bg-forest-soft/40 hover:text-forest"
+                            title="Enfermidades, profissão, vícios, temperamento, ordem, observações e gestação"
                           >
-                            <AlertCircle className="size-4" />
-                          </div>
-                        )}
-                      </div>
-                    </Td>
-                    <Td>
-                      <CellInput
-                        type="date"
-                        value={r.birth_date ?? ""}
-                        onChange={(v) => scheduleSave(r.id, { birth_date: v || null })}
-                      />
-                    </Td>
-                    <Td>
-                      <CellInput
-                        value={r.gestational_weeks ?? ""}
-                        onChange={(v) => scheduleSave(r.id, { gestational_weeks: v || null })}
-                        placeholder="ex. 40s"
-                      />
-                    </Td>
-                    <Td>
-                      <CellInput
-                        type="date"
-                        value={r.death_date ?? ""}
-                        onChange={(v) =>
-                          scheduleSave(r.id, { death_date: v || null, is_deceased: !!v })
-                        }
-                      />
-                    </Td>
-                    <Td>
-                      <CellInput
-                        value={(r.health_conditions ?? []).join(", ")}
-                        onChange={(v) =>
-                          scheduleSave(r.id, {
-                            health_conditions: v
-                              .split(",")
-                              .map((s) => s.trim())
-                              .filter(Boolean),
-                          })
-                        }
-                        placeholder="separar por vírgula"
-                      />
-                    </Td>
-                    <Td>
-                      <CellInput
-                        value={r.occupation ?? ""}
-                        onChange={(v) => scheduleSave(r.id, { occupation: v })}
-                      />
-                    </Td>
-                    <Td>
-                      <CellInput
-                        value={r.vices ?? ""}
-                        onChange={(v) => scheduleSave(r.id, { vices: v })}
-                      />
-                    </Td>
-                    <Td>
-                      <CellInput
-                        value={r.temperament ?? ""}
-                        onChange={(v) => scheduleSave(r.id, { temperament: v })}
-                      />
-                    </Td>
-                    <Td>
-                      <CellInput
-                        type="number"
-                        value={r.birth_order?.toString() ?? ""}
-                        onChange={(v) =>
-                          scheduleSave(r.id, { birth_order: v === "" ? null : Number(v) })
-                        }
-                      />
-                    </Td>
-                    <Td>
-                      <CellInput
-                        value={r.notes ?? ""}
-                        onChange={(v) => scheduleSave(r.id, { notes: v })}
-                      />
-                    </Td>
-                    <td className="px-1 text-center">
-                      <button
-                        onClick={() => {
-                          if (confirm(`Remover ${r.full_name || "pessoa sem nome"}?`))
-                            removePerson.mutate(r.id);
-                        }}
-                        className="rounded h-11 w-11 flex items-center justify-center text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                        title="Remover"
-                      >
-                        <Trash2 className="size-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                            {expanded ? (
+                              <ChevronDown className="size-4" />
+                            ) : (
+                              <ChevronRight className="size-4" />
+                            )}
+                            {!expanded && hasSecondaryData && (
+                              <span className="absolute top-2 right-2 size-1.5 rounded-full bg-gold" />
+                            )}
+                          </button>
+                        </td>
+                        <td className="px-1 text-center">
+                          <button
+                            onClick={() => {
+                              if (confirm(`Remover ${r.full_name || "pessoa sem nome"}?`))
+                                removePerson.mutate(r.id);
+                            }}
+                            className="rounded h-11 w-11 flex items-center justify-center text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                            title="Remover"
+                          >
+                            <Trash2 className="size-4" />
+                          </button>
+                        </td>
+                      </tr>
+                      {expanded && (
+                        <tr className="border-b border-border/40 bg-forest-soft/10">
+                          <td colSpan={7} className="px-4 py-3">
+                            <div className="flex flex-wrap gap-4">
+                              <DetailField label="Gestação" w="w-24">
+                                <CellInput
+                                  value={r.gestational_weeks ?? ""}
+                                  onChange={(v) =>
+                                    scheduleSave(r.id, { gestational_weeks: v || null })
+                                  }
+                                  placeholder="ex. 40s"
+                                />
+                              </DetailField>
+                              <DetailField label="Enfermidades" w="min-w-[200px]">
+                                <CellInput
+                                  value={(r.health_conditions ?? []).join(", ")}
+                                  onChange={(v) =>
+                                    scheduleSave(r.id, {
+                                      health_conditions: v
+                                        .split(",")
+                                        .map((s) => s.trim())
+                                        .filter(Boolean),
+                                    })
+                                  }
+                                  placeholder="separar por vírgula"
+                                />
+                              </DetailField>
+                              <DetailField label="Profissão" w="min-w-[160px]">
+                                <CellInput
+                                  value={r.occupation ?? ""}
+                                  onChange={(v) => scheduleSave(r.id, { occupation: v })}
+                                />
+                              </DetailField>
+                              <DetailField label="Vícios" w="min-w-[140px]">
+                                <CellInput
+                                  value={r.vices ?? ""}
+                                  onChange={(v) => scheduleSave(r.id, { vices: v })}
+                                />
+                              </DetailField>
+                              <DetailField label="Temperamento" w="min-w-[140px]">
+                                <CellInput
+                                  value={r.temperament ?? ""}
+                                  onChange={(v) => scheduleSave(r.id, { temperament: v })}
+                                />
+                              </DetailField>
+                              <DetailField label="Ordem" w="w-16">
+                                <CellInput
+                                  type="number"
+                                  value={r.birth_order?.toString() ?? ""}
+                                  onChange={(v) =>
+                                    scheduleSave(r.id, {
+                                      birth_order: v === "" ? null : Number(v),
+                                    })
+                                  }
+                                />
+                              </DetailField>
+                              <DetailField label="Observações" w="min-w-[260px] flex-1">
+                                <CellInput
+                                  value={r.notes ?? ""}
+                                  onChange={(v) => scheduleSave(r.id, { notes: v })}
+                                />
+                              </DetailField>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -871,11 +919,124 @@ function isValidYMD(iso: string): boolean {
   return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
 }
 
-function Th({ children, w }: { children?: React.ReactNode; w?: string }) {
-  return <th className={`px-3 py-3 text-left font-bold ${w ?? ""}`}>{children}</th>;
+function Th({ children, w, sticky }: { children?: React.ReactNode; w?: string; sticky?: boolean }) {
+  return (
+    <th
+      className={`px-3 py-3 text-left font-bold ${w ?? ""} ${sticky ? "sticky left-0 z-20 bg-forest-soft/40" : ""}`}
+    >
+      {children}
+    </th>
+  );
 }
 function Td({ children }: { children: React.ReactNode }) {
   return <td className="px-1 py-1 relative group">{children}</td>;
+}
+
+function DetailField({
+  label,
+  w,
+  children,
+}: {
+  label: string;
+  w?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className={`flex flex-col gap-1 ${w ?? ""}`}>
+      <span className="text-[12px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
+        {label}
+      </span>
+      {children}
+    </label>
+  );
+}
+
+function RelationshipCombobox({
+  value,
+  onChange,
+  hasWarning,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  hasWarning?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const trimmedSearch = search.trim();
+  const hasExactMatch = RELATIONSHIP_GROUPS.some((g) =>
+    g.options.some((o) => o.toLowerCase() === trimmedSearch.toLowerCase()),
+  );
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (o) setSearch(value);
+      }}
+    >
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={`w-full h-11 flex items-center rounded-sm border-0 bg-transparent px-2 text-left text-[16px] font-medium outline-none ring-1 ring-transparent transition-all hover:bg-forest-soft/20 focus:bg-forest-soft/30 focus:ring-forest truncate ${
+            value ? "text-foreground" : "text-muted-foreground/40"
+          } ${hasWarning ? "pr-8 bg-clinical-critical/5" : ""}`}
+        >
+          {value || "Selecionar parentesco…"}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80 p-0" align="start">
+        <Command shouldFilter={false}>
+          <CommandInput
+            value={search}
+            onValueChange={setSearch}
+            placeholder="Buscar (ex: avô, tio, bisavó materna)…"
+          />
+          <CommandList>
+            <CommandEmpty className="px-3 py-4 text-[13px] text-muted-foreground">
+              Nenhuma opção da lista bate com isso.
+            </CommandEmpty>
+            {trimmedSearch && !hasExactMatch && (
+              <CommandGroup heading="Texto digitado">
+                <CommandItem
+                  value={`__custom__${trimmedSearch}`}
+                  onSelect={() => {
+                    onChange(trimmedSearch);
+                    setOpen(false);
+                  }}
+                >
+                  Usar "{trimmedSearch}" mesmo assim
+                </CommandItem>
+              </CommandGroup>
+            )}
+            {RELATIONSHIP_GROUPS.map((group) => {
+              const filtered = trimmedSearch
+                ? group.options.filter((o) => o.toLowerCase().includes(trimmedSearch.toLowerCase()))
+                : group.options;
+              if (filtered.length === 0) return null;
+              return (
+                <CommandGroup key={group.label} heading={group.label}>
+                  {filtered.map((opt) => (
+                    <CommandItem
+                      key={opt}
+                      value={opt}
+                      onSelect={() => {
+                        onChange(opt);
+                        setOpen(false);
+                      }}
+                    >
+                      {opt}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              );
+            })}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
 }
 
 function CellInput(props: {

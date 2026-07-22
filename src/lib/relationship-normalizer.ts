@@ -478,6 +478,62 @@ export function smartNormalizeRelationship(input: string | null | undefined): st
 }
 
 /**
+ * Lista completa das tags reconhecidas pelo sistema, agrupada por ramo/geração,
+ * pra alimentar um seletor de busca na planilha (em vez de o clínico ter que
+ * acertar a grafia exata de texto livre). Espelha RULES/SIBLING_TAG_OF acima —
+ * única fonte de verdade, sem duplicar a lista manualmente noutro arquivo.
+ */
+export const RELATIONSHIP_GROUPS: { label: string; options: string[] }[] = [
+  { label: "Consulente", options: ["Consulente", "Irmã(o)", "Cônjuge", "Filho(a)", "Aborto"] },
+  { label: "Pais", options: ["Pai", "Mãe"] },
+  { label: "Tios (irmãos dos pais)", options: ["Irmã(o) do Pai", "Irmã(o) da Mãe"] },
+  {
+    label: "Avós paternos",
+    options: ["Avô paterno", "Avó paterna", "Irmã(o) do avô paterno", "Irmã(o) da avó paterna"],
+  },
+  {
+    label: "Avós maternos",
+    options: ["Avô materno", "Avó materna", "Irmã(o) do avô materno", "Irmã(o) da avó materna"],
+  },
+  {
+    label: "Bisavós paternos (lado do avô)",
+    options: [
+      "Bisavô paterno (pai do avô)",
+      "Bisavó paterna (mãe do avô)",
+      "Irmã(o) do Bisavô paterno (pai do avô)",
+      "Irmã(o) da Bisavó paterna (mãe do avô)",
+    ],
+  },
+  {
+    label: "Bisavós paternos (lado da avó)",
+    options: [
+      "Bisavô paterno (pai da avó)",
+      "Bisavó paterna (mãe da avó)",
+      "Irmã(o) do Bisavô paterno (pai da avó)",
+      "Irmã(o) da Bisavó paterna (mãe da avó)",
+    ],
+  },
+  {
+    label: "Bisavós maternos (lado do avô)",
+    options: [
+      "Bisavô materno (pai do avô)",
+      "Bisavó materna (mãe do avô)",
+      "Irmã(o) do Bisavô materno (pai do avô)",
+      "Irmã(o) da Bisavó materna (mãe do avô)",
+    ],
+  },
+  {
+    label: "Bisavós maternos (lado da avó)",
+    options: [
+      "Bisavô materno (pai da avó)",
+      "Bisavó materna (mãe da avó)",
+      "Irmã(o) do Bisavô materno (pai da avó)",
+      "Irmã(o) da Bisavó materna (mãe da avó)",
+    ],
+  },
+];
+
+/**
  * Prioridade de exibição para ordenação genealógica da planilha.
  * Menor número = mais próximo do consulente = aparece primeiro.
  */
