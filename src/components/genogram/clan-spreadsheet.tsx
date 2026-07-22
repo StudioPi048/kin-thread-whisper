@@ -19,6 +19,7 @@ import type { Tables, TablesUpdate } from "@/integrations/supabase/types";
 
 import { smartNormalizeRelationship, genealogicalOrder } from "@/lib/relationship-normalizer";
 import { ensureProband } from "@/lib/ensure-proband";
+import { buildLogicalGraph } from "@/lib/geno/build";
 
 type Person = Tables<"genogram_persons">;
 type Props = { clientId: string };
@@ -207,6 +208,16 @@ export function ClanSpreadsheet({ clientId }: Props) {
       return (a.full_name ?? "").localeCompare(b.full_name ?? "");
     });
   }, [persons, drafts]);
+
+  // Mesmo motor do genossociograma, só pra saber quem vai ficar solto na
+  // árvore e por quê — sem precisar abrir a aba do desenho pra descobrir.
+  const warningsByPersonId = useMemo(() => {
+    const map = new Map<string, string>();
+    if (rows.length === 0) return map;
+    const g = buildLogicalGraph({ persons: rows, rels: [] });
+    for (const w of g.warnings) map.set(w.personId, w.message);
+    return map;
+  }, [rows]);
 
   const scaffoldTemplate = async () => {
     if (rows.length > 0) {
@@ -644,7 +655,8 @@ export function ClanSpreadsheet({ clientId }: Props) {
                           value={r.relationship_to_proband ?? ""}
                           onChange={(v) => scheduleSave(r.id, { relationship_to_proband: v })}
                           className={
-                            !r.relationship_to_proband?.trim() && r.full_name?.trim()
+                            (!r.relationship_to_proband?.trim() && r.full_name?.trim()) ||
+                            warningsByPersonId.has(r.id)
                               ? "pr-8 border-clinical-critical/40 bg-clinical-critical/5"
                               : ""
                           }
@@ -653,6 +665,14 @@ export function ClanSpreadsheet({ clientId }: Props) {
                           <div
                             className="absolute right-2 text-clinical-critical"
                             title="Vínculo pendente! Esta pessoa não aparecerá conectada na árvore."
+                          >
+                            <AlertCircle className="size-4" />
+                          </div>
+                        )}
+                        {warningsByPersonId.has(r.id) && (
+                          <div
+                            className="absolute right-2 text-clinical-critical"
+                            title={warningsByPersonId.get(r.id)}
                           >
                             <AlertCircle className="size-4" />
                           </div>

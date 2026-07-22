@@ -76,12 +76,20 @@ export interface LogicalEdge {
   childKind?: "biological" | "adoptive" | "foster";
 }
 
+export interface GenogramWarning {
+  personId: string;
+  personName: string;
+  message: string;
+}
+
 export interface LogicalGraph {
   probandId: string | null;
   persons: Map<string, PersonEntity>;
   unions: Map<string, UnionEntity>;
   edges: LogicalEdge[];
   errors: string[];
+  /** Pessoas visíveis mas sem âncora genealógica real — o que fazer pra corrigir cada uma. */
+  warnings: GenogramWarning[];
   positions: Map<string, NodePositionRow>;
 }
 
@@ -188,6 +196,7 @@ export function buildLogicalGraph({
     unions: new Map(),
     edges: [],
     errors: [],
+    warnings: [],
     positions: new Map(),
   };
 
@@ -452,6 +461,25 @@ export function buildLogicalGraph({
       !reachableFromParents.has(p.id),
   );
   orphans.forEach((p) => addPerson(p, 0, "other"));
+
+  // Cada órfão vira satélite visível (bom), mas o motivo fica escondido do
+  // clínico — sem isso, "por que essa pessoa está solta do lado do
+  // paciente?" só se descobre lendo código. Um aviso por pessoa, com o que
+  // fazer: falta ancestral cadastrado (parentesco reconhecido) ou falta
+  // escolher a opção certa do menu (texto livre não reconhecido).
+  for (const p of orphans) {
+    const name = p.full_name?.trim() || "(sem nome)";
+    const rawRel = p.relationship_to_proband?.trim();
+    let message: string;
+    if (!rawRel) {
+      message = `${name}: linha sem parentesco definido — preencha ou apague essa linha na planilha.`;
+    } else if (SYSTEM_KEYS.has(canonicalKey(p.relationship_to_proband))) {
+      message = `${name}: parentesco "${rawRel}" reconhecido, mas falta cadastrar o ancestral correspondente para conectá-la(o) no lugar certo da árvore.`;
+    } else {
+      message = `${name}: parentesco "${rawRel}" não foi reconhecido — escolha uma opção específica da lista de parentesco em vez de texto livre.`;
+    }
+    g.warnings.push({ personId: p.id, personName: name, message });
+  }
 
   // ── União central: Pai ⟷ Mãe (sintetizada mesmo sem RelRow) ─
   const rootPartners = [pai, mae].filter(Boolean) as PersonRow[];

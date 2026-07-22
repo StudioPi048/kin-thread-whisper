@@ -36,10 +36,12 @@ import {
   Save,
   Lock,
   Unlock,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
 import { PersonNode, type PersonNodeData } from "./person-node";
 import { PersonFormDialog } from "./person-form-dialog";
@@ -476,6 +478,7 @@ import {
   buildLogicalGraph,
   layoutGraph,
   validateGraph,
+  type GenogramWarning,
 } from "@/lib/geno/build";
 
 /**
@@ -585,7 +588,7 @@ function buildRenderGraph(
     });
   }
 
-  return { nodes, edges };
+  return { nodes, edges, warnings: graph.warnings };
 }
 
 function GenogramCanvasInner({ clientId }: CanvasProps) {
@@ -632,6 +635,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+  const [warnings, setWarnings] = useState<GenogramWarning[]>([]);
   const [creatingPerson, setCreatingPerson] = useState(false);
   const [editingPerson, setEditingPerson] = useState<PersonRow | null>(null);
   const [defaultRelationship, setDefaultRelationship] = useState<string>("");
@@ -701,12 +705,12 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
     const proband = qualifiedPersons.find((p) => p.is_proband) || qualifiedPersons[0];
     const probandId = proband?.id;
 
-    const { nodes: layoutedNodes, edges: layoutedEdges } = buildRenderGraph(
-      qualifiedPersons,
-      query.data.rels,
-      probandId,
-      query.data.positions,
-    );
+    const {
+      nodes: layoutedNodes,
+      edges: layoutedEdges,
+      warnings: graphWarnings,
+    } = buildRenderGraph(qualifiedPersons, query.data.rels, probandId, query.data.positions);
+    setWarnings(graphWarnings);
 
     // Injeta o callback de quick-add nos nós de pessoa (função depende de state
     // do componente e por isso não vive dentro do engine puro).
@@ -1035,6 +1039,28 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
               <Link2 className="size-3.5 text-gold" />
               <strong className="text-white">{relCount}</strong> vínculos
             </span>
+            {warnings.length > 0 && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button className="flex items-center gap-1.5 rounded-full bg-amber-500/20 px-2.5 py-1 text-[14px] font-bold text-amber-300 hover:bg-amber-500/30 transition-colors">
+                    <AlertTriangle className="size-3.5" />
+                    {warnings.length} para revisar
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-96 max-h-96 overflow-y-auto" align="start">
+                  <p className="mb-2 text-[13px] font-bold uppercase tracking-wide text-muted-foreground">
+                    Pessoas soltas na árvore
+                  </p>
+                  <ul className="space-y-2.5">
+                    {warnings.map((w) => (
+                      <li key={w.personId} className="text-[14px] leading-snug">
+                        {w.message}
+                      </li>
+                    ))}
+                  </ul>
+                </PopoverContent>
+              </Popover>
+            )}
             {(layoutDirty || lastSavedAt) && (
               <span className="text-[16px] font-semibold text-white">
                 {layoutDirty ? "Não salvo" : `Salvo às ${lastSavedAt}`}
