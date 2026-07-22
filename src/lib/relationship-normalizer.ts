@@ -6,16 +6,21 @@
 
 /** Remove acentos e normaliza para lowercase */
 function clean(s: string): string {
-  return s
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\([oa]\)/g, "") // remove marcadores de gênero de tags: Tio(a), Irmã(o)
-    .replace(/[()]/g, " ") // mantém o contexto escrito entre parênteses
-    .replace(/s$/g, "") // remove plural 's' at the end of words roughly (irmaos -> irmao)
-    .replace(/oes$/g, "ao") // (irmaoes -> irmao)
-    .replace(/\s+/g, " ")
-    .trim();
+  return (
+    s
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\([oa]\)/g, "") // remove marcadores de gênero de tags: Tio(a), Irmã(o)
+      .replace(/[()]/g, " ") // mantém o contexto escrito entre parênteses
+      .replace(/\s+/g, " ")
+      .trim()
+      .split(" ")
+      // Remove plural 's' PALAVRA POR PALAVRA (irmãos do avô -> irmao do avo), não só
+      // no fim da frase inteira — "irmãos" quase sempre é a PRIMEIRA palavra da frase.
+      .map((w) => w.replace(/oes$/, "ao").replace(/s$/, ""))
+      .join(" ")
+  );
 }
 
 type TagRule = { tag: string; keywords: string[] };
@@ -282,106 +287,15 @@ const RULES: TagRule[] = [
   },
 
   // ── IRMÃOS DOS AVÔS (tios-avós) ────────────────────────────
-  {
-    tag: "Irmã(o) do avô paterno",
-    keywords: [
-      "irmao do avo paterno",
-      "irma da avo paterna",
-      "irma do avo paterno",
-      "tio avo paterno",
-      "grand-uncle paternal",
-      "irmao do avo",
-    ],
-  },
-  {
-    tag: "Irmã(o) da avó paterna",
-    keywords: [
-      "irmao da avo paterna",
-      "irma da avo paterna",
-      "tia avo paterna",
-      "grand-aunt paternal",
-      "irmao da avo",
-    ],
-  },
-  {
-    tag: "Irmã(o) do avô materno",
-    keywords: [
-      "irmao do avo materno",
-      "irma do avo materno",
-      "tio avo materno",
-      "grand-uncle maternal",
-      "irmao do avo matern",
-    ],
-  },
-  {
-    tag: "Irmã(o) da avó materna",
-    keywords: [
-      "irmao da avo materna",
-      "irmaos da avo materna",
-      "irma da avo materna",
-      "irmas da avo materna",
-      "tia avo materna",
-      "grand-aunt maternal",
-      "irmao da avo matern",
-    ],
-  },
-
-  // ── IRMÃOS DOS BISAVÔS (um tag por bisavô/bisavó real) ──────
-  // Espelha exatamente a mesma desambiguação "(pai do avô)"/"(mãe do avô)"/
-  // "(pai da avó)"/"(mãe da avó)" já usada nos bisavós, para que o vínculo
-  // de cada irmão(ã) fique explícito e não ambíguo entre os 4 bisavós do lado.
-  {
-    tag: "Irmã(o) do Bisavô paterno (pai do avô)",
-    keywords: [
-      "irmao do bisavo paterno pai do avo",
-      "irma do bisavo paterno pai do avo",
-      "irmao do bisavo pai do avo",
-      "irma do bisavo pai do avo",
-    ],
-  },
-  {
-    tag: "Irmã(o) da Bisavó paterna (mãe do avô)",
-    keywords: [
-      "irmao da bisavo paterna mae do avo",
-      "irma da bisavo paterna mae do avo",
-      "irmao da bisavo mae do avo",
-      "irma da bisavo mae do avo",
-    ],
-  },
-  {
-    tag: "Irmã(o) do Bisavô paterno (pai da avó)",
-    keywords: [
-      "irmao do bisavo paterno pai da avo",
-      "irma do bisavo paterno pai da avo",
-      "irmao do bisavo pai da avo",
-      "irma do bisavo pai da avo",
-    ],
-  },
-  {
-    tag: "Irmã(o) da Bisavó paterna (mãe da avó)",
-    keywords: [
-      "irmao da bisavo paterna mae da avo",
-      "irma da bisavo paterna mae da avo",
-      "irmao da bisavo mae da avo",
-      "irma da bisavo mae da avo",
-    ],
-  },
-  {
-    tag: "Irmã(o) do Bisavô materno (pai do avô)",
-    keywords: ["irmao do bisavo materno pai do avo", "irma do bisavo materno pai do avo"],
-  },
-  {
-    tag: "Irmã(o) da Bisavó materna (mãe do avô)",
-    keywords: ["irmao da bisavo materna mae do avo", "irma da bisavo materna mae do avo"],
-  },
-  {
-    tag: "Irmã(o) do Bisavô materno (pai da avó)",
-    keywords: ["irmao do bisavo materno pai da avo", "irma do bisavo materno pai da avo"],
-  },
-  {
-    tag: "Irmã(o) da Bisavó materna (mãe da avó)",
-    keywords: ["irmao da bisavo materna mae da avo", "irma da bisavo materna mae da avo"],
-  },
+  // Frases como "irmão do avô paterno" / "irmã da bisavó materna (pai da
+  // avó)" são resolvidas dinamicamente por resolveSiblingOfAncestor (abaixo),
+  // reaproveitando as tags de ancestral — sem duplicar cada combinação aqui.
+  // Só o idioma "tio-avô/tia-avó" fica explícito, porque o resolvedor só
+  // reconhece o prefixo "irmã(o)", não "tio".
+  { tag: "Irmã(o) do avô paterno", keywords: ["tio avo paterno", "grand-uncle paternal"] },
+  { tag: "Irmã(o) da avó paterna", keywords: ["tia avo paterna", "grand-aunt paternal"] },
+  { tag: "Irmã(o) do avô materno", keywords: ["tio avo materno", "grand-uncle maternal"] },
+  { tag: "Irmã(o) da avó materna", keywords: ["tia avo materna", "grand-aunt maternal"] },
 
   // ── CÔNJUGE / PARCEIRO(A) ───────────────────────────────────
   {
@@ -418,6 +332,83 @@ const RULES: TagRule[] = [
   },
 ];
 
+// ── Composição "irmã(o) do/da <ancestral>" ──────────────────────
+// Em vez de duplicar manualmente cada combinação (irmão do avô paterno,
+// irmã da bisavó materna, irmãos do avô paterno...) — o que se mostrou
+// frágil contra plural, preposição omitida ou texto truncado — reconhece
+// o prefixo colateral (irmã/irmão, já sem plural depois do clean()) e
+// resolve o RESTO do texto contra as tags de ancestral diretas, que já
+// tratam sinônimo/abreviação/plural. Cobre qualquer geração sem precisar
+// listar cada variante à mão.
+const ANCESTOR_TAGS = new Set([
+  "Pai",
+  "Mãe",
+  "Avô paterno",
+  "Avó paterna",
+  "Avô materno",
+  "Avó materna",
+  "Bisavô paterno (pai do avô)",
+  "Bisavó paterna (mãe do avô)",
+  "Bisavô paterno (pai da avó)",
+  "Bisavó paterna (mãe da avó)",
+  "Bisavô materno (pai do avô)",
+  "Bisavó materna (mãe do avô)",
+  "Bisavô materno (pai da avó)",
+  "Bisavó materna (mãe da avó)",
+]);
+
+const SIBLING_TAG_OF: Record<string, string> = {
+  Pai: "Irmã(o) do Pai",
+  Mãe: "Irmã(o) da Mãe",
+  "Avô paterno": "Irmã(o) do avô paterno",
+  "Avó paterna": "Irmã(o) da avó paterna",
+  "Avô materno": "Irmã(o) do avô materno",
+  "Avó materna": "Irmã(o) da avó materna",
+  "Bisavô paterno (pai do avô)": "Irmã(o) do Bisavô paterno (pai do avô)",
+  "Bisavó paterna (mãe do avô)": "Irmã(o) da Bisavó paterna (mãe do avô)",
+  "Bisavô paterno (pai da avó)": "Irmã(o) do Bisavô paterno (pai da avó)",
+  "Bisavó paterna (mãe da avó)": "Irmã(o) da Bisavó paterna (mãe da avó)",
+  "Bisavô materno (pai do avô)": "Irmã(o) do Bisavô materno (pai do avô)",
+  "Bisavó materna (mãe do avô)": "Irmã(o) da Bisavó materna (mãe do avô)",
+  "Bisavô materno (pai da avó)": "Irmã(o) do Bisavô materno (pai da avó)",
+  "Bisavó materna (mãe da avó)": "Irmã(o) da Bisavó materna (mãe da avó)",
+};
+
+function matchByInclusion(normalized: string, rules: TagRule[]): TagRule | null {
+  let best: TagRule | null = null;
+  let bestLen = 0;
+  for (const rule of rules) {
+    for (const kw of rule.keywords) {
+      // normalized mais curto que kw = texto truncado (corta no FIM, nunca no
+      // meio) — por isso startsWith aqui, não includes: senão um pedaço curto
+      // como "avo pa" bate no meio de uma keyword bem mais longa e diferente
+      // (ex.: "...avo paterno" dentro de uma keyword de bisavô).
+      if (normalized.includes(kw) || kw.startsWith(normalized)) {
+        if (kw.length > bestLen) {
+          bestLen = kw.length;
+          best = rule;
+        }
+      }
+    }
+  }
+  return best;
+}
+
+/** "irmao do avo materno" / "irmao avo materno" (sem preposição) / "irmao bisavo" -> tag do irmão certo. */
+function resolveSiblingOfAncestor(normalized: string): string | null {
+  const m = normalized.match(/^irmao?\s*(?:do|da|de)?\s*(.+)$/);
+  if (!m) return null;
+  const remainder = m[1].trim();
+  if (!remainder) return null; // só "irmão" sozinho — não é caso deste resolvedor
+
+  const ancestorRules = RULES.filter((r) => ANCESTOR_TAGS.has(r.tag));
+  for (const rule of ancestorRules) {
+    if (rule.keywords.some((kw) => remainder === kw)) return SIBLING_TAG_OF[rule.tag];
+  }
+  const best = matchByInclusion(remainder, ancestorRules);
+  return best ? SIBLING_TAG_OF[best.tag] : null;
+}
+
 /**
  * Tenta mapear o texto livre de parentesco para a tag canônica do sistema.
  * Retorna o texto original se não conseguir fazer o match com alta confiança.
@@ -434,22 +425,14 @@ export function smartNormalizeRelationship(input: string | null | undefined): st
     }
   }
 
+  // "irmã(o) [do/da] <ancestral>" — antes da busca genérica por inclusão,
+  // senão um "bisavo" (6 letras) bate antes de qualquer coisa mais específica.
+  const siblingTag = resolveSiblingOfAncestor(normalized);
+  if (siblingTag) return siblingTag;
+
   // Busca por inclusão (o texto normalizado CONTÉM a keyword)
   // Prioriza o keyword mais LONGO para evitar que "irmao" dê match em "irmao da bisavo"
-  let bestMatch: TagRule | null = null;
-  let bestMatchLen = 0;
-
-  for (const rule of RULES) {
-    for (const kw of rule.keywords) {
-      if (normalized.includes(kw) || kw.includes(normalized)) {
-        if (kw.length > bestMatchLen) {
-          bestMatchLen = kw.length;
-          bestMatch = rule;
-        }
-      }
-    }
-  }
-
+  const bestMatch = matchByInclusion(normalized, RULES);
   if (bestMatch) return bestMatch.tag;
 
   // Sem match: retorna o original (o sistema vai ignorar na árvore mas preserva o dado)
