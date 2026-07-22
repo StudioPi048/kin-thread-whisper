@@ -377,6 +377,20 @@ const SIBLING_TAG_OF: Record<string, string> = {
   "Bisavó materna (mãe da avó)": "Irmã(o) da Bisavó materna (mãe da avó)",
 };
 
+/**
+ * "avó"/"bisavó" e "avô"/"bisavô" colapsam no mesmo texto depois do clean()
+ * (o acento que distingue ô de ó é removido). Sem outro qualificador
+ * ("paterno"/"materna" já resolvem por si, sem precisar disto), a ÚNICA forma
+ * de saber se o texto queria dizer avô ou avó é olhar o acento no ORIGINAL,
+ * antes do clean() apagar — usado só como desempate dos fallbacks genéricos.
+ */
+function detectAncestorGender(raw: string): "m" | "f" | null {
+  const low = raw.toLowerCase();
+  if (low.includes("avó") || low.includes("vovó")) return "f";
+  if (low.includes("avô") || low.includes("vovô")) return "m";
+  return null;
+}
+
 function matchByInclusion(normalized: string, rules: TagRule[]): TagRule | null {
   let best: TagRule | null = null;
   let bestLen = 0;
@@ -398,11 +412,23 @@ function matchByInclusion(normalized: string, rules: TagRule[]): TagRule | null 
 }
 
 /** "irmao do avo materno" / "irmao avo materno" (sem preposição) / "irmao bisavo" -> tag do irmão certo. */
-function resolveSiblingOfAncestor(normalized: string): string | null {
+function resolveSiblingOfAncestor(normalized: string, rawInput: string): string | null {
   const m = normalized.match(/^irmao?\s*(?:do|da|de)?\s*(.+)$/);
   if (!m) return null;
   const remainder = m[1].trim();
   if (!remainder) return null; // só "irmão" sozinho — não é caso deste resolvedor
+
+  // "irmão do avô"/"irmã da avó" (bare, sem lado): "avo"/"bisavo" sozinho é
+  // ambíguo pós-clean(), mas o acento original ainda diz o gênero certo.
+  if (remainder === "avo" || remainder === "bisavo") {
+    const gender = detectAncestorGender(rawInput);
+    if (remainder === "avo") {
+      return SIBLING_TAG_OF[gender === "f" ? "Avó paterna" : "Avô paterno"];
+    }
+    return SIBLING_TAG_OF[
+      gender === "f" ? "Bisavó paterna (mãe do avô)" : "Bisavô paterno (pai do avô)"
+    ];
+  }
 
   const ancestorRules = RULES.filter((r) => ANCESTOR_TAGS.has(r.tag));
   for (const rule of ancestorRules) {
@@ -421,6 +447,15 @@ export function smartNormalizeRelationship(input: string | null | undefined): st
 
   const normalized = clean(input);
 
+  // "avô"/"avó" e "bisavô"/"bisavó" (bare, sem "paterno/materna" etc.) viram
+  // o mesmo texto pós-clean() — sem isto, cairia sempre no masculino por
+  // acaso da ordem das regras, mesmo quando o original dizia claramente "avó".
+  if (normalized === "avo" || normalized === "bisavo") {
+    const gender = detectAncestorGender(input);
+    if (normalized === "avo") return gender === "f" ? "Avó paterna" : "Avô paterno";
+    return gender === "f" ? "Bisavó paterna (mãe do avô)" : "Bisavô paterno (pai do avô)";
+  }
+
   // Busca primeiro match exato
   for (const rule of RULES) {
     for (const kw of rule.keywords) {
@@ -430,7 +465,7 @@ export function smartNormalizeRelationship(input: string | null | undefined): st
 
   // "irmã(o) [do/da] <ancestral>" — antes da busca genérica por inclusão,
   // senão um "bisavo" (6 letras) bate antes de qualquer coisa mais específica.
-  const siblingTag = resolveSiblingOfAncestor(normalized);
+  const siblingTag = resolveSiblingOfAncestor(normalized, input);
   if (siblingTag) return siblingTag;
 
   // Busca por inclusão (o texto normalizado CONTÉM a keyword)
