@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, X, User } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Plus, X, User, HeartCrack } from "lucide-react";
 
 import {
   Sheet,
@@ -26,7 +28,12 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
-import { genogramGenderOptions } from "@/lib/genogram";
+import {
+  genogramGenderOptions,
+  estimateConceptionDate,
+  findNearbyLosses,
+  formatDateBR,
+} from "@/lib/genogram";
 import { personLifeEvents, type LifeEvent } from "@/lib/patterns";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -39,6 +46,7 @@ interface Props {
   editing?: PersonRow | null;
   defaultPosition?: { x: number; y: number };
   defaultRelationship?: string;
+  allPersons?: PersonRow[];
 }
 
 interface FormState {
@@ -80,6 +88,7 @@ export function PersonFormDialog({
   editing,
   defaultPosition,
   defaultRelationship,
+  allPersons = [],
 }: Props) {
   const qc = useQueryClient();
   const [v, setV] = useState<FormState>(empty);
@@ -197,6 +206,11 @@ export function PersonFormDialog({
       v.life_events.filter((_, idx) => idx !== i),
     );
   }
+
+  // Concepção estimada (nasc. - 9 meses) e checagem de "filho de substituição":
+  // nascimento caindo até ~9 meses depois do falecimento de outro membro do clã.
+  const conceptionDate = estimateConceptionDate(v.birth_date);
+  const nearbyLosses = findNearbyLosses(v.birth_date, editing?.id ?? "", allPersons);
 
   // Visual header: initials
   const initials = v.full_name
@@ -346,6 +360,35 @@ export function PersonFormDialog({
                   É o paciente-índice
                 </label>
               </div>
+
+              {conceptionDate && (
+                <div className="rounded-lg border border-border/70 bg-card px-4 py-3 text-[14px]">
+                  <p className="font-bold text-foreground">
+                    Concepção estimada:{" "}
+                    <span className="font-mono tabular-nums">
+                      {format(conceptionDate, "dd/MM/yyyy", { locale: ptBR })}
+                    </span>
+                    <span className="ml-1 font-normal text-muted-foreground">
+                      (nascimento − 9 meses; ajuste manual se houve prematuridade)
+                    </span>
+                  </p>
+                  {nearbyLosses.length > 0 && (
+                    <div className="mt-2 flex items-start gap-2 text-clinical-critical">
+                      <HeartCrack className="mt-0.5 size-4 shrink-0" />
+                      <p>
+                        Possível <strong>filho(a) de substituição</strong>: nasceu até 9 meses após
+                        o falecimento de{" "}
+                        {nearbyLosses
+                          .map(
+                            (l) => `${l.name} (${l.deathDateLabel}, ${l.daysBeforeBirth}d antes)`,
+                          )
+                          .join("; ")}
+                        .
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {(v.is_deceased || v.death_date) && (
                 <Field label="Causa da morte" id="cause_of_death">

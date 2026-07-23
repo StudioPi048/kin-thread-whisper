@@ -8,7 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { personYears } from "@/lib/genogram";
+import { personDatesLabel } from "@/lib/genogram";
 import { cn } from "@/lib/utils";
 
 export interface PersonNodeData {
@@ -77,7 +77,7 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
 
   const displayName = d.preferred_name || d.full_name || "—";
   // Nome em duas linhas se necessário, sem cortar — o container é largo.
-  const years = personYears(d.birth_date, d.death_date);
+  const dates = personDatesLabel(d.birth_date, d.death_date);
 
   return (
     <div
@@ -215,9 +215,9 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
         >
           {displayName}
         </p>
-        {years ? (
-          <p className="mt-0.5 text-[10.5px] font-bold text-ink/80 leading-tight tabular-nums">
-            {years}
+        {dates ? (
+          <p className="mt-0.5 text-[9.5px] font-bold text-ink/80 leading-tight tabular-nums">
+            {dates}
           </p>
         ) : (
           <div className="h-3.5" />

@@ -3,6 +3,8 @@
  * Fica separado de qualquer componente para poder ser reutilizado
  * pelo canvas, formulários e (futuramente) pelo motor de padrões.
  */
+import { format, subMonths } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 export const genogramGenderOptions = [
   { value: "feminino", label: "Feminino", symbol: "○" },
@@ -67,9 +69,69 @@ export function relationshipLabel(type: string, qualifier?: string | null): stri
   return q ? `${t.split(" (")[0]} · ${q.label}` : t;
 }
 
-export function personYears(birth?: string | null, death?: string | null): string {
-  const b = birth?.slice(0, 4) ?? "";
-  const d = death?.slice(0, 4) ?? "";
-  if (!b && !d) return "";
-  return `${b}${b || d ? " – " : ""}${d}`;
+function parseISODate(iso?: string | null): Date | null {
+  if (!iso) return null;
+  const d = new Date(`${iso}T00:00:00`);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+export function formatDateBR(iso?: string | null): string {
+  const d = parseISODate(iso);
+  return d ? format(d, "dd/MM/yyyy", { locale: ptBR }) : "";
+}
+
+/** Datas completas (não só o ano) pro card do nó — nasc. e óbito, quando houver. */
+export function personDatesLabel(birth?: string | null, death?: string | null): string {
+  const b = formatDateBR(birth);
+  const d = formatDateBR(death);
+  if (b && d) return `${b} – ${d}`;
+  return b || d;
+}
+
+/** Concepção estimada: nascimento menos 9 meses. Sem dado de gestação, é sempre 9
+ * meses cheios — prematuridade fica a critério do clínico ajustar manualmente. */
+export function estimateConceptionDate(birthDate?: string | null): Date | null {
+  const d = parseISODate(birthDate);
+  return d ? subMonths(d, 9) : null;
+}
+
+export interface NearbyLoss {
+  personId: string;
+  name: string;
+  deathDateLabel: string;
+  daysBeforeBirth: number;
+}
+
+/**
+ * Padrão de "filho de substituição" (psicogenealogia): sinaliza quando o
+ * nascimento de alguém ocorreu dentro da janela de ~9 meses após o
+ * falecimento de outro membro do clã — a concepção coincidiu com o luto.
+ */
+export function findNearbyLosses(
+  birthDate: string | null | undefined,
+  personId: string,
+  allPersons: {
+    id: string;
+    full_name?: string | null;
+    preferred_name?: string | null;
+    death_date?: string | null;
+  }[],
+): NearbyLoss[] {
+  const birth = parseISODate(birthDate);
+  if (!birth) return [];
+  const windowStart = subMonths(birth, 9);
+
+  const losses: NearbyLoss[] = [];
+  for (const p of allPersons) {
+    if (p.id === personId) continue;
+    const death = parseISODate(p.death_date);
+    if (!death || death < windowStart || death > birth) continue;
+    losses.push({
+      personId: p.id,
+      name: p.preferred_name || p.full_name || "(sem nome)",
+      deathDateLabel: formatDateBR(p.death_date),
+      daysBeforeBirth: Math.round((birth.getTime() - death.getTime()) / 86400000),
+    });
+  }
+  return losses.sort((a, b) => a.daysBeforeBirth - b.daysBeforeBirth);
 }

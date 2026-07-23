@@ -11,6 +11,8 @@ import {
   useNodesState,
   useReactFlow,
   useStore,
+  getNodesBounds,
+  getViewportForBounds,
   type Connection,
   type Edge,
   type EdgeProps,
@@ -37,8 +39,11 @@ import {
   Lock,
   Unlock,
   AlertTriangle,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { toPng } from "html-to-image";
+import { jsPDF } from "jspdf";
 
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -655,6 +660,60 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
     }
   }, [query.data?.layout]);
   const rfInstance = useReactFlow();
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+
+  const exportPdf = useCallback(async () => {
+    const nodes = rfInstance.getNodes();
+    const viewportEl = document.querySelector(".react-flow__viewport") as HTMLElement | null;
+    if (nodes.length === 0 || !viewportEl) {
+      toast.error("Nada pra exportar ainda.");
+      return;
+    }
+    setIsExportingPdf(true);
+    try {
+      const bounds = getNodesBounds(nodes);
+      const padding = 120;
+      const imageWidth = Math.ceil(bounds.width) + padding * 2;
+      const imageHeight = Math.ceil(bounds.height) + padding * 2;
+      const viewport = getViewportForBounds(bounds, imageWidth, imageHeight, 0.1, 2, 0.08);
+
+      const dataUrl = await toPng(viewportEl, {
+        backgroundColor: "#ffffff",
+        width: imageWidth,
+        height: imageHeight,
+        pixelRatio: 2,
+        style: {
+          width: `${imageWidth}px`,
+          height: `${imageHeight}px`,
+          transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
+        },
+      });
+
+      const pdf = new jsPDF({
+        orientation: imageWidth >= imageHeight ? "landscape" : "portrait",
+        unit: "mm",
+        format: "a3",
+      });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const ratio = Math.min(pageWidth / imageWidth, pageHeight / imageHeight);
+      const pdfWidth = imageWidth * ratio;
+      const pdfHeight = imageHeight * ratio;
+      pdf.addImage(
+        dataUrl,
+        "PNG",
+        (pageWidth - pdfWidth) / 2,
+        (pageHeight - pdfHeight) / 2,
+        pdfWidth,
+        pdfHeight,
+      );
+      pdf.save(`genossociograma-${clientId.slice(0, 8)}.pdf`);
+    } catch {
+      toast.error("Erro ao gerar o PDF. Tente novamente.");
+    } finally {
+      setIsExportingPdf(false);
+    }
+  }, [rfInstance, clientId]);
 
   const handleQuickAdd = useCallback(
     (personId: string, relativeType: string) => {
@@ -1078,11 +1137,17 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
               <span className="hidden sm:inline">Guia</span>
             </button>
             <button
-              onClick={() => window.print()}
-              className="flex items-center gap-1.5 rounded px-3 py-2 text-[16px] font-bold uppercase tracking-[0.1em] text-white transition-colors hover:bg-white/10 hover:text-white"
+              onClick={exportPdf}
+              disabled={isExportingPdf}
+              title="Exportar PDF (A3) pra imprimir com o cliente"
+              className="flex items-center gap-1.5 rounded px-3 py-2 text-[16px] font-bold uppercase tracking-[0.1em] text-white transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
             >
-              <Printer className="size-4" />
-              <span className="hidden sm:inline">A3</span>
+              {isExportingPdf ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Printer className="size-4" />
+              )}
+              <span className="hidden sm:inline">{isExportingPdf ? "Gerando…" : "PDF A3"}</span>
             </button>
             <button
               onClick={() => deleteSelected.mutate()}
@@ -1186,6 +1251,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
         onOpenChange={(o) => !o && setEditingPerson(null)}
         clientId={clientId}
         editing={editingPerson}
+        allPersons={persons}
       />
       <RelationshipFormDialog
         open={relDialog.open}
