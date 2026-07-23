@@ -391,6 +391,57 @@ function detectAncestorGender(raw: string): "m" | "f" | null {
   return null;
 }
 
+/**
+ * "bisavô/bisavó (pai/mãe) do avô/avó paterno/materno" — frase completa que
+ * nomeia o próprio bisavô/bisavó E de qual avô/avó ele é pai/mãe E de que
+ * lado. Mesmo colapso de acento do detectAncestorGender acima, mas aqui o
+ * texto tem MAIS de uma palavra com av[oôó] (o "bisav[oôó]" inicial e o
+ * "av[oôó]" do meio) — sem separar os dois, matchByInclusion() pega a
+ * keyword "avo paterno"/"avo materno" (mais longa) como substring e
+ * classifica a pessoa como avô/avó comum, um nível GENEALÓGICO inteiro
+ * errado. Só entra em jogo quando pai/mãe + lado aparecem por extenso (ou
+ * abreviados "pat"/"mat") E o acento do av[oôó] do MEIO (não o do
+ * "bisav[oôó]" inicial) diz claramente avô ou avó — do contrário, devolve
+ * null e deixa o restante do pipeline (matchByInclusion etc.) resolver.
+ */
+function resolveGreatGrandparentPhrase(raw: string): string | null {
+  const low = raw.toLowerCase();
+  if (!/^\s*bisav[oôó]/.test(low)) return null;
+
+  const isPai = /\bpai\b/.test(low);
+  const isMae = /\bm[aã]e\b/.test(low);
+  if (isPai === isMae) return null; // nenhum ou os dois — não arrisca
+
+  // Ignora o acento do "bisav[oôó]" inicial (é só o rótulo da própria
+  // pessoa) e olha só o av[oôó] que vem DEPOIS, que é o que diz de quem
+  // ela é pai/mãe.
+  const afterSelf = low.replace(/^\s*bisav[oôó]\S*/, "");
+  const isAvoM = /avô|vovô/.test(afterSelf);
+  const isAvoF = /avó|vovó/.test(afterSelf);
+  if (isAvoM === isAvoF) return null;
+
+  const isPaterno = /\bpat/.test(low);
+  const isMaterno = /\bmat/.test(low);
+  if (isPaterno === isMaterno) return null;
+
+  const key = [
+    isPai ? "pai" : "mae",
+    isAvoM ? "avo" : "ava",
+    isPaterno ? "paterno" : "materno",
+  ].join("-");
+  const MAP: Record<string, string> = {
+    "pai-avo-paterno": "Bisavô paterno (pai do avô)",
+    "mae-avo-paterno": "Bisavó paterna (mãe do avô)",
+    "pai-ava-paterno": "Bisavô paterno (pai da avó)",
+    "mae-ava-paterno": "Bisavó paterna (mãe da avó)",
+    "pai-avo-materno": "Bisavô materno (pai do avô)",
+    "mae-avo-materno": "Bisavó materna (mãe do avô)",
+    "pai-ava-materno": "Bisavô materno (pai da avó)",
+    "mae-ava-materno": "Bisavó materna (mãe da avó)",
+  };
+  return MAP[key] ?? null;
+}
+
 function matchByInclusion(normalized: string, rules: TagRule[]): TagRule | null {
   let best: TagRule | null = null;
   let bestLen = 0;
@@ -455,6 +506,12 @@ export function smartNormalizeRelationship(input: string | null | undefined): st
     if (normalized === "avo") return gender === "f" ? "Avó paterna" : "Avô paterno";
     return gender === "f" ? "Bisavó paterna (mãe do avô)" : "Bisavô paterno (pai do avô)";
   }
+
+  // Frase completa "bisavô/bisavó (pai/mãe) do avô/avó paterno/materno" —
+  // antes do match exato/inclusão, senão a keyword "avo paterno"/"avo
+  // materno" sequestra a frase pro nível avô/avó (errado) por ser mais longa.
+  const ggpTag = resolveGreatGrandparentPhrase(input);
+  if (ggpTag) return ggpTag;
 
   // Busca primeiro match exato
   for (const rule of RULES) {

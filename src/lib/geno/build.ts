@@ -291,32 +291,51 @@ export function buildLogicalGraph({
   tiosPat.forEach((t) => addPerson(t, 1, "paternal"));
   tiosMat.forEach((t) => addPerson(t, 1, "maternal"));
 
-  const avoPat = first("Avô paterno");
-  const avoPatF = first("Avó paterna");
-  const avoMat = first("Avô materno");
-  const avoMatF = first("Avó materna");
+  // Um ancestral direto (avô/avó/bisavô/bisavó) é UMA pessoa só — mas na
+  // prática o clínico às vezes reusa o mesmo texto de ancestral pra um grupo
+  // inteiro de irmãos (em vez de usar a tag "irmã(o) do/da X" pra cada um).
+  // `first()` sozinho pegaria só o primeiro cadastro e derrubaria o resto
+  // pro fallback "todos aparecem" (satélite solto do paciente). Em vez disso,
+  // o primeiro cadastro (ordem de criação) vira a âncora e os excedentes
+  // entram como irmãos dela — reaproveitando addSiblingGroup, que já existe.
+  const avoPatAll = get("Avô paterno");
+  const avoPatFAll = get("Avó paterna");
+  const avoMatAll = get("Avô materno");
+  const avoMatFAll = get("Avó materna");
+  const avoPat = avoPatAll[0];
+  const avoPatF = avoPatFAll[0];
+  const avoMat = avoMatAll[0];
+  const avoMatF = avoMatFAll[0];
   if (avoPat) addPerson(avoPat, 2, "paternal");
   if (avoPatF) addPerson(avoPatF, 2, "paternal");
   if (avoMat) addPerson(avoMat, 2, "maternal");
   if (avoMatF) addPerson(avoMatF, 2, "maternal");
 
-  const tioAvoPatAvo = get("Irmã(o) do avô paterno");
-  const tioAvoPatAva = get("Irmã(o) da avó paterna");
-  const tioAvoMatAvo = get("Irmã(o) do avô materno");
-  const tioAvoMatAva = get("Irmã(o) da avó materna");
+  const tioAvoPatAvo = [...get("Irmã(o) do avô paterno"), ...avoPatAll.slice(1)];
+  const tioAvoPatAva = [...get("Irmã(o) da avó paterna"), ...avoPatFAll.slice(1)];
+  const tioAvoMatAvo = [...get("Irmã(o) do avô materno"), ...avoMatAll.slice(1)];
+  const tioAvoMatAva = [...get("Irmã(o) da avó materna"), ...avoMatFAll.slice(1)];
   tioAvoPatAvo.forEach((p) => addPerson(p, 2, "paternal"));
   tioAvoPatAva.forEach((p) => addPerson(p, 2, "paternal"));
   tioAvoMatAvo.forEach((p) => addPerson(p, 2, "maternal"));
   tioAvoMatAva.forEach((p) => addPerson(p, 2, "maternal"));
 
-  const bp1 = first("Bisavô paterno (pai do avô)");
-  const bp2 = first("Bisavó paterna (mãe do avô)");
-  const bp3 = first("Bisavô paterno (pai da avó)");
-  const bp4 = first("Bisavó paterna (mãe da avó)");
-  const bm1 = first("Bisavô materno (pai do avô)");
-  const bm2 = first("Bisavó materna (mãe do avô)");
-  const bm3 = first("Bisavô materno (pai da avó)");
-  const bm4 = first("Bisavó materna (mãe da avó)");
+  const bp1All = get("Bisavô paterno (pai do avô)");
+  const bp2All = get("Bisavó paterna (mãe do avô)");
+  const bp3All = get("Bisavô paterno (pai da avó)");
+  const bp4All = get("Bisavó paterna (mãe da avó)");
+  const bm1All = get("Bisavô materno (pai do avô)");
+  const bm2All = get("Bisavó materna (mãe do avô)");
+  const bm3All = get("Bisavô materno (pai da avó)");
+  const bm4All = get("Bisavó materna (mãe da avó)");
+  const bp1 = bp1All[0];
+  const bp2 = bp2All[0];
+  const bp3 = bp3All[0];
+  const bp4 = bp4All[0];
+  const bm1 = bm1All[0];
+  const bm2 = bm2All[0];
+  const bm3 = bm3All[0];
+  const bm4 = bm4All[0];
   [bp1, bp2, bp3, bp4].forEach((p) => p && addPerson(p, 3, "paternal"));
   [bm1, bm2, bm3, bm4].forEach((p) => p && addPerson(p, 3, "maternal"));
 
@@ -340,14 +359,62 @@ export function buildLogicalGraph({
     siblings.forEach((p) => addPerson(p, generation, branchId));
     addUnion({ id, partners: [], children: [anchor, ...siblings], generation, branchId });
   };
-  addSiblingGroup("u_sib_bp1", bp1, get("Irmã(o) do Bisavô paterno (pai do avô)"), 3, "paternal");
-  addSiblingGroup("u_sib_bp2", bp2, get("Irmã(o) da Bisavó paterna (mãe do avô)"), 3, "paternal");
-  addSiblingGroup("u_sib_bp3", bp3, get("Irmã(o) do Bisavô paterno (pai da avó)"), 3, "paternal");
-  addSiblingGroup("u_sib_bp4", bp4, get("Irmã(o) da Bisavó paterna (mãe da avó)"), 3, "paternal");
-  addSiblingGroup("u_sib_bm1", bm1, get("Irmã(o) do Bisavô materno (pai do avô)"), 3, "maternal");
-  addSiblingGroup("u_sib_bm2", bm2, get("Irmã(o) da Bisavó materna (mãe do avô)"), 3, "maternal");
-  addSiblingGroup("u_sib_bm3", bm3, get("Irmã(o) do Bisavô materno (pai da avó)"), 3, "maternal");
-  addSiblingGroup("u_sib_bm4", bm4, get("Irmã(o) da Bisavó materna (mãe da avó)"), 3, "maternal");
+  addSiblingGroup(
+    "u_sib_bp1",
+    bp1,
+    [...get("Irmã(o) do Bisavô paterno (pai do avô)"), ...bp1All.slice(1)],
+    3,
+    "paternal",
+  );
+  addSiblingGroup(
+    "u_sib_bp2",
+    bp2,
+    [...get("Irmã(o) da Bisavó paterna (mãe do avô)"), ...bp2All.slice(1)],
+    3,
+    "paternal",
+  );
+  addSiblingGroup(
+    "u_sib_bp3",
+    bp3,
+    [...get("Irmã(o) do Bisavô paterno (pai da avó)"), ...bp3All.slice(1)],
+    3,
+    "paternal",
+  );
+  addSiblingGroup(
+    "u_sib_bp4",
+    bp4,
+    [...get("Irmã(o) da Bisavó paterna (mãe da avó)"), ...bp4All.slice(1)],
+    3,
+    "paternal",
+  );
+  addSiblingGroup(
+    "u_sib_bm1",
+    bm1,
+    [...get("Irmã(o) do Bisavô materno (pai do avô)"), ...bm1All.slice(1)],
+    3,
+    "maternal",
+  );
+  addSiblingGroup(
+    "u_sib_bm2",
+    bm2,
+    [...get("Irmã(o) da Bisavó materna (mãe do avô)"), ...bm2All.slice(1)],
+    3,
+    "maternal",
+  );
+  addSiblingGroup(
+    "u_sib_bm3",
+    bm3,
+    [...get("Irmã(o) do Bisavô materno (pai da avó)"), ...bm3All.slice(1)],
+    3,
+    "maternal",
+  );
+  addSiblingGroup(
+    "u_sib_bm4",
+    bm4,
+    [...get("Irmã(o) da Bisavó materna (mãe da avó)"), ...bm4All.slice(1)],
+    3,
+    "maternal",
+  );
 
   // ── União dos avós paternos → pai + tios paternos ───────────
   const patGpPartners = [avoPat, avoPatF].filter(Boolean) as PersonRow[];
