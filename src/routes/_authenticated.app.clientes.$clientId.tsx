@@ -47,6 +47,8 @@ import {
   CalendarDays,
   Table2,
   Repeat,
+  Feather,
+  CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -71,6 +73,7 @@ import { ClinicalIntelligencePanel } from "@/components/clients/clinical-intelli
 import { DocumentHeader } from "@/components/ui/document-header";
 
 import { calcAge, formatBirthDate, genderOptions, initialsFrom } from "@/lib/clients";
+import { JOURNEY_STAGES, deriveStage, stageIndex } from "@/lib/clinical-catalog";
 
 function TabSuspense({ children }: { children: React.ReactNode }) {
   return (
@@ -98,9 +101,12 @@ const DOSSIER_TABS = [
 type DossierTab = (typeof DOSSIER_TABS)[number];
 
 export const Route = createFileRoute("/_authenticated/app/clientes/$clientId")({
-  validateSearch: (search: Record<string, unknown>): { tab?: DossierTab } => {
+  validateSearch: (search: Record<string, unknown>): { tab?: DossierTab; from?: "agenda" } => {
     const tab = search.tab as string | undefined;
-    return DOSSIER_TABS.includes(tab as DossierTab) ? { tab: tab as DossierTab } : {};
+    return {
+      ...(DOSSIER_TABS.includes(tab as DossierTab) ? { tab: tab as DossierTab } : {}),
+      ...(search.from === "agenda" ? { from: "agenda" as const } : {}),
+    };
   },
   component: ClientDossierPage,
   notFoundComponent: ClientNotFound,
@@ -108,7 +114,7 @@ export const Route = createFileRoute("/_authenticated/app/clientes/$clientId")({
 
 function ClientDossierPage() {
   const { clientId } = Route.useParams();
-  const { tab: tabFromUrl } = Route.useSearch();
+  const { tab: tabFromUrl, from } = Route.useSearch();
   const { user } = Route.useRouteContext();
   const qc = useQueryClient();
   const navigate = useNavigate();
@@ -194,6 +200,36 @@ function ClientDossierPage() {
     },
   });
 
+  // Sinais leves pra jornada clínica e o card de "próxima sessão" — não
+  // duplicam os dados completos que cada aba (Sessões/Genograma) já busca.
+  const { data: nextSessionISO = null } = useQuery({
+    queryKey: ["client-next-session", clientId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("clinical_sessions")
+        .select("session_date")
+        .eq("client_id", clientId)
+        .gt("session_date", new Date().toISOString())
+        .order("session_date", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data?.session_date ?? null;
+    },
+  });
+
+  const { data: genogramPersonCount = 0 } = useQuery({
+    queryKey: ["client-genogram-count", clientId],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("genogram_persons")
+        .select("id", { count: "exact", head: true })
+        .eq("client_id", clientId);
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+
   const toggleArchive = useMutation({
     mutationFn: async () => {
       if (!client) return;
@@ -258,6 +294,26 @@ function ClientDossierPage() {
   const genderLabel = genderOptions.find((g) => g.value === client.gender)?.label ?? "—";
   const initials = initialsFrom(client.full_name);
 
+  const monthsAsClient = (() => {
+    const created = new Date(client.created_at);
+    const now = new Date();
+    return Math.max(
+      0,
+      (now.getFullYear() - created.getFullYear()) * 12 + (now.getMonth() - created.getMonth()),
+    );
+  })();
+  const currentStage = deriveStage(sessionCount, genogramPersonCount > 0, patterns.length);
+  const currentStageIdx = stageIndex(currentStage);
+  const journeyStages = JOURNEY_STAGES.map((s, i) => ({
+    ...s,
+    status:
+      i < currentStageIdx
+        ? ("done" as const)
+        : i === currentStageIdx
+          ? ("current" as const)
+          : ("future" as const),
+  }));
+
   // Gramática visual derivada dos padrões reais (nunca inventada)
   const REPETITION_TYPES = new Set([
     "shared_death_age",
@@ -289,9 +345,15 @@ function ClientDossierPage() {
       <DocumentHeader
         breadcrumb={
           <>
-            <Link to="/app/clientes" className="hover:text-gold transition-colors">
-              Clientes
-            </Link>
+            {from === "agenda" ? (
+              <Link to="/app/agenda" className="hover:text-gold transition-colors">
+                Agenda
+              </Link>
+            ) : (
+              <Link to="/app/clientes" className="hover:text-gold transition-colors">
+                Clientes
+              </Link>
+            )}
             <span className="mx-1.5 opacity-40">/</span>
             {display}
           </>
@@ -343,13 +405,37 @@ function ClientDossierPage() {
 
             <div className="flex-1" />
 
-            <div className="flex items-center gap-4 bg-surface-document/60 px-4 py-1.5 rounded-full border border-border/40">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-full border border-border/40 bg-surface-document/60 px-4 py-1.5">
+              <span
+                className="flex items-center gap-1.5 text-[12px] font-semibold text-ink/80"
+                title="Cliente desde"
+              >
+                {monthsAsClient === 0
+                  ? "Cliente novo"
+                  : monthsAsClient < 12
+                    ? `Cliente há ${monthsAsClient} ${monthsAsClient === 1 ? "mês" : "meses"}`
+                    : `Cliente há ${Math.floor(monthsAsClient / 12)} ${Math.floor(monthsAsClient / 12) === 1 ? "ano" : "anos"}`}
+              </span>
+              <div className="w-px h-3 bg-border/60" />
               <span
                 className="flex items-center gap-1.5 text-[12px] font-semibold text-ink/80"
                 title="Sessões registradas"
               >
                 <CalendarDays className="size-3.5" /> {sessionCount}{" "}
                 {sessionCount === 1 ? "sessão" : "sessões"}
+              </span>
+              <div className="w-px h-3 bg-border/60" />
+              <span
+                className="flex items-center gap-1.5 text-[12px] font-semibold text-ink/80"
+                title="Próxima sessão agendada"
+              >
+                <CalendarDays className="size-3.5 text-gold" />
+                {nextSessionISO
+                  ? new Date(nextSessionISO).toLocaleDateString("pt-BR", {
+                      day: "2-digit",
+                      month: "short",
+                    })
+                  : "Sem sessão agendada"}
               </span>
               <div className="w-px h-3 bg-border/60" />
               <span className="flex items-center gap-1.5 text-[12px] font-bold text-ink shadow-sm">
@@ -454,6 +540,9 @@ function ClientDossierPage() {
             <div className="mt-6">
               {/* Visão Geral (Resumo Executivo Clinico) */}
               <TabsContent value="overview">
+                <div className="mb-6">
+                  <JourneyStrip stages={journeyStages} />
+                </div>
                 <div className="grid gap-6 xl:grid-cols-3">
                   <section className="xl:col-span-2 space-y-6">
                     {/* Hipótese clínica alimentada pelos padrões reais do motor */}
@@ -664,6 +753,66 @@ function ClientNotFound() {
       <Button asChild className="mt-8" variant="forest">
         <Link to="/app/clientes">Voltar para clientes</Link>
       </Button>
+    </div>
+  );
+}
+
+function JourneyStrip({
+  stages,
+}: {
+  stages: {
+    key: string;
+    label: string;
+    description: string;
+    status: "done" | "current" | "future";
+  }[];
+}) {
+  return (
+    <div className="rounded-2xl bg-surface-document/85 backdrop-blur border border-border/50 shadow-sm p-5">
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground flex items-center gap-2">
+          <Feather className="size-3.5" /> Jornada clínica
+        </p>
+        <span className="text-[10px] text-forest font-bold uppercase tracking-wider">
+          Etapa atual: {stages.find((s) => s.status === "current")?.label}
+        </span>
+      </div>
+      <div className="flex items-stretch gap-1 overflow-x-auto pb-1">
+        {stages.map((s, i) => {
+          const isCurrent = s.status === "current";
+          const isDone = s.status === "done";
+          return (
+            <div key={s.key} className="flex-1 min-w-[100px]">
+              <div className="flex items-center gap-1">
+                <div
+                  className={`size-6 rounded-full flex items-center justify-center shrink-0 text-white text-[10px] font-bold ${
+                    isCurrent
+                      ? "bg-forest ring-4 ring-forest/15"
+                      : isDone
+                        ? "bg-forest"
+                        : "bg-cream border border-border text-muted-foreground/60"
+                  }`}
+                >
+                  {isDone ? <CheckCircle2 className="size-3.5" /> : i + 1}
+                </div>
+                {i < stages.length - 1 && (
+                  <div
+                    className={`h-0.5 flex-1 rounded-full ${isDone ? "bg-forest" : "bg-border"}`}
+                  />
+                )}
+              </div>
+              <p
+                className={`mt-2 text-[11.5px] font-bold ${isCurrent ? "text-forest" : isDone ? "text-primary" : "text-muted-foreground"}`}
+              >
+                {s.label}
+              </p>
+              <p className="text-[10.5px] text-muted-foreground/80 leading-tight mt-0.5">
+                {s.description}
+              </p>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

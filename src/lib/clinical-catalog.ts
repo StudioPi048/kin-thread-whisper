@@ -27,6 +27,21 @@ export const JOURNEY_STAGES: { key: JourneyStage; label: string; description: st
 
 export const stageIndex = (s: JourneyStage) => JOURNEY_STAGES.findIndex((j) => j.key === s);
 
+/** Estágio da jornada clínica, derivado de sinais objetivos (nunca inventado). */
+export const deriveStage = (
+  sessionCount: number,
+  hasGenogram: boolean,
+  patternCount: number,
+): JourneyStage => {
+  if (sessionCount === 0) return "primeira";
+  if (sessionCount === 1) return "investigacao";
+  if (!hasGenogram) return "investigacao";
+  if (patternCount === 0) return "hipoteses";
+  if (sessionCount < 6) return "hipoteses";
+  if (sessionCount < 12) return "elaboracao";
+  return "integracao";
+};
+
 // Perguntas sugeridas por tipo de padrão. Chaves são normalizadas em lowercase.
 export const QUESTIONS_BY_PATTERN: Record<string, string[]> = {
   lealdade_invisivel: [

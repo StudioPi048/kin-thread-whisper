@@ -21,7 +21,6 @@ import { Route as AuthenticatedAppConfiguracoesRouteImport } from './routes/_aut
 import { Route as AuthenticatedAppBibliotecaRouteImport } from './routes/_authenticated.app.biblioteca'
 import { Route as AuthenticatedAppAgendaRouteImport } from './routes/_authenticated.app.agenda'
 import { Route as AuthenticatedAppClientesIndexRouteImport } from './routes/_authenticated.app.clientes.index'
-import { Route as AuthenticatedAppPacienteIdRouteImport } from './routes/_authenticated.app.paciente.$id'
 import { Route as AuthenticatedAppClientesClientIdRouteImport } from './routes/_authenticated.app.clientes.$clientId'
 
 const AuthRoute = AuthRouteImport.update({
@@ -89,12 +88,6 @@ const AuthenticatedAppClientesIndexRoute =
     path: '/app/clientes/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedAppPacienteIdRoute =
-  AuthenticatedAppPacienteIdRouteImport.update({
-    id: '/app/paciente/$id',
-    path: '/app/paciente/$id',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
 const AuthenticatedAppClientesClientIdRoute =
   AuthenticatedAppClientesClientIdRouteImport.update({
     id: '/app/clientes/$clientId',
@@ -114,7 +107,6 @@ export interface FileRoutesByFullPath {
   '/app/linha-do-tempo': typeof AuthenticatedAppLinhaDoTempoRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/clientes/$clientId': typeof AuthenticatedAppClientesClientIdRoute
-  '/app/paciente/$id': typeof AuthenticatedAppPacienteIdRoute
   '/app/clientes/': typeof AuthenticatedAppClientesIndexRoute
 }
 export interface FileRoutesByTo {
@@ -129,7 +121,6 @@ export interface FileRoutesByTo {
   '/app/linha-do-tempo': typeof AuthenticatedAppLinhaDoTempoRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/clientes/$clientId': typeof AuthenticatedAppClientesClientIdRoute
-  '/app/paciente/$id': typeof AuthenticatedAppPacienteIdRoute
   '/app/clientes': typeof AuthenticatedAppClientesIndexRoute
 }
 export interface FileRoutesById {
@@ -146,7 +137,6 @@ export interface FileRoutesById {
   '/_authenticated/app/linha-do-tempo': typeof AuthenticatedAppLinhaDoTempoRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/clientes/$clientId': typeof AuthenticatedAppClientesClientIdRoute
-  '/_authenticated/app/paciente/$id': typeof AuthenticatedAppPacienteIdRoute
   '/_authenticated/app/clientes/': typeof AuthenticatedAppClientesIndexRoute
 }
 export interface FileRouteTypes {
@@ -163,7 +153,6 @@ export interface FileRouteTypes {
     | '/app/linha-do-tempo'
     | '/app/'
     | '/app/clientes/$clientId'
-    | '/app/paciente/$id'
     | '/app/clientes/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -178,7 +167,6 @@ export interface FileRouteTypes {
     | '/app/linha-do-tempo'
     | '/app'
     | '/app/clientes/$clientId'
-    | '/app/paciente/$id'
     | '/app/clientes'
   id:
     | '__root__'
@@ -194,7 +182,6 @@ export interface FileRouteTypes {
     | '/_authenticated/app/linha-do-tempo'
     | '/_authenticated/app/'
     | '/_authenticated/app/clientes/$clientId'
-    | '/_authenticated/app/paciente/$id'
     | '/_authenticated/app/clientes/'
   fileRoutesById: FileRoutesById
 }
@@ -290,13 +277,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppClientesIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/app/paciente/$id': {
-      id: '/_authenticated/app/paciente/$id'
-      path: '/app/paciente/$id'
-      fullPath: '/app/paciente/$id'
-      preLoaderRoute: typeof AuthenticatedAppPacienteIdRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/app/clientes/$clientId': {
       id: '/_authenticated/app/clientes/$clientId'
       path: '/app/clientes/$clientId'
@@ -317,7 +297,6 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAppLinhaDoTempoRoute: typeof AuthenticatedAppLinhaDoTempoRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
   AuthenticatedAppClientesClientIdRoute: typeof AuthenticatedAppClientesClientIdRoute
-  AuthenticatedAppPacienteIdRoute: typeof AuthenticatedAppPacienteIdRoute
   AuthenticatedAppClientesIndexRoute: typeof AuthenticatedAppClientesIndexRoute
 }
 
@@ -331,7 +310,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAppLinhaDoTempoRoute: AuthenticatedAppLinhaDoTempoRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
   AuthenticatedAppClientesClientIdRoute: AuthenticatedAppClientesClientIdRoute,
-  AuthenticatedAppPacienteIdRoute: AuthenticatedAppPacienteIdRoute,
   AuthenticatedAppClientesIndexRoute: AuthenticatedAppClientesIndexRoute,
 }
 

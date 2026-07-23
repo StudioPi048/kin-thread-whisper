@@ -342,8 +342,9 @@ function EmptyDay({
             {orphanClients.slice(0, 5).map((c) => (
               <li key={c.id} className="border-b border-ink/10 py-3.5">
                 <Link
-                  to="/app/paciente/$id"
-                  params={{ id: c.id }}
+                  to="/app/clientes/$clientId"
+                  params={{ clientId: c.id }}
+                  search={{ from: "agenda" }}
                   className="group flex items-center justify-between gap-4 no-underline"
                 >
                   <span className="font-serif text-lg text-ink transition-colors group-hover:text-forest-soft">
@@ -752,7 +753,11 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
           <div className="mt-7 flex flex-wrap gap-2 pt-5 border-t border-border/40">
             {session.clientId ? (
               <Button size="lg" className="font-bold shadow-md" asChild>
-                <Link to="/app/paciente/$id" params={{ id: session.clientId }}>
+                <Link
+                  to="/app/clientes/$clientId"
+                  params={{ clientId: session.clientId }}
+                  search={{ from: "agenda" }}
+                >
                   <FileText className="size-4" />
                   Abrir Dossiê
                 </Link>
@@ -1023,8 +1028,9 @@ function UpcomingList({ currentId, sessions }: { currentId: string; sessions: Se
             <li key={s.id} className="border-b border-border/30 last:border-0">
               {s.clientId ? (
                 <Link
-                  to="/app/paciente/$id"
-                  params={{ id: s.clientId }}
+                  to="/app/clientes/$clientId"
+                  params={{ clientId: s.clientId }}
+                  search={{ from: "agenda" }}
                   className="flex items-center gap-3 py-2 rounded-lg hover:bg-forest-soft/40 transition-colors -mx-1 px-1"
                 >
                   {inner}
@@ -1112,7 +1118,11 @@ function RightPanel({
 
           {session.clientId && (
             <Button variant="hero" size="sm" className="mt-4 w-full font-bold" asChild>
-              <Link to="/app/paciente/$id" params={{ id: session.clientId }}>
+              <Link
+                to="/app/clientes/$clientId"
+                params={{ clientId: session.clientId }}
+                search={{ from: "agenda" }}
+              >
                 <Wand2 className="size-3.5" />
                 Abrir prontuário
               </Link>
@@ -1136,8 +1146,9 @@ function RightPanel({
               <li key={c.id} className="flex items-center justify-between text-[12px]">
                 <span className="text-primary/80 font-medium truncate">{c.name}</span>
                 <Link
-                  to="/app/paciente/$id"
-                  params={{ id: c.id }}
+                  to="/app/clientes/$clientId"
+                  params={{ clientId: c.id }}
+                  search={{ from: "agenda" }}
                   className="text-forest font-bold hover:underline"
                 >
                   Abrir
