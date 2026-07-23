@@ -115,6 +115,44 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
           />
         )}
 
+        {/* Adicionar parente rápido — visível ao selecionar (touch) ou passar o mouse (hover) */}
+        {d.onQuickAdd && (
+          <div
+            className={cn(
+              "absolute -top-2 -right-2 z-40 transition-opacity",
+              selected ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+            )}
+          >
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  size="icon-sm"
+                  variant="forest"
+                  className="size-7 rounded-full border-2 border-white shadow-dossier [&_svg]:size-3.5"
+                  title="Adicionar parente"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Plus />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                <DropdownMenuItem onClick={() => d.onQuickAdd?.("Pai")}>
+                  Adicionar pai
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => d.onQuickAdd?.("Mãe")}>
+                  Adicionar mãe
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => d.onQuickAdd?.("Filho(a)")}>
+                  Adicionar filho(a)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => d.onQuickAdd?.("Irmã(o)")}>
+                  Adicionar irmã(o)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
+
         {/* Linha diagonal de falecido — Convenção McGoldrick/Gerson */}
         {d.is_deceased && (
           <svg

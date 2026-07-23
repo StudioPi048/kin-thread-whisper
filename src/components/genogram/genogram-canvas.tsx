@@ -48,6 +48,16 @@ import { jsPDF } from "jspdf";
 
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { PersonNode, type PersonNodeData } from "./person-node";
 import { PersonFormDialog } from "./person-form-dialog";
@@ -61,8 +71,6 @@ type PersonRow = Database["public"]["Tables"]["genogram_persons"]["Row"];
 type RelRow = Database["public"]["Tables"]["genogram_relationships"]["Row"];
 type NodePositionRow = Database["public"]["Tables"]["genogram_node_positions"]["Row"];
 type LayoutRow = Database["public"]["Tables"]["genogram_layouts"]["Row"];
-
-const BUILD_TAG = "2026-07-05-spacing-and-styles";
 
 /**
  * UnionNode — cidadão de primeira classe do grafo.
@@ -654,6 +662,8 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
   const [layoutDirty, setLayoutDirty] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [isLayoutFixed, setIsLayoutFixed] = useState(false);
+  const [confirmRecalc, setConfirmRecalc] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     if (query.data?.layout) {
@@ -1046,6 +1056,8 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
   const totalCount = persons.length;
   const incompleteCount = totalCount - qualifiedCount;
   const relCount = query.data?.rels.length ?? 0;
+  const selectedPersonCount = nodes.filter((n) => n.type === "person" && n.selected).length;
+  const selectedEdgeCount = edges.filter((e) => e.selected).length;
 
   return (
     <div className="relative flex flex-col overflow-hidden rounded-[1.5rem] border border-border bg-surface-archive shadow-inner h-[800px] min-h-[calc(100vh-200px)]">
@@ -1109,15 +1121,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
           <Button
             size="sm"
             variant="outline"
-            onClick={() => {
-              if (
-                confirm(
-                  "Isso apaga o arranjo manual salvo desta árvore e recalcula a posição de todo mundo do zero, a partir das regras atuais do genograma. Continuar?",
-                )
-              ) {
-                recalcLayout.mutate();
-              }
-            }}
+            onClick={() => setConfirmRecalc(true)}
             disabled={!query.data?.layout?.id || recalcLayout.isPending}
             title="Recalcula as posições do zero — use se alguém aparecer preso no lugar errado"
             className="h-11 gap-2 border-white/25 text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[16px] disabled:opacity-45"
@@ -1168,22 +1172,25 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
                 {layoutDirty ? "Não salvo" : `Salvo às ${lastSavedAt}`}
               </span>
             )}
-            <span className="text-[14px] opacity-40 ml-4 text-white font-mono">{BUILD_TAG}</span>
           </div>
 
           <div className="ml-auto flex items-center gap-1">
-            <button
+            <Button
+              size="sm"
+              variant="outline"
               onClick={() => setShowGuide(!showGuide)}
-              className="flex items-center gap-1.5 rounded px-3 py-2 text-[16px] font-bold uppercase tracking-[0.1em] text-white transition-colors hover:bg-white/10 hover:text-white"
+              className="h-10 gap-1.5 border-transparent text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[16px] shadow-none"
             >
               <HelpCircle className="size-4" />
               <span className="hidden sm:inline">Guia</span>
-            </button>
-            <button
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
               onClick={exportPdf}
               disabled={isExportingPdf}
               title="Exportar PDF (A3) pra imprimir com o cliente"
-              className="flex items-center gap-1.5 rounded px-3 py-2 text-[16px] font-bold uppercase tracking-[0.1em] text-white transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
+              className="h-10 gap-1.5 border-transparent text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[16px] shadow-none"
             >
               {isExportingPdf ? (
                 <Loader2 className="size-4 animate-spin" />
@@ -1191,15 +1198,19 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
                 <Printer className="size-4" />
               )}
               <span className="hidden sm:inline">{isExportingPdf ? "Gerando…" : "PDF A3"}</span>
-            </button>
-            <button
-              onClick={() => deleteSelected.mutate()}
-              disabled={deleteSelected.isPending}
-              className="flex items-center gap-1.5 rounded px-3 py-2 text-[16px] font-bold uppercase tracking-[0.1em] text-white transition-colors hover:bg-white/10 hover:text-red-400 ml-4 border-l border-border pl-4"
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setConfirmDelete(true)}
+              disabled={
+                deleteSelected.isPending || (selectedPersonCount === 0 && selectedEdgeCount === 0)
+              }
+              className="h-10 gap-1.5 border-transparent text-white hover:bg-white/10 hover:text-red-400 normal-case tracking-normal font-semibold text-[16px] ml-4 border-l border-white/15 rounded-l-none pl-4 shadow-none"
             >
               <Trash2 className="size-4" />
               <span className="hidden sm:inline">Remover</span>
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -1310,6 +1321,50 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
         seed={relDialog.seed}
         editing={relDialog.editing}
       />
+
+      <AlertDialog open={confirmRecalc} onOpenChange={setConfirmRecalc}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-serif text-ink">
+              Recalcular posições do zero?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Isso apaga o arranjo manual salvo desta árvore e recalcula a posição de todo mundo a
+              partir das regras atuais do genograma. Use se alguém aparecer preso no lugar errado.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => recalcLayout.mutate()}>Recalcular</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-serif text-ink">
+              Remover o que está selecionado?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {selectedPersonCount > 0 && selectedEdgeCount > 0
+                ? `Isso apaga ${selectedPersonCount} pessoa(s) e ${selectedEdgeCount} vínculo(s) selecionados. Não pode ser desfeito.`
+                : selectedPersonCount > 0
+                  ? `Isso apaga ${selectedPersonCount} pessoa(s) selecionada(s) e os dados clínicos ligados a elas. Não pode ser desfeito.`
+                  : `Isso apaga ${selectedEdgeCount} vínculo(s) selecionado(s). Não pode ser desfeito.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteSelected.mutate()}
+              className="bg-clinical-critical text-white hover:bg-clinical-critical/90"
+            >
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -25,6 +25,16 @@ import {
   CommandGroup,
   CommandItem,
 } from "@/components/ui/command";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables, TablesUpdate } from "@/integrations/supabase/types";
 
@@ -98,6 +108,24 @@ export function ClanSpreadsheet({ clientId }: Props) {
       return next;
     });
   };
+
+  // Confirmação genérica em modal (substitui window.confirm nativo) — resolve
+  // a promise conforme o botão clicado; fechar de qualquer outra forma conta como recusa.
+  const [confirmState, setConfirmState] = useState<{
+    title: string;
+    description: string;
+    confirmLabel?: string;
+    cancelLabel?: string;
+    destructive?: boolean;
+    resolve: (v: boolean) => void;
+  } | null>(null);
+  const askConfirm = (opts: {
+    title: string;
+    description: string;
+    confirmLabel?: string;
+    cancelLabel?: string;
+    destructive?: boolean;
+  }) => new Promise<boolean>((resolve) => setConfirmState({ ...opts, resolve }));
 
   const { data: persons, isLoading } = useQuery({
     queryKey: ["genogram-persons", clientId],
@@ -243,9 +271,11 @@ export function ClanSpreadsheet({ clientId }: Props) {
 
   const scaffoldTemplate = async () => {
     if (rows.length > 0) {
-      const ok = confirm(
-        `Já existem ${rows.length} pessoas cadastradas. Adicionar as ${RELATIONSHIP_TEMPLATE.length} linhas do modelo mesmo assim?`,
-      );
+      const ok = await askConfirm({
+        title: "Aplicar modelo mesmo assim?",
+        description: `Já existem ${rows.length} pessoas cadastradas. Adicionar as ${RELATIONSHIP_TEMPLATE.length} linhas do modelo mesmo assim?`,
+        confirmLabel: "Aplicar modelo",
+      });
       if (!ok) return;
     }
     for (const rel of RELATIONSHIP_TEMPLATE) {
@@ -334,9 +364,14 @@ export function ClanSpreadsheet({ clientId }: Props) {
         // Pergunta se deseja substituir a planilha inteira
         const shouldOverwrite =
           persons && persons.length > 0
-            ? window.confirm(
-                "Deseja substituir a planilha atual pelos dados do arquivo?\n\n[OK] = Apagar tudo e usar apenas o arquivo\n[Cancelar] = Adicionar as novas linhas no final",
-              )
+            ? await askConfirm({
+                title: "Substituir a planilha atual?",
+                description:
+                  "Você pode apagar tudo e usar só os dados do arquivo, ou manter o que já está aqui e adicionar as novas linhas no final.",
+                confirmLabel: "Apagar tudo e usar o arquivo",
+                cancelLabel: "Manter e adicionar no final",
+                destructive: true,
+              })
             : false;
 
         let currentContext = "Consulente";
@@ -559,14 +594,15 @@ export function ClanSpreadsheet({ clientId }: Props) {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => {
-              if (
-                window.confirm(
-                  "ATENÇÃO: Deseja apagar TODAS as linhas da planilha deste cliente? Esta ação não pode ser desfeita.",
-                )
-              ) {
-                deleteAllPersons.mutate();
-              }
+            onClick={async () => {
+              const ok = await askConfirm({
+                title: "Apagar toda a planilha?",
+                description:
+                  "Isso remove TODAS as linhas cadastradas para este cliente. Esta ação não pode ser desfeita.",
+                confirmLabel: "Apagar tudo",
+                destructive: true,
+              });
+              if (ok) deleteAllPersons.mutate();
             }}
             disabled={deleteAllPersons.isPending}
             className="font-bold border-destructive/20 text-destructive hover:bg-destructive/5"
@@ -731,9 +767,14 @@ export function ClanSpreadsheet({ clientId }: Props) {
                         </td>
                         <td className="px-1 text-center">
                           <button
-                            onClick={() => {
-                              if (confirm(`Remover ${r.full_name || "pessoa sem nome"}?`))
-                                removePerson.mutate(r.id);
+                            onClick={async () => {
+                              const ok = await askConfirm({
+                                title: "Remover pessoa?",
+                                description: `Remover ${r.full_name || "pessoa sem nome"} da planilha?`,
+                                confirmLabel: "Remover",
+                                destructive: true,
+                              });
+                              if (ok) removePerson.mutate(r.id);
                             }}
                             className="rounded h-11 w-11 flex items-center justify-center text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                             title="Remover"
@@ -821,6 +862,38 @@ export function ClanSpreadsheet({ clientId }: Props) {
           </div>
         </motion.div>
       )}
+
+      <AlertDialog
+        open={!!confirmState}
+        onOpenChange={(o) => {
+          if (!o) {
+            confirmState?.resolve(false);
+            setConfirmState(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-serif text-ink">
+              {confirmState?.title}
+            </AlertDialogTitle>
+            <AlertDialogDescription>{confirmState?.description}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{confirmState?.cancelLabel ?? "Cancelar"}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => confirmState?.resolve(true)}
+              className={
+                confirmState?.destructive
+                  ? "bg-clinical-critical text-white hover:bg-clinical-critical/90"
+                  : undefined
+              }
+            >
+              {confirmState?.confirmLabel ?? "Confirmar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
