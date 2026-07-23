@@ -40,7 +40,7 @@ function AppHome() {
   });
 
   // Clientes ativos — base para contagem, pendências de consentimento e nomes
-  const { data: clients = [] } = useQuery({
+  const { data: clients = [], isLoading: clientsLoading } = useQuery({
     queryKey: ["mesa-clients"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -53,7 +53,7 @@ function AppHome() {
   });
 
   // Sessões de hoje
-  const { data: todaySessions = [] } = useQuery({
+  const { data: todaySessions = [], isLoading: sessionsLoading } = useQuery({
     queryKey: ["mesa-sessions-today"],
     queryFn: async () => {
       const start = new Date();
@@ -72,7 +72,7 @@ function AppHome() {
   });
 
   // Padrões transgeracionais ainda não reconhecidos (Segundo Cérebro)
-  const { data: openPatterns = [] } = useQuery({
+  const { data: openPatterns = [], isLoading: patternsLoading } = useQuery({
     queryKey: ["mesa-open-patterns"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -85,6 +85,8 @@ function AppHome() {
       return data ?? [];
     },
   });
+
+  const isLoading = clientsLoading || sessionsLoading || patternsLoading;
 
   const firstName =
     profile?.full_name?.split(" ")[0] ?? user.email?.split("@")[0] ?? "Pesquisadora";
@@ -114,27 +116,39 @@ function AppHome() {
       <main className="container-liz space-y-6 py-2">
         {/* Linha de indicadores — cards brancos */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <StatCard
-            icon={Users}
-            value={clients.length}
-            label={clients.length === 1 ? "Cliente ativo" : "Clientes ativos"}
-            to="/app/clientes"
-          />
-          <StatCard
-            icon={Sparkles}
-            value={openPatterns.length}
-            label={openPatterns.length === 1 ? "Padrão em aberto" : "Padrões em aberto"}
-            accent={openPatterns.length > 0 ? "olive" : "muted"}
-          />
-          <StatCard
-            icon={ClipboardCheck}
-            value={pendingConsent.length}
-            label={
-              pendingConsent.length === 1 ? "Consentimento pendente" : "Consentimentos pendentes"
-            }
-            accent={pendingConsent.length > 0 ? "critical" : "positive"}
-            to="/app/clientes"
-          />
+          {isLoading ? (
+            <>
+              <StatCardSkeleton />
+              <StatCardSkeleton />
+              <StatCardSkeleton />
+            </>
+          ) : (
+            <>
+              <StatCard
+                icon={Users}
+                value={clients.length}
+                label={clients.length === 1 ? "Cliente ativo" : "Clientes ativos"}
+                to="/app/clientes"
+              />
+              <StatCard
+                icon={Sparkles}
+                value={openPatterns.length}
+                label={openPatterns.length === 1 ? "Padrão em aberto" : "Padrões em aberto"}
+                accent={openPatterns.length > 0 ? "olive" : "muted"}
+              />
+              <StatCard
+                icon={ClipboardCheck}
+                value={pendingConsent.length}
+                label={
+                  pendingConsent.length === 1
+                    ? "Consentimento pendente"
+                    : "Consentimentos pendentes"
+                }
+                accent={pendingConsent.length > 0 ? "critical" : "positive"}
+                to="/app/clientes"
+              />
+            </>
+          )}
         </div>
 
         {/* Corpo — duas colunas que ocupam a largura */}
@@ -154,7 +168,9 @@ function AppHome() {
                 </Link>
               }
             >
-              {hasPriorities ? (
+              {isLoading ? (
+                <PanelSkeleton rows={2} />
+              ) : hasPriorities ? (
                 <ul className="m-0 list-none divide-y divide-border p-0">
                   {todaySessions.map((s) => (
                     <li key={s.id}>
@@ -183,7 +199,9 @@ function AppHome() {
             </Panel>
 
             <Panel icon={ScrollText} title="Pendências Clínicas">
-              {hasPendencies ? (
+              {isLoading ? (
+                <PanelSkeleton rows={3} />
+              ) : hasPendencies ? (
                 <ul className="m-0 list-none divide-y divide-border p-0">
                   {pendingConsent.slice(0, 5).map((c) => (
                     <li key={c.id}>
@@ -222,7 +240,9 @@ function AppHome() {
           {/* Coluna lateral */}
           <div className="space-y-6">
             <Panel icon={Sparkles} title="Segundo Cérebro & Hipóteses">
-              {openPatterns.length > 0 ? (
+              {isLoading ? (
+                <PanelSkeleton rows={2} />
+              ) : openPatterns.length > 0 ? (
                 <ul className="m-0 list-none space-y-3 p-0">
                   {openPatterns.map((p) => (
                     <li key={p.id}>
@@ -305,6 +325,31 @@ function StatCard({
     </Link>
   ) : (
     inner
+  );
+}
+
+function StatCardSkeleton() {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-surface-document px-5 py-4 shadow-surface">
+      <div className="space-y-2">
+        <div className="skeleton h-8 w-10" />
+        <div className="skeleton h-3 w-24" />
+      </div>
+      <div className="skeleton size-6 rounded-full" />
+    </div>
+  );
+}
+
+function PanelSkeleton({ rows }: { rows: number }) {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: rows }).map((_, i) => (
+        <div key={i} className="flex items-center justify-between gap-4 py-1">
+          <div className="skeleton h-5 w-2/3" />
+          <div className="skeleton h-4 w-12 shrink-0" />
+        </div>
+      ))}
+    </div>
   );
 }
 

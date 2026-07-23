@@ -29,6 +29,7 @@ import {
   TimerReset,
   Users,
   ChevronRight,
+  ChevronLeft,
   Circle,
   Loader2,
 } from "lucide-react";
@@ -37,7 +38,12 @@ import { Button } from "@/components/ui/button";
 import { DocumentHeader } from "@/components/ui/document-header";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import { getAgendaData, type AgendaSessionDTO, type OrphanClientDTO } from "@/lib/agenda.functions";
+import {
+  getAgendaData,
+  type AgendaDataDTO,
+  type AgendaSessionDTO,
+  type OrphanClientDTO,
+} from "@/lib/agenda.functions";
 import {
   getClientGenogram,
   type ClientGenogramDTO,
@@ -46,7 +52,19 @@ import {
 
 export const Route = createFileRoute("/_authenticated/app/agenda")({
   component: AgendaPage,
+  validateSearch: (search: Record<string, unknown>): { date?: string } => {
+    const date = search.date;
+    return typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date) ? { date } : {};
+  },
 });
+
+const toDateKey = (d: Date) =>
+  `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, "0")}-${d.getDate().toString().padStart(2, "0")}`;
+
+const isSameDay = (a: Date, b: Date) =>
+  a.getFullYear() === b.getFullYear() &&
+  a.getMonth() === b.getMonth() &&
+  a.getDate() === b.getDate();
 
 /* ------------------------------ Selos Clínicos ---------------------------- */
 
@@ -176,10 +194,109 @@ const QUICK_ACTIONS = [
   { label: "Abrir biblioteca", icon: BookOpen, to: "/app/biblioteca" },
 ] as const;
 
+/* ------------------------------ Date Navigation ---------------------------- */
+
+const WEEKDAY_SHORT = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+
+function DateNav({
+  viewedDate,
+  isToday,
+  week,
+  onShift,
+  onSelect,
+}: {
+  viewedDate: Date;
+  isToday: boolean;
+  week: { date: string; count: number }[];
+  onShift: (deltaDays: number) => void;
+  onSelect: (d: Date) => void;
+}) {
+  return (
+    <div className="flex items-center gap-1">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="size-8 rounded-lg text-primary/70 hover:text-forest hover:bg-forest-soft/50"
+        onClick={() => onShift(-1)}
+        aria-label="Dia anterior"
+      >
+        <ChevronLeft className="size-4" />
+      </Button>
+
+      <div className="hidden items-center gap-0.5 md:flex">
+        {week.map((w) => {
+          const d = new Date(w.date);
+          const selected = isSameDay(d, viewedDate);
+          return (
+            <button
+              key={w.date}
+              onClick={() => onSelect(d)}
+              className={`flex w-9 flex-col items-center gap-0.5 rounded-lg py-1 transition-colors ${
+                selected
+                  ? "bg-forest text-white"
+                  : "text-primary/70 hover:bg-forest-soft/50 hover:text-forest"
+              }`}
+            >
+              <span className="text-[9px] font-bold uppercase tracking-wide opacity-70">
+                {WEEKDAY_SHORT[d.getDay()]}
+              </span>
+              <span className="text-[13px] font-bold tabular-nums leading-none">{d.getDate()}</span>
+              {w.count > 0 && (
+                <span
+                  className={`size-1 rounded-full ${selected ? "bg-gold" : "bg-forest/50"}`}
+                  aria-hidden
+                />
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      <Button
+        variant="ghost"
+        size="icon"
+        className="size-8 rounded-lg text-primary/70 hover:text-forest hover:bg-forest-soft/50"
+        onClick={() => onShift(1)}
+        aria-label="Próximo dia"
+      >
+        <ChevronRight className="size-4" />
+      </Button>
+
+      {!isToday && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="ml-1 h-8 rounded-lg text-[12px] font-semibold"
+          onClick={() => onSelect(new Date())}
+        >
+          Hoje
+        </Button>
+      )}
+    </div>
+  );
+}
+
 /* ------------------------------ Page Component ---------------------------- */
 
 function AgendaPage() {
   const { user } = Route.useRouteContext();
+  const { date } = Route.useSearch();
+  const navigate = Route.useNavigate();
+
+  const viewedDate = useMemo(() => (date ? new Date(`${date}T00:00:00`) : new Date()), [date]);
+  const isToday = isSameDay(viewedDate, new Date());
+
+  const goToDate = (d: Date) => {
+    const key = toDateKey(d);
+    const todayKey = toDateKey(new Date());
+    navigate({
+      from: Route.fullPath,
+      search: key === todayKey ? {} : { date: key },
+      replace: true,
+    });
+  };
+  const shiftDay = (deltaDays: number) =>
+    goToDate(new Date(viewedDate.getTime() + deltaDays * 86_400_000));
 
   const { data: profile } = useQuery({
     queryKey: ["profile", user.id],
@@ -197,17 +314,18 @@ function AgendaPage() {
     profile?.full_name?.split(" ")[0] ?? user.email?.split("@")[0] ?? "Pesquisadora";
 
   const query = useQuery({
-    queryKey: ["agenda-data"],
-    queryFn: () => getAgendaData(),
+    queryKey: ["agenda-data", date ?? "today"],
+    queryFn: () => getAgendaData({ data: date ? { date } : undefined }),
     staleTime: 60_000,
   });
 
-  const { sessions, orphanClients, prontuariosPendentes } = useMemo(() => {
+  const { sessions, orphanClients, prontuariosPendentes, week } = useMemo(() => {
     const dto = query.data;
     return {
       sessions: dto ? mapDtosToSessions(dto.today) : [],
       orphanClients: dto?.orphanClients ?? ([] as OrphanClientDTO[]),
       prontuariosPendentes: dto?.stats.prontuariosPendentes ?? 0,
+      week: dto?.week ?? ([] as AgendaDataDTO["week"]),
     };
   }, [query.data]);
 
@@ -236,21 +354,32 @@ function AgendaPage() {
         isLoading={query.isLoading}
         isError={query.isError}
         hasSessions={hasSessions}
+        viewedDate={viewedDate}
+        isToday={isToday}
       />
 
-      {/* Quick Actions Bar */}
+      {/* Quick Actions Bar + Date Nav */}
       <div className="container-liz -mt-6 relative z-10">
-        <div className="surface shadow-surface flex flex-wrap gap-1 rounded-2xl px-3 py-2 backdrop-blur">
-          {QUICK_ACTIONS.map((a) => (
-            <Link
-              key={a.label}
-              to={a.to}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl text-[12px] font-semibold text-primary/80 no-underline hover:text-forest hover:bg-forest-soft/50 transition-colors"
-            >
-              <a.icon className="size-3.5" />
-              {a.label}
-            </Link>
-          ))}
+        <div className="surface shadow-surface flex flex-wrap items-center justify-between gap-2 rounded-2xl px-3 py-2 backdrop-blur">
+          <div className="flex flex-wrap gap-1">
+            {QUICK_ACTIONS.map((a) => (
+              <Link
+                key={a.label}
+                to={a.to}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl text-[12px] font-semibold text-primary/80 no-underline hover:text-forest hover:bg-forest-soft/50 transition-colors"
+              >
+                <a.icon className="size-3.5" />
+                {a.label}
+              </Link>
+            ))}
+          </div>
+          <DateNav
+            viewedDate={viewedDate}
+            isToday={isToday}
+            week={week}
+            onShift={shiftDay}
+            onSelect={goToDate}
+          />
         </div>
       </div>
 
@@ -279,7 +408,7 @@ function AgendaPage() {
           </div>
         </div>
       ) : (
-        <EmptyDay isLoading={query.isLoading} orphanClients={orphanClients} />
+        <EmptyDay isLoading={query.isLoading} orphanClients={orphanClients} isToday={isToday} />
       )}
     </div>
   );
@@ -289,9 +418,11 @@ function AgendaPage() {
 function EmptyDay({
   isLoading,
   orphanClients,
+  isToday,
 }: {
   isLoading: boolean;
   orphanClients: OrphanClientDTO[];
+  isToday: boolean;
 }) {
   if (isLoading) {
     return (
@@ -313,11 +444,13 @@ function EmptyDay({
       />
       <section>
         <h2 className="mb-6 font-sans text-[11px] font-bold tracking-widest text-warm-gray uppercase">
-          Sessões de hoje
+          {isToday ? "Sessões de hoje" : "Sessões do dia"}
         </h2>
         <div className="border-b border-ink/10 py-4 md:pr-56">
           <p className="m-0 font-serif text-xl text-ink/55 italic md:text-2xl">
-            Nenhuma sessão registrada para hoje. O dia está aberto para pesquisa e escrita.
+            {isToday
+              ? "Nenhuma sessão registrada para hoje. O dia está aberto para pesquisa e escrita."
+              : "Nenhuma sessão registrada para este dia."}
           </p>
         </div>
         <div className="mt-8">
@@ -376,6 +509,8 @@ function ContextualHeader({
   isLoading,
   isError,
   hasSessions,
+  viewedDate,
+  isToday,
 }: {
   stats: {
     total: number;
@@ -389,17 +524,31 @@ function ContextualHeader({
   isLoading: boolean;
   isError: boolean;
   hasSessions: boolean;
+  viewedDate: Date;
+  isToday: boolean;
 }) {
+  const dayLabel = viewedDate.toLocaleDateString("pt-BR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+
   return (
     <DocumentHeader
       breadcrumb="Agenda Clínica"
       title={
         <div className="flex items-center gap-4">
-          <div className="flex items-center justify-center size-14 shrink-0 rounded-lg bg-forest text-gold font-serif text-3xl font-bold shadow-sm">
+          <div className="flex items-center justify-center size-14 shrink-0 rounded-lg bg-forest text-gold font-serif text-3xl font-bold shadow-surface">
             {firstName.charAt(0).toUpperCase()}
           </div>
           <span className="tracking-tight">
-            {greetingByHour()}, {firstName}.
+            {isToday ? (
+              <>
+                {greetingByHour()}, {firstName}.
+              </>
+            ) : (
+              <span className="capitalize">{dayLabel}</span>
+            )}
           </span>
         </div>
       }
@@ -407,7 +556,7 @@ function ContextualHeader({
         <div className="font-sans font-normal text-ink/70 text-[15px]">
           {hasSessions ? (
             <>
-              Hoje você acompanhará{" "}
+              {isToday ? "Hoje" : "Neste dia"} você acompanhará{" "}
               <strong>
                 {stats.total} {stats.total === 1 ? "história familiar" : "histórias familiares"}
               </strong>
@@ -423,7 +572,9 @@ function ContextualHeader({
               )}
             </>
           ) : (
-            <>Nenhuma sessão marcada para hoje.</>
+            <>
+              {isToday ? "Nenhuma sessão marcada para hoje." : "Nenhuma sessão marcada neste dia."}
+            </>
           )}
         </div>
       }
@@ -493,7 +644,7 @@ function HeaderStat({
     terracotta: "text-terracotta",
   }[accent];
   return (
-    <div className="rounded-xl bg-surface-document/70 backdrop-blur-sm border border-border/40 px-4 py-3 shadow-sm">
+    <div className="rounded-xl bg-surface-document/70 backdrop-blur-sm border border-border/40 px-4 py-3 shadow-surface">
       <div className={`flex items-center gap-1.5 ${accentClass}`}>
         <Icon className="size-3.5" />
         <p className="text-[10px] font-bold uppercase tracking-[0.15em]">{label}</p>
@@ -525,7 +676,7 @@ function TimelineColumn({
         <span className="text-[10px] text-muted-foreground/70 font-semibold">Hoje</span>
       </div>
 
-      <div className="relative rounded-2xl bg-surface-document/80 backdrop-blur border border-border/50 shadow-sm p-4">
+      <div className="relative rounded-2xl bg-surface-document/80 backdrop-blur border border-border/50 shadow-surface p-4">
         {/* vertical line */}
         <div className="absolute left-[38px] top-6 bottom-6 w-px bg-gradient-to-b from-transparent via-border to-transparent" />
 
@@ -662,7 +813,7 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
           {/* Patient identity */}
           <div className="flex items-start gap-5">
             <div
-              className={`size-20 md:size-24 rounded-2xl ${initialsBg} flex items-center justify-center font-serif text-2xl md:text-3xl font-bold shadow-lg shrink-0 relative`}
+              className={`size-20 md:size-24 rounded-2xl ${initialsBg} flex items-center justify-center font-serif text-2xl md:text-3xl font-bold shadow-dossier shrink-0 relative`}
             >
               {session.initials}
               <div className="absolute -bottom-1 -right-1 size-6 rounded-full bg-surface-document border-2 border-cream flex items-center justify-center">
@@ -752,7 +903,7 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
           {/* Actions — apenas destinos reais */}
           <div className="mt-7 flex flex-wrap gap-2 pt-5 border-t border-border/40">
             {session.clientId ? (
-              <Button size="lg" className="font-bold shadow-md" asChild>
+              <Button size="lg" className="font-bold shadow-surface" asChild>
                 <Link
                   to="/app/clientes/$clientId"
                   params={{ clientId: session.clientId }}
@@ -811,7 +962,7 @@ function MiniTreePreview({
   const totalPersons = genogram?.totalPersons ?? 0;
 
   return (
-    <div className="rounded-2xl bg-surface-document/85 backdrop-blur border border-border/50 shadow-sm p-5">
+    <div className="rounded-2xl bg-surface-document/85 backdrop-blur border border-border/50 shadow-surface p-5">
       <div className="flex items-center justify-between mb-4">
         <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground flex items-center gap-2">
           <GitBranch className="size-3.5" /> Genossociograma
@@ -1004,7 +1155,7 @@ function UpcomingList({ currentId, sessions }: { currentId: string; sessions: Se
   const others = sessions.filter((s) => s.id !== currentId);
 
   return (
-    <div className="rounded-2xl bg-surface-document/85 backdrop-blur border border-border/50 shadow-sm p-5">
+    <div className="rounded-2xl bg-surface-document/85 backdrop-blur border border-border/50 shadow-surface p-5">
       <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4 flex items-center gap-2">
         <Clock className="size-3.5" /> Próximas hoje
       </p>
@@ -1077,7 +1228,7 @@ function RightPanel({
   return (
     <aside className="grid gap-4 md:grid-cols-2 2xl:grid-cols-1">
       {/* Preparação do próximo atendimento — dados reais da sessão selecionada */}
-      <div className="rounded-2xl bg-gradient-to-br from-forest via-forest to-forest/90 text-white p-5 shadow-lg relative overflow-hidden">
+      <div className="rounded-2xl bg-gradient-to-br from-forest via-forest to-forest/90 text-white p-5 shadow-dossier relative overflow-hidden">
         <div
           aria-hidden
           className="absolute -top-10 -right-10 size-40 rounded-full bg-gold/20 blur-3xl pointer-events-none"
@@ -1132,7 +1283,7 @@ function RightPanel({
       </div>
 
       {/* Pendências */}
-      <div className="rounded-2xl bg-surface-document/85 backdrop-blur border border-border/50 shadow-sm p-5">
+      <div className="rounded-2xl bg-surface-document/85 backdrop-blur border border-border/50 shadow-surface p-5">
         <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3 flex items-center gap-2">
           <ClipboardList className="size-3.5" /> Pendências
         </p>
@@ -1160,7 +1311,7 @@ function RightPanel({
       </div>
 
       {/* Balanço de tempo do dia */}
-      <div className="rounded-2xl bg-surface-document/85 backdrop-blur border border-border/50 shadow-sm p-5">
+      <div className="rounded-2xl bg-surface-document/85 backdrop-blur border border-border/50 shadow-surface p-5">
         <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">
           Balanço do dia
         </p>
@@ -1206,7 +1357,7 @@ function QuickNote() {
   });
 
   return (
-    <div className="rounded-2xl bg-gradient-to-br from-cream to-surface-document border border-border/50 shadow-sm p-5">
+    <div className="rounded-2xl bg-gradient-to-br from-cream to-surface-document border border-border/50 shadow-surface p-5">
       <div className="mb-2 flex items-center justify-between">
         <p className="m-0 text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground flex items-center gap-2">
           <FileText className="size-3.5" /> Nota rápida

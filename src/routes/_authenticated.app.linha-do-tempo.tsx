@@ -13,6 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DocumentHeader } from "@/components/ui/document-header";
 import { ArchiveEmptyState } from "@/components/ui/archive-empty-state";
 import { Button } from "@/components/ui/button";
@@ -30,14 +31,15 @@ export const Route = createFileRoute("/_authenticated/app/linha-do-tempo")({
 
 function TimelinesPage() {
   const [search, setSearch] = useState("");
+  const [tab, setTab] = useState<"active" | "archived">("active");
 
   const { data: clients = [], isLoading } = useQuery({
-    queryKey: ["timelines-list"],
+    queryKey: ["timelines-list", tab],
     queryFn: async () => {
       const { data: clientRows } = await supabase
         .from("clients")
         .select("*")
-        .eq("status", "active")
+        .eq("status", tab)
         .order("full_name");
 
       const clientIds = (clientRows ?? []).map((c) => c.id);
@@ -86,8 +88,8 @@ function TimelinesPage() {
       />
 
       <div className="container-liz py-8 space-y-6">
-        {/* Search */}
-        <div className="flex items-center gap-3">
+        {/* Search + status */}
+        <div className="flex flex-wrap items-center gap-3">
           <div className="relative w-full max-w-sm">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -98,6 +100,12 @@ function TimelinesPage() {
               className="pl-9 h-10 text-[14px]"
             />
           </div>
+          <Tabs value={tab} onValueChange={(v) => setTab(v as "active" | "archived")}>
+            <TabsList>
+              <TabsTrigger value="active">Ativos</TabsTrigger>
+              <TabsTrigger value="archived">Arquivados</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
         {/* Timelines list */}
@@ -115,15 +123,20 @@ function TimelinesPage() {
             title={
               search
                 ? "Nenhuma linha do tempo com esse nome."
-                : "O tempo desta família ainda não foi desenhado."
+                : tab === "archived"
+                  ? "Nenhum cliente arquivado."
+                  : "O tempo desta família ainda não foi desenhado."
             }
             description={
               search
                 ? "Confira a grafia ou limpe a busca para ver todas as linhas ativas."
-                : "Nascimentos, uniões, perdas e recomeços ganham uma cronologia própria assim que as datas entram no genossociograma."
+                : tab === "archived"
+                  ? "Clientes arquivados aparecem aqui com a linha do tempo que já construíram."
+                  : "Nascimentos, uniões, perdas e recomeços ganham uma cronologia própria assim que as datas entram no genossociograma."
             }
             action={
-              !search && (
+              !search &&
+              tab === "active" && (
                 <Link to="/app/clientes">
                   <Button className="gap-2 bg-forest font-bold text-white hover:bg-forest-mid">
                     <History className="size-4" />

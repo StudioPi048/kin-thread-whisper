@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -64,9 +64,6 @@ const LETICIA_WORKS: Array<{
   subtitle: string;
   kind: "Livro" | "Manual" | "Almanaque" | "Curso" | "Protocolo";
   badge: "Novo" | "Mais estudado" | "Exclusivo" | "Clássico";
-  concepts: number;
-  protocols: number;
-  citations: number;
   accent: "forest" | "forest" | "gold" | "cream";
 }> = [
   {
@@ -74,9 +71,6 @@ const LETICIA_WORKS: Array<{
     subtitle: "Simbologia oral e memória transgeracional",
     kind: "Livro",
     badge: "Novo",
-    concepts: 120,
-    protocols: 48,
-    citations: 312,
     accent: "forest",
   },
   {
@@ -84,9 +78,6 @@ const LETICIA_WORKS: Array<{
     subtitle: "Método clínico Instituto Liz",
     kind: "Manual",
     badge: "Mais estudado",
-    concepts: 86,
-    protocols: 34,
-    citations: 210,
     accent: "gold",
   },
   {
@@ -94,9 +85,6 @@ const LETICIA_WORKS: Array<{
     subtitle: "Onomástica e projeto sentido",
     kind: "Livro",
     badge: "Exclusivo",
-    concepts: 54,
-    protocols: 21,
-    citations: 143,
     accent: "forest",
   },
   {
@@ -104,9 +92,6 @@ const LETICIA_WORKS: Array<{
     subtitle: "Espiritualidade e clínica sistêmica",
     kind: "Livro",
     badge: "Clássico",
-    concepts: 62,
-    protocols: 18,
-    citations: 168,
     accent: "cream",
   },
   {
@@ -114,9 +99,6 @@ const LETICIA_WORKS: Array<{
     subtitle: "Compêndio de casos e verbetes",
     kind: "Almanaque",
     badge: "Exclusivo",
-    concepts: 240,
-    protocols: 72,
-    citations: 480,
     accent: "forest",
   },
   {
@@ -124,9 +106,6 @@ const LETICIA_WORKS: Array<{
     subtitle: "Ferramenta de mapeamento em 4 gerações",
     kind: "Protocolo",
     badge: "Mais estudado",
-    concepts: 32,
-    protocols: 12,
-    citations: 96,
     accent: "forest",
   },
 ];
@@ -185,8 +164,6 @@ const TODAY = {
 const AUTHORS: Array<{
   name: string;
   field: string;
-  works: number;
-  concepts: number;
   initials: string;
   photo?: string;
   years?: string;
@@ -195,8 +172,6 @@ const AUTHORS: Array<{
   {
     name: "Anne Ancelin Schützenberger",
     field: "Psicogenealogia",
-    works: 12,
-    concepts: 48,
     initials: "AS",
     photo:
       "https://commons.wikimedia.org/wiki/Special:FilePath/Anne_Ancelin_Sch%C3%BCtzenberger.jpg?width=400",
@@ -206,8 +181,6 @@ const AUTHORS: Array<{
   {
     name: "Françoise Dolto",
     field: "Psicanálise da infância",
-    works: 22,
-    concepts: 61,
     initials: "FD",
     photo:
       "https://commons.wikimedia.org/wiki/Special:FilePath/Fran%C3%A7oise_Dolto_1980.jpg?width=400",
@@ -217,8 +190,6 @@ const AUTHORS: Array<{
   {
     name: "Alejandro Jodorowsky",
     field: "Metagenealogia · Psicomagia",
-    works: 18,
-    concepts: 40,
     initials: "AJ",
     photo:
       "https://commons.wikimedia.org/wiki/Special:FilePath/Alejandro_Jodorowsky_2022.jpg?width=400",
@@ -228,8 +199,6 @@ const AUTHORS: Array<{
   {
     name: "Ivan Boszormenyi-Nagy",
     field: "Terapia contextual",
-    works: 8,
-    concepts: 22,
     initials: "IB",
     years: "1920–2007",
     nationality: "Hungria · EUA",
@@ -237,8 +206,6 @@ const AUTHORS: Array<{
   {
     name: "Bert Hellinger",
     field: "Constelação familiar",
-    works: 30,
-    concepts: 55,
     initials: "BH",
     photo: "https://commons.wikimedia.org/wiki/Special:FilePath/Bert_Hellinger.jpg?width=400",
     years: "1925–2019",
@@ -247,8 +214,6 @@ const AUTHORS: Array<{
   {
     name: "Nicolas Abraham",
     field: "Cripta e Fantasma",
-    works: 6,
-    concepts: 18,
     initials: "NA",
     years: "1919–1975",
     nationality: "Hungria · França",
@@ -256,8 +221,6 @@ const AUTHORS: Array<{
   {
     name: "Maria Torok",
     field: "Cripta e Fantasma",
-    works: 5,
-    concepts: 15,
     initials: "MT",
     years: "1925–1998",
     nationality: "Hungria · França",
@@ -265,8 +228,6 @@ const AUTHORS: Array<{
   {
     name: "Didier Dumas",
     field: "Não-dito familiar",
-    works: 9,
-    concepts: 20,
     initials: "DD",
     years: "1943–2010",
     nationality: "França",
@@ -274,8 +235,6 @@ const AUTHORS: Array<{
   {
     name: "Patrick Estrade",
     field: "Clínica transgeracional",
-    works: 14,
-    concepts: 26,
     initials: "PE",
     years: "1949–",
     nationality: "França",
@@ -283,8 +242,6 @@ const AUTHORS: Array<{
   {
     name: "Boris Cyrulnik",
     field: "Resiliência sistêmica",
-    works: 20,
-    concepts: 34,
     initials: "BC",
     photo:
       "https://commons.wikimedia.org/wiki/Special:FilePath/Boris_Cyrulnik_-_Comedie_du_Livre_2011_-_Montpellier_-_P1150907.jpg?width=400",
@@ -293,52 +250,45 @@ const AUTHORS: Array<{
   },
 ];
 
-const THEMES: Array<{ name: string; count: number; icon: typeof Feather; accent: string }> = [
-  { name: "Traumas", count: 42, icon: HeartCrack, accent: "bg-forest text-white" },
+const THEMES: Array<{ name: string; icon: typeof Feather; accent: string }> = [
+  { name: "Traumas", icon: HeartCrack, accent: "bg-forest text-white" },
   {
     name: "Lealdades",
-    count: 28,
     icon: Link2,
     accent: "bg-white text-forest border border-forest/10",
   },
-  { name: "Doenças", count: 31, icon: Dna, accent: "bg-white text-forest border border-forest/10" },
-  { name: "Projeto Sentido", count: 19, icon: Target, accent: "bg-forest text-white" },
+  { name: "Doenças", icon: Dna, accent: "bg-white text-forest border border-forest/10" },
+  { name: "Projeto Sentido", icon: Target, accent: "bg-forest text-white" },
   {
     name: "Nome",
-    count: 12,
     icon: Fingerprint,
     accent: "bg-white text-forest border border-forest/10",
   },
   {
     name: "Empresa Familiar",
-    count: 15,
     icon: Building2,
     accent: "bg-white text-forest border border-forest/10",
   },
   {
     name: "Abandono",
-    count: 24,
     icon: UserMinus,
     accent: "bg-white text-forest border border-forest/10",
   },
-  { name: "Luto", count: 33, icon: Anchor, accent: "bg-gold text-forest" },
+  { name: "Luto", icon: Anchor, accent: "bg-gold text-forest" },
   {
     name: "Exclusão",
-    count: 21,
     icon: Users,
     accent: "bg-white text-forest border border-forest/10",
   },
-  { name: "Aborto", count: 18, icon: Baby, accent: "bg-white text-forest border border-forest/10" },
-  { name: "Segredos", count: 26, icon: Lock, accent: "bg-forest/90 text-white" },
+  { name: "Aborto", icon: Baby, accent: "bg-white text-forest border border-forest/10" },
+  { name: "Segredos", icon: Lock, accent: "bg-forest/90 text-white" },
   {
     name: "Epigenética",
-    count: 14,
     icon: Dna,
     accent: "bg-white text-forest border border-forest/10",
   },
   {
     name: "Ordens do Amor",
-    count: 17,
     icon: Scale,
     accent: "bg-white text-forest border border-forest/10",
   },
@@ -351,9 +301,6 @@ const ESSENTIAL_BOOKS: Array<{
   year: number;
   level: string;
   concepts: string[];
-  citations: number;
-  protocols: number;
-  cases: number;
   spine: string;
   cover?: string;
 }> = [
@@ -364,9 +311,6 @@ const ESSENTIAL_BOOKS: Array<{
     year: 1988,
     level: "Fundamento",
     concepts: ["Síndrome de aniversário", "Genossociograma", "Lealdade invisível"],
-    citations: 42,
-    protocols: 8,
-    cases: 12,
     spine: "bg-forest text-white",
     cover: "https://covers.openlibrary.org/b/isbn/8532303617-L.jpg?default=false",
   },
@@ -377,9 +321,6 @@ const ESSENTIAL_BOOKS: Array<{
     year: 2011,
     level: "Avançado",
     concepts: ["4 centros", "Psicomagia", "Arquétipo materno"],
-    citations: 31,
-    protocols: 5,
-    cases: 9,
     spine: "bg-forest text-white",
     cover: "https://covers.openlibrary.org/b/isbn/9782226221315-L.jpg?default=false",
   },
@@ -390,9 +331,6 @@ const ESSENTIAL_BOOKS: Array<{
     year: 1978,
     level: "Teoria",
     concepts: ["Cripta", "Fantasma", "Segredo"],
-    citations: 27,
-    protocols: 3,
-    cases: 7,
     spine: "bg-forest/80 text-white",
     cover: "https://covers.openlibrary.org/b/isbn/9782081218918-L.jpg?default=false",
   },
@@ -403,9 +341,6 @@ const ESSENTIAL_BOOKS: Array<{
     year: 2001,
     level: "Prática",
     concepts: ["Pertença", "Hierarquia", "Equilíbrio"],
-    citations: 55,
-    protocols: 12,
-    cases: 18,
     spine: "bg-gold text-forest",
     cover: "https://covers.openlibrary.org/b/isbn/8531608872-L.jpg?default=false",
   },
@@ -416,9 +351,6 @@ const ESSENTIAL_BOOKS: Array<{
     year: 2013,
     level: "Prática Clínica",
     concepts: ["Padrão de repetição", "Ruptura", "Nomeação"],
-    citations: 19,
-    protocols: 6,
-    cases: 11,
     spine: "bg-forest text-white",
   },
   {
@@ -428,9 +360,6 @@ const ESSENTIAL_BOOKS: Array<{
     year: 2004,
     level: "Resiliência",
     concepts: ["Tutor de resiliência", "Reescrita narrativa"],
-    citations: 22,
-    protocols: 4,
-    cases: 8,
     spine: "bg-forest/80 text-white",
     cover: "https://covers.openlibrary.org/b/isbn/9782738113610-L.jpg?default=false",
   },
@@ -634,6 +563,12 @@ function BibliotecaPage() {
   const [q, setQ] = useState("");
   const [openTerm, setOpenTerm] = useState<(typeof GLOSSARY)[number] | null>(null);
   const [aiOpen, setAiOpen] = useState(true);
+  const resultsRef = useRef<HTMLDivElement>(null);
+
+  const goToSearch = (term?: string) => {
+    if (term !== undefined) setQ(term);
+    resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   const { data: entries = [], isLoading: entriesLoading } = useQuery({
     queryKey: ["library-entries"],
@@ -682,13 +617,17 @@ function BibliotecaPage() {
                   <input
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && goToSearch()}
                     placeholder="Pesquise autores, conceitos, doenças, traumas, sobrenomes, sintomas ou protocolos..."
                     className="flex-1 min-w-0 border-none bg-transparent py-4 text-[15px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none"
                   />
                   <kbd className="hidden md:inline-flex items-center gap-1 rounded-md border border-border/60 bg-muted/50 px-2 py-1 text-[10px] font-mono font-semibold text-muted-foreground">
                     ⌘K
                   </kbd>
-                  <button className="hidden sm:inline-flex items-center gap-2 rounded-[0.85rem] bg-forest px-5 py-3 text-[13px] font-semibold text-white transition-colors hover:bg-forest">
+                  <button
+                    onClick={() => goToSearch()}
+                    className="hidden sm:inline-flex items-center gap-2 rounded-[0.85rem] bg-forest px-5 py-3 text-[13px] font-semibold text-white transition-colors hover:bg-forest"
+                  >
                     Buscar <ArrowRight className="size-4" />
                   </button>
                 </div>
@@ -702,7 +641,7 @@ function BibliotecaPage() {
                   <button
                     key={s}
                     onClick={() => setQ(s)}
-                    className="rounded-full border border-forest/10 bg-white px-3.5 py-1.5 text-[12px] font-medium text-foreground/80 shadow-sm transition-all hover:-translate-y-0.5 hover:border-forest hover:bg-forest hover:text-white hover:shadow-md"
+                    className="rounded-full border border-forest/10 bg-white px-3.5 py-1.5 text-[12px] font-medium text-foreground/80 shadow-surface transition-all hover:-translate-y-0.5 hover:border-forest hover:bg-forest hover:text-white hover:shadow-surface"
                   >
                     {s}
                   </button>
@@ -712,7 +651,7 @@ function BibliotecaPage() {
           </section>
 
           {/* ── BIBLIOTECA AUTORAL — LETÍCIA (PROTAGONISTA) ── */}
-          <LeticiaAutoralSection />
+          <LeticiaAutoralSection onExplore={goToSearch} />
 
           {/* ── HOJE NA BIBLIOTECA (BENTO) ─────────────────── */}
           <section className="space-y-6">
@@ -750,7 +689,10 @@ function BibliotecaPage() {
                       </span>
                     ))}
                   </div>
-                  <button className="inline-flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-widest text-gold hover:gap-3 transition-all">
+                  <button
+                    onClick={() => goToSearch(TODAY.concept.title)}
+                    className="inline-flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-widest text-gold hover:gap-3 transition-all"
+                  >
                     Aprofundar <ArrowRight className="size-3.5" />
                   </button>
                 </div>
@@ -758,7 +700,7 @@ function BibliotecaPage() {
 
               {/* Author of week */}
               <div className="col-span-4 md:col-span-2 rounded-[1.25rem] bg-gold p-6 text-forest flex items-center gap-5 hover-lift">
-                <div className="flex size-20 shrink-0 items-center justify-center rounded-full bg-forest text-white font-serif text-2xl font-bold shadow-lg">
+                <div className="flex size-20 shrink-0 items-center justify-center rounded-full bg-forest text-white font-serif text-2xl font-bold shadow-dossier">
                   {TODAY.authorOfWeek.initials}
                 </div>
                 <div className="min-w-0">
@@ -804,12 +746,7 @@ function BibliotecaPage() {
 
           {/* ── EXPLORAR POR AUTOR ─────────────────────────── */}
           <section className="space-y-6">
-            <SectionHeader
-              number="04"
-              eyebrow="Explorar por autor"
-              title="Vozes fundadoras"
-              action={{ label: `Ver todos (${AUTHORS.length})`, onClick: () => {} }}
-            />
+            <SectionHeader number="04" eyebrow="Explorar por autor" title="Vozes fundadoras" />
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-6">
               {AUTHORS.map((a, i) => (
@@ -828,7 +765,8 @@ function BibliotecaPage() {
                 return (
                   <button
                     key={t.name}
-                    className={`group rounded-[1rem] p-5 text-left transition-all hover:-translate-y-1 hover:shadow-lg ${t.accent}`}
+                    onClick={() => goToSearch(t.name)}
+                    className={`group rounded-[1rem] p-5 text-left transition-all hover:-translate-y-1 hover:shadow-dossier ${t.accent}`}
                   >
                     <div className="flex items-start justify-between">
                       <Icon className="size-6 opacity-80 group-hover:opacity-100" />
@@ -843,18 +781,13 @@ function BibliotecaPage() {
 
           {/* ── LEITURAS FUNDAMENTAIS ──────────────────────── */}
           <section className="space-y-6">
-            <SectionHeader
-              number="06"
-              eyebrow="Cânone"
-              title="Leituras fundamentais"
-              action={{ label: "Ver acervo completo", onClick: () => {} }}
-            />
+            <SectionHeader number="06" eyebrow="Cânone" title="Leituras fundamentais" />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {ESSENTIAL_BOOKS.map((b) => (
                 <article
                   key={b.title}
-                  className="group relative flex gap-5 rounded-[1.25rem] bg-white border border-forest/10 p-5 shadow-sm hover:shadow-2xl hover:shadow-forest/10 transition-all duration-500 hover:-translate-y-1"
+                  className="group relative flex gap-5 rounded-[1.25rem] bg-white border border-forest/10 p-5 shadow-surface hover:shadow-lifted hover:shadow-forest/10 transition-all duration-500 hover:-translate-y-1"
                 >
                   {/* Real cover with typographic fallback */}
                   <BookCoverArt book={b} />
@@ -891,7 +824,10 @@ function BibliotecaPage() {
 
                     <div className="mt-auto pt-4 border-t border-border/50 flex items-center justify-between">
                       <span className="text-[11px] text-muted-foreground italic">{b.level}</span>
-                      <button className="inline-flex items-center gap-1.5 rounded-lg bg-forest px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-white hover:bg-forest transition-colors">
+                      <button
+                        onClick={() => goToSearch(b.title)}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-forest px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-white hover:bg-forest transition-colors"
+                      >
                         Abrir
                       </button>
                     </div>
@@ -930,7 +866,7 @@ function BibliotecaPage() {
                 return (
                   <figure
                     key={i}
-                    className={`mb-5 break-inside-avoid rounded-[1.25rem] p-6 shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 ${bg}`}
+                    className={`mb-5 break-inside-avoid rounded-[1.25rem] p-6 shadow-surface hover:shadow-dossier transition-all hover:-translate-y-1 ${bg}`}
                   >
                     <QuoteIcon className={`size-6 mb-3 ${iconColor}`} />
                     <blockquote
@@ -972,7 +908,7 @@ function BibliotecaPage() {
               action={{ label: "Ver glossário completo", onClick: () => {} }}
             />
 
-            <div className="rounded-[1.25rem] bg-white border border-forest/10 overflow-hidden shadow-sm">
+            <div className="rounded-[1.25rem] bg-white border border-forest/10 overflow-hidden shadow-surface">
               <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-border/50">
                 <div className="divide-y divide-border/50">
                   {GLOSSARY.slice(0, Math.ceil(GLOSSARY.length / 2)).map((g) => (
@@ -996,7 +932,7 @@ function BibliotecaPage() {
               {PROTOCOLS.map((p) => (
                 <article
                   key={p.title}
-                  className={`group rounded-[1.25rem] bg-white p-6 border border-forest/10 border-l-[5px] shadow-sm hover:shadow-xl transition-all ${p.accent}`}
+                  className={`group rounded-[1.25rem] bg-white p-6 border border-forest/10 border-l-[5px] shadow-surface hover:shadow-dossier transition-all ${p.accent}`}
                 >
                   <div className="flex items-center justify-between mb-4">
                     <span className="inline-flex items-center gap-1.5 rounded-md bg-cream px-2 py-1 text-[10px] font-bold text-forest/70">
@@ -1054,80 +990,86 @@ function BibliotecaPage() {
           </section>
 
           {/* ── ACERVO INTELIGENTE (BASE DE DADOS) ─────────── */}
-          {entriesLoading && (
-            <section className="space-y-6">
-              <SectionHeader number="10" eyebrow="Acervo inteligente" title="Carregando acervo…" />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="skeleton h-36 rounded-[1.25rem]" />
-                ))}
-              </div>
-            </section>
-          )}
-          {!entriesLoading && entries.length > 0 && filteredEntries.length === 0 && q.trim() && (
-            <section className="space-y-6">
-              <SectionHeader
-                number="10"
-                eyebrow="Acervo inteligente"
-                title={`Resultados para "${q}"`}
-              />
-              <p className="font-serif text-lg text-ink/45 italic">
-                Nenhum verbete encontrado para este termo. Tente um autor, conceito ou escola.
-              </p>
-            </section>
-          )}
-          {!entriesLoading && filteredEntries.length > 0 && (
-            <section className="space-y-6">
-              <SectionHeader
-                number="10"
-                eyebrow="Acervo inteligente"
-                title={q ? `Resultados para "${q}"` : "Verbetes recentes do acervo"}
-              />
+          <div ref={resultsRef} className="scroll-mt-24 space-y-24">
+            {entriesLoading && (
+              <section className="space-y-6">
+                <SectionHeader
+                  number="10"
+                  eyebrow="Acervo inteligente"
+                  title="Carregando acervo…"
+                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="skeleton h-36 rounded-[1.25rem]" />
+                  ))}
+                </div>
+              </section>
+            )}
+            {!entriesLoading && entries.length > 0 && filteredEntries.length === 0 && q.trim() && (
+              <section className="space-y-6">
+                <SectionHeader
+                  number="10"
+                  eyebrow="Acervo inteligente"
+                  title={`Resultados para "${q}"`}
+                />
+                <p className="font-serif text-lg text-ink/45 italic">
+                  Nenhum verbete encontrado para este termo. Tente um autor, conceito ou escola.
+                </p>
+              </section>
+            )}
+            {!entriesLoading && filteredEntries.length > 0 && (
+              <section className="space-y-6">
+                <SectionHeader
+                  number="10"
+                  eyebrow="Acervo inteligente"
+                  title={q ? `Resultados para "${q}"` : "Verbetes recentes do acervo"}
+                />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {filteredEntries.map((e) => (
-                  <motion.article
-                    key={e.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="rounded-[1.25rem] bg-surface-document border border-forest/10 p-5 hover:shadow-lg transition-all"
-                  >
-                    <div className="flex items-baseline justify-between gap-3">
-                      <h4 className="font-serif text-lg font-bold text-forest">{e.author}</h4>
-                      {e.school && (
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60">
-                          {e.school}
-                        </span>
-                      )}
-                    </div>
-                    <p className="mt-1 text-[13px] font-semibold text-foreground/85">
-                      {e.title}
-                      {e.topic && (
-                        <span className="font-normal text-muted-foreground"> — {e.topic}</span>
-                      )}
-                    </p>
-                    {e.summary && (
-                      <p className="mt-2 text-[12px] leading-relaxed text-muted-foreground line-clamp-3">
-                        {e.summary}
-                      </p>
-                    )}
-                    {e.tags && e.tags.length > 0 && (
-                      <div className="mt-3 flex flex-wrap gap-1">
-                        {e.tags.slice(0, 4).map((t) => (
-                          <span
-                            key={t}
-                            className="rounded-md bg-cream border border-forest/5 px-2 py-0.5 text-[10px] font-semibold text-forest/70"
-                          >
-                            {t}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {filteredEntries.map((e) => (
+                    <motion.article
+                      key={e.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="rounded-[1.25rem] bg-surface-document border border-forest/10 p-5 hover:shadow-dossier transition-all"
+                    >
+                      <div className="flex items-baseline justify-between gap-3">
+                        <h4 className="font-serif text-lg font-bold text-forest">{e.author}</h4>
+                        {e.school && (
+                          <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60">
+                            {e.school}
                           </span>
-                        ))}
+                        )}
                       </div>
-                    )}
-                  </motion.article>
-                ))}
-              </div>
-            </section>
-          )}
+                      <p className="mt-1 text-[13px] font-semibold text-foreground/85">
+                        {e.title}
+                        {e.topic && (
+                          <span className="font-normal text-muted-foreground"> — {e.topic}</span>
+                        )}
+                      </p>
+                      {e.summary && (
+                        <p className="mt-2 text-[12px] leading-relaxed text-muted-foreground line-clamp-3">
+                          {e.summary}
+                        </p>
+                      )}
+                      {e.tags && e.tags.length > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-1">
+                          {e.tags.slice(0, 4).map((t) => (
+                            <span
+                              key={t}
+                              className="rounded-md bg-cream border border-forest/5 px-2 py-0.5 text-[10px] font-semibold text-forest/70"
+                            >
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </motion.article>
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
         </main>
 
         {/* ─────────── RIGHT: IA CLÍNICA (COLLAPSIBLE) ─────────── */}
@@ -1339,7 +1281,7 @@ function ClinicalAiRail({ open, onToggle }: { open: boolean; onToggle: () => voi
     <aside className="relative shrink-0 hidden lg:block transition-all duration-300">
       <button
         onClick={onToggle}
-        className="absolute -left-3 top-16 z-50 flex size-7 items-center justify-center rounded-full border border-forest/15 bg-white text-forest shadow-md hover:scale-105 transition-transform"
+        className="absolute -left-3 top-16 z-50 flex size-7 items-center justify-center rounded-full border border-forest/15 bg-white text-forest shadow-surface hover:scale-105 transition-transform"
       >
         {open ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}
       </button>
@@ -1355,7 +1297,7 @@ function ClinicalAiRail({ open, onToggle }: { open: boolean; onToggle: () => voi
             className="w-[320px] sticky top-6 space-y-5 overflow-hidden"
           >
             {/* AI card */}
-            <div className="relative overflow-hidden rounded-[1.25rem] bg-forest p-6 text-white shadow-xl">
+            <div className="relative overflow-hidden rounded-[1.25rem] bg-forest p-6 text-white shadow-dossier">
               <div className="absolute -right-6 -top-6 size-32 rounded-full bg-forest/25 blur-3xl" />
               <div className="relative">
                 <div className="flex items-center gap-2.5">
@@ -1408,7 +1350,7 @@ function ClinicalAiRail({ open, onToggle }: { open: boolean; onToggle: () => voi
             </div>
 
             {/* Mini timeline */}
-            <div className="rounded-[1.25rem] bg-white border border-forest/10 p-5 shadow-sm">
+            <div className="rounded-[1.25rem] bg-white border border-forest/10 p-5 shadow-surface">
               <p className="text-[10px] font-bold uppercase tracking-widest text-forest">
                 Linha do tempo
               </p>
@@ -1436,7 +1378,7 @@ function ClinicalAiRail({ open, onToggle }: { open: boolean; onToggle: () => voi
             initial={{ width: 0, opacity: 0 }}
             animate={{ width: 48, opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
-            className="w-12 sticky top-6 flex flex-col items-center gap-4 rounded-[1.25rem] bg-white border border-forest/10 py-6 shadow-sm cursor-pointer"
+            className="w-12 sticky top-6 flex flex-col items-center gap-4 rounded-[1.25rem] bg-white border border-forest/10 py-6 shadow-surface cursor-pointer"
             onClick={onToggle}
           >
             <BrainCircuit className="size-5 text-forest animate-pulse" />
@@ -1560,7 +1502,7 @@ function AuthorPortraitCard({
           <p className="mt-0.5 text-[10px] text-white/70">{author.nationality ?? ""}</p>
         </div>
         {featured && (
-          <span className="absolute top-2.5 right-2.5 rounded-full bg-gold px-2 py-0.5 text-[8px] font-black uppercase tracking-widest text-forest shadow-md">
+          <span className="absolute top-2.5 right-2.5 rounded-full bg-gold px-2 py-0.5 text-[8px] font-black uppercase tracking-widest text-forest shadow-surface">
             Semana
           </span>
         )}
@@ -1620,7 +1562,7 @@ function BookCoverArt({ book }: { book: (typeof ESSENTIAL_BOOKS)[number] }) {
 // BIBLIOTECA AUTORAL — SEÇÃO PROTAGONISTA (LETÍCIA)
 // ─────────────────────────────────────────────────────────────
 
-function LeticiaAutoralSection() {
+function LeticiaAutoralSection({ onExplore }: { onExplore: (title: string) => void }) {
   const accentMap = {
     forest: "bg-forest text-white",
     gold: "bg-gold text-forest",
@@ -1669,14 +1611,14 @@ function LeticiaAutoralSection() {
                 Letícia Kuchockowolec Baccin
               </h3>
             </div>
-            <span className="absolute top-4 left-4 inline-flex items-center gap-1.5 rounded-full bg-white/90 backdrop-blur px-3 py-1 text-[9px] font-black uppercase tracking-widest text-forest shadow-md">
+            <span className="absolute top-4 left-4 inline-flex items-center gap-1.5 rounded-full bg-white/90 backdrop-blur px-3 py-1 text-[9px] font-black uppercase tracking-widest text-forest shadow-surface">
               <Sparkles className="size-3 text-gold" /> Coleção autoral
             </span>
           </div>
         </div>
 
         {/* Bio + counters */}
-        <div className="flex flex-col justify-between rounded-[1.5rem] bg-white/70 backdrop-blur-sm border border-forest/10 p-8 shadow-sm">
+        <div className="flex flex-col justify-between rounded-[1.5rem] bg-white/70 backdrop-blur-sm border border-forest/10 p-8 shadow-surface">
           <div className="space-y-5">
             <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-forest">
               Biblioteca Autoral
@@ -1717,7 +1659,7 @@ function LeticiaAutoralSection() {
         {LETICIA_WORKS.map((w) => (
           <article
             key={w.title}
-            className="group relative overflow-hidden rounded-[1.25rem] bg-white border border-forest/10 shadow-sm hover:shadow-2xl hover:shadow-forest/10 hover:-translate-y-1 transition-all duration-500"
+            className="group relative overflow-hidden rounded-[1.25rem] bg-white border border-forest/10 shadow-surface hover:shadow-lifted hover:shadow-forest/10 hover:-translate-y-1 transition-all duration-500"
           >
             {/* Cover panel */}
             <div
@@ -1776,7 +1718,10 @@ function LeticiaAutoralSection() {
                   {w.kind}
                 </span>
               </div>
-              <button className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-forest py-2 text-[11px] font-bold uppercase tracking-wider text-white hover:bg-forest transition-colors">
+              <button
+                onClick={() => onExplore(w.title)}
+                className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-forest py-2 text-[11px] font-bold uppercase tracking-wider text-white hover:bg-forest transition-colors"
+              >
                 <Play className="size-3 fill-current" /> Explorar
               </button>
             </div>

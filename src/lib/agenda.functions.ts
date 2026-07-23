@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export type AgendaSessionDTO = {
@@ -50,10 +51,18 @@ const addMinutes = (d: Date, m: number) => new Date(d.getTime() + m * 60_000);
 
 export const getAgendaData = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<AgendaDataDTO> => {
+  .inputValidator((data: { date?: string } | undefined) =>
+    z.object({ date: z.string().optional() }).optional().parse(data),
+  )
+  .handler(async ({ data, context }): Promise<AgendaDataDTO> => {
     const { supabase, userId } = context;
     const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const viewedDate = data?.date ? new Date(data.date) : now;
+    const todayStart = new Date(
+      viewedDate.getFullYear(),
+      viewedDate.getMonth(),
+      viewedDate.getDate(),
+    );
     const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60_000);
     const weekBack = new Date(todayStart.getTime() - 2 * 24 * 60 * 60_000);
     const weekAhead = new Date(todayStart.getTime() + 5 * 24 * 60 * 60_000);

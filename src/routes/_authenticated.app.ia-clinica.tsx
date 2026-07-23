@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Send, Bot, User, Brain } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,11 @@ function IaClinicaPage() {
       text: "Olá! Sou a IA Clínica Liz, seu segundo cérebro para psicogenealogia. Posso analisar repetições transgeracionais, sugerir hipóteses para casos ou pesquisar conceitos teóricos. Em qual caso ou padrão estamos trabalhando hoje?",
     },
   ]);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages, thinking]);
 
   const handleSend = () => {
     if (!input.trim() || thinking) return;
@@ -103,7 +108,7 @@ function IaClinicaPage() {
                   {msg.sender === "user" ? <User className="size-4" /> : <Bot className="size-4" />}
                 </div>
                 <div
-                  className={`p-4 rounded-2xl shadow-sm text-[14px] leading-relaxed font-serif ${
+                  className={`p-4 rounded-2xl shadow-surface text-[14px] leading-relaxed font-serif ${
                     msg.sender === "user"
                       ? "bg-forest text-white rounded-tr-none"
                       : "bg-surface-document border border-border/50 text-primary rounded-tl-none"
@@ -123,7 +128,7 @@ function IaClinicaPage() {
                 <div className="flex size-8 shrink-0 items-center justify-center rounded-full border border-forest/10 bg-forest/5 text-forest">
                   <Bot className="size-4" />
                 </div>
-                <div className="rounded-2xl rounded-tl-none border border-border/50 bg-surface-document px-4 py-3 shadow-sm">
+                <div className="rounded-2xl rounded-tl-none border border-border/50 bg-surface-document px-4 py-3 shadow-surface">
                   <span className="inline-flex gap-1" aria-label="Preparando resposta">
                     <span className="size-1.5 animate-pulse rounded-full bg-warm-gray/60" />
                     <span className="size-1.5 animate-pulse rounded-full bg-warm-gray/60 [animation-delay:150ms]" />
@@ -132,6 +137,7 @@ function IaClinicaPage() {
                 </div>
               </div>
             )}
+            <div ref={bottomRef} />
           </div>
 
           {/* Chat input */}
