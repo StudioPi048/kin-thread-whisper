@@ -40,6 +40,7 @@ import {
   Unlock,
   AlertTriangle,
   Loader2,
+  RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { toPng } from "html-to-image";
@@ -1018,6 +1019,28 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
     onError: (e) => toast.error("Erro ao alterar fixação do layout"),
   });
 
+  // Posições ficam salvas por pessoa (arraste manual do clínico). Se uma
+  // correção no motor mudar a geração de alguém (ex.: parentesco que antes
+  // caía solto e agora ancora certo), a posição salva antiga FICA por cima
+  // do cálculo novo — a pessoa parece "presa" no lugar errado até alguém
+  // apagar as posições salvas e deixar recalcular do zero.
+  const recalcLayout = useMutation({
+    mutationFn: async () => {
+      const layoutId = query.data?.layout?.id;
+      if (!layoutId) return;
+      const { error } = await supabase
+        .from("genogram_node_positions")
+        .delete()
+        .eq("layout_id", layoutId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Posições recalculadas a partir das regras do genograma.");
+      qc.invalidateQueries({ queryKey: ["genogram", clientId] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao recalcular"),
+  });
+
   const persons = query.data?.persons ?? [];
   const qualifiedCount = nodes.filter((node) => node.type === "person").length;
   const totalCount = persons.length;
@@ -1081,6 +1104,26 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
           >
             {isLayoutFixed ? <Lock className="size-4 text-gold" /> : <Unlock className="size-4" />}
             {isLayoutFixed ? "Fixo" : "Livre"}
+          </Button>
+
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              if (
+                confirm(
+                  "Isso apaga o arranjo manual salvo desta árvore e recalcula a posição de todo mundo do zero, a partir das regras atuais do genograma. Continuar?",
+                )
+              ) {
+                recalcLayout.mutate();
+              }
+            }}
+            disabled={!query.data?.layout?.id || recalcLayout.isPending}
+            title="Recalcula as posições do zero — use se alguém aparecer preso no lugar errado"
+            className="h-11 gap-2 border-white/25 text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[16px] disabled:opacity-45"
+          >
+            <RotateCcw className="size-4" />
+            {recalcLayout.isPending ? "Recalculando" : "Recalcular"}
           </Button>
 
           <div className="hidden items-center gap-4 md:flex ml-3">
