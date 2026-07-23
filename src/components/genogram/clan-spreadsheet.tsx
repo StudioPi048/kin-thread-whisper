@@ -16,15 +16,6 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  Command,
-  CommandInput,
-  CommandList,
-  CommandEmpty,
-  CommandGroup,
-  CommandItem,
-} from "@/components/ui/command";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,12 +29,9 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables, TablesUpdate } from "@/integrations/supabase/types";
 
-import {
-  smartNormalizeRelationship,
-  genealogicalOrder,
-  RELATIONSHIP_GROUPS,
-} from "@/lib/relationship-normalizer";
+import { smartNormalizeRelationship, genealogicalOrder } from "@/lib/relationship-normalizer";
 import { ensureProband } from "@/lib/ensure-proband";
+import { RelationshipCombobox } from "./relationship-combobox";
 import { buildLogicalGraph } from "@/lib/geno/build";
 
 type Person = Tables<"genogram_persons">;
@@ -666,6 +654,9 @@ export function ClanSpreadsheet({ clientId }: Props) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
         >
+          <p className="mb-1.5 text-[13px] font-bold uppercase tracking-[0.1em] text-muted-foreground md:hidden">
+            ← Arraste pra o lado pra ver todas as colunas →
+          </p>
           <div className="overflow-x-auto rounded-sm border-2 border-border/80 bg-surface-document shadow-sm">
             <table className="w-full min-w-[760px] border-collapse text-[16px]">
               <thead className="bg-forest-soft/40 text-[14px] font-bold uppercase tracking-[0.15em] text-forest border-b-2 border-border/80">
@@ -699,7 +690,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
                         <td className="px-3 text-center text-[14px] font-mono font-medium text-muted-foreground">
                           {i + 1}
                         </td>
-                        <td className="px-1 py-1 sticky left-0 z-10 bg-surface-document">
+                        <td className="px-1 py-1 sticky left-0 z-10 bg-surface-document shadow-[4px_0_6px_-4px_rgba(58,45,30,0.2)]">
                           <CellInput
                             value={r.full_name ?? ""}
                             onChange={(v) => scheduleSave(r.id, { full_name: v })}
@@ -714,23 +705,25 @@ export function ClanSpreadsheet({ clientId }: Props) {
                                 (!r.relationship_to_proband?.trim() && !!r.full_name?.trim()) ||
                                 warningsByPersonId.has(r.id)
                               }
+                              triggerClassName="w-full h-11 rounded-sm border-0 bg-transparent px-2 text-[16px] font-medium ring-1 ring-transparent hover:bg-forest-soft/20 focus:bg-forest-soft/30 focus:ring-forest"
                             />
-                            {!r.relationship_to_proband?.trim() && r.full_name?.trim() && (
-                              <div
-                                className="absolute right-2 text-clinical-critical"
-                                title="Vínculo pendente! Esta pessoa não aparecerá conectada na árvore."
-                              >
-                                <AlertCircle className="size-4" />
-                              </div>
-                            )}
-                            {warningsByPersonId.has(r.id) && (
-                              <div
-                                className="absolute right-2 text-clinical-critical"
-                                title={warningsByPersonId.get(r.id)}
-                              >
-                                <AlertCircle className="size-4" />
-                              </div>
-                            )}
+                            {(() => {
+                              const missingRel =
+                                !r.relationship_to_proband?.trim() && !!r.full_name?.trim();
+                              const graphWarning = warningsByPersonId.get(r.id);
+                              const title = missingRel
+                                ? "Vínculo pendente! Esta pessoa não aparecerá conectada na árvore."
+                                : graphWarning;
+                              if (!title) return null;
+                              return (
+                                <div
+                                  className="absolute right-2 text-clinical-critical"
+                                  title={title}
+                                >
+                                  <AlertCircle className="size-4" />
+                                </div>
+                              );
+                            })()}
                           </div>
                         </Td>
                         <Td>
@@ -995,7 +988,7 @@ function isValidYMD(iso: string): boolean {
 function Th({ children, w, sticky }: { children?: React.ReactNode; w?: string; sticky?: boolean }) {
   return (
     <th
-      className={`px-3 py-3 text-left font-bold ${w ?? ""} ${sticky ? "sticky left-0 z-20 bg-forest-soft/40" : ""}`}
+      className={`px-3 py-3 text-left font-bold ${w ?? ""} ${sticky ? "sticky left-0 z-20 bg-forest-soft/40 shadow-[4px_0_6px_-4px_rgba(58,45,30,0.25)]" : ""}`}
     >
       {children}
     </th>
@@ -1021,94 +1014,6 @@ function DetailField({
       </span>
       {children}
     </label>
-  );
-}
-
-function RelationshipCombobox({
-  value,
-  onChange,
-  hasWarning,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  hasWarning?: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
-
-  const trimmedSearch = search.trim();
-  const hasExactMatch = RELATIONSHIP_GROUPS.some((g) =>
-    g.options.some((o) => o.toLowerCase() === trimmedSearch.toLowerCase()),
-  );
-
-  return (
-    <Popover
-      open={open}
-      onOpenChange={(o) => {
-        setOpen(o);
-        if (o) setSearch(value);
-      }}
-    >
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          className={`w-full h-11 flex items-center rounded-sm border-0 bg-transparent px-2 text-left text-[16px] font-medium outline-none ring-1 ring-transparent transition-all hover:bg-forest-soft/20 focus:bg-forest-soft/30 focus:ring-forest truncate ${
-            value ? "text-foreground" : "text-muted-foreground/40"
-          } ${hasWarning ? "pr-8 bg-clinical-critical/5" : ""}`}
-        >
-          {value || "Selecionar parentesco…"}
-        </button>
-      </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="start">
-        <Command shouldFilter={false}>
-          <CommandInput
-            value={search}
-            onValueChange={setSearch}
-            placeholder="Buscar (ex: avô, tio, bisavó materna)…"
-          />
-          <CommandList>
-            <CommandEmpty className="px-3 py-4 text-[13px] text-muted-foreground">
-              Nenhuma opção da lista bate com isso.
-            </CommandEmpty>
-            {trimmedSearch && !hasExactMatch && (
-              <CommandGroup heading="Texto digitado">
-                <CommandItem
-                  value={`__custom__${trimmedSearch}`}
-                  onSelect={() => {
-                    onChange(trimmedSearch);
-                    setOpen(false);
-                  }}
-                >
-                  Usar "{trimmedSearch}" mesmo assim
-                </CommandItem>
-              </CommandGroup>
-            )}
-            {RELATIONSHIP_GROUPS.map((group) => {
-              const filtered = trimmedSearch
-                ? group.options.filter((o) => o.toLowerCase().includes(trimmedSearch.toLowerCase()))
-                : group.options;
-              if (filtered.length === 0) return null;
-              return (
-                <CommandGroup key={group.label} heading={group.label}>
-                  {filtered.map((opt) => (
-                    <CommandItem
-                      key={opt}
-                      value={opt}
-                      onSelect={() => {
-                        onChange(opt);
-                        setOpen(false);
-                      }}
-                    >
-                      {opt}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              );
-            })}
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
   );
 }
 

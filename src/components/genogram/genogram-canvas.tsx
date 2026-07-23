@@ -4,6 +4,7 @@ import {
   BackgroundVariant,
   BaseEdge,
   Controls,
+  MiniMap,
   ReactFlow,
   ReactFlowProvider,
   addEdge,
@@ -41,6 +42,7 @@ import {
   AlertTriangle,
   Loader2,
   RotateCcw,
+  Layers,
 } from "lucide-react";
 import { toast } from "sonner";
 import { toPng } from "html-to-image";
@@ -1063,74 +1065,87 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
     <div className="relative flex flex-col overflow-hidden rounded-[1.5rem] border border-border bg-surface-archive shadow-inner h-[800px] min-h-[calc(100vh-200px)]">
       {/* ── CONTÊINER SUPERIOR (BARRA DE AÇÕES + LEGENDA) ── */}
       <div className="absolute top-4 left-4 z-10 flex flex-col gap-2.5 pointer-events-none max-w-[calc(100%-32px)]">
-        {/* BARRA DE AÇÕES */}
+        {/* BARRA DE AÇÕES — agrupada: Identidade | Editar | Layout | Status | Extras */}
         <div className="pointer-events-auto flex flex-wrap items-center gap-2 px-4 py-3 rounded-xl bg-forest shadow-xl border border-white/10">
-          <div className="flex items-center gap-2 mr-3">
+          <div className="flex items-center gap-2 pr-3 border-r border-white/15">
             <TreePine className="size-4 text-gold" />
             <span className="text-[14px] font-bold uppercase tracking-[0.2em] text-white">
               Genossociograma
             </span>
           </div>
 
-          <Button
-            size="sm"
-            variant="forest"
-            onClick={() => setCreatingPerson(true)}
-            className="h-11 gap-2"
-          >
-            <UserPlus className="size-4" />
-            Adicionar pessoa
-          </Button>
+          {/* Grupo: Editar */}
+          <div className="flex items-center gap-2 pr-3 border-r border-white/15">
+            <Button
+              size="sm"
+              variant="forest"
+              onClick={() => setCreatingPerson(true)}
+              className="h-11 gap-2"
+            >
+              <UserPlus className="size-4" />
+              Adicionar pessoa
+            </Button>
 
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setRelDialog({ open: true })}
-            disabled={persons.length < 2}
-            className="h-11 gap-2 border-white/25 text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[16px]"
-          >
-            <Link2 className="size-4" />
-            Criar vínculo
-          </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setRelDialog({ open: true })}
+              disabled={persons.length < 2}
+              className="h-11 gap-2 border-white/25 text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[16px]"
+            >
+              <Link2 className="size-4" />
+              Criar vínculo
+            </Button>
+          </div>
 
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => saveLayout.mutate()}
-            disabled={saveLayout.isPending || !layoutDirty}
-            className="h-11 gap-2 border-white/25 text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[16px] disabled:opacity-45"
-          >
-            <Save className="size-4" />
-            {saveLayout.isPending ? "Salvando" : "Salvar layout"}
-          </Button>
+          {/* Grupo: Layout */}
+          <div className="flex items-center gap-2 pr-3 border-r border-white/15">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => saveLayout.mutate()}
+              disabled={saveLayout.isPending || !layoutDirty}
+              className="h-11 gap-2 border-white/25 text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[16px] disabled:opacity-45"
+            >
+              <Save className="size-4" />
+              {saveLayout.isPending ? "Salvando" : "Salvar layout"}
+            </Button>
 
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => toggleLayoutFixed.mutate()}
-            disabled={!query.data?.layout?.id || toggleLayoutFixed.isPending}
-            className={`h-11 gap-2 border-white/25 normal-case tracking-normal font-semibold text-[16px] ${isLayoutFixed ? "bg-white/20 text-white" : "text-white hover:bg-white/10 hover:text-white"}`}
-            title={
-              !query.data?.layout?.id ? "Salve o layout pelo menos uma vez para poder fixá-lo" : ""
-            }
-          >
-            {isLayoutFixed ? <Lock className="size-4 text-gold" /> : <Unlock className="size-4" />}
-            {isLayoutFixed ? "Fixo" : "Livre"}
-          </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => toggleLayoutFixed.mutate()}
+              disabled={!query.data?.layout?.id || toggleLayoutFixed.isPending}
+              className={`h-11 gap-2 border-white/25 normal-case tracking-normal font-semibold text-[16px] ${isLayoutFixed ? "bg-white/20 text-white" : "text-white hover:bg-white/10 hover:text-white"}`}
+              title={
+                !query.data?.layout?.id
+                  ? "Salve o layout pelo menos uma vez para poder fixá-lo"
+                  : ""
+              }
+            >
+              {isLayoutFixed ? (
+                <Lock className="size-4 text-gold" />
+              ) : (
+                <Unlock className="size-4" />
+              )}
+              {isLayoutFixed ? "Fixo" : "Livre"}
+            </Button>
 
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setConfirmRecalc(true)}
-            disabled={!query.data?.layout?.id || recalcLayout.isPending}
-            title="Recalcula as posições do zero — use se alguém aparecer preso no lugar errado"
-            className="h-11 gap-2 border-white/25 text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[16px] disabled:opacity-45"
-          >
-            <RotateCcw className="size-4" />
-            {recalcLayout.isPending ? "Recalculando" : "Recalcular"}
-          </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setConfirmRecalc(true)}
+              disabled={!query.data?.layout?.id || recalcLayout.isPending}
+              title="Recalcula as posições do zero — use se alguém aparecer preso no lugar errado"
+              className="h-11 gap-2 border-white/25 text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[16px] disabled:opacity-45"
+            >
+              <RotateCcw className="size-4" />
+              {recalcLayout.isPending ? "Recalculando" : "Recalcular"}
+            </Button>
+          </div>
 
-          <div className="hidden items-center gap-4 md:flex ml-3">
+          {/* Grupo: Status — sempre visível (quebra linha em telas estreitas, nunca some) */}
+          <div className="flex flex-wrap items-center gap-3 pr-3 border-r border-white/15">
             <span className="flex items-center gap-1.5 text-[16px] text-white">
               <Users className="size-3.5 text-forest" />
               <strong className="text-white">{qualifiedCount}</strong>
@@ -1148,7 +1163,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
             {warnings.length > 0 && (
               <Popover>
                 <PopoverTrigger asChild>
-                  <button className="flex items-center gap-1.5 rounded-full bg-amber-500/20 px-2.5 py-1 text-[14px] font-bold text-amber-300 hover:bg-amber-500/30 transition-colors">
+                  <button className="flex items-center gap-1.5 rounded-full bg-amber-500/20 px-2.5 py-1 text-[14px] font-bold text-amber-300 hover:bg-amber-500/30 transition-colors animate-[pulse-gold_2.2s_ease-in-out_infinite]">
                     <AlertTriangle className="size-3.5" />
                     {warnings.length} para revisar
                   </button>
@@ -1172,6 +1187,58 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
                 {layoutDirty ? "Não salvo" : `Salvo às ${lastSavedAt}`}
               </span>
             )}
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  className="flex items-center gap-1.5 rounded px-2 py-1 text-[14px] font-bold text-white/80 hover:bg-white/10 hover:text-white transition-colors"
+                  title="Legenda dos símbolos"
+                >
+                  <Layers className="size-3.5" />
+                  <span className="hidden sm:inline">Legenda</span>
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72" align="start">
+                <p className="mb-2 text-[13px] font-bold uppercase tracking-wide text-muted-foreground">
+                  Legenda do mapa
+                </p>
+                <div className="grid grid-cols-1 gap-2 text-[15px]">
+                  <span className="flex items-center gap-2">
+                    <span className="inline-block size-3.5 border-2 border-forest bg-white" />
+                    Masculino
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <span className="inline-block size-3.5 rounded-full border-2 border-forest bg-white" />
+                    Feminino
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <span className="inline-block size-3.5 rotate-45 border-2 border-gold bg-white" />
+                    Não-binário / desconhecido
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <svg
+                      viewBox="0 0 10 10"
+                      className="size-3.5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                    >
+                      <polygon points="5,1 9,9 1,9" className="text-foreground/70" />
+                    </svg>
+                    Aborto
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <span className="relative inline-block size-3.5 border-2 border-transparent bg-white">
+                      <span className="absolute inset-[-2px] w-[140%] h-[2px] bg-[#3A3A3A] rotate-[45deg] origin-top-left" />
+                    </span>
+                    Falecido
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <span className="inline-block size-3.5 border-2 border-forest bg-forest/20" />
+                    Paciente-índice
+                  </span>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div className="ml-auto flex items-center gap-1">
@@ -1281,6 +1348,13 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
               style={{ opacity: 0.4 }}
             />
             <Controls className="shadow-xl overflow-hidden rounded-xl" showInteractive={false} />
+            <MiniMap
+              className="!hidden shadow-xl sm:!block"
+              nodeColor="var(--color-forest)"
+              maskColor="rgba(238, 244, 241, 0.65)"
+              pannable
+              zoomable
+            />
           </ReactFlow>
         )}
         {!query.isLoading && persons.length > 0 && (

@@ -254,21 +254,26 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
           {displayName}
         </p>
         {dates ? (
-          <p className="mt-0.5 text-[9.5px] font-bold text-ink/80 leading-tight tabular-nums">
+          <p className="mt-0.5 text-[11px] font-bold text-ink/80 leading-tight tabular-nums">
             {dates}
           </p>
         ) : (
           <div className="h-3.5" />
         )}
         {d.is_proband && (
-          <span className="mt-0.5 inline-block rounded bg-forest px-1.5 py-0.2 text-[8px] font-black uppercase tracking-[0.1em] text-white">
+          <span className="mt-0.5 inline-block rounded bg-forest px-1.5 py-0.2 text-[10px] font-black uppercase tracking-[0.1em] text-white">
             Paciente
           </span>
         )}
       </div>
 
-      {/* Visual drag handle to connect people */}
-      <div className="absolute -bottom-7 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-50 flex items-center justify-center pointer-events-auto">
+      {/* Visual drag handle to connect people — visível ao selecionar (touch) ou hover (mouse) */}
+      <div
+        className={cn(
+          "absolute -bottom-7 left-1/2 -translate-x-1/2 transition-opacity z-50 flex items-center justify-center pointer-events-auto",
+          selected ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+        )}
+      >
         <Handle
           id="visual-connect"
           type="source"

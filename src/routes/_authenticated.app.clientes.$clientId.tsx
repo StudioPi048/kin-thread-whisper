@@ -45,6 +45,8 @@ import {
   Sparkles,
   Layers,
   CalendarDays,
+  Table2,
+  Repeat,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -113,6 +115,12 @@ function ClientDossierPage() {
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<DossierTab>(tabFromUrl ?? "genogram");
+
+  const goToTab = (next: DossierTab) => {
+    setActiveTab(next);
+    navigate({ from: Route.fullPath, search: (prev) => ({ ...prev, tab: next }), replace: true });
+  };
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -390,10 +398,14 @@ function ClientDossierPage() {
       <div className="container-liz -mt-2 relative z-20 flex gap-6 items-start">
         {/* Main Content (Tabs) */}
         <div className="flex-1 min-w-0">
-          <Tabs defaultValue={tabFromUrl ?? "genogram"} className="w-full">
+          <Tabs
+            value={activeTab}
+            onValueChange={(v) => goToTab(v as DossierTab)}
+            className="w-full"
+          >
             {/* STICKY NAV TABS — rolagem horizontal no mobile */}
-            <div className="sticky top-0 z-30 -mx-6 border-b border-border/40 bg-surface-archive/85 px-6 py-2 backdrop-blur-md sm:mx-0 sm:px-0">
-              <div className="overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="sticky top-0 z-30 -mx-6 flex items-center gap-2 border-b border-border/40 bg-surface-archive/85 px-6 py-2 backdrop-blur-md sm:mx-0 sm:px-0">
+              <div className="min-w-0 flex-1 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 <TabsList className="flex h-auto w-max flex-nowrap justify-start gap-1 rounded-full border border-border/40 bg-surface-document p-1 shadow-md">
                   {(
                     [
@@ -416,6 +428,27 @@ function ClientDossierPage() {
                   ))}
                 </TabsList>
               </div>
+
+              {/* Atalho rápido Genograma ↔ Planilha — as duas telas de dados do clã mais usadas */}
+              {(activeTab === "genogram" || activeTab === "clan") && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => goToTab(activeTab === "genogram" ? "clan" : "genogram")}
+                  className="hidden shrink-0 gap-1.5 rounded-full font-semibold sm:flex"
+                >
+                  <Repeat className="size-3.5" />
+                  {activeTab === "genogram" ? (
+                    <>
+                      <Table2 className="size-3.5" /> Ver planilha
+                    </>
+                  ) : (
+                    <>
+                      <TreePine className="size-3.5" /> Ver genograma
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
 
             <div className="mt-6">

@@ -35,6 +35,7 @@ import {
   formatDateBR,
 } from "@/lib/genogram";
 import { personLifeEvents, type LifeEvent } from "@/lib/patterns";
+import { RelationshipCombobox } from "./relationship-combobox";
 import type { Database } from "@/integrations/supabase/types";
 
 type PersonRow = Database["public"]["Tables"]["genogram_persons"]["Row"];
@@ -293,6 +294,14 @@ export function PersonFormDialog({
                   />
                 </Field>
               </Row>
+              <Field label="Parentesco com o paciente-índice" id="relationship_to_proband">
+                <RelationshipCombobox
+                  value={v.relationship_to_proband}
+                  onChange={(x) => set("relationship_to_proband", x)}
+                  placeholder="Ex.: Pai, Tia paterna, Bisavô materno..."
+                  triggerClassName="flex h-[42px] w-full rounded-none border-0 border-b-2 border-border/60 bg-transparent px-2 text-[16px] font-medium transition-all duration-300 hover:border-forest/50 focus-visible:outline-none focus-visible:border-forest focus-visible:bg-[#EFE9E0]/50"
+                />
+              </Field>
               <Row>
                 <Field label="Gênero" id="gender">
                   <Select value={v.gender} onValueChange={(x) => set("gender", x)}>
