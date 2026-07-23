@@ -789,7 +789,7 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
                 </span>
               </div>
               {session.status === "next" && (
-                <Badge className="bg-forest text-white border-transparent text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full animate-pulse">
+                <Badge className="bg-forest text-white border-transparent text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full animate-[pulse-gold_2.2s_ease-in-out_infinite]">
                   Próxima sessão
                 </Badge>
               )}
