@@ -431,7 +431,13 @@ export function PersonFormDialog({
                     }}
                     placeholder="Diabetes, luto, depressão... (Enter para adicionar)"
                   />
-                  <Button type="button" variant="forest" size="icon" onClick={addCondition}>
+                  <Button
+                    type="button"
+                    variant="forest"
+                    size="icon"
+                    onClick={addCondition}
+                    aria-label="Adicionar condição de saúde"
+                  >
                     <Plus className="size-4" />
                   </Button>
                 </div>
@@ -447,6 +453,7 @@ export function PersonFormDialog({
                         <button
                           type="button"
                           onClick={() => removeCondition(c)}
+                          aria-label={`Remover ${c}`}
                           className="opacity-60 hover:opacity-100 transition-opacity"
                         >
                           <X className="size-3" />
@@ -472,7 +479,13 @@ export function PersonFormDialog({
                       placeholder="Descrição (ex.: exílio, casamento, aborto)"
                       aria-label="Descrição"
                     />
-                    <Button type="button" variant="outline" size="icon" onClick={addEvent}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={addEvent}
+                      aria-label="Adicionar evento biográfico"
+                    >
                       <Plus className="size-4" />
                     </Button>
                   </div>
@@ -495,6 +508,7 @@ export function PersonFormDialog({
                             <button
                               type="button"
                               onClick={() => removeEvent(i)}
+                              aria-label={`Remover evento: ${ev.description}`}
                               className="text-muted-foreground hover:text-destructive"
                             >
                               <X className="size-4" />

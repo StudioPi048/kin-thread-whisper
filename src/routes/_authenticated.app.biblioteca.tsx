@@ -9,8 +9,6 @@ import {
   ChevronRight,
   ChevronLeft,
   Copy,
-  Bookmark,
-  StickyNote,
   Play,
   Clock,
   Layers,
@@ -34,7 +32,6 @@ import {
   Quote as QuoteIcon,
   BrainCircuit,
   Wand2,
-  ScrollText,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -975,15 +972,6 @@ function BibliotecaPage() {
                       </li>
                     ))}
                   </ol>
-
-                  <div className="mt-6 flex gap-2">
-                    <button className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-forest py-2.5 text-[11px] font-bold uppercase tracking-wider text-white hover:bg-forest transition-colors">
-                      <ScrollText className="size-3.5" /> Checklist
-                    </button>
-                    <button className="inline-flex items-center justify-center rounded-lg border border-forest/15 px-3 text-forest hover:bg-forest hover:text-white transition-colors">
-                      <Play className="size-3.5" />
-                    </button>
-                  </div>
                 </article>
               ))}
             </div>
@@ -1257,20 +1245,9 @@ function QuoteActions({ tone, text, author }: { tone: string; text: string; auth
         onClick={handleCopy}
         className={`p-1.5 rounded-md transition-colors ${iconClass}`}
         title="Copiar"
+        aria-label="Copiar citação"
       >
         <Copy className="size-3.5" />
-      </button>
-      <button className={`p-1.5 rounded-md transition-colors ${iconClass}`} title="Salvar">
-        <Bookmark className="size-3.5" />
-      </button>
-      <button
-        className={`p-1.5 rounded-md transition-colors ${iconClass}`}
-        title="Adicionar às notas"
-      >
-        <StickyNote className="size-3.5" />
-      </button>
-      <button className={`p-1.5 rounded-md transition-colors ${iconClass}`} title="Usar em sessão">
-        <Play className="size-3.5" />
       </button>
     </div>
   );
@@ -1281,6 +1258,8 @@ function ClinicalAiRail({ open, onToggle }: { open: boolean; onToggle: () => voi
     <aside className="relative shrink-0 hidden lg:block transition-all duration-300">
       <button
         onClick={onToggle}
+        aria-label={open ? "Recolher IA Clínica" : "Expandir IA Clínica"}
+        aria-expanded={open}
         className="absolute -left-3 top-16 z-50 flex size-7 items-center justify-center rounded-full border border-forest/15 bg-white text-forest shadow-surface hover:scale-105 transition-transform"
       >
         {open ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}

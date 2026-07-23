@@ -130,6 +130,7 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
                   variant="forest"
                   className="size-7 rounded-full border-2 border-white shadow-dossier [&_svg]:size-3.5"
                   title="Adicionar parente"
+                  aria-label="Adicionar parente"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <Plus />

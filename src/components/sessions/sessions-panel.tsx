@@ -397,13 +397,20 @@ function SessionCard({
                 onClick={onReprocess}
                 disabled={reprocessing}
                 title="Reprocessar áudio"
+                aria-label="Reprocessar áudio"
               >
                 <RefreshCw
                   className={`h-4 w-4 text-muted-foreground hover:text-forest ${reprocessing ? "animate-spin" : ""}`}
                 />
               </Button>
             )}
-            <Button size="icon-sm" variant="ghost" onClick={onDelete} title="Excluir sessão">
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              onClick={onDelete}
+              title="Excluir sessão"
+              aria-label="Excluir sessão"
+            >
               <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
             </Button>
           </div>

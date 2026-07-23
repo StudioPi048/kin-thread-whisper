@@ -452,6 +452,7 @@ function ClientDossierPage() {
               onClick={() => setEditing(true)}
               className="hover:bg-black/5"
               title="Editar"
+              aria-label="Editar"
             >
               <Pencil className="size-3.5" />
             </Button>
@@ -461,6 +462,7 @@ function ClientDossierPage() {
               onClick={() => toggleArchive.mutate()}
               className="hover:bg-black/5"
               title={client.status === "active" ? "Arquivar" : "Reativar"}
+              aria-label={client.status === "active" ? "Arquivar" : "Reativar"}
             >
               {client.status === "active" ? (
                 <Archive className="size-3.5" />
@@ -474,6 +476,7 @@ function ClientDossierPage() {
               className="text-clinical-critical hover:bg-clinical-critical/10 hover:text-clinical-critical"
               onClick={() => setDeleting(true)}
               title="Excluir"
+              aria-label="Excluir cliente"
             >
               <Trash2 className="size-3.5" />
             </Button>

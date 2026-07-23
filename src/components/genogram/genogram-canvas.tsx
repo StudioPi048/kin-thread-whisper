@@ -1192,6 +1192,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
                 <button
                   className="flex items-center gap-1.5 rounded px-2 py-1 text-[14px] font-bold text-white/80 hover:bg-white/10 hover:text-white transition-colors"
                   title="Legenda dos símbolos"
+                  aria-label="Legenda dos símbolos"
                 >
                   <Layers className="size-3.5" />
                   <span className="hidden sm:inline">Legenda</span>
