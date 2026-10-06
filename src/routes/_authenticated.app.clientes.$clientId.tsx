@@ -341,7 +341,7 @@ function ClientDossierPage() {
   };
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pb-12">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pb-12 atlas-dossier">
       <DocumentHeader
         breadcrumb={
           <>
@@ -362,7 +362,7 @@ function ClientDossierPage() {
           <div className="flex items-center gap-4">
             <motion.div
               layoutId={`avatar-${client.id}`}
-              className="relative flex size-14 shrink-0 items-center justify-center rounded-lg bg-archive-old font-serif text-2xl font-bold text-ink shadow-sm overflow-hidden group cursor-pointer border border-border/40"
+              className="relative flex size-11 shrink-0 items-center justify-center rounded-lg bg-archive-old font-serif text-2xl font-bold text-ink shadow-sm overflow-hidden group cursor-pointer border border-border/40"
             >
               {avatarUrl ? (
                 <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
@@ -387,7 +387,7 @@ function ClientDossierPage() {
           </div>
         }
         subtitle={
-          <div className="flex flex-wrap items-center gap-6 text-[13px] text-ink/70 not-italic mt-2 font-sans tracking-normal font-normal">
+          <div className="flex flex-wrap items-center gap-4 text-[13px] text-ink/70 not-italic mt-2 font-sans tracking-normal font-normal">
             <div className="flex items-center gap-2">
               <Mail className="size-3.5 opacity-50" />
               <span className="font-medium">{client.email || "Sem e-mail"}</span>
@@ -403,45 +403,9 @@ function ClientDossierPage() {
               <span className="font-medium">{age !== null ? `${age} anos` : "Idade omitida"}</span>
             </div>
 
-            <div className="flex-1" />
-
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-full border border-border/40 bg-surface-document/60 px-4 py-1.5">
-              <span
-                className="flex items-center gap-1.5 text-[12px] font-semibold text-ink/80"
-                title="Cliente desde"
-              >
-                {monthsAsClient === 0
-                  ? "Cliente novo"
-                  : monthsAsClient < 12
-                    ? `Cliente há ${monthsAsClient} ${monthsAsClient === 1 ? "mês" : "meses"}`
-                    : `Cliente há ${Math.floor(monthsAsClient / 12)} ${Math.floor(monthsAsClient / 12) === 1 ? "ano" : "anos"}`}
-              </span>
-              <div className="w-px h-3 bg-border/60" />
-              <span
-                className="flex items-center gap-1.5 text-[12px] font-semibold text-ink/80"
-                title="Sessões registradas"
-              >
-                <CalendarDays className="size-3.5" /> {sessionCount}{" "}
-                {sessionCount === 1 ? "sessão" : "sessões"}
-              </span>
-              <div className="w-px h-3 bg-border/60" />
-              <span
-                className="flex items-center gap-1.5 text-[12px] font-semibold text-ink/80"
-                title="Próxima sessão agendada"
-              >
-                <CalendarDays className="size-3.5 text-gold" />
-                {nextSessionISO
-                  ? new Date(nextSessionISO).toLocaleDateString("pt-BR", {
-                      day: "2-digit",
-                      month: "short",
-                    })
-                  : "Sem sessão agendada"}
-              </span>
-              <div className="w-px h-3 bg-border/60" />
-              <span className="flex items-center gap-1.5 text-[12px] font-bold text-ink shadow-sm">
-                <Sparkles className="size-3.5 text-gold" /> IA Clínica
-              </span>
-            </div>
+            <span className="text-xs text-muted-foreground">
+              {sessionCount} {sessionCount === 1 ? "sessão registrada" : "sessões registradas"}
+            </span>
           </div>
         }
         actions={
@@ -484,7 +448,7 @@ function ClientDossierPage() {
         }
       />
 
-      <div className="container-liz -mt-2 relative z-20 flex gap-6 items-start">
+      <div className="container-liz -mt-2 relative z-20 flex gap-6 items-start atlas-tabs">
         {/* Main Content (Tabs) */}
         <div className="flex-1 min-w-0">
           <Tabs
@@ -493,14 +457,14 @@ function ClientDossierPage() {
             className="w-full"
           >
             {/* STICKY NAV TABS — rolagem horizontal no mobile */}
-            <div className="sticky top-0 z-30 -mx-6 flex items-center gap-2 border-b border-border/40 bg-surface-archive/85 px-6 py-2 backdrop-blur-md sm:mx-0 sm:px-0">
+            <div className="sticky top-0 z-30 -mx-6 flex items-center gap-2 border-b border-border/40 bg-surface-archive px-6 py-2  sm:mx-0 sm:px-0">
               <div className="min-w-0 flex-1 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 <TabsList className="flex h-auto w-max flex-nowrap justify-start gap-1 rounded-full border border-border/40 bg-surface-document p-1 shadow-md">
                   {(
                     [
                       { value: "overview", label: "Visão geral", Icon: FileText },
                       { value: "genogram", label: "Genossociograma", Icon: TreePine },
-                      { value: "timeline", label: "Linhas de Herança", Icon: History },
+                      { value: "timeline", label: "Linha do tempo", Icon: History },
                       { value: "patterns", label: "Padrões", Icon: Activity },
                       { value: "intake", label: "Anamnese", Icon: null },
                       { value: "sessions", label: "Sessões", Icon: null },
@@ -540,7 +504,7 @@ function ClientDossierPage() {
               )}
             </div>
 
-            <div className="mt-6">
+            <div className="mt-4">
               {/* Visão Geral (Resumo Executivo Clinico) */}
               <TabsContent value="overview">
                 <div className="mb-6">
@@ -570,7 +534,7 @@ function ClientDossierPage() {
                         </p>
                       </ClinicalDocument>
                     ) : (
-                      <section className="border-l-[3px] border-l-material-olive bg-surface-manuscript px-5 py-4">
+                      <section className="border-l border-l-material-olive bg-surface-manuscript px-5 py-4">
                         <h3 className="m-0 font-serif text-lg font-bold text-ink">
                           Hipótese Clínica
                         </h3>
@@ -709,7 +673,7 @@ function ClientDossierPage() {
         </div>
 
         {/* Collapsible Clinical Intelligence Copilot Panel */}
-        <ClinicalIntelligencePanel clientId={clientId} />
+        {activeTab !== "genogram" && <ClinicalIntelligencePanel clientId={clientId} />}
       </div>
 
       <ClientFormDialog
@@ -793,7 +757,7 @@ function JourneyStrip({
                       ? "bg-forest ring-4 ring-forest/15"
                       : isDone
                         ? "bg-forest"
-                        : "bg-cream border border-border text-muted-foreground/60"
+                        : "bg-cream border border-border text-muted-foreground"
                   }`}
                 >
                   {isDone ? <CheckCircle2 className="size-3.5" /> : i + 1}

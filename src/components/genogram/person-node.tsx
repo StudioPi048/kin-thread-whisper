@@ -103,13 +103,14 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
         ) : (
           <div
             className={cn(
-              "size-full bg-surface-document transition-all",
+              "size-full transition-colors",
               "border-2",
               borderColor,
-              isMale && "rounded-2xl",
+              isFemale ? "bg-[#C9969F]" : "bg-[#90A6BF]",
+              isMale && "rounded-none",
               isFemale && "rounded-full",
-              isDiamond && "rotate-45 rounded-2xl",
-              d.is_proband && "shadow-[0_0_0_3px_var(--color-forest)] ring-1 ring-forest/30",
+              isDiamond && "rotate-45 rounded-none",
+              d.is_proband && "outline-2 outline-offset-4 outline-gold",
               selected && "ring-2 ring-forest ring-offset-2 ring-offset-background",
             )}
           />
@@ -238,34 +239,10 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
         />
       </div>
 
-      {/* ── CARD DE INFORMAÇÃO — Independente e flutuante ── */}
-      <div
-        className={cn(
-          "mt-3 w-[140px] min-h-[72px] h-auto bg-surface-dossier border border-material-border rounded-lg shadow-sm px-2 py-1.5 flex flex-col justify-center items-center text-center select-none z-10 transition-all pb-2",
-          d.is_proband && "border-forest shadow-[0_0_0_1px_rgba(18,41,31,0.15)]",
-          selected && "ring-1 ring-forest border-forest",
-        )}
-      >
-        <p
-          className={cn(
-            "font-sans font-bold text-foreground leading-[1.2] break-words",
-            d.is_proband ? "text-[16px]" : "text-[14px]",
-          )}
-        >
-          {displayName}
-        </p>
-        {dates ? (
-          <p className="mt-0.5 text-[11px] font-bold text-ink/80 leading-tight tabular-nums">
-            {dates}
-          </p>
-        ) : (
-          <div className="h-3.5" />
-        )}
-        {d.is_proband && (
-          <span className="mt-0.5 inline-block rounded bg-forest px-1.5 py-0.2 text-[10px] font-black uppercase tracking-[0.1em] text-white">
-            Paciente
-          </span>
-        )}
+      <div className="atlas-person-info">
+        <p className="text-sm font-semibold leading-tight break-words">{displayName}</p>
+        {dates && <p className="atlas-person-dates tabular-nums">{dates}</p>}
+        {d.is_proband && <span className="text-[10px] text-gold">Pessoa de referência</span>}
       </div>
 
       {/* Visual drag handle to connect people — visível ao selecionar (touch) ou hover (mouse) */}

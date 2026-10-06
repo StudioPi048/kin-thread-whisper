@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
-import { LizLogo, LizLogoLockup } from "@/components/liz-logo";
+import { GenealizWordmark } from "@/components/genealiz-wordmark";
+import { FamilyAtlasDiagram } from "@/components/family-atlas-diagram";
 
 const searchSchema = z.object({
   mode: z.enum(["signin", "signup", "recover", "reset"]).optional(),
@@ -106,7 +107,7 @@ function AuthPage() {
           password: parsed.password,
         });
         if (error) throw error;
-        toast.success("Bem-vinda ao Instituto Liz.");
+        toast.success("Bem-vinda ao GENEALIZ.");
       }
       navigate({ to: redirectTo ?? "/app" });
     } catch (err) {
@@ -135,79 +136,37 @@ function AuthPage() {
 
   return (
     <div className="grid min-h-screen md:grid-cols-[1fr_1fr]">
-      {/* ── PAINEL ESQUERDO — Manifesto editorial ───────── */}
-      <aside className="block-forest relative hidden overflow-hidden md:flex md:flex-col md:justify-between md:p-12">
-        {/* Constelação familiar — teia dourada quase invisível sobre a floresta */}
-        <img
-          src="/assets/renders/constelacao-floresta.jpg"
-          alt=""
-          aria-hidden
-          className="pointer-events-none absolute inset-0 size-full object-cover opacity-60 mix-blend-screen"
-        />
-        <Link to="/" className="relative flex items-center gap-3">
-          <LizLogoLockup variant="light" />
+      <aside className="atlas-auth-aside">
+        <Link to="/" aria-label="GENEALIZ — Início">
+          <GenealizWordmark />
         </Link>
-
-        <div className="relative">
-          {/* Número decorativo */}
-          <span
-            aria-hidden
-            className="mb-4 block font-serif text-9xl font-bold leading-none text-white/[0.07] select-none"
-          >
-            Liz
-          </span>
-
-          <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-gold mb-6">
-            Beta fechado
+        <div>
+          <h2 className="font-serif text-5xl leading-tight font-medium">
+            Cada pessoa faz parte
+            <br />
+            de uma história maior.
+          </h2>
+          <p className="mt-5 text-sm leading-7 text-slate-300 max-w-md">
+            Seu espaço de trabalho para organizar relações familiares e acompanhar cada atendimento.
           </p>
-
-          <blockquote className="font-serif text-3xl font-bold leading-tight text-white">
-            "O que não pode ser dito, não pode ser esquecido —
-            <span className="text-gold"> apenas repetido."</span>
-          </blockquote>
-
-          <p className="mt-5 text-[14px] text-white/45">— inspirado em Françoise Dolto</p>
-
-          <div className="mt-10 space-y-3 border-t border-sidebar-border pt-8">
-            {[
-              "Genossociograma vivo com banco de dados por nó",
-              "Motor de padrões transgeracionais automático",
-              "Dados criptografados. LGPD. Sigilo profissional.",
-            ].map((f) => (
-              <p key={f} className="flex items-start gap-2 text-[14px] text-white/70">
-                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-gold" />
-                {f}
-              </p>
-            ))}
-          </div>
+          <FamilyAtlasDiagram />
         </div>
-
-        <p className="relative text-[11px] text-white/22">Beta fechado · Instituto Liz · 2026</p>
+        <p className="text-xs text-slate-300">GENEALIZ · Psicogenealogia</p>
       </aside>
 
       {/* ── PAINEL DIREITO — Formulário ──────────────────── */}
       <main className="flex items-center justify-center bg-background p-6 md:p-14">
         <div className="w-full max-w-md">
-          {/* Mobile: logo */}
-          <div className="md:hidden mb-10 flex items-center gap-3">
-            <LizLogo size={36} />
-            <span className="font-serif text-2xl font-bold text-primary">Instituto Liz</span>
-          </div>
-
+          <Link to="/" className="mb-10 block md:hidden">
+            <GenealizWordmark />
+          </Link>
           {/* Header */}
           <div className="mb-8">
-            <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-forest">
-              {mode === "signin"
-                ? "Acesso à plataforma"
-                : mode === "signup"
-                  ? "Beta fechado"
-                  : "Recuperação de acesso"}
-            </p>
             <h1 className="mt-3 font-serif text-4xl font-bold text-primary">
               {mode === "signin"
                 ? "Entrar"
                 : mode === "signup"
-                  ? "Solicitar acesso"
+                  ? "Criar conta"
                   : mode === "recover"
                     ? "Recuperar senha"
                     : "Nova senha"}
@@ -383,7 +342,7 @@ function AuthPage() {
                   className="font-bold text-forest hover:text-forest transition-colors underline-offset-4 hover:underline"
                   onClick={() => setMode("signup")}
                 >
-                  Solicitar acesso
+                  Criar conta
                 </button>
               </>
             ) : (

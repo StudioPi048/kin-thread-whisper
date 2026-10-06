@@ -4,30 +4,27 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  // Base gráfica: serif, uppercase, bordas retas (rounded-sm)
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-sm border border-transparent font-serif text-[16px] uppercase tracking-[0.15em] cursor-pointer transition-all duration-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-forest focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-40 [&_svg]:pointer-events-none [&_svg]:size-[16px] [&_svg]:shrink-0 [&_svg]:stroke-[1.5]",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md border border-transparent font-sans text-sm font-semibold cursor-pointer transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:stroke-[1.7]",
   {
     variants: {
       variant: {
-        default: "bg-forest text-white shadow-dossier hover:bg-forest-mid active:scale-[0.98]",
-        destructive:
-          "bg-clinical-critical text-white shadow-dossier hover:opacity-90 active:scale-[0.98]",
-        outline:
-          "border border-[#D4C3A3] bg-transparent text-primary shadow-sm hover:bg-[#FAF8F5] active:scale-[0.98]",
-        secondary: "bg-[#EFE9E0] text-forest hover:bg-[#D4C3A3] active:scale-[0.98]",
-        ghost: "hover:bg-[#FAF8F5] text-primary active:scale-[0.98]",
-        link: "text-primary hover:text-gold p-0 h-auto normal-case tracking-normal font-serif italic text-[16px]",
-        gold: "bg-gold text-forest shadow-dossier hover:bg-gold-soft active:scale-[0.98]",
-        forest: "bg-forest text-white shadow-dossier hover:bg-forest-mid active:scale-[0.98]",
-        hero: "bg-[#1B241C] text-white border border-white/20 shadow-dossier hover:bg-black active:scale-[0.97] text-[14px] tracking-[0.2em]",
+        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        destructive: "bg-clinical-critical text-white hover:bg-clinical-critical/90",
+        outline: "border-input bg-card text-foreground hover:bg-secondary",
+        secondary: "bg-secondary text-secondary-foreground hover:bg-muted",
+        ghost: "text-foreground hover:bg-secondary",
+        link: "text-primary underline-offset-4 hover:underline",
+        gold: "bg-gold text-forest hover:bg-gold-soft",
+        forest: "bg-forest text-white hover:bg-forest-mid",
+        hero: "bg-gold text-forest hover:bg-gold-soft",
       },
       size: {
-        default: "h-[52px] px-7 py-3",
-        sm: "h-10 px-4 text-[16px]",
-        lg: "h-[58px] px-10 text-[14px]",
-        xl: "h-16 px-14 text-[15px]",
-        icon: "h-[52px] w-[52px]",
-        "icon-sm": "h-10 w-10 rounded-md",
+        default: "h-11 px-5 py-2",
+        sm: "h-9 px-3 text-sm",
+        lg: "h-12 px-6 text-sm",
+        xl: "h-14 px-8 text-base",
+        icon: "size-11",
+        "icon-sm": "size-9",
       },
     },
     defaultVariants: { variant: "default", size: "default" },

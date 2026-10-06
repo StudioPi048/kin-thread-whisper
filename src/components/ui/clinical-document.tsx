@@ -35,7 +35,7 @@ export function ClinicalDocument({
       className={cn(
         "relative rounded-sm border p-6 transition-all duration-300",
         // Lógica Estrutural Básica (Sem teatralização)
-        isExcluded ? "opacity-40 grayscale" : "bg-white border-[#E5E2DC]",
+        isExcluded ? "bg-secondary border-border" : "bg-white border-border",
         stage === "observada" ? "border-dashed" : "border-solid",
         className,
       )}
@@ -62,7 +62,7 @@ export function ClinicalDocument({
         </div>
 
         {/* Indicadores Clínicos Discretos (Sem animação) */}
-        <div className="flex items-center gap-2 text-ink/40">
+        <div className="flex items-center gap-2 text-muted-foreground">
           {temporalAnchor && (
             <span className="text-xs font-sans border-b border-ink/20 pb-0.5">
               {temporalAnchor}
@@ -75,9 +75,9 @@ export function ClinicalDocument({
       </div>
 
       {/* 2. Conteúdo Principal */}
-      <div className="font-serif text-ink/80 text-[15px] leading-relaxed">
+      <div className="font-sans text-ink-soft text-sm leading-relaxed">
         {isSecret && stage !== "investigada" ? (
-          <div className="italic text-ink/40 text-sm py-2">
+          <div className="italic text-muted-foreground text-sm py-2">
             [Informação preservada. Requer investigação para expandir.]
           </div>
         ) : (

@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -556,18 +556,34 @@ const PROTOCOLS = [
 // COMPONENT
 // ─────────────────────────────────────────────────────────────
 
+type LibraryItem = {
+  key: string;
+  category: string;
+  title: string;
+  meta: string;
+  body: string;
+  details?: string[];
+  term?: (typeof GLOSSARY)[number];
+};
+const categories = [
+  "Todos",
+  "Acervo autoral",
+  "Autores",
+  "Livros",
+  "Conceitos",
+  "Protocolos",
+  "Citações",
+  "Meu acervo",
+];
 function BibliotecaPage() {
   const [q, setQ] = useState("");
-  const [openTerm, setOpenTerm] = useState<(typeof GLOSSARY)[number] | null>(null);
-  const [aiOpen, setAiOpen] = useState(true);
-  const resultsRef = useRef<HTMLDivElement>(null);
-
-  const goToSearch = (term?: string) => {
-    if (term !== undefined) setQ(term);
-    resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
-  const { data: entries = [], isLoading: entriesLoading } = useQuery({
+  const [category, setCategory] = useState("Todos");
+  const [selected, setSelected] = useState<LibraryItem | null>(null);
+  const {
+    data: entries = [],
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: ["library-entries"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -578,564 +594,218 @@ function BibliotecaPage() {
       return data as Entry[];
     },
   });
-
-  const filteredEntries = useMemo(() => {
-    const term = q.trim().toLowerCase();
-    if (!term) return entries.slice(0, 6);
-    return entries
-      .filter((e) => {
-        const hay = [e.author, e.title, e.topic, e.school, e.summary, e.content, ...(e.tags ?? [])]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-        return hay.includes(term);
-      })
-      .slice(0, 12);
-  }, [entries, q]);
-
+  const items = useMemo<LibraryItem[]>(
+    () => [
+      ...LETICIA_WORKS.map((x, i) => ({
+        key: `liz-${i}`,
+        category: "Acervo autoral",
+        title: x.title,
+        meta: `${x.kind} · ${LETICIA.name}`,
+        body: x.subtitle,
+      })),
+      ...AUTHORS.map((x, i) => ({
+        key: `author-${i}`,
+        category: "Autores",
+        title: x.name,
+        meta: x.field,
+        body: [x.years, x.nationality].filter(Boolean).join(" · "),
+      })),
+      ...ESSENTIAL_BOOKS.map((x, i) => ({
+        key: `book-${i}`,
+        category: "Livros",
+        title: x.title,
+        meta: `${x.author} · ${x.year}`,
+        body: x.subtitle,
+        details: x.concepts,
+      })),
+      ...GLOSSARY.map((x, i) => ({
+        key: `term-${i}`,
+        category: "Conceitos",
+        title: x.term,
+        meta: x.authors.join(" · "),
+        body: x.short,
+        term: x,
+      })),
+      ...PROTOCOLS.map((x, i) => ({
+        key: `protocol-${i}`,
+        category: "Protocolos",
+        title: x.title,
+        meta: `${x.duration} · ${x.indication}`,
+        body: x.goal,
+        details: x.steps,
+      })),
+      ...QUOTES.map((x, i) => ({
+        key: `quote-${i}`,
+        category: "Citações",
+        title: x.theme,
+        meta: `${x.author} · ${x.work}`,
+        body: x.text,
+      })),
+      ...entries.map((x) => ({
+        key: x.id,
+        category: "Meu acervo",
+        title: x.title,
+        meta: [x.author, x.school, x.topic].filter(Boolean).join(" · "),
+        body: x.summary || x.content || "",
+        details: x.content ? [x.content] : undefined,
+      })),
+    ],
+    [entries],
+  );
+  const shown = items.filter(
+    (x) =>
+      (category === "Todos" || x.category === category) &&
+      [x.title, x.meta, x.body, ...(x.details ?? [])]
+        .join(" ")
+        .toLowerCase()
+        .includes(q.toLowerCase()),
+  );
   return (
-    <div className="relative pb-20">
+    <div className="pb-14">
       <DocumentHeader
-        breadcrumb="Acervo Clínico"
-        title="Biblioteca Clínica"
-        subtitle="Todo o conhecimento da Psicogenealogia conectado em um único lugar. Autores, conceitos, protocolos e casos que conversam entre si."
+        breadcrumb="Biblioteca"
+        title="Referências para o seu trabalho."
+        subtitle="Consulte autores, obras, conceitos e materiais do acervo."
       />
-
-      <div className="container-liz mt-4 flex gap-8 items-start">
-        {/* MAIN */}
-        <main className="flex-1 min-w-0 space-y-24">
-          {/* ── SEARCH AREA ───────────────────────────────────────── */}
-          <section className="relative">
-            <div className="relative z-10 space-y-6">
-              <div className="group relative max-w-3xl">
-                <div className="absolute inset-0 rounded-[1.25rem] bg-gradient-to-r from-forest/30 to-gold/20 blur-xl opacity-60 group-focus-within:opacity-100 transition-opacity duration-500" />
-                <div className="relative flex items-center gap-3 rounded-[1.25rem] border border-forest/10 bg-surface-document p-2 pl-5 shadow-dossier">
-                  <Search className="size-5 text-forest shrink-0" />
-                  <input
-                    value={q}
-                    onChange={(e) => setQ(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && goToSearch()}
-                    placeholder="Pesquise autores, conceitos, doenças, traumas, sobrenomes, sintomas ou protocolos..."
-                    className="flex-1 min-w-0 border-none bg-transparent py-4 text-[15px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none"
-                  />
-                  <kbd className="hidden md:inline-flex items-center gap-1 rounded-md border border-border/60 bg-muted/50 px-2 py-1 text-[10px] font-mono font-semibold text-muted-foreground">
-                    ⌘K
-                  </kbd>
-                  <button
-                    onClick={() => goToSearch()}
-                    className="hidden sm:inline-flex items-center gap-2 rounded-[0.85rem] bg-forest px-5 py-3 text-[13px] font-semibold text-white transition-colors hover:bg-forest"
-                  >
-                    Buscar <ArrowRight className="size-4" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/70 mr-1">
-                  Sugestões:
+      <div className="container-liz atlas-library">
+        <aside>
+          <nav aria-label="Categorias da biblioteca">
+            {categories.map((c) => (
+              <button
+                key={c}
+                onClick={() => setCategory(c)}
+                aria-pressed={category === c}
+                className="atlas-library-category"
+              >
+                {c}
+                <span>
+                  {c === "Todos" ? items.length : items.filter((x) => x.category === c).length}
                 </span>
-                {QUICK_SUGGESTIONS.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setQ(s)}
-                    className="rounded-full border border-forest/10 bg-white px-3.5 py-1.5 text-[12px] font-medium text-foreground/80 shadow-surface transition-all hover:-translate-y-0.5 hover:border-forest hover:bg-forest hover:text-white hover:shadow-surface"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          {/* ── BIBLIOTECA AUTORAL — LETÍCIA (PROTAGONISTA) ── */}
-          <LeticiaAutoralSection onExplore={goToSearch} />
-
-          {/* ── HOJE NA BIBLIOTECA (BENTO) ─────────────────── */}
-          <section className="space-y-6">
-            <SectionHeader
-              number="03"
-              eyebrow="Destaques do acervo"
-              title="Destaques da Biblioteca"
-            />
-
-            <div className="grid grid-cols-4 gap-4 auto-rows-[minmax(180px,auto)]">
-              {/* Concept of day — big */}
-              <div className="col-span-4 md:col-span-2 md:row-span-2 relative overflow-hidden rounded-[1.25rem] bg-forest text-white p-8 flex flex-col justify-between group hover-lift">
-                <div className="absolute -right-6 -top-2 font-serif text-[180px] italic leading-none text-white/[0.05] select-none">
-                  {TODAY.concept.title.charAt(0)}
-                </div>
-                <div className="relative space-y-4">
-                  <div className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-sm px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-gold">
-                    <Sparkles className="size-3" /> {TODAY.concept.label}
-                  </div>
-                  <h3 className="font-serif text-4xl md:text-5xl font-bold italic leading-tight">
-                    {TODAY.concept.title}
-                  </h3>
-                  <p className="max-w-md text-[14px] leading-relaxed text-white/75">
-                    {TODAY.concept.body}
-                  </p>
-                </div>
-                <div className="relative flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex flex-wrap gap-1.5">
-                    {TODAY.concept.related.map((r) => (
-                      <span
-                        key={r}
-                        className="rounded-md border border-white/15 bg-white/5 px-2 py-1 text-[10px] font-semibold text-white/80"
-                      >
-                        {r}
-                      </span>
-                    ))}
-                  </div>
-                  <button
-                    onClick={() => goToSearch(TODAY.concept.title)}
-                    className="inline-flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-widest text-gold hover:gap-3 transition-all"
-                  >
-                    Aprofundar <ArrowRight className="size-3.5" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Author of week */}
-              <div className="col-span-4 md:col-span-2 rounded-[1.25rem] bg-gold p-6 text-forest flex items-center gap-5 hover-lift">
-                <div className="flex size-20 shrink-0 items-center justify-center rounded-full bg-forest text-white font-serif text-2xl font-bold shadow-dossier">
-                  {TODAY.authorOfWeek.initials}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">
-                    Autor em destaque
-                  </p>
-                  <h4 className="font-serif text-2xl font-bold leading-tight mt-1">
-                    {TODAY.authorOfWeek.name}
-                  </h4>
-                  <p className="text-[12px] mt-1 opacity-80">{TODAY.authorOfWeek.field}</p>
-                </div>
-              </div>
-
-              {/* Recommended book */}
-              <div className="col-span-2 md:col-span-1 rounded-[1.25rem] bg-white border border-forest/10 p-5 flex flex-col justify-between hover-lift">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-forest">
-                    Livro recomendado
-                  </p>
-                  <h4 className="mt-2 font-serif text-[18px] font-bold text-forest italic leading-tight">
-                    {TODAY.bookRecommended.title}
-                  </h4>
-                  <p className="text-[11px] text-muted-foreground mt-1">
-                    {TODAY.bookRecommended.author}
-                  </p>
-                </div>
-                <span className="mt-3 self-start rounded-full bg-gold/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-forest">
-                  {TODAY.bookRecommended.tag}
-                </span>
-              </div>
-
-              {/* Clinical question */}
-              <div className="col-span-2 md:col-span-1 rounded-[1.25rem] bg-forest-soft/60 border border-forest/20 p-5 flex flex-col justify-between hover-lift">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-forest">
-                  Pergunta clínica
-                </p>
-                <p className="text-[13px] font-serif italic leading-relaxed text-forest">
-                  "{TODAY.clinicalQuestion}"
-                </p>
-              </div>
-            </div>
-          </section>
-
-          {/* ── EXPLORAR POR AUTOR ─────────────────────────── */}
-          <section className="space-y-6">
-            <SectionHeader number="04" eyebrow="Explorar por autor" title="Vozes fundadoras" />
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-6">
-              {AUTHORS.map((a, i) => (
-                <AuthorPortraitCard key={a.name} author={a} featured={i === 0} />
-              ))}
-            </div>
-          </section>
-
-          {/* ── EXPLORAR POR TEMA ──────────────────────────── */}
-          <section className="space-y-6">
-            <SectionHeader number="05" eyebrow="Explorar por tema" title="Territórios clínicos" />
-
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {THEMES.map((t) => {
-                const Icon = t.icon;
-                return (
-                  <button
-                    key={t.name}
-                    onClick={() => goToSearch(t.name)}
-                    className={`group rounded-[1rem] p-5 text-left transition-all hover:-translate-y-1 hover:shadow-dossier ${t.accent}`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <Icon className="size-6 opacity-80 group-hover:opacity-100" />
-                    </div>
-                    <h4 className="mt-6 font-serif text-lg font-bold leading-tight">{t.name}</h4>
-                    <ChevronRight className="mt-2 size-4 opacity-0 -translate-x-1 group-hover:opacity-70 group-hover:translate-x-0 transition-all" />
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-
-          {/* ── LEITURAS FUNDAMENTAIS ──────────────────────── */}
-          <section className="space-y-6">
-            <SectionHeader number="06" eyebrow="Cânone" title="Leituras fundamentais" />
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {ESSENTIAL_BOOKS.map((b) => (
-                <article
-                  key={b.title}
-                  className="group relative flex gap-5 rounded-[1.25rem] bg-white border border-forest/10 p-5 shadow-surface hover:shadow-lifted hover:shadow-forest/10 transition-all duration-500 hover:-translate-y-1"
+              </button>
+            ))}
+          </nav>
+          <div className="mt-7 border-t border-border pt-5">
+            <h2 className="font-serif text-xl">Temas</h2>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {THEMES.map((t) => (
+                <button
+                  key={t.name}
+                  onClick={() => {
+                    setQ(t.name);
+                    setCategory("Todos");
+                  }}
+                  className="atlas-chip"
                 >
-                  {/* Real cover with typographic fallback */}
-                  <BookCoverArt book={b} />
-
-                  {/* Meta */}
-                  <div className="flex-1 min-w-0 flex flex-col">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <h3 className="font-serif text-xl font-bold text-forest leading-tight">
-                          {b.title}
-                        </h3>
-                        <p className="text-[12px] italic text-muted-foreground mt-0.5 leading-snug">
-                          {b.subtitle}
-                        </p>
-                        <p className="text-[12px] font-semibold text-forest mt-2">
-                          {b.author} · {b.year}
-                        </p>
-                      </div>
-                      <span className="shrink-0 rounded-full bg-gold/15 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-forest">
-                        {b.level}
-                      </span>
-                    </div>
-
-                    <div className="mt-3 flex flex-wrap gap-1">
-                      {b.concepts.map((c) => (
-                        <span
-                          key={c}
-                          className="rounded-md bg-cream border border-forest/5 px-2 py-0.5 text-[10px] font-semibold text-forest/70"
-                        >
-                          {c}
-                        </span>
-                      ))}
-                    </div>
-
-                    <div className="mt-auto pt-4 border-t border-border/50 flex items-center justify-between">
-                      <span className="text-[11px] text-muted-foreground italic">{b.level}</span>
-                      <button
-                        onClick={() => goToSearch(b.title)}
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-forest px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-white hover:bg-forest transition-colors"
-                      >
-                        Abrir
-                      </button>
-                    </div>
-                  </div>
-                </article>
+                  {t.name}
+                </button>
               ))}
             </div>
-          </section>
-
-          {/* ── CITAÇÕES (MASONRY) ─────────────────────────── */}
-          <section className="space-y-6">
-            <SectionHeader number="07" eyebrow="Sabedoria clínica" title="Citações dos mestres" />
-
-            <div className="columns-1 md:columns-2 xl:columns-3 gap-5 [column-fill:_balance]">
-              {QUOTES.map((q, i) => {
-                const bg =
-                  q.tone === "forest"
-                    ? "bg-forest text-white"
-                    : q.tone === "gold"
-                      ? "bg-gold text-forest"
-                      : q.tone === "forest"
-                        ? "bg-forest/15 text-forest border border-forest/30"
-                        : "bg-white text-forest border border-forest/10";
-                const authorColor =
-                  q.tone === "forest"
-                    ? "text-gold"
-                    : q.tone === "gold"
-                      ? "text-forest"
-                      : "text-forest";
-                const iconColor =
-                  q.tone === "forest"
-                    ? "text-white/20"
-                    : q.tone === "gold"
-                      ? "text-forest/20"
-                      : "text-forest/40";
-                return (
-                  <figure
-                    key={i}
-                    className={`mb-5 break-inside-avoid rounded-[1.25rem] p-6 shadow-surface hover:shadow-dossier transition-all hover:-translate-y-1 ${bg}`}
-                  >
-                    <QuoteIcon className={`size-6 mb-3 ${iconColor}`} />
-                    <blockquote
-                      className={`font-serif italic leading-relaxed ${
-                        i % 3 === 0 ? "text-xl" : "text-lg"
-                      }`}
-                    >
-                      "{q.text}"
-                    </blockquote>
-                    <figcaption className="mt-4 flex items-center justify-between gap-2">
-                      <div>
-                        <p
-                          className={`text-[11px] font-bold uppercase tracking-wider ${authorColor}`}
-                        >
-                          {q.author}
-                        </p>
-                        <p
-                          className={`text-[10px] mt-0.5 ${
-                            q.tone === "forest" ? "text-white/50" : "text-muted-foreground"
-                          }`}
-                        >
-                          {q.work} · {q.year} · {q.theme}
-                        </p>
-                      </div>
-                      <QuoteActions tone={q.tone} text={q.text} author={q.author} />
-                    </figcaption>
-                  </figure>
-                );
-              })}
-            </div>
-          </section>
-
-          {/* ── GLOSSÁRIO COMPACTO ─────────────────────────── */}
-          <section className="space-y-6">
-            <SectionHeader
-              number="08"
-              eyebrow="Definições"
-              title="Glossário clínico"
-              action={{ label: "Ver glossário completo", onClick: () => {} }}
-            />
-
-            <div className="rounded-[1.25rem] bg-white border border-forest/10 overflow-hidden shadow-surface">
-              <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-border/50">
-                <div className="divide-y divide-border/50">
-                  {GLOSSARY.slice(0, Math.ceil(GLOSSARY.length / 2)).map((g) => (
-                    <GlossaryRow key={g.term} item={g} onOpen={() => setOpenTerm(g)} />
-                  ))}
-                </div>
-                <div className="divide-y divide-border/50">
-                  {GLOSSARY.slice(Math.ceil(GLOSSARY.length / 2)).map((g) => (
-                    <GlossaryRow key={g.term} item={g} onOpen={() => setOpenTerm(g)} />
-                  ))}
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* ── PROTOCOLOS ─────────────────────────────────── */}
-          <section className="space-y-6">
-            <SectionHeader number="09" eyebrow="Ferramentas" title="Protocolos de sessão" />
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              {PROTOCOLS.map((p) => (
-                <article
-                  key={p.title}
-                  className={`group rounded-[1.25rem] bg-white p-6 border border-forest/10 border-l-[5px] shadow-surface hover:shadow-dossier transition-all ${p.accent}`}
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="inline-flex items-center gap-1.5 rounded-md bg-cream px-2 py-1 text-[10px] font-bold text-forest/70">
-                      <Clock className="size-3" /> {p.duration}
-                    </span>
-                    <div className="flex gap-0.5" aria-label={`Complexidade ${p.complexity} de 3`}>
-                      {[1, 2, 3].map((n) => (
-                        <span
-                          key={n}
-                          className={`size-1.5 rounded-full ${
-                            n <= p.complexity ? "bg-forest" : "bg-forest/15"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  <h3 className="font-serif text-xl font-bold text-forest leading-tight">
-                    {p.title}
-                  </h3>
-                  <p className="mt-2 text-[13px] text-foreground/70 leading-relaxed">{p.goal}</p>
-
-                  <div className="mt-4 rounded-lg bg-forest-soft/40 border border-forest/20 p-3">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-forest mb-1">
-                      Indicação
-                    </p>
-                    <p className="text-[12px] text-forest/80">{p.indication}</p>
-                  </div>
-
-                  <ol className="mt-4 space-y-2">
-                    {p.steps.map((s, i) => (
-                      <li
-                        key={s}
-                        className="flex items-start gap-2.5 text-[13px] text-foreground/80"
-                      >
-                        <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-forest text-[10px] font-bold text-white">
-                          {i + 1}
-                        </span>
-                        <span>{s}</span>
-                      </li>
-                    ))}
-                  </ol>
-                </article>
-              ))}
-            </div>
-          </section>
-
-          {/* ── ACERVO INTELIGENTE (BASE DE DADOS) ─────────── */}
-          <div ref={resultsRef} className="scroll-mt-24 space-y-24">
-            {entriesLoading && (
-              <section className="space-y-6">
-                <SectionHeader
-                  number="10"
-                  eyebrow="Acervo inteligente"
-                  title="Carregando acervo…"
-                />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="skeleton h-36 rounded-[1.25rem]" />
-                  ))}
-                </div>
-              </section>
-            )}
-            {!entriesLoading && entries.length > 0 && filteredEntries.length === 0 && q.trim() && (
-              <section className="space-y-6">
-                <SectionHeader
-                  number="10"
-                  eyebrow="Acervo inteligente"
-                  title={`Resultados para "${q}"`}
-                />
-                <p className="font-serif text-lg text-ink/45 italic">
-                  Nenhum verbete encontrado para este termo. Tente um autor, conceito ou escola.
-                </p>
-              </section>
-            )}
-            {!entriesLoading && filteredEntries.length > 0 && (
-              <section className="space-y-6">
-                <SectionHeader
-                  number="10"
-                  eyebrow="Acervo inteligente"
-                  title={q ? `Resultados para "${q}"` : "Verbetes recentes do acervo"}
-                />
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {filteredEntries.map((e) => (
-                    <motion.article
-                      key={e.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="rounded-[1.25rem] bg-surface-document border border-forest/10 p-5 hover:shadow-dossier transition-all"
-                    >
-                      <div className="flex items-baseline justify-between gap-3">
-                        <h4 className="font-serif text-lg font-bold text-forest">{e.author}</h4>
-                        {e.school && (
-                          <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60">
-                            {e.school}
-                          </span>
-                        )}
-                      </div>
-                      <p className="mt-1 text-[13px] font-semibold text-foreground/85">
-                        {e.title}
-                        {e.topic && (
-                          <span className="font-normal text-muted-foreground"> — {e.topic}</span>
-                        )}
-                      </p>
-                      {e.summary && (
-                        <p className="mt-2 text-[12px] leading-relaxed text-muted-foreground line-clamp-3">
-                          {e.summary}
-                        </p>
-                      )}
-                      {e.tags && e.tags.length > 0 && (
-                        <div className="mt-3 flex flex-wrap gap-1">
-                          {e.tags.slice(0, 4).map((t) => (
-                            <span
-                              key={t}
-                              className="rounded-md bg-cream border border-forest/5 px-2 py-0.5 text-[10px] font-semibold text-forest/70"
-                            >
-                              {t}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </motion.article>
-                  ))}
-                </div>
-              </section>
-            )}
           </div>
-        </main>
-
-        {/* ─────────── RIGHT: IA CLÍNICA (COLLAPSIBLE) ─────────── */}
-        <ClinicalAiRail open={aiOpen} onToggle={() => setAiOpen(!aiOpen)} />
+        </aside>
+        <section className="min-w-0">
+          <div className="relative">
+            <Search className="absolute left-4 top-3.5 size-4 text-muted-foreground" />
+            <input
+              aria-label="Buscar na biblioteca"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Buscar autor, obra ou conceito"
+              className="h-11 w-full rounded-md border border-input bg-white pl-11 pr-4 text-sm"
+            />
+          </div>
+          <div className="flex justify-between items-center py-6">
+            <h2 className="font-serif text-3xl font-semibold">{category}</h2>
+            <span className="text-xs text-muted-foreground">{shown.length} resultados</span>
+          </div>
+          {isLoading && category === "Meu acervo" && <div className="skeleton h-32" />}
+          {isError && (
+            <p role="alert" className="text-sm text-destructive mb-4">
+              Não foi possível carregar seu acervo. Atualize a página para tentar novamente.
+            </p>
+          )}
+          <div className="atlas-library-list">
+            {shown.map((x) => (
+              <button key={x.key} onClick={() => setSelected(x)} className="atlas-library-item">
+                <BookOpen size={20} strokeWidth={1.4} />
+                <div>
+                  <span className="text-xs text-muted-foreground">{x.category}</span>
+                  <h3>{x.title}</h3>
+                  <p>{x.meta}</p>
+                  <p className="line-clamp-2">{x.body}</p>
+                </div>
+                <ChevronRight size={17} />
+              </button>
+            ))}
+          </div>
+          {!shown.length && !isLoading && (
+            <div className="atlas-empty">
+              <Search size={28} />
+              <h2>Nenhum resultado encontrado</h2>
+              <p>Tente outro termo ou escolha uma categoria diferente.</p>
+              <button
+                onClick={() => {
+                  setQ("");
+                  setCategory("Todos");
+                }}
+                className="mt-5 text-sm underline"
+              >
+                Limpar busca
+              </button>
+            </div>
+          )}
+        </section>
       </div>
-
-      {/* ─────────── GLOSSARY SIDE PANEL ─────────── */}
-      <Sheet open={!!openTerm} onOpenChange={(o) => !o && setOpenTerm(null)}>
+      <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
         <SheetContent side="right" className="w-full sm:max-w-[520px] overflow-y-auto p-0">
-          {openTerm && <GlossaryDetail item={openTerm} />}
+          {selected?.term ? (
+            <GlossaryDetail item={selected.term} />
+          ) : (
+            selected && (
+              <>
+                <SheetHeader className="bg-forest text-white p-8">
+                  <SheetTitle className="font-serif text-3xl text-white">
+                    {selected.title}
+                  </SheetTitle>
+                  <p className="text-sm text-slate-300">{selected.meta}</p>
+                </SheetHeader>
+                <div className="p-8">
+                  <p className="text-sm leading-7 whitespace-pre-wrap">{selected.body}</p>
+                  {selected.details && (
+                    <ul className="mt-6 space-y-4 text-sm leading-7">
+                      {selected.details.map((d, i) => (
+                        <li key={i} className="border-t border-border pt-4">
+                          {d}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {selected.category === "Citações" && (
+                    <button
+                      className="mt-7 flex items-center gap-2 text-sm font-semibold"
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(
+                            `${selected.body} — ${selected.meta}`,
+                          );
+                          toast.success("Citação copiada");
+                        } catch {
+                          toast.error(
+                            "Não foi possível copiar. Selecione o texto para copiar manualmente.",
+                          );
+                        }
+                      }}
+                    >
+                      <Copy size={16} />
+                      Copiar citação
+                    </button>
+                  )}
+                </div>
+              </>
+            )
+          )}
         </SheetContent>
       </Sheet>
     </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────
-// SUBCOMPONENTS
-// ─────────────────────────────────────────────────────────────
-
-function SectionHeader({
-  number,
-  eyebrow,
-  title,
-  action,
-}: {
-  number: string;
-  eyebrow: string;
-  title: string;
-  action?: { label: string; onClick: () => void };
-}) {
-  return (
-    <div className="flex items-end justify-between gap-4">
-      <div className="flex items-end gap-4 min-w-0">
-        <span className="font-serif text-4xl md:text-5xl italic font-bold text-forest/25 leading-none select-none shrink-0">
-          {number}
-        </span>
-        <div className="min-w-0">
-          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-forest">{eyebrow}</p>
-          <h2 className="font-serif text-2xl md:text-3xl font-bold text-forest leading-tight mt-1">
-            {title}
-          </h2>
-        </div>
-      </div>
-      {action && (
-        <button
-          onClick={action.onClick}
-          className="shrink-0 inline-flex items-center gap-1 text-[12px] font-semibold text-forest hover:text-forest transition-colors"
-        >
-          {action.label} <ArrowRight className="size-3.5" />
-        </button>
-      )}
-    </div>
-  );
-}
-
-function GlossaryRow({ item, onOpen }: { item: (typeof GLOSSARY)[number]; onOpen: () => void }) {
-  const Icon = item.icon;
-  return (
-    <button
-      onClick={onOpen}
-      className="group w-full text-left flex items-start gap-4 p-5 hover:bg-cream/60 transition-colors"
-    >
-      <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-forest-soft/60 text-forest group-hover:bg-forest group-hover:text-white transition-colors">
-        <Icon className="size-5" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center justify-between gap-2">
-          <h4 className="font-serif text-[16px] font-bold text-forest leading-tight">
-            {item.term}
-          </h4>
-          <ChevronRight className="size-4 text-muted-foreground/40 group-hover:text-forest group-hover:translate-x-0.5 transition-all shrink-0" />
-        </div>
-        <p className="mt-1 text-[12.5px] text-muted-foreground leading-snug line-clamp-1">
-          {item.short}
-        </p>
-      </div>
-    </button>
   );
 }
 
@@ -1175,10 +845,7 @@ function GlossaryDetail({ item }: { item: (typeof GLOSSARY)[number] }) {
         <DetailBlock label="Autores">
           <div className="flex flex-wrap gap-2">
             {item.authors.map((a) => (
-              <span
-                key={a}
-                className="rounded-full bg-forest-soft/60 px-3 py-1 text-[12px] font-semibold text-forest"
-              >
+              <span key={a} className="atlas-chip">
                 {a}
               </span>
             ))}
@@ -1208,10 +875,6 @@ function GlossaryDetail({ item }: { item: (typeof GLOSSARY)[number] }) {
             ))}
           </ul>
         </DetailBlock>
-
-        <button className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-forest py-3 text-[12px] font-bold uppercase tracking-wider text-white hover:bg-forest transition-colors">
-          <Wand2 className="size-4" /> Usar em sessão
-        </button>
       </div>
     </div>
   );
@@ -1223,490 +886,5 @@ function DetailBlock({ label, children }: { label: string; children: React.React
       <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-forest mb-2">{label}</p>
       {children}
     </div>
-  );
-}
-
-function QuoteActions({ tone, text, author }: { tone: string; text: string; author: string }) {
-  const iconClass =
-    tone === "forest"
-      ? "text-white/40 hover:text-gold"
-      : tone === "gold"
-        ? "text-forest/40 hover:text-forest"
-        : "text-muted-foreground/40 hover:text-forest";
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(`"${text}" — ${author}`);
-    toast.success("Citação copiada");
-  };
-
-  return (
-    <div className="flex items-center gap-1 shrink-0">
-      <button
-        onClick={handleCopy}
-        className={`p-1.5 rounded-md transition-colors ${iconClass}`}
-        title="Copiar"
-        aria-label="Copiar citação"
-      >
-        <Copy className="size-3.5" />
-      </button>
-    </div>
-  );
-}
-
-function ClinicalAiRail({ open, onToggle }: { open: boolean; onToggle: () => void }) {
-  return (
-    <aside className="relative shrink-0 hidden lg:block transition-all duration-300">
-      <button
-        onClick={onToggle}
-        aria-label={open ? "Recolher IA Clínica" : "Expandir IA Clínica"}
-        aria-expanded={open}
-        className="absolute -left-3 top-16 z-50 flex size-7 items-center justify-center rounded-full border border-forest/15 bg-white text-forest shadow-surface hover:scale-105 transition-transform"
-      >
-        {open ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}
-      </button>
-
-      <AnimatePresence initial={false} mode="wait">
-        {open ? (
-          <motion.div
-            key="open"
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 320, opacity: 1 }}
-            exit={{ width: 0, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="w-[320px] sticky top-6 space-y-5 overflow-hidden"
-          >
-            {/* AI card */}
-            <div className="relative overflow-hidden rounded-[1.25rem] bg-forest p-6 text-white shadow-dossier">
-              <div className="absolute -right-6 -top-6 size-32 rounded-full bg-forest/25 blur-3xl" />
-              <div className="relative">
-                <div className="flex items-center gap-2.5">
-                  <div className="flex size-9 items-center justify-center rounded-lg bg-forest">
-                    <BrainCircuit className="size-5 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-serif text-lg font-bold">Sugestões do acervo</h3>
-                    <p className="text-[10px] uppercase tracking-widest text-white/50 font-bold">
-                      Conexões curadas
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-6 space-y-4">
-                  <AiBlock label="Conexão sugerida">
-                    Você sabia que <strong className="text-gold">Cripta</strong> (Torok) conecta-se
-                    ao trauma de <strong className="text-gold">Aborto</strong> na 3ª geração?
-                  </AiBlock>
-
-                  <AiList
-                    label="Autores relacionados"
-                    items={["Nicolas Abraham", "Maria Torok", "Didier Dumas"]}
-                  />
-
-                  <AiList
-                    label="Perguntas para investigar"
-                    items={[
-                      "Houve luto não elaborado na linhagem materna?",
-                      "Qual o segredo de família mais próximo do nascimento?",
-                    ]}
-                  />
-
-                  <AiList
-                    label="Protocolos aplicáveis"
-                    items={["Mapa de Segredos", "Ritual de nomeação"]}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Curiosidade histórica */}
-            <div className="rounded-[1.25rem] bg-gold/15 border border-gold/30 p-5">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-forest/70">
-                Curiosidade histórica
-              </p>
-              <p className="mt-2 text-[13px] leading-relaxed text-forest italic font-serif">
-                {TODAY.historyBite}
-              </p>
-            </div>
-
-            {/* Mini timeline */}
-            <div className="rounded-[1.25rem] bg-white border border-forest/10 p-5 shadow-surface">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-forest">
-                Linha do tempo
-              </p>
-              <ol className="mt-3 space-y-3">
-                {[
-                  { y: "1913", e: "Freud · Totem e Tabu" },
-                  { y: "1970", e: "Schützenberger · genossociograma" },
-                  { y: "1978", e: "Abraham & Torok · A Casca e o Núcleo" },
-                  { y: "1990", e: "Hellinger · Ordens do Amor" },
-                  { y: "2005", e: "Yehuda · epigenética do trauma" },
-                ].map((t) => (
-                  <li key={t.y} className="flex items-start gap-3 text-[12px]">
-                    <span className="mt-0.5 rounded-md bg-forest px-1.5 py-0.5 font-mono font-bold text-white text-[10px]">
-                      {t.y}
-                    </span>
-                    <span className="text-foreground/75 leading-snug">{t.e}</span>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          </motion.div>
-        ) : (
-          <motion.div
-            key="closed"
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 48, opacity: 1 }}
-            exit={{ width: 0, opacity: 0 }}
-            className="w-12 sticky top-6 flex flex-col items-center gap-4 rounded-[1.25rem] bg-white border border-forest/10 py-6 shadow-surface cursor-pointer"
-            onClick={onToggle}
-          >
-            <BrainCircuit className="size-5 text-forest animate-pulse" />
-            <p
-              className="text-[10px] font-bold uppercase tracking-widest text-forest/60"
-              style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
-            >
-              Sugestões
-            </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </aside>
-  );
-}
-
-function AiBlock({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-lg bg-white/5 border border-white/10 p-3">
-      <p className="text-[9px] font-bold uppercase tracking-widest text-white/40 mb-1.5">{label}</p>
-      <p className="text-[12px] leading-relaxed text-white/85">{children}</p>
-    </div>
-  );
-}
-
-function AiList({ label, items }: { label: string; items: string[] }) {
-  return (
-    <div>
-      <p className="text-[9px] font-bold uppercase tracking-widest text-white/40 mb-2">{label}</p>
-      <div className="space-y-1.5">
-        {items.map((it) => (
-          <button
-            key={it}
-            className="w-full text-left rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-[11.5px] text-white/85 hover:bg-forest hover:border-forest transition-colors flex items-center justify-between group"
-          >
-            <span className="min-w-0 truncate pr-2">{it}</span>
-            <ArrowRight className="size-3 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────
-// PORTRAIT & COVER PRIMITIVES (real image with elegant fallback)
-// ─────────────────────────────────────────────────────────────
-
-function SmartImage({
-  src,
-  alt,
-  className,
-  filter,
-  fallback,
-}: {
-  src?: string;
-  alt: string;
-  className?: string;
-  filter?: string;
-  fallback: React.ReactNode;
-}) {
-  const [ok, setOk] = useState(Boolean(src));
-  if (!src || !ok) return <>{fallback}</>;
-  return (
-    <img
-      src={src}
-      alt={alt}
-      loading="lazy"
-      onError={() => setOk(false)}
-      className={className}
-      style={filter ? { filter } : undefined}
-    />
-  );
-}
-
-function AuthorPortraitCard({
-  author,
-  featured,
-}: {
-  author: (typeof AUTHORS)[number];
-  featured: boolean;
-}) {
-  return (
-    <button className="group text-left space-y-3">
-      <div className="relative aspect-[4/5] overflow-hidden rounded-[1.1rem] border border-forest/10 shadow-[0_10px_30px_-15px_oklch(0.25_0.10_295/0.35)] bg-gradient-to-br from-[#FDFCF9] via-[#F6F4EF] to-[#EAE6D9] group-hover:shadow-[0_20px_50px_-15px_oklch(0.25_0.10_295/0.5)] transition-all duration-500">
-        {/* Museum paper grain */}
-        <div
-          aria-hidden
-          className="absolute inset-0 opacity-[0.18] mix-blend-multiply pointer-events-none"
-          style={{
-            backgroundImage:
-              "radial-gradient(circle at 30% 20%, rgba(0,0,0,0.15) 0.5px, transparent 1px), radial-gradient(circle at 70% 60%, rgba(0,0,0,0.1) 0.5px, transparent 1px)",
-            backgroundSize: "3px 3px, 5px 5px",
-          }}
-        />
-        <SmartImage
-          src={author.photo}
-          alt={author.name}
-          className="absolute inset-0 h-full w-full object-cover object-top transition-transform duration-[900ms] group-hover:scale-[1.04]"
-          filter="grayscale(1) sepia(0.35) contrast(1.05) brightness(0.98)"
-          fallback={
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span
-                className="font-serif text-[68px] font-black italic text-forest/25 select-none"
-                style={{ letterSpacing: "-0.04em" }}
-              >
-                {author.initials}
-              </span>
-            </div>
-          }
-        />
-        {/* Editorial vignette */}
-        <div className="absolute inset-0 bg-gradient-to-t from-forest/70 via-forest/10 to-transparent" />
-        {/* Bottom caption strip */}
-        <div className="absolute inset-x-0 bottom-0 p-3">
-          {author.years && (
-            <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-gold/90">
-              {author.years}
-            </p>
-          )}
-          <p className="mt-0.5 text-[10px] text-white/70">{author.nationality ?? ""}</p>
-        </div>
-        {featured && (
-          <span className="absolute top-2.5 right-2.5 rounded-full bg-gold px-2 py-0.5 text-[8px] font-black uppercase tracking-widest text-forest shadow-surface">
-            Semana
-          </span>
-        )}
-      </div>
-      <div>
-        <h4 className="font-serif text-[15px] font-bold text-forest leading-tight">
-          {author.name}
-        </h4>
-        <p className="mt-0.5 text-[10px] uppercase tracking-wider text-forest font-semibold">
-          {author.field}
-        </p>
-        {(author.years || author.nationality) && (
-          <p className="mt-1 text-[10px] text-muted-foreground/60">
-            {[author.years, author.nationality].filter(Boolean).join(" · ")}
-          </p>
-        )}
-      </div>
-    </button>
-  );
-}
-
-function BookCoverArt({ book }: { book: (typeof ESSENTIAL_BOOKS)[number] }) {
-  return (
-    <div className="relative w-28 shrink-0 perspective-[900px]">
-      <div
-        className="relative h-40 w-full rounded-r-md rounded-l-sm shadow-[6px_10px_25px_-8px_oklch(0.25_0.10_295/0.45)] transition-transform duration-500 group-hover:-rotate-y-6 origin-left overflow-hidden"
-        style={{ transformStyle: "preserve-3d" }}
-      >
-        <SmartImage
-          src={book.cover}
-          alt={book.title}
-          className="absolute inset-0 h-full w-full object-cover"
-          fallback={
-            <div className={`absolute inset-0 flex flex-col justify-between p-3 ${book.spine}`}>
-              <span className="text-[8px] font-bold uppercase tracking-widest opacity-60">
-                {book.year}
-              </span>
-              <div>
-                <p className="font-serif text-[13px] font-bold italic leading-tight">
-                  {book.title}
-                </p>
-                <div className="mt-1.5 h-px w-6 bg-current opacity-40" />
-              </div>
-            </div>
-          }
-        />
-        {/* Spine shadow */}
-        <div className="absolute inset-y-0 left-0 w-1 bg-black/25 rounded-l-sm" />
-        {/* Subtle sheen */}
-        <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-black/10 pointer-events-none" />
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────
-// BIBLIOTECA AUTORAL — SEÇÃO PROTAGONISTA (LETÍCIA)
-// ─────────────────────────────────────────────────────────────
-
-function LeticiaAutoralSection({ onExplore }: { onExplore: (title: string) => void }) {
-  const accentMap = {
-    forest: "bg-forest text-white",
-    gold: "bg-gold text-forest",
-    cream: "bg-cream text-forest border border-forest/10",
-  } as const;
-
-  return (
-    <section className="relative space-y-8">
-      {/* Ambient glow */}
-      <div
-        aria-hidden
-        className="absolute -inset-x-8 -top-8 -bottom-8 -z-10 rounded-[2rem] bg-gradient-to-br from-forest/[0.03] via-gold/[0.05] to-forest/[0.06] blur-2xl"
-      />
-
-      <SectionHeader
-        number="02"
-        eyebrow="Biblioteca Autoral"
-        title="Acervo de Letícia Kuchockowolec Baccin"
-      />
-
-      {/* Author hero */}
-      <div className="relative grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-8 items-stretch">
-        {/* Portrait */}
-        <div className="relative">
-          <div className="relative aspect-[4/5] overflow-hidden rounded-[1.5rem] shadow-[0_30px_80px_-30px_oklch(0.25_0.10_295/0.55)] ring-1 ring-forest/10">
-            <img
-              src={LETICIA.photo}
-              alt={LETICIA.name}
-              className="absolute inset-0 h-full w-full object-cover object-center"
-            />
-            {/* Museum paper grain */}
-            <div
-              aria-hidden
-              className="absolute inset-0 opacity-[0.10] mix-blend-multiply pointer-events-none"
-              style={{
-                backgroundImage:
-                  "radial-gradient(circle at 30% 20%, rgba(0,0,0,0.2) 0.5px, transparent 1px), radial-gradient(circle at 70% 60%, rgba(0,0,0,0.15) 0.5px, transparent 1px)",
-                backgroundSize: "3px 3px, 5px 5px",
-              }}
-            />
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-forest via-forest/70 to-transparent p-6">
-              <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-gold">
-                Fundadora · Instituto Liz
-              </p>
-              <h3 className="mt-2 font-serif text-[22px] font-bold italic text-white leading-tight">
-                Letícia Kuchockowolec Baccin
-              </h3>
-            </div>
-            <span className="absolute top-4 left-4 inline-flex items-center gap-1.5 rounded-full bg-white/90 backdrop-blur px-3 py-1 text-[9px] font-black uppercase tracking-widest text-forest shadow-surface">
-              <Sparkles className="size-3 text-gold" /> Coleção autoral
-            </span>
-          </div>
-        </div>
-
-        {/* Bio + counters */}
-        <div className="flex flex-col justify-between rounded-[1.5rem] bg-white/70 backdrop-blur-sm border border-forest/10 p-8 shadow-surface">
-          <div className="space-y-5">
-            <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-forest">
-              Biblioteca Autoral
-            </p>
-            <h3 className="font-serif text-2xl md:text-3xl font-bold text-forest leading-[1.1]">
-              Toda a produção científica, clínica e didática da{" "}
-              <span className="italic text-forest">fundadora</span> da Academia.
-            </h3>
-            <p className="text-[15px] leading-relaxed text-foreground/75 max-w-xl">{LETICIA.bio}</p>
-          </div>
-          <div className="mt-8 grid grid-cols-3 gap-3 border-t border-forest/10 pt-6">
-            {[
-              { n: LETICIA_WORKS.length, l: "Obras" },
-              {
-                n: LETICIA_WORKS.filter((w) => w.kind === "Livro").length,
-                l: "Livros",
-              },
-              {
-                n: new Set(LETICIA_WORKS.map((w) => w.kind)).size,
-                l: "Formatos",
-              },
-            ].map((s) => (
-              <div key={s.l} className="min-w-0">
-                <p className="font-serif text-2xl md:text-3xl font-bold text-forest leading-none">
-                  {s.n}
-                </p>
-                <p className="text-[9px] font-bold uppercase tracking-[0.1em] text-forest/80 mt-1">
-                  {s.l}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Works grid — Apple Books / Netflix aesthetic */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {LETICIA_WORKS.map((w) => (
-          <article
-            key={w.title}
-            className="group relative overflow-hidden rounded-[1.25rem] bg-white border border-forest/10 shadow-surface hover:shadow-lifted hover:shadow-forest/10 hover:-translate-y-1 transition-all duration-500"
-          >
-            {/* Cover panel */}
-            <div
-              className={`relative h-44 flex items-center justify-center overflow-hidden ${accentMap[w.accent]}`}
-            >
-              {/* Letícia portrait medallion */}
-              <div className="absolute -bottom-6 -right-6 size-32 rounded-full overflow-hidden border-4 border-white/20 opacity-30 group-hover:opacity-60 transition-opacity">
-                <img
-                  src={LETICIA.photo}
-                  alt=""
-                  aria-hidden
-                  className="h-full w-full object-cover"
-                  style={{ filter: "grayscale(1) contrast(1.1)" }}
-                />
-              </div>
-              {/* Paper grain */}
-              <div
-                aria-hidden
-                className="absolute inset-0 opacity-[0.15] mix-blend-overlay pointer-events-none"
-                style={{
-                  backgroundImage:
-                    "radial-gradient(circle at 30% 20%, rgba(0,0,0,0.3) 0.5px, transparent 1px)",
-                  backgroundSize: "4px 4px",
-                }}
-              />
-              <div className="relative z-10 text-center px-6">
-                <p className="text-[9px] font-bold uppercase tracking-[0.3em] opacity-70">
-                  {w.kind}
-                </p>
-                <h4 className="mt-2 font-serif text-xl font-bold italic leading-tight">
-                  {w.title}
-                </h4>
-                <div className="mt-2 h-px w-8 mx-auto bg-current opacity-40" />
-              </div>
-              {/* Badge */}
-              <span
-                className={`absolute top-3 left-3 rounded-full px-2 py-0.5 text-[8px] font-black uppercase tracking-widest shadow ${
-                  w.badge === "Novo"
-                    ? "bg-gold text-forest"
-                    : w.badge === "Exclusivo"
-                      ? "bg-forest text-gold border border-gold/40"
-                      : w.badge === "Mais estudado"
-                        ? "bg-white text-forest"
-                        : "bg-forest text-white"
-                }`}
-              >
-                {w.badge}
-              </span>
-            </div>
-
-            {/* Meta */}
-            <div className="p-4 space-y-3">
-              <p className="text-[12px] italic text-muted-foreground leading-snug">{w.subtitle}</p>
-              <div className="flex items-center justify-between text-[11px] text-muted-foreground border-t border-border/40 pt-3">
-                <span className="uppercase tracking-wider font-semibold text-forest/70">
-                  {w.kind}
-                </span>
-              </div>
-              <button
-                onClick={() => onExplore(w.title)}
-                className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-forest py-2 text-[11px] font-bold uppercase tracking-wider text-white hover:bg-forest transition-colors"
-              >
-                <Play className="size-3 fill-current" /> Explorar
-              </button>
-            </div>
-          </article>
-        ))}
-      </div>
-    </section>
   );
 }

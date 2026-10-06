@@ -70,11 +70,11 @@ function IaClinicaPage() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-90px)]">
+    <div className="flex flex-col min-h-[calc(100dvh-72px)]">
       <DocumentHeader
         breadcrumb="Inteligência Clínica"
-        title="Segundo Cérebro Clínico"
-        subtitle="Seu assistente especialista em Psicogenealogia para análise de repetições transgeracionais e hipóteses diagnósticas."
+        title="IA clínica"
+        subtitle="Explore o formato do assistente em uma demonstração com respostas simuladas."
         actions={
           <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-clinical-warning bg-clinical-warning/10 border border-clinical-warning/30 px-2 py-0.5 rounded-full whitespace-nowrap">
             Protótipo · modo demonstração
@@ -166,17 +166,10 @@ function IaClinicaPage() {
         <div className="w-[300px] border-l border-border/50 bg-surface-document p-6 hidden lg:block space-y-6 overflow-y-auto">
           <div className="flex items-center gap-2 pb-4 border-b border-border/40">
             <Brain className="size-5 text-forest" />
-            <h3 className="font-serif text-lg font-bold text-primary">Cérebro Clínico</h3>
+            <h3 className="font-serif text-lg font-bold text-primary">Sobre a demonstração</h3>
           </div>
 
           {/* Gravura do acervo — cérebro que se dissolve em raízes */}
-          <img
-            src="/assets/renders/cerebro-raizes.jpg"
-            alt=""
-            aria-hidden
-            loading="lazy"
-            className="mx-auto w-[190px] mix-blend-darken [mask-image:radial-gradient(120%_120%_at_50%_45%,black_58%,transparent_90%)]"
-          />
 
           <div className="space-y-4">
             <h4 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">

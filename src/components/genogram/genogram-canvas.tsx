@@ -434,7 +434,7 @@ function ShortcutsLegend() {
   return (
     <div className="w-[168px] overflow-hidden rounded-lg border border-forest/25 bg-popover/95 shadow-lg backdrop-blur-md ring-1 ring-black/5">
       <div className="bg-forest/5 px-2.5 py-1.5 border-b border-forest/20">
-        <p className="font-serif text-[16px] font-bold leading-tight text-forest">Atalhos</p>
+        <p className="font-serif text-[13px] font-bold leading-tight text-forest">Atalhos</p>
       </div>
       <div className="px-3 py-2.5 flex flex-col gap-2.5">
         <div className="flex flex-col gap-0.5">
@@ -653,6 +653,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [warnings, setWarnings] = useState<GenogramWarning[]>([]);
   const [creatingPerson, setCreatingPerson] = useState(false);
+  const [focusedPersonId, setFocusedPersonId] = useState<string | null>(null);
   const [editingPerson, setEditingPerson] = useState<PersonRow | null>(null);
   const [defaultRelationship, setDefaultRelationship] = useState<string>("");
   const [relDialog, setRelDialog] = useState<{
@@ -803,44 +804,16 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
 
     const centerTimer = window.setTimeout(() => {
       if (cancelled) return;
-      // Enquadramento: cliente próximo ao topo, gerações descendo.
-      // IMPORTANTE: só contamos nós de pessoa para calcular a largura real.
-      // Os nós "band" (faixas de fundo por geração) têm 15000px e envenenam o cálculo.
-      const container = document.querySelector(".react-flow") as HTMLElement | null;
-      const canvasW = container?.clientWidth ?? 1200;
-      const canvasH = container?.clientHeight ?? 800;
-
+      // Fit only people: generation bands span thousands of pixels and must not set the zoom.
       const personNodes = layoutedNodes.filter((n) => n.type === "person");
-      if (personNodes.length === 0) {
-        rfInstance.fitView({ padding: 0.15, duration: 600, minZoom: 0.2, maxZoom: 1.4 });
-        return;
-      }
-
-      const xs = personNodes.map((n) => n.position.x);
-      const ys = personNodes.map((n) => n.position.y);
-      const treeW = Math.max(1, Math.max(...xs) - Math.min(...xs) + NODE_W);
-      const treeH = Math.max(1, Math.max(...ys) - Math.min(...ys) + NODE_H);
-
-      // Usar mais tela: o enquadramento inicial prioriza a leitura do núcleo.
-      // Colaterais longos continuam acessíveis com pan/zoom, mas não encolhem toda a árvore.
-      const focusW = Math.min(treeW, 1800);
-      const zoomX = (canvasW * 0.96) / focusW;
-      const zoomY = (canvasH * 0.96) / treeH;
-      const zoom = Math.min(1.4, Math.max(0.48, Math.min(zoomX, zoomY)));
-
-      if (probandId) {
-        const probandNode = personNodes.find((n) => n.id === probandId);
-        if (probandNode) {
-          // Centrar horizontalmente no proband; verticalmente posicionar o proband
-          // 180px abaixo do topo do canvas para dar respiro sob a barra de ações e legenda.
-          const cx = probandNode.position.x + NODE_W / 2;
-          const targetTopOffset = 180;
-          const cy = probandNode.position.y + (canvasH / 2 - targetTopOffset) / zoom;
-          rfInstance.setCenter(cx, cy, { zoom, duration: 600 });
-          return;
-        }
-      }
-      rfInstance.fitView({ padding: 0.08, duration: 600, minZoom: 0.2, maxZoom: 1.4 });
+      if (personNodes.length)
+        rfInstance.fitView({
+          nodes: personNodes,
+          padding: 0.18,
+          duration: 0,
+          minZoom: 0.15,
+          maxZoom: 1.2,
+        });
     }, 120);
 
     return () => {
@@ -1054,6 +1027,10 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
   });
 
   const persons = query.data?.persons ?? [];
+  const focusedPerson =
+    persons.find((p) => p.id === focusedPersonId) ??
+    persons.find((p) => p.is_proband) ??
+    persons[0];
   const qualifiedCount = nodes.filter((node) => node.type === "person").length;
   const totalCount = persons.length;
   const incompleteCount = totalCount - qualifiedCount;
@@ -1062,309 +1039,377 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
   const selectedEdgeCount = edges.filter((e) => e.selected).length;
 
   return (
-    <div className="relative flex flex-col overflow-hidden rounded-[1.5rem] border border-border bg-surface-archive shadow-inner h-[800px] min-h-[calc(100vh-200px)]">
-      {/* ── CONTÊINER SUPERIOR (BARRA DE AÇÕES + LEGENDA) ── */}
-      <div className="absolute top-4 left-4 z-10 flex flex-col gap-2.5 pointer-events-none max-w-[calc(100%-32px)]">
-        {/* BARRA DE AÇÕES — agrupada: Identidade | Editar | Layout | Status | Extras */}
-        <div className="pointer-events-auto flex flex-wrap items-center gap-2 px-4 py-3 rounded-xl bg-forest shadow-xl border border-white/10">
-          <div className="flex items-center gap-2 pr-3 border-r border-white/15">
-            <TreePine className="size-4 text-gold" />
-            <span className="text-[14px] font-bold uppercase tracking-[0.2em] text-white">
-              Genossociograma
-            </span>
-          </div>
+    <div className="atlas-genogram">
+      <div className="atlas-map-workspace">
+        {/* ── CONTÊINER SUPERIOR (BARRA DE AÇÕES + LEGENDA) ── */}
+        <div className="atlas-map-toolbar">
+          {/* BARRA DE AÇÕES — agrupada: Identidade | Editar | Layout | Status | Extras */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 pr-2 border-r border-white/15">
+              <TreePine className="size-4 text-gold" />
+              <span className="text-xs font-medium text-white">Genossociograma</span>
+            </div>
 
-          {/* Grupo: Editar */}
-          <div className="flex items-center gap-2 pr-3 border-r border-white/15">
-            <Button
-              size="sm"
-              variant="forest"
-              onClick={() => setCreatingPerson(true)}
-              className="h-11 gap-2"
-            >
-              <UserPlus className="size-4" />
-              Adicionar pessoa
-            </Button>
+            {/* Grupo: Editar */}
+            <div className="flex items-center gap-2 pr-2 border-r border-white/15">
+              <Button
+                size="sm"
+                variant="gold"
+                onClick={() => setCreatingPerson(true)}
+                className="h-9 gap-2"
+              >
+                <UserPlus className="size-4" />
+                Adicionar pessoa
+              </Button>
 
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setRelDialog({ open: true })}
-              disabled={persons.length < 2}
-              className="h-11 gap-2 border-white/25 text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[16px]"
-            >
-              <Link2 className="size-4" />
-              Criar vínculo
-            </Button>
-          </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setRelDialog({ open: true })}
+                disabled={persons.length < 2}
+                className="h-9 gap-2 border-white/25 bg-transparent text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[13px]"
+              >
+                <Link2 className="size-4" />
+                Criar vínculo
+              </Button>
+            </div>
 
-          {/* Grupo: Layout */}
-          <div className="flex items-center gap-2 pr-3 border-r border-white/15">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => saveLayout.mutate()}
-              disabled={saveLayout.isPending || !layoutDirty}
-              className="h-11 gap-2 border-white/25 text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[16px] disabled:opacity-45"
-            >
-              <Save className="size-4" />
-              {saveLayout.isPending ? "Salvando" : "Salvar layout"}
-            </Button>
+            {/* Grupo: Layout */}
+            <div className="flex items-center gap-2 pr-2 border-r border-white/15">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => saveLayout.mutate()}
+                disabled={saveLayout.isPending || !layoutDirty}
+                className="h-9 gap-2 border-white/25 bg-transparent text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[13px] disabled:opacity-45"
+              >
+                <Save className="size-4" />
+                {saveLayout.isPending ? "Salvando" : "Salvar layout"}
+              </Button>
 
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => toggleLayoutFixed.mutate()}
-              disabled={!query.data?.layout?.id || toggleLayoutFixed.isPending}
-              className={`h-11 gap-2 border-white/25 normal-case tracking-normal font-semibold text-[16px] ${isLayoutFixed ? "bg-white/20 text-white" : "text-white hover:bg-white/10 hover:text-white"}`}
-              title={
-                !query.data?.layout?.id
-                  ? "Salve o layout pelo menos uma vez para poder fixá-lo"
-                  : ""
-              }
-            >
-              {isLayoutFixed ? (
-                <Lock className="size-4 text-gold" />
-              ) : (
-                <Unlock className="size-4" />
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => toggleLayoutFixed.mutate()}
+                disabled={!query.data?.layout?.id || toggleLayoutFixed.isPending}
+                className={`h-11 gap-2 border-white/25 normal-case tracking-normal font-semibold text-[13px] ${isLayoutFixed ? "bg-[#405B76] text-white" : "bg-transparent text-white hover:bg-white/10 hover:text-white"}`}
+                title={
+                  !query.data?.layout?.id
+                    ? "Salve o layout pelo menos uma vez para poder fixá-lo"
+                    : ""
+                }
+              >
+                {isLayoutFixed ? (
+                  <Lock className="size-4 text-gold" />
+                ) : (
+                  <Unlock className="size-4" />
+                )}
+                {isLayoutFixed ? "Fixo" : "Livre"}
+              </Button>
+
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setConfirmRecalc(true)}
+                disabled={!query.data?.layout?.id || recalcLayout.isPending}
+                title="Recalcula as posições do zero — use se alguém aparecer preso no lugar errado"
+                className="h-9 gap-2 border-white/25 bg-transparent text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[13px] disabled:opacity-45"
+              >
+                <RotateCcw className="size-4" />
+                {recalcLayout.isPending ? "Recalculando" : "Recalcular"}
+              </Button>
+            </div>
+
+            {/* Grupo: Status — sempre visível (quebra linha em telas estreitas, nunca some) */}
+            <div className="flex flex-wrap items-center gap-3 pr-3 border-r border-white/15">
+              <span className="flex items-center gap-1.5 text-[13px] text-white">
+                <Users className="size-3.5 text-forest" />
+                <strong className="text-white">{qualifiedCount}</strong>
+                <span>no mapa</span>
+                {incompleteCount > 0 && (
+                  <span className="ml-1 rounded-full bg-gold/20 px-1.5 py-0.5 text-[14px] font-bold text-gold">
+                    {incompleteCount} incompletos
+                  </span>
+                )}
+              </span>
+              <span className="flex items-center gap-1.5 text-[13px] text-white">
+                <Link2 className="size-3.5 text-gold" />
+                <strong className="text-white">{relCount}</strong> vínculos
+              </span>
+              {warnings.length > 0 && (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="flex items-center gap-1.5 rounded-full bg-amber-500/20 px-2.5 py-1 text-[14px] font-bold text-amber-300 hover:bg-amber-500/30 transition-colors animate-[pulse-gold_2.2s_ease-in-out_infinite]">
+                      <AlertTriangle className="size-3.5" />
+                      {warnings.length} para revisar
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-96 max-h-96 overflow-y-auto" align="start">
+                    <p className="mb-2 text-[13px] font-bold uppercase tracking-wide text-muted-foreground">
+                      Pessoas soltas na árvore
+                    </p>
+                    <ul className="space-y-2.5">
+                      {warnings.map((w) => (
+                        <li key={w.personId} className="text-[14px] leading-snug">
+                          {w.message}
+                        </li>
+                      ))}
+                    </ul>
+                  </PopoverContent>
+                </Popover>
               )}
-              {isLayoutFixed ? "Fixo" : "Livre"}
-            </Button>
-
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setConfirmRecalc(true)}
-              disabled={!query.data?.layout?.id || recalcLayout.isPending}
-              title="Recalcula as posições do zero — use se alguém aparecer preso no lugar errado"
-              className="h-11 gap-2 border-white/25 text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[16px] disabled:opacity-45"
-            >
-              <RotateCcw className="size-4" />
-              {recalcLayout.isPending ? "Recalculando" : "Recalcular"}
-            </Button>
-          </div>
-
-          {/* Grupo: Status — sempre visível (quebra linha em telas estreitas, nunca some) */}
-          <div className="flex flex-wrap items-center gap-3 pr-3 border-r border-white/15">
-            <span className="flex items-center gap-1.5 text-[16px] text-white">
-              <Users className="size-3.5 text-forest" />
-              <strong className="text-white">{qualifiedCount}</strong>
-              <span>no mapa</span>
-              {incompleteCount > 0 && (
-                <span className="ml-1 rounded-full bg-gold/20 px-1.5 py-0.5 text-[14px] font-bold text-gold">
-                  {incompleteCount} incompletos
+              {(layoutDirty || lastSavedAt) && (
+                <span className="text-[13px] font-semibold text-white">
+                  {layoutDirty ? "Não salvo" : `Salvo às ${lastSavedAt}`}
                 </span>
               )}
-            </span>
-            <span className="flex items-center gap-1.5 text-[16px] text-white">
-              <Link2 className="size-3.5 text-gold" />
-              <strong className="text-white">{relCount}</strong> vínculos
-            </span>
-            {warnings.length > 0 && (
               <Popover>
                 <PopoverTrigger asChild>
-                  <button className="flex items-center gap-1.5 rounded-full bg-amber-500/20 px-2.5 py-1 text-[14px] font-bold text-amber-300 hover:bg-amber-500/30 transition-colors animate-[pulse-gold_2.2s_ease-in-out_infinite]">
-                    <AlertTriangle className="size-3.5" />
-                    {warnings.length} para revisar
+                  <button
+                    className="flex items-center gap-1.5 rounded px-2 py-1 text-[14px] font-bold text-white/80 hover:bg-white/10 hover:text-white transition-colors"
+                    title="Legenda dos símbolos"
+                    aria-label="Legenda dos símbolos"
+                  >
+                    <Layers className="size-3.5" />
+                    <span className="hidden sm:inline">Legenda</span>
                   </button>
                 </PopoverTrigger>
-                <PopoverContent className="w-96 max-h-96 overflow-y-auto" align="start">
+                <PopoverContent className="w-72" align="start">
                   <p className="mb-2 text-[13px] font-bold uppercase tracking-wide text-muted-foreground">
-                    Pessoas soltas na árvore
+                    Legenda do mapa
                   </p>
-                  <ul className="space-y-2.5">
-                    {warnings.map((w) => (
-                      <li key={w.personId} className="text-[14px] leading-snug">
-                        {w.message}
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="grid grid-cols-1 gap-2 text-[15px]">
+                    <span className="flex items-center gap-2">
+                      <span className="inline-block size-3.5 border-2 border-forest bg-white" />
+                      Masculino
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <span className="inline-block size-3.5 rounded-full border-2 border-forest bg-white" />
+                      Feminino
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <span className="inline-block size-3.5 rotate-45 border-2 border-gold bg-white" />
+                      Não-binário / desconhecido
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <svg
+                        viewBox="0 0 10 10"
+                        className="size-3.5"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                      >
+                        <polygon points="5,1 9,9 1,9" className="text-foreground/70" />
+                      </svg>
+                      Aborto
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <span className="relative inline-block size-3.5 border-2 border-transparent bg-white">
+                        <span className="absolute inset-[-2px] w-[140%] h-[2px] bg-[#3A3A3A] rotate-[45deg] origin-top-left" />
+                      </span>
+                      Falecido
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <span className="inline-block size-3.5 border-2 border-forest bg-forest/20" />
+                      Paciente-índice
+                    </span>
+                  </div>
                 </PopoverContent>
               </Popover>
-            )}
-            {(layoutDirty || lastSavedAt) && (
-              <span className="text-[16px] font-semibold text-white">
-                {layoutDirty ? "Não salvo" : `Salvo às ${lastSavedAt}`}
-              </span>
-            )}
-            <Popover>
-              <PopoverTrigger asChild>
-                <button
-                  className="flex items-center gap-1.5 rounded px-2 py-1 text-[14px] font-bold text-white/80 hover:bg-white/10 hover:text-white transition-colors"
-                  title="Legenda dos símbolos"
-                  aria-label="Legenda dos símbolos"
-                >
-                  <Layers className="size-3.5" />
-                  <span className="hidden sm:inline">Legenda</span>
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-72" align="start">
-                <p className="mb-2 text-[13px] font-bold uppercase tracking-wide text-muted-foreground">
-                  Legenda do mapa
-                </p>
-                <div className="grid grid-cols-1 gap-2 text-[15px]">
-                  <span className="flex items-center gap-2">
-                    <span className="inline-block size-3.5 border-2 border-forest bg-white" />
-                    Masculino
-                  </span>
-                  <span className="flex items-center gap-2">
-                    <span className="inline-block size-3.5 rounded-full border-2 border-forest bg-white" />
-                    Feminino
-                  </span>
-                  <span className="flex items-center gap-2">
-                    <span className="inline-block size-3.5 rotate-45 border-2 border-gold bg-white" />
-                    Não-binário / desconhecido
-                  </span>
-                  <span className="flex items-center gap-2">
-                    <svg
-                      viewBox="0 0 10 10"
-                      className="size-3.5"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                    >
-                      <polygon points="5,1 9,9 1,9" className="text-foreground/70" />
-                    </svg>
-                    Aborto
-                  </span>
-                  <span className="flex items-center gap-2">
-                    <span className="relative inline-block size-3.5 border-2 border-transparent bg-white">
-                      <span className="absolute inset-[-2px] w-[140%] h-[2px] bg-[#3A3A3A] rotate-[45deg] origin-top-left" />
-                    </span>
-                    Falecido
-                  </span>
-                  <span className="flex items-center gap-2">
-                    <span className="inline-block size-3.5 border-2 border-forest bg-forest/20" />
-                    Paciente-índice
-                  </span>
+            </div>
+
+            <div className="ml-auto flex items-center gap-1">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowGuide(!showGuide)}
+                className="h-10 gap-1.5 border-transparent bg-transparent text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[13px] shadow-none"
+              >
+                <HelpCircle className="size-4" />
+                <span className="hidden sm:inline">Guia</span>
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={exportPdf}
+                disabled={isExportingPdf}
+                title="Exportar PDF (A3) pra imprimir com o cliente"
+                className="h-10 gap-1.5 border-transparent bg-transparent text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[13px] shadow-none"
+              >
+                {isExportingPdf ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Printer className="size-4" />
+                )}
+                <span className="hidden sm:inline">{isExportingPdf ? "Gerando…" : "PDF A3"}</span>
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setConfirmDelete(true)}
+                disabled={
+                  deleteSelected.isPending || (selectedPersonCount === 0 && selectedEdgeCount === 0)
+                }
+                className="h-10 gap-1.5 border-transparent bg-transparent text-white hover:bg-white/10 hover:text-red-400 normal-case tracking-normal font-semibold text-[13px] ml-4 border-l border-white/15 rounded-l-none pl-4 shadow-none"
+              >
+                <Trash2 className="size-4" />
+                <span className="hidden sm:inline">Remover</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {showGuide && (
+          <div className="border-b border-border bg-forest-soft px-4 py-3">
+            <div className="flex flex-wrap gap-6 text-[13px] text-foreground/70">
+              {[
+                ["Espaço + Arrastar", "Navegar pela tela"],
+                ["Arrastar Pessoa", "Reposicionar horizontalmente"],
+                ["Duplo Clique", "Ver informações completas"],
+                ["Selecionar + Remover", "Excluir o selecionado"],
+                ["Scroll", "Zoom in/out"],
+              ].map(([key, desc]) => (
+                <span key={key} className="flex items-center gap-2">
+                  <kbd className="rounded border border-border bg-card px-1.5 py-0.5 text-[14px] font-mono font-semibold">
+                    {key}
+                  </kbd>
+                  {desc}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Legenda movida para o painel lateral "Copiloto Clínico" */}
+
+        {/* ── CANVAS ──────── */}
+        <div className="atlas-map-stage">
+          {query.isLoading ? (
+            <div className="flex h-full flex-col items-center justify-center gap-3">
+              <div className="h-11 w-11 animate-spin rounded-full border-2 border-forest border-t-transparent" />
+              <p className="text-[14px] text-muted-foreground">Carregando a árvore...</p>
+            </div>
+          ) : persons.length === 0 ? (
+            <EmptyCanvas onCreate={() => setCreatingPerson(true)} />
+          ) : (
+            <ReactFlow
+              connectionMode={ConnectionMode.Loose}
+              nodes={nodes}
+              edges={edges}
+              nodeTypes={nodeTypes}
+              edgeTypes={edgeTypes}
+              onNodesChange={onNodesChangeCustom}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              onNodeDoubleClick={onNodeDoubleClick}
+              onNodeClick={(_, node) => {
+                if (node.type === "person") setFocusedPersonId(node.id);
+              }}
+              onEdgeDoubleClick={onEdgeDoubleClick}
+              nodesDraggable={!isLayoutFixed}
+              nodesConnectable={false}
+              panOnDrag={false}
+              panActivationKeyCode="Space"
+              minZoom={0.15}
+              maxZoom={2.5}
+              proOptions={{ hideAttribution: true }}
+              defaultEdgeOptions={{
+                type: "step",
+                style: { strokeWidth: 2, stroke: "var(--color-forest)" },
+              }}
+              fitView
+              fitViewOptions={{ padding: 0.18, nodes: nodes.filter((n) => n.type === "person") }}
+            >
+              <Background
+                color="#405B76"
+                variant={BackgroundVariant.Dots}
+                gap={24}
+                size={1}
+                style={{ opacity: 0.25 }}
+              />
+              <Controls
+                className="overflow-hidden rounded-md"
+                showInteractive={false}
+                fitViewOptions={{ nodes: nodes.filter((n) => n.type === "person"), padding: 0.18 }}
+              />
+              <MiniMap
+                position="top-right"
+                className="!hidden shadow-xl sm:!block"
+                nodeColor="var(--color-forest)"
+                maskColor="rgba(23, 39, 58, 0.75)"
+                pannable
+                zoomable
+              />
+            </ReactFlow>
+          )}
+        </div>
+      </div>
+      <aside className="atlas-person-panel" aria-label="Ficha da pessoa selecionada">
+        {focusedPerson ? (
+          <>
+            <h2>{focusedPerson.preferred_name || focusedPerson.full_name}</h2>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {focusedPerson.is_proband
+                ? "Pessoa de referência"
+                : focusedPerson.relationship_to_proband || "Vínculo não informado"}
+            </p>
+            <dl>
+              <div>
+                <dt>Nome completo</dt>
+                <dd>{focusedPerson.full_name || "Não informado"}</dd>
+              </div>
+              <div>
+                <dt>Nascimento</dt>
+                <dd>
+                  {focusedPerson.birth_date
+                    ? new Date(focusedPerson.birth_date + "T12:00:00").toLocaleDateString("pt-BR")
+                    : "Não informado"}
+                </dd>
+              </div>
+              {focusedPerson.is_deceased && (
+                <div>
+                  <dt>Falecimento</dt>
+                  <dd>
+                    {focusedPerson.death_date
+                      ? new Date(focusedPerson.death_date + "T12:00:00").toLocaleDateString("pt-BR")
+                      : "Data não informada"}
+                  </dd>
                 </div>
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          <div className="ml-auto flex items-center gap-1">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setShowGuide(!showGuide)}
-              className="h-10 gap-1.5 border-transparent text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[16px] shadow-none"
-            >
-              <HelpCircle className="size-4" />
-              <span className="hidden sm:inline">Guia</span>
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={exportPdf}
-              disabled={isExportingPdf}
-              title="Exportar PDF (A3) pra imprimir com o cliente"
-              className="h-10 gap-1.5 border-transparent text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[16px] shadow-none"
-            >
-              {isExportingPdf ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Printer className="size-4" />
               )}
-              <span className="hidden sm:inline">{isExportingPdf ? "Gerando…" : "PDF A3"}</span>
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setConfirmDelete(true)}
-              disabled={
-                deleteSelected.isPending || (selectedPersonCount === 0 && selectedEdgeCount === 0)
-              }
-              className="h-10 gap-1.5 border-transparent text-white hover:bg-white/10 hover:text-red-400 normal-case tracking-normal font-semibold text-[16px] ml-4 border-l border-white/15 rounded-l-none pl-4 shadow-none"
-            >
-              <Trash2 className="size-4" />
-              <span className="hidden sm:inline">Remover</span>
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {showGuide && (
-        <div className="border-b border-border bg-forest-soft px-4 py-3">
-          <div className="flex flex-wrap gap-6 text-[16px] text-foreground/70">
-            {[
-              ["Espaço + Arrastar", "Navegar pela tela"],
-              ["Arrastar Pessoa", "Reposicionar horizontalmente"],
-              ["Duplo Clique", "Ver informações completas"],
-              ["Selecionar + Remover", "Excluir o selecionado"],
-              ["Scroll", "Zoom in/out"],
-            ].map(([key, desc]) => (
-              <span key={key} className="flex items-center gap-2">
-                <kbd className="rounded border border-border bg-card px-1.5 py-0.5 text-[14px] font-mono font-semibold">
-                  {key}
-                </kbd>
-                {desc}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Legenda movida para o painel lateral "Copiloto Clínico" */}
-
-      {/* ── CANVAS ──────── */}
-      <div className="absolute inset-0 z-0 bg-transparent shadow-[inset_0_0_120px_rgba(59,47,47,0.1)]">
-        {query.isLoading ? (
-          <div className="flex h-full flex-col items-center justify-center gap-3">
-            <div className="h-11 w-11 animate-spin rounded-full border-2 border-forest border-t-transparent" />
-            <p className="text-[14px] text-muted-foreground">Carregando a árvore...</p>
-          </div>
-        ) : persons.length === 0 ? (
-          <EmptyCanvas onCreate={() => setCreatingPerson(true)} />
+              <div>
+                <dt>Gênero registrado</dt>
+                <dd>{focusedPerson.gender || "Não informado"}</dd>
+              </div>
+              <div>
+                <dt>Observações</dt>
+                <dd>{focusedPerson.notes || "Nenhuma observação registrada."}</dd>
+              </div>
+            </dl>
+            <div className="atlas-panel-actions">
+              <Button variant="outline" onClick={() => setEditingPerson(focusedPerson)}>
+                Editar pessoa
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setRelDialog({ open: true, seed: { from: focusedPerson.id } })}
+              >
+                Criar vínculo
+              </Button>
+            </div>
+            <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
+              Selecione uma pessoa no mapa para consultar sua ficha. Dê dois cliques para editar.
+            </p>
+          </>
         ) : (
-          <ReactFlow
-            connectionMode={ConnectionMode.Loose}
-            nodes={nodes}
-            edges={edges}
-            nodeTypes={nodeTypes}
-            edgeTypes={edgeTypes}
-            onNodesChange={onNodesChangeCustom}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            onNodeDoubleClick={onNodeDoubleClick}
-            onEdgeDoubleClick={onEdgeDoubleClick}
-            nodesDraggable={!isLayoutFixed}
-            nodesConnectable={false}
-            panOnDrag={false}
-            panActivationKeyCode="Space"
-            minZoom={0.15}
-            maxZoom={2.5}
-            proOptions={{ hideAttribution: true }}
-            defaultEdgeOptions={{
-              type: "step",
-              style: { strokeWidth: 2, stroke: "var(--color-forest)" },
-            }}
-            fitView
-            fitViewOptions={{ padding: 0.2 }}
-          >
-            <Background
-              color="#D8D0C0"
-              variant={BackgroundVariant.Lines}
-              gap={24}
-              size={1}
-              style={{ opacity: 0.4 }}
-            />
-            <Controls className="shadow-xl overflow-hidden rounded-xl" showInteractive={false} />
-            <MiniMap
-              className="!hidden shadow-xl sm:!block"
-              nodeColor="var(--color-forest)"
-              maskColor="rgba(238, 244, 241, 0.65)"
-              pannable
-              zoomable
-            />
-          </ReactFlow>
+          <>
+            <h2>Pessoas e relações</h2>
+            <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+              Adicione a primeira pessoa para começar o genossociograma. Os dados de cada pessoa
+              aparecem aqui.
+            </p>
+          </>
         )}
-        {!query.isLoading && persons.length > 0 && (
-          <div className="pointer-events-none absolute bottom-4 left-4 z-50 hidden md:flex md:flex-col md:gap-4">
-            <GenerationRuler />
-            <ShortcutsLegend />
-          </div>
-        )}
-      </div>
+      </aside>
 
       <PersonFormDialog
         open={creatingPerson}
@@ -1522,8 +1567,10 @@ function EmptyCanvas({ onCreate }: { onCreate: () => void }) {
       </div>
 
       <div>
-        <p className="font-serif text-2xl font-bold text-primary">A árvore começa por uma pessoa</p>
-        <p className="mt-3 max-w-md text-[15px] leading-relaxed text-muted-foreground">
+        <p className="font-serif text-3xl font-semibold text-white">
+          A árvore começa por uma pessoa
+        </p>
+        <p className="mt-3 max-w-md text-sm leading-relaxed text-slate-300">
           Adicione o <strong>paciente-índice</strong> primeiro. Depois construa em torno dele: pais,
           avós, irmãos, uniões, filhos.
         </p>

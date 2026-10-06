@@ -81,7 +81,7 @@ function GenogramsPage() {
         subtitle="Explore e gerencie as árvores genealógicas ativas dos seus clientes."
       />
 
-      <div className="container-liz py-8 space-y-6">
+      <div className="container-liz py-2 space-y-6">
         {/* Search */}
         <div className="flex items-center gap-3">
           <div className="relative w-full max-w-sm">
@@ -130,11 +130,11 @@ function GenogramsPage() {
             }
           />
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {filtered.map((c) => (
               <div
                 key={c.id}
-                className="rounded-2xl border border-border/50 bg-surface-document p-6 shadow-surface flex flex-col justify-between hover-lift accent-bar-forest"
+                className="rounded-xl border border-border bg-surface-document p-6 flex flex-col justify-between"
               >
                 <div className="space-y-3">
                   <div className="flex justify-between items-start gap-2">
@@ -190,7 +190,7 @@ function GenogramsPage() {
                     to="/app/clientes/$clientId"
                     params={{ clientId: c.id }}
                     search={{ tab: "genogram" }}
-                    className="font-bold text-[12px] uppercase tracking-wider text-forest hover:text-forest flex items-center gap-1"
+                    className="font-bold text-[13px] text-forest hover:text-forest flex items-center gap-1"
                   >
                     Ver Árvore <ArrowRight className="size-3.5" />
                   </Link>

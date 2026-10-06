@@ -190,7 +190,7 @@ function minutesBetween(a: string, b: string): number {
 const QUICK_ACTIONS = [
   { label: "Arquivo de clientes", icon: Users, to: "/app/clientes" },
   { label: "Novo genograma", icon: GitBranch, to: "/app/genossociogramas" },
-  { label: "Linhas de herança", icon: TimerReset, to: "/app/linha-do-tempo" },
+  { label: "Linha do tempo", icon: TimerReset, to: "/app/linha-do-tempo" },
   { label: "Abrir biblioteca", icon: BookOpen, to: "/app/biblioteca" },
 ] as const;
 
@@ -216,7 +216,7 @@ function DateNav({
       <Button
         variant="ghost"
         size="icon"
-        className="size-8 rounded-lg text-primary/70 hover:text-forest hover:bg-forest-soft/50"
+        className="size-8 rounded-lg text-primary/70 hover:text-forest hover:bg-secondary"
         onClick={() => onShift(-1)}
         aria-label="Dia anterior"
       >
@@ -234,7 +234,7 @@ function DateNav({
               className={`flex w-9 flex-col items-center gap-0.5 rounded-lg py-1 transition-colors ${
                 selected
                   ? "bg-forest text-white"
-                  : "text-primary/70 hover:bg-forest-soft/50 hover:text-forest"
+                  : "text-primary/70 hover:bg-secondary hover:text-forest"
               }`}
             >
               <span className="text-[9px] font-bold uppercase tracking-wide opacity-70">
@@ -255,7 +255,7 @@ function DateNav({
       <Button
         variant="ghost"
         size="icon"
-        className="size-8 rounded-lg text-primary/70 hover:text-forest hover:bg-forest-soft/50"
+        className="size-8 rounded-lg text-primary/70 hover:text-forest hover:bg-secondary"
         onClick={() => onShift(1)}
         aria-label="Próximo dia"
       >
@@ -360,13 +360,13 @@ function AgendaPage() {
 
       {/* Quick Actions Bar + Date Nav */}
       <div className="container-liz -mt-6 relative z-10">
-        <div className="surface shadow-surface flex flex-wrap items-center justify-between gap-2 rounded-2xl px-3 py-2 backdrop-blur">
+        <div className="surface shadow-surface flex flex-wrap items-center justify-between gap-2 rounded-xl px-3 py-2 ">
           <div className="flex flex-wrap gap-1">
             {QUICK_ACTIONS.map((a) => (
               <Link
                 key={a.label}
                 to={a.to}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl text-[12px] font-semibold text-primary/80 no-underline hover:text-forest hover:bg-forest-soft/50 transition-colors"
+                className="flex items-center gap-2 px-3 py-2 rounded-xl text-[12px] font-semibold text-primary/80 no-underline hover:text-forest hover:bg-secondary transition-colors"
               >
                 <a.icon className="size-3.5" />
                 {a.label}
@@ -483,7 +483,7 @@ function EmptyDay({
                   <span className="font-serif text-lg text-ink transition-colors group-hover:text-forest-soft">
                     {c.name}
                   </span>
-                  <ChevronRight className="size-4 shrink-0 text-ink/30 transition-transform group-hover:translate-x-1" />
+                  <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1" />
                 </Link>
               </li>
             ))}
@@ -535,23 +535,8 @@ function ContextualHeader({
 
   return (
     <DocumentHeader
-      breadcrumb="Agenda Clínica"
-      title={
-        <div className="flex items-center gap-4">
-          <div className="flex items-center justify-center size-14 shrink-0 rounded-lg bg-forest text-gold font-serif text-3xl font-bold shadow-surface">
-            {firstName.charAt(0).toUpperCase()}
-          </div>
-          <span className="tracking-tight">
-            {isToday ? (
-              <>
-                {greetingByHour()}, {firstName}.
-              </>
-            ) : (
-              <span className="capitalize">{dayLabel}</span>
-            )}
-          </span>
-        </div>
-      }
+      breadcrumb="Agenda"
+      title={isToday ? "Agenda de hoje" : <span className="capitalize">{dayLabel}</span>}
       subtitle={
         <div className="font-sans font-normal text-ink/70 text-[15px]">
           {hasSessions ? (
@@ -586,7 +571,7 @@ function ContextualHeader({
             </span>
           )}
           {isError && (
-            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-clinical-critical bg-clinical-critical/10 border border-clinical-critical/30 px-2 py-0.5 rounded-full whitespace-nowrap">
+            <span className="text-xs font-medium text-clinical-critical bg-clinical-critical/10 border border-clinical-critical/30 px-2 py-0.5 rounded-full whitespace-nowrap">
               Erro de conexão — tentando de novo
             </span>
           )}
@@ -594,7 +579,7 @@ function ContextualHeader({
       }
     >
       {hasSessions && (
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-3 border-t border-border pt-4">
           <HeaderStat
             icon={Users}
             label="Atendimentos"
@@ -640,14 +625,14 @@ function HeaderStat({
 }) {
   const accentClass = {
     forest: "text-ink/60",
-    gold: "text-gold",
+    gold: "text-muted-foreground",
     terracotta: "text-terracotta",
   }[accent];
   return (
-    <div className="rounded-xl bg-surface-document/70 backdrop-blur-sm border border-border/40 px-4 py-3 shadow-surface">
+    <div className="px-2 py-1">
       <div className={`flex items-center gap-1.5 ${accentClass}`}>
         <Icon className="size-3.5" />
-        <p className="text-[10px] font-bold uppercase tracking-[0.15em]">{label}</p>
+        <p className="text-xs font-medium">{label}</p>
       </div>
       <p className="mt-2 font-serif text-2xl font-bold text-ink">{value}</p>
     </div>
@@ -671,12 +656,12 @@ function TimelineColumn({
     <aside className="space-y-3">
       <div className="flex items-center justify-between px-1">
         <h2 className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
-          <CalendarIcon className="size-3.5" /> Timeline do dia
+          <CalendarIcon className="size-3.5" /> Horários do dia
         </h2>
-        <span className="text-[10px] text-muted-foreground/70 font-semibold">Hoje</span>
+        <span className="text-[10px] text-muted-foreground font-semibold">Hoje</span>
       </div>
 
-      <div className="relative rounded-2xl bg-surface-document/80 backdrop-blur border border-border/50 shadow-surface p-4">
+      <div className="relative rounded-xl bg-surface-document/80  border border-border/50 shadow-surface p-4">
         {/* vertical line */}
         <div className="absolute left-[38px] top-6 bottom-6 w-px bg-gradient-to-b from-transparent via-border to-transparent" />
 
@@ -696,7 +681,7 @@ function TimelineColumn({
                     isSession
                       ? isSelected
                         ? "bg-forest/[0.06] ring-1 ring-forest/20"
-                        : "hover:bg-forest-soft/40 cursor-pointer"
+                        : "hover:bg-secondary cursor-pointer"
                       : "opacity-70"
                   }`}
                 >
@@ -709,7 +694,7 @@ function TimelineColumn({
                         ? isSelected
                           ? "bg-forest text-white border-forest"
                           : "bg-surface-document border-forest/30 text-forest"
-                        : "bg-cream border-border text-muted-foreground/70"
+                        : "bg-cream border-border text-muted-foreground"
                     }`}
                   >
                     <Icon className="size-3" />
@@ -771,9 +756,9 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
   return (
     <main className="space-y-5">
       {/* Rich patient card */}
-      <article className="relative rounded-3xl bg-surface-document border border-border/60 shadow-dossier overflow-hidden">
+      <article className="relative rounded-xl bg-surface-document border border-border/60 shadow-dossier overflow-hidden">
         {/* accent bar */}
-        <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${accentBar}`} />
+        <div className={`absolute left-0 top-0 bottom-0 w-px ${accentBar}`} />
 
         <div className="p-6 md:p-8 pl-8 md:pl-10">
           {/* Top row: time + status */}
@@ -813,7 +798,7 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
           {/* Patient identity */}
           <div className="flex items-start gap-5">
             <div
-              className={`size-20 md:size-24 rounded-2xl ${initialsBg} flex items-center justify-center font-serif text-2xl md:text-3xl font-bold shadow-dossier shrink-0 relative`}
+              className={`size-20 md:size-24 rounded-xl ${initialsBg} flex items-center justify-center font-serif text-2xl md:text-3xl font-bold shadow-dossier shrink-0 relative`}
             >
               {session.initials}
               <div className="absolute -bottom-1 -right-1 size-6 rounded-full bg-surface-document border-2 border-cream flex items-center justify-center">
@@ -847,7 +832,7 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
           </div>
 
           {/* AI alerts */}
-          <div className="mt-6 rounded-2xl border border-forest/15 bg-gradient-to-br from-forest/[0.03] to-forest/[0.05] p-4">
+          <div className="mt-6 rounded-xl border border-forest/15 bg-secondary p-4">
             <div className="flex items-center gap-2 mb-3">
               <div className="size-6 rounded-full bg-forest/10 flex items-center justify-center">
                 <Sparkles className="size-3 text-forest" />
@@ -891,7 +876,7 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
               {session.protocols.map((p) => (
                 <span
                   key={p}
-                  className="inline-flex items-center gap-2 rounded-full border border-forest/30 bg-forest-soft/40 px-3.5 py-1.5 text-[12.5px] font-semibold text-forest"
+                  className="inline-flex items-center gap-2 rounded-full border border-forest/30 bg-secondary px-3.5 py-1.5 text-[12.5px] font-semibold text-forest"
                 >
                   <ClipboardList className="size-3.5" />
                   {p}
@@ -927,7 +912,7 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
             )}
             <Link
               to="/app/genossociogramas"
-              className="inline-flex items-center gap-2 h-11 px-4 rounded-md text-[14px] font-semibold text-primary/80 hover:text-forest hover:bg-forest-soft/50 transition-colors"
+              className="inline-flex items-center gap-2 h-11 px-4 rounded-md text-[14px] font-semibold text-primary/80 hover:text-forest hover:bg-secondary transition-colors"
             >
               <GitBranch className="size-4" />
               Genossociograma
@@ -962,7 +947,7 @@ function MiniTreePreview({
   const totalPersons = genogram?.totalPersons ?? 0;
 
   return (
-    <div className="rounded-2xl bg-surface-document/85 backdrop-blur border border-border/50 shadow-surface p-5">
+    <div className="rounded-xl bg-surface-document/85  border border-border/50 shadow-surface p-5">
       <div className="flex items-center justify-between mb-4">
         <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground flex items-center gap-2">
           <GitBranch className="size-3.5" /> Genossociograma
@@ -973,7 +958,7 @@ function MiniTreePreview({
       </div>
 
       {isLoading && !genogram ? (
-        <div className="h-32 flex items-center justify-center text-muted-foreground/60">
+        <div className="h-32 flex items-center justify-center text-muted-foreground">
           <Loader2 className="size-5 animate-spin" />
         </div>
       ) : hasData ? (
@@ -1155,7 +1140,7 @@ function UpcomingList({ currentId, sessions }: { currentId: string; sessions: Se
   const others = sessions.filter((s) => s.id !== currentId);
 
   return (
-    <div className="rounded-2xl bg-surface-document/85 backdrop-blur border border-border/50 shadow-surface p-5">
+    <div className="rounded-xl bg-surface-document/85  border border-border/50 shadow-surface p-5">
       <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-4 flex items-center gap-2">
         <Clock className="size-3.5" /> Próximas hoje
       </p>
@@ -1182,7 +1167,7 @@ function UpcomingList({ currentId, sessions }: { currentId: string; sessions: Se
                   to="/app/clientes/$clientId"
                   params={{ clientId: s.clientId }}
                   search={{ from: "agenda" }}
-                  className="flex items-center gap-3 py-2 rounded-lg hover:bg-forest-soft/40 transition-colors -mx-1 px-1"
+                  className="flex items-center gap-3 py-2 rounded-lg hover:bg-secondary transition-colors -mx-1 px-1"
                 >
                   {inner}
                 </Link>
@@ -1228,14 +1213,14 @@ function RightPanel({
   return (
     <aside className="grid gap-4 md:grid-cols-2 2xl:grid-cols-1">
       {/* Preparação do próximo atendimento — dados reais da sessão selecionada */}
-      <div className="rounded-2xl bg-gradient-to-br from-forest via-forest to-forest/90 text-white p-5 shadow-dossier relative overflow-hidden">
+      <div className="rounded-xl bg-forest text-white p-5 shadow-dossier relative overflow-hidden">
         <div
           aria-hidden
           className="absolute -top-10 -right-10 size-40 rounded-full bg-gold/20 blur-3xl pointer-events-none"
         />
         <div className="relative">
           <div className="flex items-center gap-2 mb-3">
-            <div className="size-8 rounded-full bg-white/10 backdrop-blur flex items-center justify-center">
+            <div className="size-8 rounded-full bg-white/10  flex items-center justify-center">
               <Brain className="size-4 text-gold" />
             </div>
             <div>
@@ -1283,7 +1268,7 @@ function RightPanel({
       </div>
 
       {/* Pendências */}
-      <div className="rounded-2xl bg-surface-document/85 backdrop-blur border border-border/50 shadow-surface p-5">
+      <div className="rounded-xl bg-surface-document/85  border border-border/50 shadow-surface p-5">
         <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3 flex items-center gap-2">
           <ClipboardList className="size-3.5" /> Pendências
         </p>
@@ -1311,7 +1296,7 @@ function RightPanel({
       </div>
 
       {/* Balanço de tempo do dia */}
-      <div className="rounded-2xl bg-surface-document/85 backdrop-blur border border-border/50 shadow-surface p-5">
+      <div className="rounded-xl bg-surface-document/85  border border-border/50 shadow-surface p-5">
         <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-3">
           Balanço do dia
         </p>
@@ -1332,7 +1317,7 @@ function RightPanel({
           </div>
           <div className="h-1.5 bg-cream rounded-full overflow-hidden mt-2">
             <div
-              className="h-full bg-gradient-to-r from-forest to-forest rounded-full transition-[width] duration-500"
+              className="h-full bg-forest rounded-full transition-[width] duration-500"
               style={{ width: `${occupiedPct}%` }}
             />
           </div>
@@ -1357,12 +1342,12 @@ function QuickNote() {
   });
 
   return (
-    <div className="rounded-2xl bg-gradient-to-br from-cream to-surface-document border border-border/50 shadow-surface p-5">
+    <div className="rounded-xl bg-white border border-border/50 shadow-surface p-5">
       <div className="mb-2 flex items-center justify-between">
         <p className="m-0 text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground flex items-center gap-2">
           <FileText className="size-3.5" /> Nota rápida
         </p>
-        <span className="text-[9px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/60">
+        <span className="text-[9px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
           Salva neste dispositivo
         </span>
       </div>
@@ -1378,7 +1363,7 @@ function QuickNote() {
         }}
         placeholder="Uma linha, uma intuição, uma hipótese..."
         aria-label="Nota rápida"
-        className="w-full bg-transparent text-[13px] font-serif text-primary/90 placeholder:text-muted-foreground/60 resize-none focus:outline-none min-h-[60px]"
+        className="w-full bg-transparent text-[13px] font-serif text-primary/90 placeholder:text-muted-foreground resize-none focus:outline-none min-h-[60px]"
       />
     </div>
   );
