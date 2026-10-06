@@ -1,3 +1,4 @@
+import { GenogramThumbnail } from "@/components/genogram/genogram-thumbnail";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   TreePine,
@@ -64,7 +65,15 @@ function GenogramsPage() {
         const patternsCount = detectPatterns(persons, rels).length;
         const consistent = validateGraph(graph).ok;
 
-        return { ...c, personCount: persons.length, generations, patternsCount, consistent };
+        return {
+          ...c,
+          persons,
+          rels,
+          personCount: persons.length,
+          generations,
+          patternsCount,
+          consistent,
+        };
       });
     },
   });
@@ -130,15 +139,24 @@ function GenogramsPage() {
             }
           />
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="gv-map-gallery">
             {filtered.map((c) => (
-              <div
-                key={c.id}
-                className="rounded-xl border border-border bg-surface-document p-6 flex flex-col justify-between"
-              >
-                <div className="space-y-3">
+              <div key={c.id} className="gv-map-card">
+                <Link
+                  to="/app/clientes/$clientId"
+                  params={{ clientId: c.id }}
+                  search={{ tab: "genogram" }}
+                  className="gv-map-card-preview"
+                  aria-label={`Abrir genossociograma de ${c.preferred_name || c.full_name}`}
+                >
+                  <GenogramThumbnail persons={c.persons} rels={c.rels} />
+                  <span>
+                    Explorar árvore <ArrowRight size={15} />
+                  </span>
+                </Link>
+                <div className="space-y-3 gv-map-card-body">
                   <div className="flex justify-between items-start gap-2">
-                    <h3 className="font-serif text-xl font-bold text-primary truncate">
+                    <h3 className="font-serif text-xl font-bold text-primary">
                       {c.preferred_name || c.full_name}
                     </h3>
                     <Badge
@@ -171,7 +189,7 @@ function GenogramsPage() {
                   </div>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-border/40 flex justify-between items-center">
+                <div className="gv-map-card-footer flex justify-between items-center">
                   <span className="text-[11px] text-muted-foreground font-semibold flex items-center gap-1">
                     {c.personCount === 0 ? null : c.consistent ? (
                       <>

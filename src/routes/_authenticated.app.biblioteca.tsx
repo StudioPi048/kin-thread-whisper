@@ -667,6 +667,23 @@ function BibliotecaPage() {
         title="Referências para o seu trabalho."
         subtitle="Consulte autores, obras, conceitos e materiais do acervo."
       />
+      <div className="container-liz">
+        <div className="gv-library-banner">
+          <img
+            src="/assets/genealiz/archive-library.jpg"
+            alt="Livros e fotografias, composição de acervo ilustrativa"
+          />
+          <div>
+            <p className="gv-category">Acervo de consulta</p>
+            <h2>
+              Conhecimento que
+              <br />
+              acompanha a prática.
+            </h2>
+            <p>Conceitos, autores e leituras para voltar sempre que precisar.</p>
+          </div>
+        </div>
+      </div>
       <div className="container-liz atlas-library">
         <aside>
           <nav aria-label="Categorias da biblioteca">

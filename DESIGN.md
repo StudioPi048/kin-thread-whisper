@@ -1,7 +1,7 @@
 ---
-name: "GENEALIZ — Atlas familiar"
+name: "GENEALIZ — Arquivo vivo"
 description: "Relações familiares em um espaço de trabalho profissional."
-colors: {"forest": "#17273a", "forest-mid": "#243b53", "forest-soft": "#405b76", "forest-mist": "#eaf0f6", "gold": "#dbac67", "gold-soft": "#e7bf86", "gold-muted": "#f4e6d0", "archive": "#f5f7fa", "archive-doc": "#ffffff", "ink-soft": "#4c6179", "warm-gray": "#53677e", "border": "#d8e1ea", "input": "#bdcada", "clinical-critical": "#8b3a3a"}
+colors: {"forest": "#253c38", "forest-mid": "#243b53", "forest-soft": "#405b76", "forest-mist": "#eaf0f6", "gold": "#dbac67", "gold-soft": "#e7bf86", "gold-muted": "#f4e6d0", "archive": "#f6f3ed", "archive-doc": "#ffffff", "ink-soft": "#4c6179", "warm-gray": "#53677e", "border": "#d8e1ea", "input": "#bdcada", "clinical-critical": "#8b3a3a"}
 typography: {"display": {"fontFamily": "Cormorant Garamond, ui-serif, Georgia, serif", "fontSize": "clamp(3rem, 6vw, 6rem)", "fontWeight": 600, "lineHeight": 1, "letterSpacing": "-0.025em"}, "headline": {"fontFamily": "Cormorant Garamond, ui-serif, Georgia, serif", "fontSize": "42px", "fontWeight": 600, "lineHeight": 1.04, "letterSpacing": "-0.02em"}, "title": {"fontFamily": "Cormorant Garamond, ui-serif, Georgia, serif", "fontSize": "27px", "fontWeight": 600, "lineHeight": 1.15}, "body": {"fontFamily": "Inter, ui-sans-serif, system-ui, sans-serif", "fontSize": "15px", "lineHeight": 1.65}, "label": {"fontFamily": "Inter, ui-sans-serif, system-ui, sans-serif", "fontSize": "14px", "fontWeight": 600}}
 rounded: {"chip": "4px", "nav": "5px", "sm": "6px", "md": "8px", "lg": "12px", "xl": "16px", "2xl": "20px"}
 spacing: {"2": "8px", "3": "12px", "4": "16px", "5": "20px", "6": "24px"}
@@ -10,21 +10,15 @@ components: {"button-default": {"backgroundColor": "{colors.forest}", "textColor
 
 # Design System: GENEALIZ
 
-## Overview
+## Direção atual — Arquivo vivo
 
-**Creative North Star: "Atlas familiar"**
+A implementação Atlas foi rejeitada pelo usuário. A direção atual parte do AI Brain de LIZ Consultório e Studio Pi: fotografia de arquivo familiar, papel, fio vinho, luz lateral e uma superfície clara de trabalho. A aprovação estética está pendente de revisão pelo usuário no Lovable.
 
-Atlas familiar organiza pessoas, vínculos e registros com navegação azul profundo, superfícies claras de leitura e âmbar para destaque. Títulos editoriais em serifa marcam contexto; Inter mantém formulários e controles legíveis. O desenho é preciso, plano e contido, sem brilho ornamental nem significado clínico atribuído à posição visual.
+Duas imagens originais geradas estão em `public/assets/genealiz/`. A home usa fotografia dominante; a mesa reúne casos recentes, agenda e biblioteca; a galeria mostra miniaturas do motor real. O símbolo vetorial combina três fólios em G, com assinatura Inter. Títulos editoriais usam Cormorant; nomes em dossiês e controles usam Inter.
 
-Direção **Atlas familiar** e composição **Mapa em primeiro plano** aprovadas por Pietro em 06/10/2026. Este documento consolida o seed da mesma sessão com o código implementado. Implementação local concluída nas páginas do aplicativo, entrada pública e autenticação; revisão final PASS comunicada pelo revisor, com os apontamentos materiais resolvidos. **Ainda não publicada.** Regra obrigatória preservada do motor original: cliente no topo, pais abaixo, avós abaixo dos pais; filiação sempre passa pela união dos respectivos pais. A orientação não é uma limitação. O preview usa dados fictícios calculados pelo motor original, sem posições manuais impostas; a IA clínica permanece demonstrativa.
+Cliente no topo, pais abaixo e avós abaixo dos pais são invariantes. O motor de layout e os vínculos não foram alterados. A planilha ocupa a largura disponível; o painel complementar está na visão geral. O mapa recebe prancheta clara, cartões opacos e ficha compacta.
 
-Fontes: `src/styles.css`, componentes compartilhados de botão, campo, dossiê e cabeçalho, contrato em `src/routes/__root.tsx`, `PRODUCT.md`, `design/restructure/brief.md` e capturas `map-desktop.jpg`, `map-mobile.jpg`, `biblioteca-desktop.jpg` em `design/restructure/screenshots/`. A composição aprovada é uma expressão do sistema; páginas de acervo e leitura usam sua própria organização.
-
-**Key Characteristics:**
-
-- Navegação azul profundo e registros claros.
-- Serifa editorial nos títulos; sans nos controles.
-- Bordas finas, cantos contidos e relações identificáveis.
+Fonte de decisões: `design/arquivo-vivo/brief.md`. Os valores e tamanhos antigos descritos abaixo documentam a base Atlas e são substituídos pelas regras Arquivo vivo ao final de `src/styles.css` quando houver divergência.
 
 ## Colors
 

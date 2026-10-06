@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { GenealizWordmark } from "@/components/genealiz-wordmark";
-import { FamilyAtlasDiagram } from "@/components/family-atlas-diagram";
 
 const searchSchema = z.object({
   mode: z.enum(["signin", "signup", "recover", "reset"]).optional(),
@@ -149,7 +148,11 @@ function AuthPage() {
           <p className="mt-5 text-sm leading-7 text-slate-300 max-w-md">
             Seu espaço de trabalho para organizar relações familiares e acompanhar cada atendimento.
           </p>
-          <FamilyAtlasDiagram />
+          <img
+            className="gv-auth-image"
+            src="/assets/genealiz/archive-hero.jpg"
+            alt="Fotografias de um arquivo familiar ilustrativo"
+          />
         </div>
         <p className="text-xs text-slate-300">GENEALIZ · Psicogenealogia</p>
       </aside>

@@ -1,3 +1,4 @@
+import { personSymbol } from "./person-symbol";
 import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { Plus } from "lucide-react";
@@ -39,33 +40,7 @@ export interface PersonNodeData {
  */
 function PersonNodeComponent({ data, selected }: NodeProps) {
   const d = data as unknown as PersonNodeData;
-  const rawGender = (d.gender || "").toLowerCase().trim();
-  const rel = (d.relationship_to_proband || "").toLowerCase();
-
-  const rawName = (d.full_name || "").toLowerCase().trim();
-  const rawPref = (d.preferred_name || "").toLowerCase().trim();
-
-  let gender = "desconhecido";
-  if (
-    rawGender.includes("masculino") ||
-    rawGender === "m" ||
-    rawGender === "homem" ||
-    rel.match(/pai|tio|avô|bisavô|filho|irmão|irmao/)
-  ) {
-    gender = "masculino";
-  } else if (
-    rawGender.includes("feminino") ||
-    rawGender === "f" ||
-    rawGender === "mulher" ||
-    rel.match(/mãe|mae|tia|avó|avo|bisavó|filha|irmã|irma/)
-  ) {
-    gender = "feminino";
-  }
-
-  if (rawGender.includes("aborto") || rawName.includes("aborto") || rawPref.includes("aborto")) {
-    gender = "aborto";
-  }
-
+  const gender = personSymbol(d);
   const isMale = gender === "masculino";
   const isFemale = gender === "feminino";
   const isAbortion = gender === "aborto";

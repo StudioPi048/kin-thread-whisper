@@ -673,7 +673,7 @@ function ClientDossierPage() {
         </div>
 
         {/* Collapsible Clinical Intelligence Copilot Panel */}
-        {activeTab !== "genogram" && <ClinicalIntelligencePanel clientId={clientId} />}
+        {activeTab === "overview" && <ClinicalIntelligencePanel clientId={clientId} />}
       </div>
 
       <ClientFormDialog

@@ -1,146 +1,220 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Network, CalendarDays, BookOpen, Users } from "lucide-react";
+import {
+  ArrowRight,
+  ArrowUpRight,
+  Check,
+  CalendarDays,
+  BookOpen,
+  Network,
+  FolderOpen,
+} from "lucide-react";
 import { GenealizWordmark } from "@/components/genealiz-wordmark";
-import { FamilyAtlasDiagram } from "@/components/family-atlas-diagram";
-export const Route = createFileRoute("/")({ component: HomePage });
-function HomePage() {
+export const Route = createFileRoute("/")({ component: Index });
+function Index() {
   return (
-    <div className="atlas-landing">
-      <header className="atlas-public-nav">
-        <Link to="/" aria-label="GENEALIZ — Início">
+    <div className="gv-public">
+      <header className="gv-public-nav">
+        <Link to="/" aria-label="GENEALIZ — início">
           <GenealizWordmark />
         </Link>
         <nav aria-label="Navegação pública">
           <a href="#plataforma">A plataforma</a>
-          <a href="#fluxo">Como funciona</a>
-          <Link to="/auth" className="cta-outline">
-            Entrar <ArrowRight size={15} />
+          <a href="#pratica">Na sua prática</a>
+          <Link to="/auth">
+            Entrar <ArrowUpRight size={16} />
           </Link>
         </nav>
       </header>
       <main>
-        <section className="atlas-hero">
-          <div className="atlas-hero-copy">
+        <section className="gv-hero">
+          <img
+            src="/assets/genealiz/archive-hero.jpg"
+            alt="Mãos organizam fotografias de diferentes gerações em um arquivo familiar; composição ilustrativa."
+            fetchPriority="high"
+            className="gv-hero-image"
+          />
+          <div className="gv-hero-copy">
+            <span className="gv-category">Psicogenealogia · espaço de trabalho</span>
             <h1>
-              Histórias se encontram.
+              Toda história
               <br />
-              <em>
-                Você acompanha
-                <br />
-                as relações.
-              </em>
+              começa <em>antes.</em>
             </h1>
             <p>
-              Um espaço de trabalho para psicogenealogistas: clientes, genossociogramas e
-              atendimentos organizados em torno de cada história familiar.
+              Conecte histórias familiares. Organize seus atendimentos. Tenha espaço para escutar.
             </p>
-            <div className="flex flex-wrap gap-3 mt-9">
-              <Link to="/auth" search={{ mode: "signup" }} className="cta-gold">
-                Começar meu acompanhamento <ArrowRight size={17} />
+            <Link to="/auth" search={{ mode: "signup" }} className="gv-button gv-button-gold">
+              Criar meu espaço <ArrowRight size={18} />
+            </Link>
+            <a href="#plataforma" className="gv-hero-secondary">
+              Explore a plataforma <span>↓</span>
+            </a>
+          </div>
+          <div className="gv-hero-foot">
+            <span>Da memória familiar ao acompanhamento.</span>
+            <span>GENEALIZ / Arquivo vivo</span>
+          </div>
+        </section>
+        <section className="gv-intro" id="plataforma">
+          <div>
+            <span className="gv-category">Um lugar para reunir os fios</span>
+            <h2>
+              A história é complexa.
+              <br />
+              Seu espaço de trabalho
+              <br />
+              pode ser <em>claro.</em>
+            </h2>
+          </div>
+          <div>
+            <p>
+              Uma data anotada. Um vínculo que ganha contexto. Uma conversa que precisa ser
+              retomada. Na GENEALIZ, essas informações encontram seu lugar.
+            </p>
+            <p>
+              Um ambiente pensado para psicogenealogistas acompanharem pessoas, relações e
+              acontecimentos ao longo das sessões.
+            </p>
+            <div className="gv-text-links">
+              <Link to="/auth">
+                Abrir minha conta <ArrowUpRight size={17} />
               </Link>
-              <a href="#plataforma" className="cta-outline">
-                Conhecer a plataforma
+              <a href="#pratica">
+                Veja como se organiza <ArrowRight size={17} />
               </a>
             </div>
           </div>
-          <div className="atlas-hero-map">
-            <div className="flex items-center justify-between text-xs text-slate-300">
-              <span>Genossociograma familiar</span>
-              <Network size={18} />
-            </div>
-            <FamilyAtlasDiagram />
-          </div>
         </section>
-        <section id="plataforma" className="atlas-public-section">
-          <div className="atlas-public-intro">
+        <section className="gv-product-story" id="pratica">
+          <div className="gv-story-heading">
             <h2>
-              O contexto familiar
-              <br />
-              sempre por perto.
+              Do primeiro registro
+              <br />à próxima conversa.
             </h2>
             <p>
-              Da preparação da sessão à consulta de referências, cada área tem um lugar claro no seu
-              trabalho.
+              Ferramentas que acompanham o seu trabalho,
+              <br />
+              com cada informação no seu contexto.
             </p>
           </div>
-          <div className="atlas-capabilities">
-            {[
-              {
-                Icon: Network,
-                title: "Pessoas e vínculos",
-                text: "Registre pessoas, organize relações e consulte os dados de cada integrante no genossociograma.",
-              },
-              {
-                Icon: Users,
-                title: "Um dossiê para cada cliente",
-                text: "Reúna identificação, anamnese, acontecimentos e registros de sessão no mesmo contexto.",
-              },
-              {
-                Icon: CalendarDays,
-                title: "Continuidade dos atendimentos",
-                text: "Consulte sua agenda e retome o acompanhamento a partir do dossiê correspondente.",
-              },
-              {
-                Icon: BookOpen,
-                title: "Referências para consultar",
-                text: "Explore materiais da biblioteca e encontre apoio para organizar seus estudos.",
-              },
-            ].map((c) => (
-              <article key={c.title}>
-                <c.Icon size={23} strokeWidth={1.4} />
+          <div className="gv-feature-primary">
+            <div className="gv-feature-copy">
+              <Network size={26} />
+              <h3>
+                Uma família.
+                <br />
+                Muitas histórias conectadas.
+              </h3>
+              <p>
+                Construa o genossociograma, consulte a ficha de cada pessoa e alterne para a
+                planilha quando precisar registrar mais informações.
+              </p>
+              <ul>
+                <li>
+                  <Check size={16} />
+                  Cliente no topo, ancestralidade abaixo
+                </li>
+                <li>
+                  <Check size={16} />
+                  Pessoas e uniões no mesmo mapa
+                </li>
+                <li>
+                  <Check size={16} />
+                  Nome, datas e observações por integrante
+                </li>
+              </ul>
+              <Link to="/auth">
+                Explorar os genossociogramas <ArrowUpRight size={18} />
+              </Link>
+            </div>
+            <div
+              className="gv-family-example"
+              aria-label="Exemplo ilustrativo da organização de um dossiê"
+            >
+              <div className="gv-example-top">
+                <span>História familiar</span>
+                <span>Exemplo ilustrativo</span>
+              </div>
+              <div className="gv-example-person">
+                <span className="gv-initial">H</span>
                 <div>
-                  <h3>{c.title}</h3>
-                  <p>{c.text}</p>
+                  <strong>Helena</strong>
+                  <small>Pessoa de referência</small>
                 </div>
-              </article>
-            ))}
+                <span className="gv-dot" />
+              </div>
+              <div className="gv-example-rule" />
+              <div className="gv-example-parents">
+                <div>
+                  <span className="gv-square" />
+                  <strong>Carlos</strong>
+                  <small>Pai</small>
+                </div>
+                <span className="gv-join">união</span>
+                <div>
+                  <span className="gv-circle" />
+                  <strong>Mariana</strong>
+                  <small>Mãe</small>
+                </div>
+              </div>
+              <div className="gv-example-bottom">
+                <span>Genossociograma</span>
+                <span>Linha do tempo</span>
+                <span>Sessões</span>
+              </div>
+            </div>
+          </div>
+          <div className="gv-feature-pair">
+            <article>
+              <CalendarDays size={24} />
+              <h3>O atendimento tem continuidade.</h3>
+              <p>
+                Agenda, anamnese e registros de sessão acessíveis a partir do dossiê. Retome o
+                acompanhamento com o contexto por perto.
+              </p>
+              <Link to="/auth">
+                Organizar atendimentos <ArrowRight size={18} />
+              </Link>
+            </article>
+            <article className="gv-library-feature">
+              <img
+                src="/assets/genealiz/archive-library.jpg"
+                alt="Livros e uma fotografia familiar sobre papel, composição ilustrativa."
+                loading="lazy"
+              />
+              <div>
+                <BookOpen size={24} />
+                <h3>Conhecimento à mão.</h3>
+                <p>
+                  Consulte conceitos, autores e referências na biblioteca enquanto desenvolve sua
+                  prática.
+                </p>
+                <Link to="/auth">
+                  Conhecer a biblioteca <ArrowRight size={18} />
+                </Link>
+              </div>
+            </article>
           </div>
         </section>
-        <section id="fluxo" className="atlas-public-section atlas-public-flow">
+        <section className="gv-closing">
+          <FolderOpen size={32} />
           <h2>
-            Da primeira conversa
+            Mais presença na escuta.
             <br />
-            ao próximo encontro.
+            <em>Mais clareza nos registros.</em>
           </h2>
-          <ol>
-            <li>
-              <span>1</span>
-              <div>
-                <h3>Abra o dossiê</h3>
-                <p>Comece pelo cadastro e pelo contexto trazido pelo cliente.</p>
-              </div>
-            </li>
-            <li>
-              <span>2</span>
-              <div>
-                <h3>Organize pessoas e acontecimentos</h3>
-                <p>Construa o mapa familiar e registre as informações ao longo do tempo.</p>
-              </div>
-            </li>
-            <li>
-              <span>3</span>
-              <div>
-                <h3>Retome o acompanhamento</h3>
-                <p>Consulte as sessões e mantenha a continuidade do trabalho.</p>
-              </div>
-            </li>
-          </ol>
-        </section>
-        <section className="atlas-public-close">
-          <h2>
-            Uma história.
-            <br />
-            Muitas conexões para compreender.
-          </h2>
-          <Link to="/auth" className="cta-gold">
-            Entrar no GENEALIZ <ArrowRight size={17} />
+          <p>Prepare o seu espaço de trabalho em psicogenealogia.</p>
+          <Link to="/auth" search={{ mode: "signup" }} className="gv-button gv-button-gold">
+            Criar minha conta <ArrowRight size={18} />
           </Link>
         </section>
       </main>
-      <footer className="atlas-public-footer">
+      <footer className="gv-footer">
         <GenealizWordmark />
-        <p>Uma plataforma voltada para psicogenealogistas.</p>
-        <Link to="/auth">Acessar minha conta</Link>
+        <p>Histórias, relações e continuidade.</p>
+        <Link to="/auth">
+          Acessar a plataforma <ArrowUpRight size={16} />
+        </Link>
       </footer>
     </div>
   );

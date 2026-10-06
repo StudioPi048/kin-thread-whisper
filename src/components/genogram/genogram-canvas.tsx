@@ -4,7 +4,6 @@ import {
   BackgroundVariant,
   BaseEdge,
   Controls,
-  MiniMap,
   ReactFlow,
   ReactFlowProvider,
   addEdge,
@@ -1056,7 +1055,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
                 size="sm"
                 variant="gold"
                 onClick={() => setCreatingPerson(true)}
-                className="h-9 gap-2"
+                className="gv-add-person h-9 gap-2"
               >
                 <UserPlus className="size-4" />
                 Adicionar pessoa
@@ -1331,14 +1330,6 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
                 className="overflow-hidden rounded-md"
                 showInteractive={false}
                 fitViewOptions={{ nodes: nodes.filter((n) => n.type === "person"), padding: 0.18 }}
-              />
-              <MiniMap
-                position="top-right"
-                className="!hidden shadow-xl sm:!block"
-                nodeColor="var(--color-forest)"
-                maskColor="rgba(23, 39, 58, 0.75)"
-                pannable
-                zoomable
               />
             </ReactFlow>
           )}

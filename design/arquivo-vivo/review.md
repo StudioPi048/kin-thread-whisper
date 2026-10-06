@@ -1,0 +1,3 @@
+# Revisão — 06/10/2026
+Revisão independente de design e produção realizada por arquivo_review. A composição fotográfica materializa Arquivo vivo. P1 corrigido: miniaturas passam a compartilhar personSymbol com o mapa (inclui aborto, desconhecido e aliases), sem modificar lógica. P2 corrigidos: CTA Criar meu espaço; agenda distingue carregamento/erro; concordância de consentimento. Nota restante: banner da mesa tem 270px e pendências ficam abaixo da dobra. Não representa aprovação estética do usuário.
+Build de produção e TypeScript passaram na primeira rodada. Capturas desktop de home, mesa, mapa e galeria; galeria mobile sem overflow. Fixtures usadas só na verificação interna. Revisão no Lovable ainda pendente.
