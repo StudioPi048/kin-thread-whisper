@@ -2640,3 +2640,9 @@
     max-width: 200px;
   }
 }
+.atlas-genogram.gv-panel-collapsed {
+  grid-template-columns: minmax(0, 1fr);
+}
+.atlas-genogram:fullscreen {
+  height: 100dvh;
+}
