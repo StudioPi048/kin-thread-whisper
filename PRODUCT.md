@@ -40,3 +40,9 @@ Código GitHub StudioPi048/kin-thread-whisper, Lovable projeto 0bbf5716-9319-44e
 
 ## Regra estrutural confirmada — 06/10/2026
 Cliente/paciente-índice sempre no topo. Gerações anteriores descem: pais, avós e assim por diante. Cada filho liga-se à união dos respectivos pais; o eixo do cliente e dos ancestrais diretos fica centralizado na união parental. Preservar o motor existente; mudanças estéticas e dados de demonstração não podem impor orientação contrária.
+
+## Regra absoluta do genossociograma
+Cliente e irmãos sempre no topo; pais abaixo; avós abaixo dos pais. Nunca inverter. Ligações de filiação sempre pela união correta dos pais.
+
+## Hipóteses clínicas
+Só a partir de evidências registradas, sempre com fontes, limites e perguntas. Sem dados, sem hipótese.
