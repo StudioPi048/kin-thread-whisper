@@ -34,7 +34,23 @@ import { smartNormalizeRelationship, genealogicalOrder } from "@/lib/relationshi
 import { ensureProband } from "@/lib/ensure-proband";
 import { RelationshipCombobox } from "./relationship-combobox";
 import { buildLogicalGraph } from "@/lib/geno/build";
-import { inferGenderFromRelationship, parseDateString } from "@/lib/clan-import";
+import {
+  inferGenderFromRelationship,
+  parseDateString,
+  autoMap,
+  analyzeImport,
+  IMPORT_FIELDS,
+  type Mapping,
+  type FieldKey,
+} from "@/lib/clan-import";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type Person = Tables<"genogram_persons">;
 type Props = { clientId: string };
@@ -89,6 +105,51 @@ export function ClanSpreadsheet({ clientId }: Props) {
   const pendingPatch = useRef<Record<string, TablesUpdate<"genogram_persons">>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [importPreview, setImportPreview] = useState<{
+    header: string[];
+    rows: string[][];
+    mapping: Mapping;
+  } | null>(null);
+  const [importReplace, setImportReplace] = useState(false);
+  const [importDuplicates, setImportDuplicates] = useState(false);
+  const analysis = useMemo(
+    () =>
+      importPreview
+        ? analyzeImport(
+            importPreview.rows,
+            importPreview.mapping,
+            importReplace ? [] : (persons ?? []).map((p) => ({ full_name: p.full_name, birth_date: p.birth_date })),
+          )
+        : [],
+    [importPreview, importReplace, persons],
+  );
+  const toImport = analysis.filter((r) => r.status === "ok" || (importDuplicates && r.status === "duplicate"));
+  const confirmImport = useMutation({
+    mutationFn: async () => {
+      const rows = toImport.map((r) => r.record!);
+      if (rows.length === 0) throw new Error("Nenhuma linha válida para importar.");
+      const { data, error } = await supabase.rpc("import_genogram_persons", {
+        _client_id: clientId,
+        _rows: rows as never,
+        _replace: importReplace,
+      });
+      if (error) throw error;
+      await ensureProband(clientId);
+      return data as number;
+    },
+    onSuccess: (n) => {
+      qc.invalidateQueries({ queryKey: ["genogram-persons", clientId] });
+      invalidateCase(qc, clientId);
+      toast.success(`${n} familiares importados.`);
+      setImportPreview(null);
+      setImportReplace(false);
+      setImportDuplicates(false);
+    },
+    onError: (e) =>
+      toast.error(
+        `Importação não concluída — nada foi alterado. ${e instanceof Error ? e.message : ""}`,
+      ),
+  });
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const toggleExpanded = (id: string) => {
     setExpandedRows((prev) => {
@@ -284,6 +345,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
     reader.onload = async (event) => {
       try {
         let parsedRows: string[][] = [];
+        let parsedHeader: string[] = [];
 
         if (file.name.toLowerCase().endsWith(".xlsx")) {
           // Process Excel
@@ -300,13 +362,14 @@ export function ClanSpreadsheet({ clientId }: Props) {
 
           if (jsonData.length < 2) throw new Error("Arquivo vazio ou sem cabeçalho.");
 
+          parsedHeader = (jsonData[0] ?? []).map((c) => String(c ?? ""));
           parsedRows = jsonData
             .slice(1)
             .filter((row) =>
               row.some((cell) => cell !== undefined && cell !== null && String(cell).trim() !== ""),
             )
             .map((row) =>
-              Array.from({ length: 11 }).map((_, i) => {
+              Array.from({ length: Math.max(11, row.length) }).map((_, i) => {
                 const cell = row[i];
 
                 // 1) Objeto Date nativo (cellDates:true funcionou)
@@ -340,7 +403,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
           if (lines.length < 2) throw new Error("Arquivo vazio ou sem cabeçalho.");
 
           const separator = lines[0].includes(";") ? ";" : ",";
-          parsedRows = lines.slice(1).map((line) => {
+          const splitLine = (line: string) => {
             const regex = new RegExp(`(?:^|${separator})(?:"([^"]*)"|([^${separator}]*))`, "g");
             const row: string[] = [];
             let match;
@@ -348,122 +411,12 @@ export function ClanSpreadsheet({ clientId }: Props) {
               row.push(match[1] || match[2] || "");
             }
             return row;
-          });
+          };
+          parsedHeader = splitLine(lines[0]);
+          parsedRows = lines.slice(1).map(splitLine);
         }
 
-        // Pergunta se deseja substituir a planilha inteira
-        const shouldOverwrite =
-          persons && persons.length > 0
-            ? await askConfirm({
-                title: "Substituir a planilha atual?",
-                description:
-                  "Você pode apagar tudo e usar só os dados do arquivo, ou manter o que já está aqui e adicionar as novas linhas no final.",
-                confirmLabel: "Apagar tudo e usar o arquivo",
-                cancelLabel: "Manter e adicionar no final",
-                destructive: true,
-              })
-            : false;
-
-        let currentContext = "Consulente";
-
-        // Normalizar e filtrar: skip linhas sem nenhum dado útil
-        const inserts = parsedRows
-          .filter((r) => r.length > 1)
-          .map((row) => {
-            const [
-              nome,
-              parentesco,
-              nascimento,
-              gestacao,
-              morte,
-              enfermidades,
-              profissao,
-              vicios,
-              temperamento,
-              ordem,
-              obs,
-            ] = row;
-
-            let rawRel = parentesco?.trim() || "";
-            const lowerRel = rawRel.toLowerCase();
-
-            // Se for um ancestral direto, salva como contexto atual
-            if (rawRel && !lowerRel.includes("irmã") && !lowerRel.includes("irmão")) {
-              currentContext = rawRel;
-            }
-            // Se for SÓ "irmãos" genérico abaixo de um ancestral, injeta o contexto para o sistema entender
-            else if (
-              lowerRel === "irmãos" ||
-              lowerRel === "irmãs" ||
-              lowerRel === "irmão" ||
-              lowerRel === "irmã" ||
-              lowerRel === "irmao" ||
-              lowerRel === "irma" ||
-              lowerRel === "irmaos"
-            ) {
-              if (currentContext !== "Consulente" && currentContext !== "Paciente") {
-                // Preposição precisa bater com o gênero da âncora (do Pai / da
-                // Mãe / do Avô / da Avó...), senão o normalizador não reconhece
-                // o texto e a pessoa desaparece da árvore.
-                const prep = /mãe|avó|bisavó/i.test(currentContext) ? "da" : "do";
-                rawRel = `Irmã(o) ${prep} ${currentContext}`;
-              }
-            }
-
-            // Apenas para inferir o gênero corretamente no momento do import
-            const relCanonical = rawRel ? smartNormalizeRelationship(rawRel) : null;
-
-            return {
-              client_id: clientId,
-              full_name: nome?.trim() || "",
-              relationship_to_proband: rawRel || null, // Mantém a nomenclatura que o usuário digitou (com o contexto injetado se necessário)
-              gender: inferGenderFromRelationship(relCanonical ?? "") || "unknown",
-              birth_date: parseDateString(nascimento),
-              gestational_weeks: gestacao?.trim() || null,
-              death_date: parseDateString(morte),
-              is_deceased: !!morte?.trim(),
-              health_conditions: enfermidades
-                ? enfermidades
-                    .split(",")
-                    .map((s) => s.trim())
-                    .filter(Boolean)
-                : [],
-              occupation: profissao?.trim() || null,
-              vices: vicios?.trim() || null,
-              temperament: temperamento?.trim() || null,
-              birth_order: ordem && !isNaN(parseInt(ordem)) ? parseInt(ordem) : null,
-              notes: obs?.trim() || null,
-            };
-          })
-          // Remove linhas vazias E a linha "Consulente" — o proband vem do cadastro do cliente
-          .filter(
-            (r) => (!!r.full_name || !!r.birth_date) && r.relationship_to_proband !== "Consulente",
-          );
-
-        if (inserts.length > 0) {
-          if (shouldOverwrite) {
-            const { error: delError } = await supabase
-              .from("genogram_persons")
-              .delete()
-              .eq("client_id", clientId);
-            if (delError) throw delError;
-          }
-
-          const { error } = await supabase.from("genogram_persons").insert(inserts);
-          if (error) {
-            console.error("Insert error:", error);
-            throw new Error(`Erro no banco de dados: ${error.message}`);
-          }
-
-          // Garante o proband a partir do cadastro do cliente
-          await ensureProband(clientId);
-
-          qc.invalidateQueries({ queryKey: ["genogram-persons", clientId] });
-          invalidateCase(qc, clientId);
-          toast.success(`${inserts.length} familiares importados com sucesso!`);
-        } else {
-          toast.info("Nenhum dado válido encontrado para importar.");
-        }
+        setImportPreview({ header: parsedHeader, rows: parsedRows, mapping: autoMap(parsedHeader) });
       } catch (error) {
         console.error("Import Error:", error);
         toast.error(`Erro ao importar: ${(error as Error)?.message || "Verifique o formato."}`);
