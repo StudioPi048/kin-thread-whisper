@@ -1,5 +1,5 @@
 import { invalidateCase } from "@/lib/clinical-intel";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Background,
   BackgroundVariant,
