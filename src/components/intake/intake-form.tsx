@@ -195,7 +195,29 @@ export function IntakeForm({ clientId, professionalId }: Props) {
               {INTAKE_SECTIONS.find((s) => s.id === section)?.label}
             </h2>
           </div>
-          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+            <label className="flex items-center gap-2">
+              <span>Origem da informação</span>
+              <select
+                className="min-h-11 rounded-md border border-input bg-background px-2 text-[14px] text-foreground"
+                value={
+                  ((draft.section_sources as Record<string, string> | null) ?? {})[section] ?? ""
+                }
+                onChange={(e) => {
+                  const cur = { ...((draft.section_sources as Record<string, string> | null) ?? {}) };
+                  if (e.target.value) cur[section] = e.target.value;
+                  else delete cur[section];
+                  update({ section_sources: cur as ClientIntake["section_sources"] });
+                }}
+              >
+                <option value="">Não registrada</option>
+                <option value="cliente">Relato do cliente</option>
+                <option value="familiar">Relato de familiar</option>
+                <option value="documento">Documento</option>
+                <option value="observacao">Observação da profissional</option>
+                <option value="misto">Fontes mistas</option>
+              </select>
+            </label>
             <span>{sectionCompletion}% desta seção</span>
             <Button
               size="sm"
