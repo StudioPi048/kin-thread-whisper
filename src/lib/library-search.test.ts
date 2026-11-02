@@ -2,9 +2,28 @@ import { describe, expect, it } from "vitest";
 import { searchLibrary } from "./library-search";
 
 const items = [
-  { key: "1", category: "Conceitos", title: "Síndrome de aniversário", meta: "Schützenberger", body: "Datas que se repetem" },
-  { key: "2", category: "Livros", title: "Meus antepassados", meta: "Anne Ancelin Schützenberger · 1993", body: "Obra" },
-  { key: "3", category: "Conceitos", title: "Lealdade invisível", meta: "Boszormenyi-Nagy", body: "Dívidas", term: { related: ["síndrome"] } },
+  {
+    key: "1",
+    category: "Conceitos",
+    title: "Síndrome de aniversário",
+    meta: "Schützenberger",
+    body: "Datas que se repetem",
+  },
+  {
+    key: "2",
+    category: "Livros",
+    title: "Meus antepassados",
+    meta: "Anne Ancelin Schützenberger · 1993",
+    body: "Obra",
+  },
+  {
+    key: "3",
+    category: "Conceitos",
+    title: "Lealdade invisível",
+    meta: "Boszormenyi-Nagy",
+    body: "Dívidas",
+    term: { related: ["síndrome"] },
+  },
 ];
 
 describe("busca da biblioteca", () => {

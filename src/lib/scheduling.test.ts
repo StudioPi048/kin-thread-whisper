@@ -31,7 +31,11 @@ describe("reagendamento", () => {
 
   it("aceita horário livre", () => {
     const r = validateReschedule({ ...base, date: "2026-11-02", time: "08:00", existing: [other] });
-    expect(r).toEqual({ ok: true, startISO: "2026-11-02T11:00:00.000Z", endISO: "2026-11-02T11:50:00.000Z" });
+    expect(r).toEqual({
+      ok: true,
+      startISO: "2026-11-02T11:00:00.000Z",
+      endISO: "2026-11-02T11:50:00.000Z",
+    });
   });
   it("detecta sobreposição causada pela duração", () => {
     const r = validateReschedule({ ...base, date: "2026-11-02", time: "09:30", existing: [other] });
@@ -43,18 +47,36 @@ describe("reagendamento", () => {
     expect(r.ok).toBe(true);
   });
   it("ignora a própria sessão", () => {
-    const r = validateReschedule({ ...base, sessionId: "s2", date: "2026-11-02", time: "10:00", existing: [other] });
+    const r = validateReschedule({
+      ...base,
+      sessionId: "s2",
+      date: "2026-11-02",
+      time: "10:00",
+      existing: [other],
+    });
     expect(r.ok).toBe(true);
   });
   it("mesmo horário local em outro fuso pode conflitar", () => {
     // 09:00 em Manaus (UTC-4) = 13:00 UTC = 10:00 SP → conflita
-    const r = validateReschedule({ ...base, tz: "America/Manaus", date: "2026-11-02", time: "09:00", existing: [other] });
+    const r = validateReschedule({
+      ...base,
+      tz: "America/Manaus",
+      date: "2026-11-02",
+      time: "09:00",
+      existing: [other],
+    });
     expect(r.ok).toBe(false);
   });
   it("rejeita duração fora de 10–480 e fuso desconhecido", () => {
-    expect(validateReschedule({ ...base, durationMin: 5, date: "2026-11-02", time: "08:00" }).ok).toBe(false);
-    expect(validateReschedule({ ...base, durationMin: 500, date: "2026-11-02", time: "08:00" }).ok).toBe(false);
-    expect(validateReschedule({ ...base, tz: "Mars/Base", date: "2026-11-02", time: "08:00" }).ok).toBe(false);
+    expect(
+      validateReschedule({ ...base, durationMin: 5, date: "2026-11-02", time: "08:00" }).ok,
+    ).toBe(false);
+    expect(
+      validateReschedule({ ...base, durationMin: 500, date: "2026-11-02", time: "08:00" }).ok,
+    ).toBe(false);
+    expect(
+      validateReschedule({ ...base, tz: "Mars/Base", date: "2026-11-02", time: "08:00" }).ok,
+    ).toBe(false);
   });
   it("rejeita data inválida", () => {
     expect(validateReschedule({ ...base, date: "2026-13-02", time: "08:00" }).ok).toBe(false);

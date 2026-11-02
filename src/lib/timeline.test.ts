@@ -19,7 +19,13 @@ const p = (o: Partial<PersonRow>): PersonRow =>
 
 const persons = [
   p({ id: "c", full_name: "Cliente Teste", is_proband: true, birth_date: "1990-05-10" }),
-  p({ id: "m", full_name: "Mãe Teste", relationship_to_proband: "Mãe", birth_date: "1960-01-02", life_events: [{ date: "1985", description: "Mudança" }] }),
+  p({
+    id: "m",
+    full_name: "Mãe Teste",
+    relationship_to_proband: "Mãe",
+    birth_date: "1960-01-02",
+    life_events: [{ date: "1985", description: "Mudança" }],
+  }),
   p({ id: "a", full_name: "Avô Teste", relationship_to_proband: "Avô materno", is_deceased: true }),
   p({ id: "s", full_name: "Sem vínculo", life_events: [{ date: "", description: "Algo" }] }),
 ];

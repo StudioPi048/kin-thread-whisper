@@ -1,0 +1,2 @@
+GENEALIZ — ambiente visual sintético
+Executar npm run dev:fixtures. Somente dados fictícios em memória; nenhuma conta real é necessária. O resolver da configuração substitui o cliente Supabase, OAuth e funções externas apenas neste processo. Áudio/RPC/autenticação externa permanecem desativados. As alterações desaparecem ao recarregar. A configuração recusa build e não é importada pela configuração de produção. Não usar este ambiente como prova de persistência, RLS, e-mail ou processamento real.

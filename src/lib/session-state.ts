@@ -5,13 +5,7 @@
 
 export type ClinicalStatus = "scheduled" | "in_progress" | "pending_record" | "completed";
 export type AudioState =
-  | "none"
-  | "recording"
-  | "uploading"
-  | "processing"
-  | "review"
-  | "reviewed"
-  | "error";
+  "none" | "recording" | "uploading" | "processing" | "review" | "reviewed" | "error";
 
 export const CLINICAL_LABEL: Record<ClinicalStatus, string> = {
   scheduled: "Agendada",

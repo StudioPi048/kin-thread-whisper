@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { DEFAULT_PREFERENCES, preferencesKey, type Preferences } from "@/lib/preferences";
 import { usePreferences } from "./use-preferences";
+import { exportAccountData, type ExportRow } from "@/lib/data-export";
 
 const card =
   "rounded-[14px] border border-material-border bg-surface-document p-6 shadow-surface sm:p-8";
@@ -134,27 +135,16 @@ export function DataExport({ userId }: { userId: string }) {
   const run = async () => {
     setState({ phase: "running" });
     try {
-      const tables = [
-        "profiles",
-        "clients",
-        "client_intakes",
-        "genogram_persons",
-        "genogram_relationships",
-        "genogram_layouts",
-        "clinical_sessions",
-        "hypothesis_reviews",
-        "library_entries",
-      ] as const;
-      const out: Record<string, unknown> = {
-        exported_at: new Date().toISOString(),
-        user_id: userId,
-        note: "Arquivos de áudio não incluídos.",
-      };
-      for (const t of tables) {
-        const { data, error } = await supabase.from(t).select("*");
-        if (error) throw new Error(`${t}: ${error.message}`);
-        out[t] = data;
-      }
+      const out = await exportAccountData(async ({ table, filter, from, to }) => {
+        const { data, error } = await supabase
+          .from(table)
+          .select("*")
+          .in(filter.column, filter.values)
+          .order("id")
+          .range(from, to);
+        if (error) throw new Error(`${table}: ${error.message}`);
+        return (data ?? []) as ExportRow[];
+      }, userId);
       const blob = new Blob([JSON.stringify(out, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");

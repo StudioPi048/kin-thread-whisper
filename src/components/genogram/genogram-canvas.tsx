@@ -70,6 +70,8 @@ import { toPng } from "html-to-image";
 import { jsPDF } from "jspdf";
 
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   AlertDialog,
@@ -697,6 +699,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
     editing?: RelRow | null;
   }>({ open: false });
   const [showGuide, setShowGuide] = useState(false);
+  const [toolsExpanded, setToolsExpanded] = useState(false);
   const [layoutDirty, setLayoutDirty] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [isLayoutFixed, setIsLayoutFixed] = useState(false);
@@ -1215,7 +1218,11 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
     >
       <div className="atlas-map-workspace">
         {/* ── CONTÊINER SUPERIOR (BARRA DE AÇÕES + LEGENDA) ── */}
-        <div className="atlas-map-toolbar">
+        <Collapsible
+          className="atlas-map-toolbar"
+          open={!isMobile || toolsExpanded}
+          onOpenChange={setToolsExpanded}
+        >
           {/* BARRA DE AÇÕES — agrupada: Identidade | Editar | Layout | Status | Extras */}
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-2 pr-2 border-r border-border">
@@ -1224,74 +1231,127 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
             </div>
 
             {/* Grupo: Editar */}
-            <div className="flex items-center gap-2 pr-2 border-r border-border">
+            <div className="flex items-center gap-2 md:pr-2 md:border-r border-border">
               <Button
                 size="sm"
                 variant="gold"
+                aria-label="Adicionar pessoa"
                 onClick={() => setCreatingPerson(true)}
                 className="gv-add-person h-9 gap-2"
               >
                 <UserPlus className="size-4" />
-                Adicionar pessoa
+                <span className="md:hidden">Pessoa</span>
+                <span className="hidden md:inline">Adicionar pessoa</span>
               </Button>
 
               <Button
                 size="sm"
                 variant="outline"
+                aria-label="Criar vínculo"
                 onClick={() => setRelDialog({ open: true })}
                 disabled={persons.length < 2}
                 className="h-9 gap-2 border-border bg-transparent text-foreground hover:bg-muted hover:text-foreground normal-case tracking-normal font-semibold text-[13px]"
               >
                 <Link2 className="size-4" />
-                Criar vínculo
+                <span className="md:hidden">Vínculo</span>
+                <span className="hidden md:inline">Criar vínculo</span>
               </Button>
             </div>
 
-            {/* Grupo: Layout */}
-            <div className="flex items-center gap-2 pr-2 border-r border-border">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => saveLayout.mutate()}
-                disabled={saveLayout.isPending || !layoutDirty}
-                className="h-9 gap-2 border-border bg-transparent text-foreground hover:bg-muted hover:text-foreground normal-case tracking-normal font-semibold text-[13px] disabled:opacity-45"
-              >
-                <Save className="size-4" />
-                {saveLayout.isPending ? "Salvando" : "Salvar layout"}
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" size="sm" className="min-h-11 md:hidden">
+                {toolsExpanded ? "Recolher ferramentas" : "Ferramentas"}
               </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="flex flex-wrap items-center gap-2">
+              {/* Grupo: Layout */}
+              <div className="flex items-center gap-2 pr-2 border-r border-border">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => saveLayout.mutate()}
+                  disabled={saveLayout.isPending || !layoutDirty}
+                  className="h-9 gap-2 border-border bg-transparent text-foreground hover:bg-muted hover:text-foreground normal-case tracking-normal font-semibold text-[13px] disabled:opacity-45"
+                >
+                  <Save className="size-4" />
+                  {saveLayout.isPending ? "Salvando" : "Salvar layout"}
+                </Button>
 
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => toggleLayoutFixed.mutate()}
-                disabled={!query.data?.layout?.id || toggleLayoutFixed.isPending}
-                className={`h-11 gap-2 border-border normal-case tracking-normal font-semibold text-[13px] ${isLayoutFixed ? "bg-forest text-primary-foreground" : "bg-transparent text-foreground hover:bg-muted hover:text-foreground"}`}
-                title={
-                  !query.data?.layout?.id
-                    ? "Salve o layout pelo menos uma vez para poder fixá-lo"
-                    : ""
-                }
-              >
-                {isLayoutFixed ? (
-                  <Lock className="size-4 text-gold" />
-                ) : (
-                  <Unlock className="size-4" />
-                )}
-                {isLayoutFixed ? "Fixo" : "Livre"}
-              </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => toggleLayoutFixed.mutate()}
+                  disabled={!query.data?.layout?.id || toggleLayoutFixed.isPending}
+                  className={`h-11 gap-2 border-border normal-case tracking-normal font-semibold text-[13px] ${isLayoutFixed ? "bg-forest text-primary-foreground" : "bg-transparent text-foreground hover:bg-muted hover:text-foreground"}`}
+                  title={
+                    !query.data?.layout?.id
+                      ? "Salve o layout pelo menos uma vez para poder fixá-lo"
+                      : ""
+                  }
+                >
+                  {isLayoutFixed ? (
+                    <Lock className="size-4 text-gold" />
+                  ) : (
+                    <Unlock className="size-4" />
+                  )}
+                  {isLayoutFixed ? "Fixo" : "Livre"}
+                </Button>
 
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setConfirmRecalc(true)}
-                disabled={!query.data?.layout?.id || recalcLayout.isPending}
-                title="Recalcula as posições do zero — use se alguém aparecer preso no lugar errado"
-                className="h-9 gap-2 border-border bg-transparent text-foreground hover:bg-muted hover:text-foreground normal-case tracking-normal font-semibold text-[13px] disabled:opacity-45"
-              >
-                <RotateCcw className="size-4" />
-                {recalcLayout.isPending ? "Recalculando" : "Recalcular"}
-              </Button>
-            </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setConfirmRecalc(true)}
+                  disabled={!query.data?.layout?.id || recalcLayout.isPending}
+                  title="Recalcula as posições do zero — use se alguém aparecer preso no lugar errado"
+                  className="h-9 gap-2 border-border bg-transparent text-foreground hover:bg-muted hover:text-foreground normal-case tracking-normal font-semibold text-[13px] disabled:opacity-45"
+                >
+                  <RotateCcw className="size-4" />
+                  {recalcLayout.isPending ? "Recalculando" : "Recalcular"}
+                </Button>
+              </div>
+
+              <div className="ml-auto flex items-center gap-1">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  aria-label="Guia do genossociograma"
+                  onClick={() => setShowGuide(!showGuide)}
+                  className="min-h-11 gap-1.5 border-transparent bg-transparent text-foreground hover:bg-muted hover:text-foreground normal-case tracking-normal font-semibold text-[13px] shadow-none"
+                >
+                  <HelpCircle className="size-4" />
+                  <span className="hidden sm:inline">Guia</span>
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={exportPdf}
+                  disabled={isExportingPdf}
+                  title="Exportar PDF (A3) pra imprimir com o cliente"
+                  className="min-h-11 gap-1.5 border-transparent bg-transparent text-foreground hover:bg-muted hover:text-foreground normal-case tracking-normal font-semibold text-[13px] shadow-none"
+                >
+                  {isExportingPdf ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Printer className="size-4" />
+                  )}
+                  <span className="hidden sm:inline">{isExportingPdf ? "Gerando…" : "PDF A3"}</span>
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  aria-label="Remover seleção"
+                  onClick={() => setConfirmDelete(true)}
+                  disabled={
+                    deleteSelected.isPending ||
+                    (selectedPersonCount === 0 && selectedEdgeCount === 0)
+                  }
+                  className="min-h-11 gap-1.5 border-transparent bg-transparent text-foreground hover:bg-muted hover:text-destructive normal-case tracking-normal font-semibold text-[13px] ml-4 border-l border-border rounded-l-none pl-4 shadow-none"
+                >
+                  <Trash2 className="size-4" />
+                  <span className="hidden sm:inline">Remover</span>
+                </Button>
+              </div>
+            </CollapsibleContent>
 
             {/* Grupo: Status — sempre visível (quebra linha em telas estreitas, nunca some) */}
             <div className="flex flex-wrap items-center gap-3 pr-3 border-r border-border">
@@ -1403,47 +1463,8 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                 </PopoverContent>
               </Popover>
             </div>
-
-            <div className="ml-auto flex items-center gap-1">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setShowGuide(!showGuide)}
-                className="min-h-11 gap-1.5 border-transparent bg-transparent text-foreground hover:bg-muted hover:text-foreground normal-case tracking-normal font-semibold text-[13px] shadow-none"
-              >
-                <HelpCircle className="size-4" />
-                <span className="hidden sm:inline">Guia</span>
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={exportPdf}
-                disabled={isExportingPdf}
-                title="Exportar PDF (A3) pra imprimir com o cliente"
-                className="min-h-11 gap-1.5 border-transparent bg-transparent text-foreground hover:bg-muted hover:text-foreground normal-case tracking-normal font-semibold text-[13px] shadow-none"
-              >
-                {isExportingPdf ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Printer className="size-4" />
-                )}
-                <span className="hidden sm:inline">{isExportingPdf ? "Gerando…" : "PDF A3"}</span>
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setConfirmDelete(true)}
-                disabled={
-                  deleteSelected.isPending || (selectedPersonCount === 0 && selectedEdgeCount === 0)
-                }
-                className="min-h-11 gap-1.5 border-transparent bg-transparent text-foreground hover:bg-muted hover:text-destructive normal-case tracking-normal font-semibold text-[13px] ml-4 border-l border-border rounded-l-none pl-4 shadow-none"
-              >
-                <Trash2 className="size-4" />
-                <span className="hidden sm:inline">Remover</span>
-              </Button>
-            </div>
           </div>
-        </div>
+        </Collapsible>
 
         {showGuide && (
           <div className="border-b border-border bg-forest-soft px-4 py-3">
@@ -1470,7 +1491,18 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
 
         {/* ── CANVAS ──────── */}
         <div className="atlas-map-stage">
-          {query.isLoading ? (
+          {query.isError ? (
+            <section
+              className="flex h-full flex-col items-center justify-center gap-3 p-6"
+              role="alert"
+            >
+              <h3 className="font-semibold">Não foi possível carregar o genossociograma.</h3>
+              <p>Seus dados não foram alterados. Tente carregar novamente.</p>
+              <Button variant="outline" onClick={() => query.refetch()}>
+                Tentar novamente
+              </Button>
+            </section>
+          ) : query.isLoading ? (
             <div className="flex h-full flex-col items-center justify-center gap-3">
               <div className="h-11 w-11 animate-spin rounded-full border-2 border-forest border-t-transparent" />
               <p className="text-[14px] text-muted-foreground">Carregando a árvore...</p>
@@ -1501,7 +1533,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
               onEdgeDoubleClick={onEdgeDoubleClick}
               nodesDraggable={!isLayoutFixed}
               nodesConnectable={false}
-              panOnDrag={false}
+              panOnDrag={isMobile}
               panActivationKeyCode="Space"
               minZoom={0.15}
               maxZoom={2.5}
@@ -1509,6 +1541,11 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
               defaultEdgeOptions={{
                 type: "step",
                 style: { strokeWidth: 2, stroke: "var(--color-forest)" },
+              }}
+              ariaLabelConfig={{
+                "controls.zoomIn.ariaLabel": "Aproximar mapa",
+                "controls.zoomOut.ariaLabel": "Afastar mapa",
+                "controls.fitView.ariaLabel": "Enquadrar mapa",
               }}
               fitView
               fitViewOptions={{ padding: 0.18, nodes: nodes.filter((n) => n.type === "person") }}
@@ -1522,7 +1559,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
               />
               <Panel
                 position="top-right"
-                className="flex flex-wrap items-center gap-1 rounded-md border border-border bg-card p-1 shadow-sm"
+                className="flex max-w-[calc(100%_-_20px)] flex-wrap items-center gap-1 rounded-md border border-border bg-card p-1 shadow-sm"
               >
                 <label className="sr-only" htmlFor="geno-locate">
                   Localizar familiar
@@ -1556,7 +1593,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="min-h-11 min-w-11"
+                  className={cn("min-h-11 min-w-11", isMobile && !toolsExpanded && "hidden")}
                   aria-label="Localizar o cliente"
                   onClick={() => {
                     const pb = persons.find((p) => p.is_proband);
@@ -1589,7 +1626,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="min-h-11 min-w-11"
+                  className={cn("min-h-11 min-w-11", isMobile && !toolsExpanded && "hidden")}
                   aria-label="Desfazer posição"
                   disabled={!historyRef.current.canUndo || isLayoutFixed}
                   onClick={undoLayout}
@@ -1599,7 +1636,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="min-h-11 min-w-11"
+                  className={cn("min-h-11 min-w-11", isMobile && !toolsExpanded && "hidden")}
                   aria-label="Refazer posição"
                   disabled={!historyRef.current.canRedo || isLayoutFixed}
                   onClick={redoLayout}
@@ -1609,7 +1646,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="min-h-11 min-w-11"
+                  className={cn("min-h-11 min-w-11", isMobile && !toolsExpanded && "hidden")}
                   aria-label={isFullscreen ? "Sair da tela ampla" : "Tela ampla"}
                   onClick={() => {
                     if (document.fullscreenElement) void document.exitFullscreen();
