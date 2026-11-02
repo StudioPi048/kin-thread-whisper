@@ -53,6 +53,8 @@ import {
   PanelRightOpen,
 } from "lucide-react";
 import { personSymbol } from "./person-symbol";
+import { useUnsaved } from "@/components/unsaved/unsaved-guard";
+import { RevisionTracker } from "@/lib/unsaved";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
@@ -701,6 +703,15 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
   const [confirmRecalc, setConfirmRecalc] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [panelOpen, setPanelOpen] = useState(true);
+  // Revisões do arranjo: um save só limpa o que existia quando começou
+  const revRef = useRef(new RevisionTracker());
+  const [dirtyTick, setDirtyTick] = useState(0);
+  const [draftStored, setDraftStored] = useState(true);
+  const markLayoutDirty = useCallback(() => {
+    revRef.current.bump();
+    setLayoutDirty(true);
+    setDirtyTick((t) => t + 1);
+  }, []);
   const isMobile = useIsMobile();
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -870,6 +881,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
     setNodes(nodesWithHandlers);
     setEdges(layoutedEdges);
     setLayoutDirty(false);
+    revRef.current.reset();
     historyRef.current.reset();
 
     const centerTimer = window.setTimeout(() => {
@@ -913,7 +925,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
         }
         return change;
       });
-      if (hasPositionChange) setLayoutDirty(true);
+      if (hasPositionChange) markLayoutDirty();
       onNodesChange(nextChanges);
     },
     [onNodesChange, rfInstance],
@@ -1009,7 +1021,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
           safe[n.id] ? { ...n, position: { x: safe[n.id][0], y: safe[n.id][1] } } : n,
         ),
       );
-      setLayoutDirty(true);
+      markLayoutDirty();
     },
     [setNodes, snapshot],
   );
@@ -1026,7 +1038,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
 
   // Rascunho local (IDs + coordenadas) enquanto há alteração não salva
   useEffect(() => {
-    if (layoutDirty && userId) saveDraft(userId, clientId, snapshot());
+    if (layoutDirty && userId) setDraftStored(saveDraft(userId, clientId, snapshot()));
   }, [layoutDirty, nodes, userId, clientId, snapshot]);
   // Oferece recuperar rascunho mais novo que o layout salvo
   useEffect(() => {
@@ -1040,6 +1052,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
 
   const saveLayout = useMutation({
     mutationFn: async () => {
+      const rev = revRef.current.begin();
       const currentNodes = rfInstance.getNodes();
       const personNodes = currentNodes.filter((node) => node.type === "person");
       const unionNodes = currentNodes.filter((node) => node.type === "union");
@@ -1087,11 +1100,17 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
 
       if (upsertErr) throw upsertErr;
 
-      return savedAt;
+      return { savedAt, rev };
     },
-    onSuccess: (savedAt) => {
-      setLayoutDirty(false);
-      if (userId) clearDraft(userId, clientId);
+    onSuccess: ({ savedAt, rev }) => {
+      if (revRef.current.confirm(rev)) {
+        setLayoutDirty(false);
+        if (userId) clearDraft(userId, clientId);
+      } else {
+        // Houve movimento durante o salvamento: continua pendente e o rascunho fica
+        if (userId) setDraftStored(saveDraft(userId, clientId, snapshot()));
+        setDirtyTick((t) => t + 1);
+      }
       setLastSavedAt(
         new Date(savedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
       );
@@ -1100,29 +1119,40 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
     },
     onError: (e) =>
       toast.error(
-        `Não foi possível salvar o arranjo. Ele continua guardado neste navegador. ${e instanceof Error ? e.message : ""}`,
+        `Não foi possível salvar o arranjo. ${
+          draftStored
+            ? "As posições ficam como rascunho neste navegador até você salvar ou descartar."
+            : "Não foi possível guardar rascunho neste navegador: não feche nem saia desta tela antes de salvar."
+        } ${e instanceof Error ? e.message : ""}`,
       ),
   });
 
-  // Proteção de saída com alterações não salvas
-  useEffect(() => {
-    if (!layoutDirty && !saveLayout.isPending) return;
-    const h = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", h);
-    return () => window.removeEventListener("beforeunload", h);
-  }, [layoutDirty, saveLayout.isPending]);
+  // Proteção de saída (navegação interna, troca de aba e fechar a aba)
+  useUnsaved(`layout:${clientId}`, {
+    label: "Arranjo do genossociograma",
+    isDirty: () => layoutDirty || saveLayout.isPending,
+    save: async () => {
+      await saveLayout.mutateAsync();
+      if (!revRef.current.isClean()) await saveLayout.mutateAsync();
+      if (!revRef.current.isClean()) throw new Error("posições mudaram durante o salvamento");
+    },
+    discard: () => {
+      revRef.current.reset();
+      setLayoutDirty(false);
+      if (userId) clearDraft(userId, clientId);
+    },
+  });
 
   // Auto-Save Effect (Debounce 2s)
   useEffect(() => {
     if (!layoutDirty) return;
+    if (saveLayout.isPending) return;
     const t = setTimeout(() => {
       saveLayout.mutate();
     }, 2000);
     return () => clearTimeout(t);
-  }, [layoutDirty]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layoutDirty, dirtyTick, saveLayout.isPending]);
 
   const toggleLayoutFixed = useMutation({
     mutationFn: async () => {
@@ -1617,7 +1647,11 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                 >
                   {saveLayout.isError ? (
                     <>
-                      <span>Arranjo não salvo (guardado neste navegador).</span>
+                      <span>
+                        {draftStored
+                          ? "Arranjo não salvo (rascunho de posições neste navegador)."
+                          : "Arranjo não salvo e sem rascunho no navegador — não saia antes de salvar."}
+                      </span>
                       <Button size="sm" className="min-h-11" onClick={() => saveLayout.mutate()}>
                         Tentar salvar de novo
                       </Button>
