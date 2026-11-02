@@ -35,7 +35,7 @@ export function GenogramThumbnail({
       role="img"
       aria-label={`Prévia do genossociograma com ${persons.length} pessoas`}
     >
-      <g stroke="#a49c8e" strokeWidth="3" fill="none">
+      <g stroke="var(--color-muted-foreground)" strokeWidth="3" fill="none">
         {[...graph.unions].map(([id, u]) => {
           const pos = placement.unionPos.get(id);
           if (!pos) return null;
@@ -69,8 +69,8 @@ export function GenogramThumbnail({
         return (
           <g
             key={id}
-            fill={p.row.is_proband ? "#805647" : "#e9e0d3"}
-            stroke={p.row.is_proband ? "#805647" : "#6b7e79"}
+            fill={p.row.is_proband ? "var(--color-forest)" : "var(--color-muted)"}
+            stroke={p.row.is_proband ? "var(--color-forest)" : "var(--color-muted-foreground)"}
             strokeWidth="3"
           >
             {symbol === "feminino" ? (
@@ -83,7 +83,7 @@ export function GenogramThumbnail({
               <rect x={cx - 26} y={cy - 26} width={52} height={52} rx={2} />
             )}
             {p.row.is_deceased && (
-              <path d={`M${cx - 28} ${cy + 28}L${cx + 28} ${cy - 28}`} stroke="#354a3e" />
+              <path d={`M${cx - 28} ${cy + 28}L${cx + 28} ${cy - 28}`} stroke="var(--color-foreground)" />
             )}
           </g>
         );

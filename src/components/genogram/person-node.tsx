@@ -81,7 +81,7 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
               "size-full transition-colors",
               "border-2",
               borderColor,
-              isFemale ? "bg-[#C9969F]" : "bg-[#90A6BF]",
+              isFemale ? "bg-gold/40" : "bg-forest/30",
               isMale && "rounded-none",
               isFemale && "rounded-full",
               isDiamond && "rotate-45 rounded-none",

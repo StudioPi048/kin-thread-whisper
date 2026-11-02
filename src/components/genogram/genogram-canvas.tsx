@@ -1235,7 +1235,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                 variant="outline"
                 onClick={() => toggleLayoutFixed.mutate()}
                 disabled={!query.data?.layout?.id || toggleLayoutFixed.isPending}
-                className={`h-11 gap-2 border-white/25 normal-case tracking-normal font-semibold text-[13px] ${isLayoutFixed ? "bg-[#405B76] text-white" : "bg-transparent text-white hover:bg-white/10 hover:text-white"}`}
+                className={`h-11 gap-2 border-white/25 normal-case tracking-normal font-semibold text-[13px] ${isLayoutFixed ? "bg-forest text-primary-foreground" : "bg-transparent text-white hover:bg-white/10 hover:text-white"}`}
                 title={
                   !query.data?.layout?.id
                     ? "Salve o layout pelo menos uma vez para poder fixá-lo"
@@ -1482,7 +1482,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
               fitViewOptions={{ padding: 0.18, nodes: nodes.filter((n) => n.type === "person") }}
             >
               <Background
-                color="#405B76"
+                color="var(--color-border)"
                 variant={BackgroundVariant.Dots}
                 gap={24}
                 size={1}

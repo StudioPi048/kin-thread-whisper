@@ -22,7 +22,7 @@
 export function GenealogicalMark({
   size = 24,
   opacity = 0.12,
-  color = "var(--material-bronze, #8A6845)",
+  color = "var(--material-bronze)",
 }: {
   size?: number;
   opacity?: number;
@@ -134,7 +134,7 @@ export function QuoteConnector({
       {/* Citação */}
       <div
         style={{
-          background: "var(--surface-manuscript, #F0EDE5)",
+          background: "var(--surface-manuscript)",
           border: "1px solid var(--material-border, rgba(180,170,155,0.4))",
           borderRadius: "6px",
           padding: "10px 18px",
@@ -151,7 +151,7 @@ export function QuoteConnector({
             fontFamily: "var(--font-serif)",
             fontStyle: "italic",
             fontSize: "13px",
-            color: "var(--ink-soft, #4A4540)",
+            color: "var(--ink-soft)",
             lineHeight: 1.5,
             margin: 0,
           }}
@@ -164,7 +164,7 @@ export function QuoteConnector({
             fontWeight: 800,
             letterSpacing: "0.14em",
             textTransform: "uppercase",
-            color: "var(--material-olive, #7D8060)",
+            color: "var(--material-olive)",
             fontFamily: "var(--font-sans)",
           }}
         >
@@ -214,7 +214,7 @@ export function DateMarkConnector({ label = "Arquivo ativo desde 2024" }: { labe
             fontWeight: 800,
             letterSpacing: "0.18em",
             textTransform: "uppercase",
-            color: "var(--material-bronze, #8A6845)",
+            color: "var(--material-bronze)",
             fontFamily: "var(--font-sans)",
             opacity: 0.7,
           }}
@@ -250,9 +250,9 @@ export function GenealogyDivider({ opacity = 0.1 }: { opacity?: number }) {
         opacity,
       }}
     >
-      <div style={{ flex: 1, height: "1px", background: "var(--material-bronze, #8A6845)" }} />
-      <GenealogicalMark size={20} opacity={1} color="var(--material-bronze, #8A6845)" />
-      <div style={{ flex: 1, height: "1px", background: "var(--material-bronze, #8A6845)" }} />
+      <div style={{ flex: 1, height: "1px", background: "var(--material-bronze)" }} />
+      <GenealogicalMark size={20} opacity={1} color="var(--material-bronze)" />
+      <div style={{ flex: 1, height: "1px", background: "var(--material-bronze)" }} />
     </div>
   );
 }

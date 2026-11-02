@@ -80,7 +80,7 @@ export function GenogramDemo() {
                   cx={c.x}
                   cy={c.y}
                   r={BOX / 2}
-                  fill="var(--color-background, #fff)"
+                  fill="var(--color-background)"
                   stroke="currentColor"
                   strokeWidth={p.is_proband ? 6 : 3}
                 />
@@ -90,7 +90,7 @@ export function GenogramDemo() {
                   y={c.y - BOX / 2}
                   width={BOX}
                   height={BOX}
-                  fill="var(--color-background, #fff)"
+                  fill="var(--color-background)"
                   stroke="currentColor"
                   strokeWidth={3}
                 />
