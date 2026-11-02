@@ -22,6 +22,7 @@ import {
 } from "@/lib/patterns";
 import { Badge } from "@/components/ui/badge";
 import { buildHypotheses } from "@/lib/evidence";
+import { clinicalIntelQuery } from "@/lib/clinical-intel";
 
 interface Props {
   clientId: string;
@@ -31,30 +32,7 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
   const [isOpen, setIsOpen] = useState(true);
 
   // Fetch client & genogram data
-  const { data, isLoading } = useQuery({
-    queryKey: ["clinical-intel", clientId],
-    queryFn: async () => {
-      const [clientRes, personsRes, relsRes] = await Promise.all([
-        supabase
-          .from("clients")
-          .select("full_name, presenting_complaint")
-          .eq("id", clientId)
-          .maybeSingle(),
-        supabase.from("genogram_persons").select("*").eq("client_id", clientId),
-        supabase.from("genogram_relationships").select("*").eq("client_id", clientId),
-      ]);
-
-      if (clientRes.error) throw clientRes.error;
-      if (personsRes.error) throw personsRes.error;
-      if (relsRes.error) throw relsRes.error;
-
-      return {
-        client: clientRes.data,
-        persons: (personsRes.data ?? []) as PersonRow[],
-        relationships: (relsRes.data ?? []) as RelationshipRow[],
-      };
-    },
-  });
+  const { data, isLoading } = useQuery(clinicalIntelQuery(clientId));
 
   // Calculate patterns
   const patterns = useMemo(() => {
