@@ -97,6 +97,7 @@ export type Database = {
           religion: string | null
           scars_notes: string | null
           school_events: string | null
+          section_sources: Json
           siblings: Json | null
           siblings_deaths_notes: string | null
           siblings_relationship: string | null
@@ -196,6 +197,7 @@ export type Database = {
           religion?: string | null
           scars_notes?: string | null
           school_events?: string | null
+          section_sources?: Json
           siblings?: Json | null
           siblings_deaths_notes?: string | null
           siblings_relationship?: string | null
@@ -295,6 +297,7 @@ export type Database = {
           religion?: string | null
           scars_notes?: string | null
           school_events?: string | null
+          section_sources?: Json
           siblings?: Json | null
           siblings_deaths_notes?: string | null
           siblings_relationship?: string | null

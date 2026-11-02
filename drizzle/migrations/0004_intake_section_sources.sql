@@ -1,0 +1,2 @@
+ALTER TABLE public.client_intakes ADD COLUMN IF NOT EXISTS section_sources jsonb NOT NULL DEFAULT '{}'::jsonb;
+COMMENT ON COLUMN public.client_intakes.section_sources IS 'Origem da informação por seção da anamnese: {sectionId: "cliente"|"familiar"|"documento"|"observacao"|"misto"}';
