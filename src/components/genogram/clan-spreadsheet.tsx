@@ -1,4 +1,6 @@
 import { invalidateCase } from "@/lib/clinical-intel";
+import { useUnsaved } from "@/components/unsaved/unsaved-guard";
+import { KeyedDebounce } from "@/lib/unsaved";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -102,8 +104,6 @@ const RELATIONSHIP_TEMPLATE = [
 export function ClanSpreadsheet({ clientId }: Props) {
   const qc = useQueryClient();
   const [drafts, setDrafts] = useState<Record<string, Partial<Person>>>({});
-  const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
-  const pendingPatch = useRef<Record<string, TablesUpdate<"genogram_persons">>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -217,24 +217,48 @@ export function ClanSpreadsheet({ clientId }: Props) {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao apagar planilha"),
   });
 
+  // Debounce por linha com flush explícito: sair da aba/página passa pelo
+  // guard; em falha o patch volta para a fila e a edição continua na tela.
+  const [pendingCount, setPendingCount] = useState(0);
+  const queueRef = useRef<KeyedDebounce<TablesUpdate<"genogram_persons">> | null>(null);
+  if (!queueRef.current)
+    queueRef.current = new KeyedDebounce<TablesUpdate<"genogram_persons">>(
+      async (id, patch) => {
+        try {
+          await savePersonRef.current({ id, patch });
+        } finally {
+          setPendingCount(queueRef.current?.hasPending() ? 1 : 0);
+        }
+      },
+      900,
+    );
+  const savePersonRef = useRef(savePerson.mutateAsync);
+  savePersonRef.current = savePerson.mutateAsync;
+
   const scheduleSave = (id: string, patch: TablesUpdate<"genogram_persons">) => {
     setDrafts((d) => ({ ...d, [id]: { ...d[id], ...patch } }));
-    // Acumula num ref (síncrono) em vez de confiar no `patch` capturado pelo
-    // closure do setTimeout — senão, editar dois campos em menos de 900ms
-    // faz o timer do primeiro ser cancelado e só o último campo é salvo.
-    pendingPatch.current[id] = { ...pendingPatch.current[id], ...patch };
-    if (timers.current[id]) clearTimeout(timers.current[id]);
-    timers.current[id] = setTimeout(() => {
-      const fullPatch = pendingPatch.current[id];
-      delete pendingPatch.current[id];
-      savePerson.mutate({ id, patch: fullPatch });
-    }, 900);
+    queueRef.current!.push(id, patch);
+    setPendingCount(1);
   };
 
+  useUnsaved(`clan:${clientId}`, {
+    label: "Planilha do clã",
+    isDirty: () => !!queueRef.current?.hasPending() || savePerson.isPending,
+    save: async () => {
+      await queueRef.current!.flush();
+    },
+    discard: () => {
+      queueRef.current!.discard();
+      setDrafts({});
+      setPendingCount(0);
+    },
+  });
+
+  // Desmontagem sem passar pelo guard (ex.: troca de cliente): envia já o que falta
   useEffect(() => {
-    const t = timers.current;
+    const q = queueRef.current!;
     return () => {
-      Object.values(t).forEach(clearTimeout);
+      if (q.hasPending()) void q.flush().catch(() => {});
     };
   }, []);
 
