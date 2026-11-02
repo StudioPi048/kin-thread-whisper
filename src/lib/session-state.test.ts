@@ -13,12 +13,21 @@ const past = "2026-11-01T12:00:00Z";
 
 describe("estado clínico separado do áudio", () => {
   it("futuro = agendada; passado sem registro = registro pendente; com nota = concluída", () => {
-    expect(clinicalStatusOf({ session_date: "2026-11-03T12:00:00Z", status: "draft" }, now)).toBe("scheduled");
+    expect(clinicalStatusOf({ session_date: "2026-11-03T12:00:00Z", status: "draft" }, now)).toBe(
+      "scheduled",
+    );
     expect(clinicalStatusOf({ session_date: past, status: "ready" }, now)).toBe("pending_record");
-    expect(clinicalStatusOf({ session_date: past, status: "error", manual_notes: "obs" }, now)).toBe("completed");
+    expect(
+      clinicalStatusOf({ session_date: past, status: "error", manual_notes: "obs" }, now),
+    ).toBe("completed");
   });
   it("valor gravado explicitamente prevalece", () => {
-    expect(clinicalStatusOf({ session_date: past, status: "ready", clinical_status: "in_progress" }, now)).toBe("in_progress");
+    expect(
+      clinicalStatusOf(
+        { session_date: past, status: "ready", clinical_status: "in_progress" },
+        now,
+      ),
+    ).toBe("in_progress");
   });
   it("erro de áudio não muda o estado clínico", () => {
     const s = { session_date: past, status: "error", audio_path: "a", manual_notes: "nota" };
@@ -26,9 +35,17 @@ describe("estado clínico separado do áudio", () => {
     expect(clinicalStatusOf(s, now)).toBe("completed");
   });
   it("texto gerado fica em revisão até confirmação", () => {
-    expect(audioStateOf({ session_date: past, status: "ready", audio_path: "a", structured_note: {} })).toBe("review");
     expect(
-      audioStateOf({ session_date: past, status: "ready", audio_path: "a", structured_note: {}, ai_reviewed_at: past }),
+      audioStateOf({ session_date: past, status: "ready", audio_path: "a", structured_note: {} }),
+    ).toBe("review");
+    expect(
+      audioStateOf({
+        session_date: past,
+        status: "ready",
+        audio_path: "a",
+        structured_note: {},
+        ai_reviewed_at: past,
+      }),
     ).toBe("reviewed");
   });
 });
@@ -69,5 +86,18 @@ describe("revisão só quando persistida", () => {
   });
   it("resposta confirmada marca revisado", async () => {
     expect((await confirmReview(async () => ({ ai_reviewed_at: past }))).reviewed).toBe(true);
+  });
+});
+
+describe("descartar nota no diálogo de saída", () => {
+  it("volta ao texto confirmado pelo banco", async () => {
+    const { noteReducer, noteDraftInit, isDirty } = await import("./session-state");
+    let s = noteDraftInit("salvo");
+    s = noteReducer(s, { type: "edit", text: "editado" });
+    s = noteReducer(s, { type: "save_fail", message: "x" });
+    expect(isDirty(s)).toBe(true);
+    s = noteReducer(s, { type: "discard" });
+    expect(s.text).toBe("salvo");
+    expect(isDirty(s)).toBe(false);
   });
 });

@@ -222,16 +222,13 @@ export function ClanSpreadsheet({ clientId }: Props) {
   const [, setPendingCount] = useState(0);
   const queueRef = useRef<KeyedDebounce<TablesUpdate<"genogram_persons">> | null>(null);
   if (!queueRef.current)
-    queueRef.current = new KeyedDebounce<TablesUpdate<"genogram_persons">>(
-      async (id, patch) => {
-        try {
-          await savePersonRef.current({ id, patch });
-        } finally {
-          setPendingCount(queueRef.current?.hasPending() ? 1 : 0);
-        }
-      },
-      900,
-    );
+    queueRef.current = new KeyedDebounce<TablesUpdate<"genogram_persons">>(async (id, patch) => {
+      try {
+        await savePersonRef.current({ id, patch });
+      } finally {
+        setPendingCount(queueRef.current?.hasPending() ? 1 : 0);
+      }
+    }, 900);
   const savePersonRef = useRef(savePerson.mutateAsync);
   savePersonRef.current = savePerson.mutateAsync;
 

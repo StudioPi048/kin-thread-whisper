@@ -13,6 +13,7 @@ import {
 import { UnsavedProvider, useUnsaved } from "./unsaved-guard";
 
 afterEach(cleanup);
+window.scrollTo = (() => {}) as typeof window.scrollTo;
 
 const state = { dirty: true, failSave: false, saved: 0, discarded: 0 };
 
@@ -55,7 +56,11 @@ function setup() {
     validateSearch: (s: Record<string, unknown>) => ({ tab: s.tab as string | undefined }),
     component: Editor,
   });
-  const other = createRoute({ getParentRoute: () => root, path: "/outra", component: () => <p>outra página</p> });
+  const other = createRoute({
+    getParentRoute: () => root,
+    path: "/outra",
+    component: () => <p>outra página</p>,
+  });
   const router = createRouter({
     routeTree: root.addChildren([home, other]),
     history: createMemoryHistory({ initialEntries: ["/"] }),

@@ -61,7 +61,12 @@ describe("UnsavedRegistry", () => {
     const r = new UnsavedRegistry();
     let a = true;
     const discardB = vi.fn();
-    r.set("a", { label: "A", isDirty: () => a, save: async () => void (a = false), discard: () => {} });
+    r.set("a", {
+      label: "A",
+      isDirty: () => a,
+      save: async () => void (a = false),
+      discard: () => {},
+    });
     r.set("b", { label: "B", isDirty: () => false, save: async () => {}, discard: discardB });
     expect((await r.saveAll()).ok).toBe(true);
     expect(r.anyDirty()).toBe(false);
