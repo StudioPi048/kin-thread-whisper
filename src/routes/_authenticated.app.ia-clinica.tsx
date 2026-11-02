@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { DocumentHeader } from "@/components/ui/document-header";
 import { evidenceForCase } from "@/lib/evidence";
 import { clinicalIntelQuery } from "@/lib/clinical-intel";
+import { HypothesisReview } from "@/components/clients/hypothesis-review-panel";
 
 export const Route = createFileRoute("/_authenticated/app/ia-clinica")({
   head: () => ({
@@ -194,6 +195,12 @@ function IaClinicaPage() {
                         ))}
                       </ul>
                     </div>
+                    {(() => {
+                      const pt = ev.patterns.find((x) => x.id === h.patternId);
+                      return pt ? (
+                        <HypothesisReview clientId={clientId} hypothesisKey={h.id} title={h.title} pattern={pt} />
+                      ) : null;
+                    })()}
                   </article>
                 ))}
               </section>
