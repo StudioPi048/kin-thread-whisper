@@ -1,6 +1,7 @@
 import { MotionConfig } from "framer-motion";
 import { usePreferences, useApplyPreferences } from "@/components/account/use-preferences";
 import { readVisits } from "@/lib/recent-activity";
+import { CurrentCaseStrip } from "@/components/archive/current-case-strip";
 import {
   createFileRoute,
   Link,
@@ -221,6 +222,7 @@ function AuthenticatedLayout() {
             <span className="hidden sm:block truncate max-w-40">{displayName}</span>
           </Link>
         </header>
+        <CurrentCaseStrip userId={user.id} pathname={location.pathname} />
         <main id="conteudo" className="atlas-content">
           <MotionConfig reducedMotion={prefsQ.data?.reduceMotion ? "always" : "user"}>
             <Outlet />
