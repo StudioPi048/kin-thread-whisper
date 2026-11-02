@@ -736,7 +736,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
                             })()}
                           </div>
                         </Td>
-                        {showDates && (<Td>
+                        {showDates && (<><Td>
                           <CellInput
                             type="date"
                             value={r.birth_date ?? ""}
@@ -751,7 +751,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
                               scheduleSave(r.id, { death_date: v || null, is_deceased: !!v })
                             }
                           />
-                        </Td>)}
+                        </Td></>)}
                         <td className="px-1 text-center">
                           <button
                             onClick={() => toggleExpanded(r.id)}
