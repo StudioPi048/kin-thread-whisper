@@ -345,6 +345,8 @@ export function buildLogicalGraph({
   // grupo de irmãos ancora exatamente na pessoa certa — sem chute.
   // Sem trisavós no sistema, a união-satélite nasce sem parceiros (addUnion
   // já aceita isso — só bloqueia quando partners E children estão vazios).
+  // Pessoas extras com a MESMA tag de bisavô não viram irmãos por dedução:
+  // ficam visíveis como pendência (fallback), sem filiação inventada.
   const addSiblingGroup = (
     id: string,
     anchor: PersonRow | undefined,
@@ -362,56 +364,56 @@ export function buildLogicalGraph({
   addSiblingGroup(
     "u_sib_bp1",
     bp1,
-    [...get("Irmã(o) do Bisavô paterno (pai do avô)"), ...bp1All.slice(1)],
+    [...get("Irmã(o) do Bisavô paterno (pai do avô)")],
     3,
     "paternal",
   );
   addSiblingGroup(
     "u_sib_bp2",
     bp2,
-    [...get("Irmã(o) da Bisavó paterna (mãe do avô)"), ...bp2All.slice(1)],
+    [...get("Irmã(o) da Bisavó paterna (mãe do avô)")],
     3,
     "paternal",
   );
   addSiblingGroup(
     "u_sib_bp3",
     bp3,
-    [...get("Irmã(o) do Bisavô paterno (pai da avó)"), ...bp3All.slice(1)],
+    [...get("Irmã(o) do Bisavô paterno (pai da avó)")],
     3,
     "paternal",
   );
   addSiblingGroup(
     "u_sib_bp4",
     bp4,
-    [...get("Irmã(o) da Bisavó paterna (mãe da avó)"), ...bp4All.slice(1)],
+    [...get("Irmã(o) da Bisavó paterna (mãe da avó)")],
     3,
     "paternal",
   );
   addSiblingGroup(
     "u_sib_bm1",
     bm1,
-    [...get("Irmã(o) do Bisavô materno (pai do avô)"), ...bm1All.slice(1)],
+    [...get("Irmã(o) do Bisavô materno (pai do avô)")],
     3,
     "maternal",
   );
   addSiblingGroup(
     "u_sib_bm2",
     bm2,
-    [...get("Irmã(o) da Bisavó materna (mãe do avô)"), ...bm2All.slice(1)],
+    [...get("Irmã(o) da Bisavó materna (mãe do avô)")],
     3,
     "maternal",
   );
   addSiblingGroup(
     "u_sib_bm3",
     bm3,
-    [...get("Irmã(o) do Bisavô materno (pai da avó)"), ...bm3All.slice(1)],
+    [...get("Irmã(o) do Bisavô materno (pai da avó)")],
     3,
     "maternal",
   );
   addSiblingGroup(
     "u_sib_bm4",
     bm4,
-    [...get("Irmã(o) da Bisavó materna (mãe da avó)"), ...bm4All.slice(1)],
+    [...get("Irmã(o) da Bisavó materna (mãe da avó)")],
     3,
     "maternal",
   );

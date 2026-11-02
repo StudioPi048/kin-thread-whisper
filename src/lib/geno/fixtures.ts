@@ -99,8 +99,10 @@ export function largeFamily(): SyntheticFamily {
   const gp = [...grand("paterno", pai), ...grand("materno", mae)];
   gp.forEach((g, i) => {
     const side = i < 2 ? "paterno" : "materno";
-    const a = person(`Bisavô ${side}`, `Bisavô ${i + 1} fictício`, "M");
-    const b = person(side === "paterno" ? "Bisavó paterna" : "Bisavó materna", `Bisavó ${i + 1} fictícia`, "F");
+    const fem = side === "paterno" ? "paterna" : "materna";
+    const of = i % 2 === 0 ? "do avô" : "da avó";
+    const a = person(`Bisavô ${side} (pai ${of})`, `Bisavô ${i + 1} fictício`, "M");
+    const b = person(`Bisavó ${fem} (mãe ${of})`, `Bisavó ${i + 1} fictícia`, "F");
     persons.push(a, b);
     rels.push(parentRel(a.id, g.id), parentRel(b.id, g.id));
   });
