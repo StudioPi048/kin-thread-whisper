@@ -1,3 +1,5 @@
+import { MotionConfig } from "framer-motion";
+import { usePreferences, useApplyPreferences } from "@/components/account/use-preferences";
 import { readVisits } from "@/lib/recent-activity";
 import {
   createFileRoute,
@@ -76,6 +78,8 @@ function AuthenticatedLayout() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isMoreOpen, setIsMoreOpen] = useState(false);
+  const prefsQ = usePreferences(user.id);
+  useApplyPreferences(prefsQ.data);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -218,7 +222,9 @@ function AuthenticatedLayout() {
           </Link>
         </header>
         <main id="conteudo" className="atlas-content">
-          <Outlet />
+          <MotionConfig reducedMotion={prefsQ.data?.reduceMotion ? "always" : "user"}>
+            <Outlet />
+          </MotionConfig>
         </main>
       </div>
       <nav className="atlas-mobile-nav" aria-label="Navegação no celular">
