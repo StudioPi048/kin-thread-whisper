@@ -72,6 +72,7 @@ import { ClientFormDialog } from "@/components/clients/client-form-dialog";
 import { ClinicalIntelligencePanel } from "@/components/clients/clinical-intelligence-panel";
 import { DocumentHeader } from "@/components/ui/document-header";
 
+import { recordVisit } from "@/lib/recent-activity";
 import { calcAge, formatBirthDate, genderOptions, initialsFrom } from "@/lib/clients";
 import { JOURNEY_STAGES, deriveStage, stageIndex } from "@/lib/clinical-catalog";
 
@@ -122,6 +123,15 @@ function ClientDossierPage() {
   const [deleting, setDeleting] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<DossierTab>(tabFromUrl ?? "genogram");
+
+  // Contexto estável: URL manda na aba; registra visita real (só IDs/aba) por usuário
+  useEffect(() => {
+    if (tabFromUrl && tabFromUrl !== activeTab) setActiveTab(tabFromUrl);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabFromUrl]);
+  useEffect(() => {
+    recordVisit(user.id, clientId, activeTab);
+  }, [user.id, clientId, activeTab]);
 
   const goToTab = (next: DossierTab) => {
     setActiveTab(next);
