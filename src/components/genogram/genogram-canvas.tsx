@@ -52,6 +52,7 @@ import {
   PanelRightClose,
   PanelRightOpen,
 } from "lucide-react";
+import { personSymbol } from "./person-symbol";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
@@ -961,6 +962,21 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
     [query.data],
   );
 
+  const legendFlags = useMemo(() => {
+    const ps = query.data?.persons ?? [];
+    const sym = ps.map((p) => personSymbol(p));
+    return {
+      masculino: sym.includes("masculino"),
+      feminino: sym.includes("feminino"),
+      aborto: sym.includes("aborto"),
+      outro: sym.some((x) => x !== "masculino" && x !== "feminino" && x !== "aborto"),
+      falecido: ps.some((p) => p.is_deceased || !!p.death_date),
+      adocao: (query.data?.rels ?? []).some(
+        (r) => r.relationship_type === "parent" && /adot|acolh|guarda/i.test(r.qualifier ?? ""),
+      ),
+    };
+  }, [query.data]);
+
   const deleteSelected = useMutation({
     mutationFn: async () => {
       const nodeIds = nodes.filter((n) => n.type === "person" && n.selected).map((n) => n.id);
@@ -1309,18 +1325,25 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                     Legenda do mapa
                   </p>
                   <div className="grid grid-cols-1 gap-2 text-[15px]">
+                    {legendFlags.masculino && (
                     <span className="flex items-center gap-2">
                       <span className="inline-block size-3.5 border-2 border-forest bg-white" />
                       Masculino
                     </span>
+                    )}
+                    {legendFlags.feminino && (
                     <span className="flex items-center gap-2">
                       <span className="inline-block size-3.5 rounded-full border-2 border-forest bg-white" />
                       Feminino
                     </span>
+                    )}
+                    {legendFlags.outro && (
                     <span className="flex items-center gap-2">
                       <span className="inline-block size-3.5 rotate-45 border-2 border-gold bg-white" />
                       Não-binário / desconhecido
                     </span>
+                    )}
+                    {legendFlags.aborto && (
                     <span className="flex items-center gap-2">
                       <svg
                         viewBox="0 0 10 10"
@@ -1333,16 +1356,28 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                       </svg>
                       Aborto
                     </span>
+                    )}
+                    {legendFlags.falecido && (
                     <span className="flex items-center gap-2">
                       <span className="relative inline-block size-3.5 border-2 border-transparent bg-white">
                         <span className="absolute inset-[-2px] w-[140%] h-[2px] bg-[#3A3A3A] rotate-[45deg] origin-top-left" />
                       </span>
                       Falecido
                     </span>
+                    )}
+                    {true && (
                     <span className="flex items-center gap-2">
                       <span className="inline-block size-3.5 border-2 border-forest bg-forest/20" />
                       Paciente-índice
                     </span>
+                    )}
+                    {legendFlags.adocao && (
+                      <span className="flex items-center gap-2">
+                        <span className="inline-block h-0 w-4 border-t-2 border-dashed border-forest" />
+                        Filiação adotiva/acolhimento
+                      </span>
+                    )}
+                    <span className="text-[13px] text-muted-foreground">Mostra só os símbolos presentes neste mapa.</span>
                   </div>
                 </PopoverContent>
               </Popover>
