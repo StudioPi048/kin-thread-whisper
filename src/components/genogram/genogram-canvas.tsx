@@ -1570,9 +1570,13 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                   size="icon"
                   variant="ghost"
                   className="min-h-11 min-w-11"
-                  aria-label={panelOpen ? "Recolher ficha" : "Mostrar ficha"}
-                  aria-expanded={panelOpen}
-                  onClick={() => setPanelOpen((v) => !v)}
+                  aria-label={
+                    isMobile ? "Abrir ficha" : panelOpen ? "Recolher ficha" : "Mostrar ficha"
+                  }
+                  aria-expanded={isMobile ? mobileSheetOpen : panelOpen}
+                  onClick={() =>
+                    isMobile ? setMobileSheetOpen(true) : setPanelOpen((v) => !v)
+                  }
                 >
                   {panelOpen ? (
                     <PanelRightClose className="size-4" />
