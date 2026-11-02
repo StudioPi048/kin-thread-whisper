@@ -498,7 +498,7 @@ function ClientDossierPage() {
             className="w-full"
           >
             {/* STICKY NAV TABS — rolagem horizontal no mobile */}
-            <div className="sticky top-0 z-30 -mx-6 flex items-center gap-2 border-b border-border/40 bg-surface-archive px-6 py-2  sm:mx-0 sm:px-0">
+            <div className="sticky top-0 z-30 -mx-[18px] flex items-center gap-2 border-b border-border/40 bg-surface-archive px-[18px] py-2 sm:mx-0 sm:px-0">
               <div className="min-w-0 flex-1 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 <TabsList className="flex h-auto w-max flex-nowrap justify-start gap-1 rounded-full border border-border/40 bg-surface-document p-1 shadow-md">
                   {(
