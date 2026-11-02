@@ -151,7 +151,7 @@ function AppHome() {
     new Date(iso).toLocaleString("pt-BR", { weekday: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" });
 
   return (
-    <main className="container-liz space-y-5 py-5">
+    <div className="container-liz space-y-5 py-5">
       <header className="flex flex-wrap items-baseline justify-between gap-2">
         <h1 className="font-serif text-[30px] font-semibold leading-tight text-foreground">
           {greetingByHour()}
@@ -328,6 +328,6 @@ function AppHome() {
           Conceitos, autores e leituras para consultar.
         </span>
       </Link>
-    </main>
+    </div>
   );
 }

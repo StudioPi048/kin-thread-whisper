@@ -67,7 +67,7 @@ function IaClinicaPage() {
         title="Evidências e hipóteses"
         subtitle="Selecione um caso. As hipóteses vêm apenas do que está registrado no genossociograma."
       />
-      <main className="mx-auto w-full max-w-4xl space-y-6 p-4 sm:p-6">
+      <div className="mx-auto w-full max-w-4xl space-y-6 p-4 sm:p-6">
         <div className="space-y-2">
           <label htmlFor="ia-case" className="text-[15px] font-semibold text-foreground">
             Caso
@@ -188,7 +188,7 @@ function IaClinicaPage() {
             </Link>
           </>
         )}
-      </main>
+      </div>
     </div>
   );
 }
