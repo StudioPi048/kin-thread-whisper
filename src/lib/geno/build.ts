@@ -596,40 +596,50 @@ function applyExplicitFiliation(
 ) {
   const byId = new Map(persons.map((p) => [p.id, p]));
   const parentsOf = new Map<string, string[]>();
+  const kindOf = new Map<string, LogicalEdge["childKind"]>();
   for (const r of rels) {
     if (r.relationship_type !== "parent" || !r.from_person_id || !r.to_person_id) continue;
     if (!byId.has(r.from_person_id) || !byId.has(r.to_person_id)) continue;
-    if (r.from_person_id === r.to_person_id) continue;
+    if (r.from_person_id === r.to_person_id) {
+      g.errors.push(
+        `${byId.get(r.to_person_id)?.full_name ?? "Pessoa"} está como genitor(a) de si mesma.`,
+      );
+      continue;
+    }
     const list = parentsOf.get(r.to_person_id) ?? [];
-    if (!list.includes(r.from_person_id) && list.length < 2) list.push(r.from_person_id);
+    if (!list.includes(r.from_person_id)) list.push(r.from_person_id);
     parentsOf.set(r.to_person_id, list);
+    const q = clean(r.qualifier);
+    if (/adot|adoptiv/.test(q)) kindOf.set(r.to_person_id, "adoptive");
+    else if (/acolh|criac|foster|guarda/.test(q)) kindOf.set(r.to_person_id, "foster");
   }
   if (parentsOf.size === 0) return;
+  // Modelo representa no máximo 2 genitores por filho: excesso vira erro visível, nada é descartado em silêncio
+  for (const [childId, list] of [...parentsOf]) {
+    if (list.length > 2) {
+      g.errors.push(
+        `${byId.get(childId)?.full_name ?? "Pessoa"} tem ${list.length} genitores declarados (máximo 2). Revise os vínculos: a filiação explícita dessa pessoa não foi aplicada.`,
+      );
+      parentsOf.delete(childId);
+    }
+  }
 
   const pairKey = (ids: string[]) => [...ids].sort().join("|");
   const connected = new Set<string>();
 
   for (const [childId, parentIds] of parentsOf) {
-    // Genitor fixa geração do filho (gen do filho = gen do genitor − 1) e vice-versa
     const child = g.persons.get(childId);
-    const knownParent = parentIds.map((id) => g.persons.get(id)).find(Boolean);
-    const childGen = child?.generation ?? (knownParent ? knownParent.generation - 1 : 0);
-    const branch = child?.branchId ?? knownParent?.branchId ?? "other";
+    const branch = child?.branchId ?? g.persons.get(parentIds[0])?.branchId ?? "other";
     if (!child)
       g.persons.set(childId, {
         id: childId,
         row: byId.get(childId)!,
-        generation: Math.max(0, childGen),
+        generation: 0,
         branchId: branch,
       });
     for (const pid of parentIds) {
       if (!g.persons.has(pid))
-        g.persons.set(pid, {
-          id: pid,
-          row: byId.get(pid)!,
-          generation: Math.max(0, childGen) + 1,
-          branchId: branch,
-        });
+        g.persons.set(pid, { id: pid, row: byId.get(pid)!, generation: 1, branchId: branch });
     }
 
     // Remove filiação por tag anterior
@@ -664,7 +674,12 @@ function applyExplicitFiliation(
       for (const pid of parentIds) g.edges.push({ kind: "partner", personId: pid, unionId: id });
     }
     union.children.push(childId);
-    g.edges.push({ kind: "child", personId: childId, unionId: union.id, childKind: "biological" });
+    g.edges.push({
+      kind: "child",
+      personId: childId,
+      unionId: union.id,
+      childKind: kindOf.get(childId) ?? "biological",
+    });
     connected.add(childId);
     parentIds.forEach((p) => connected.add(p));
   }
@@ -678,6 +693,112 @@ function applyExplicitFiliation(
   }
   // Quem ganhou filiação explícita deixa de ter aviso de "solto"
   g.warnings = g.warnings.filter((w) => !connected.has(w.personId));
+  resolveGenerations(g);
+}
+
+/**
+ * Resolve gerações por restrições (iterativo, sem recursão): cliente = 0,
+ * parceiros de uma união = geração da união, filhos = união − 1. Parte do
+ * cliente; componentes desconexos mantêm a geração já reconhecida de um nó
+ * semente. Contradições (ciclos, genitor abaixo do filho) viram erro
+ * explícito e o primeiro valor consistente é mantido.
+ */
+export function resolveGenerations(g: LogicalGraph) {
+  type N = string; // "p:<id>" | "u:<id>"
+  const adj = new Map<N, { to: N; d: number }[]>();
+  const link = (a: N, b: N, d: number) => {
+    (adj.get(a) ?? adj.set(a, []).get(a)!).push({ to: b, d });
+    (adj.get(b) ?? adj.set(b, []).get(b)!).push({ to: a, d: -d });
+  };
+  for (const e of g.edges) {
+    if (!g.unions.has(e.unionId) || !g.persons.has(e.personId)) continue;
+    link(`u:${e.unionId}`, `p:${e.personId}`, e.kind === "partner" ? 0 : -1);
+  }
+  const gen = new Map<N, number>();
+  const conflicts = new Set<string>();
+  const badLinks: [N, N][] = [];
+  const run = (seed: N, value: number) => {
+    gen.set(seed, value);
+    const queue: N[] = [seed];
+    for (let i = 0; i < queue.length; i++) {
+      const cur = queue[i];
+      const v = gen.get(cur)!;
+      for (const { to, d } of adj.get(cur) ?? []) {
+        const want = v + d;
+        const have = gen.get(to);
+        if (have === undefined) {
+          gen.set(to, want);
+          queue.push(to);
+        } else if (have !== want) {
+          const pNode = to.startsWith("p:") ? to : cur;
+          conflicts.add(pNode.slice(2));
+          if (d !== 0) badLinks.push([cur, to]);
+        }
+      }
+    }
+  };
+  if (g.probandId && g.persons.has(g.probandId)) run(`p:${g.probandId}`, 0);
+  const rest = [...g.persons.values()].sort((a, b) => b.generation - a.generation);
+  for (const p of rest) if (!gen.has(`p:${p.id}`)) run(`p:${p.id}`, p.generation);
+  for (const [uid, u] of g.unions)
+    if (!gen.has(`u:${uid}`)) run(`u:${uid}`, Math.max(1, u.generation));
+
+  // Corta a ligação filho↔união contraditória (quebra ciclos; layout nunca recursa infinitamente)
+  for (const [a, b] of badLinks) {
+    const pn = a.startsWith("p:") ? a : b;
+    const un = a.startsWith("u:") ? a : b;
+    const pid = pn.slice(2);
+    const uid = un.slice(2);
+    const before = g.edges.length;
+    g.edges = g.edges.filter(
+      (e) => !(e.kind === "child" && e.personId === pid && e.unionId === uid),
+    );
+    if (g.edges.length !== before) {
+      const u = g.unions.get(uid);
+      if (u) u.children = u.children.filter((c) => c !== pid);
+    }
+  }
+
+  // Ninguém acima do cliente: componente com geração negativa é deslocado inteiro para baixo
+  const shiftOf = new Map<N, number>();
+  // (componentes desconexos: desloca pelo mínimo do componente)
+  const seen = new Set<N>();
+  for (const start of gen.keys()) {
+    if (seen.has(start)) continue;
+    const comp: N[] = [start];
+    seen.add(start);
+    for (let i = 0; i < comp.length; i++)
+      for (const { to } of adj.get(comp[i]) ?? [])
+        if (!seen.has(to)) {
+          seen.add(to);
+          comp.push(to);
+        }
+    const min = Math.min(...comp.filter((n) => n.startsWith("p:")).map((n) => gen.get(n)!));
+    const hasProband = g.probandId ? comp.includes(`p:${g.probandId}`) : false;
+    if (min < 0) {
+      if (hasProband)
+        g.errors.push(
+          "Há descendentes do cliente nos vínculos. O mapa representa o cliente e irmãos no topo; descendentes não são desenhados acima dele.",
+        );
+      for (const n of comp) shiftOf.set(n, -min);
+    }
+  }
+  for (const [n, v] of gen) {
+    const value = v + (shiftOf.get(n) ?? 0);
+    if (n.startsWith("p:")) {
+      const p = g.persons.get(n.slice(2));
+      if (p) p.generation = value;
+    } else {
+      const u = g.unions.get(n.slice(2));
+      if (u) u.generation = Math.max(1, value);
+    }
+  }
+  for (const id of conflicts) {
+    const name = g.persons.get(id)?.row.full_name ?? id;
+    g.errors.push(
+      `Vínculos contraditórios envolvendo ${name} (ciclo ou genitor em geração incompatível). Revise pai/mãe declarados.`,
+    );
+  }
 }
 
 // ── Validador estrutural ──────────────────────────────────────
@@ -729,7 +850,13 @@ import { checkLayoutInvariants } from "./verify";
 export interface Placement {
   personPos: Map<string, { x: number; y: number }>;
   unionPos: Map<string, { x: number; y: number }>;
+  /** Quantas posições salvas tiveram Y corrigido para a faixa da geração (x preservado). */
+  normalizedY?: number;
 }
+
+/** Y canônico por geração — cliente+irmãos (0) no topo, ancestrais abaixo. */
+export const genY = (gen: number) => gen * GEN_GAP;
+export const unionY = (gen: number) => gen * GEN_GAP + PERSON_SHAPE / 2;
 
 /**
  * Recursivamente coloca uma união e sua ascendência.
@@ -768,8 +895,11 @@ export function layoutGraph(g: LogicalGraph): Placement {
   const unionD = new Map<string, number>();
 
   // PASSO 1: Bottom-up compute width (extents)
+  const inProgress = new Set<string>();
   const computeExtent = (personId: string, side: "root" | "paternal" | "maternal"): Extent => {
     if (personExtents.has(personId)) return personExtents.get(personId)!;
+    if (inProgress.has(personId)) return { left: -NODE_W / 2, right: NODE_W / 2 }; // guarda contra ciclo
+    inProgress.add(personId);
 
     let left = -NODE_W / 2;
     let right = NODE_W / 2;
@@ -1114,7 +1244,28 @@ export function layoutGraph(g: LogicalGraph): Placement {
     }
   }
 
-  const placement = { personPos: finalPersonPos, unionPos: finalUnionPos };
+  // Faixa Y fixa por geração: posições salvas/rascunhos antigos só preservam X
+  let normalizedY = 0;
+  for (const [pid, pos] of finalPersonPos) {
+    const pe = g.persons.get(pid);
+    if (!pe) continue;
+    const want = genY(pe.generation);
+    if (Math.abs(pos.y - want) > 0.5) {
+      if (g.positions.has(pid)) normalizedY++;
+      pos.y = want;
+    }
+  }
+  for (const [uid, pos] of finalUnionPos) {
+    const u = g.unions.get(uid);
+    if (!u) continue;
+    const want = unionY(u.generation);
+    if (Math.abs(pos.y - want) > 0.5) {
+      if (g.positions.has(uid)) normalizedY++;
+      pos.y = want;
+    }
+  }
+
+  const placement: Placement = { personPos: finalPersonPos, unionPos: finalUnionPos, normalizedY };
   if (import.meta.env.DEV) {
     const violations = checkLayoutInvariants(g, placement);
     if (violations.length > 0) {

@@ -17,13 +17,20 @@ export function FamilyAtlasDiagram() {
         role="img"
         aria-label="Exemplo fictício de uma família com oito pessoas em três gerações"
       >
-        <g fill="none" stroke="#A2B5CA" strokeWidth="1.3">
+        <g fill="none" stroke="var(--color-border)" strokeWidth="1.3">
           <path d="M116 395H194M436 395H514M155 395V302M475 395V302M181 220H449M315 220V145H245V137M315 145H385V137" />
         </g>
         {people.map((p) => (
           <g key={p.name}>
             {p.name === "Helena" && (
-              <circle cx={p.x} cy={p.y} r="33" fill="none" stroke="#DBAC67" strokeWidth="2" />
+              <circle
+                cx={p.x}
+                cy={p.y}
+                r="33"
+                fill="none"
+                stroke="var(--color-gold)"
+                strokeWidth="2"
+              />
             )}
             {p.square ? (
               <rect
@@ -31,18 +38,25 @@ export function FamilyAtlasDiagram() {
                 y={p.y - 26}
                 width="52"
                 height="52"
-                fill="#90A6BF"
-                stroke="#CFDBE8"
+                fill="var(--color-forest)"
+                stroke="var(--color-border)"
                 strokeWidth="1.5"
               />
             ) : (
-              <circle cx={p.x} cy={p.y} r="26" fill="#C9969F" stroke="#EDD7DC" strokeWidth="1.5" />
+              <circle
+                cx={p.x}
+                cy={p.y}
+                r="26"
+                fill="var(--color-gold)"
+                stroke="var(--color-border)"
+                strokeWidth="1.5"
+              />
             )}
             <text
               x={p.x}
               y={p.y + 50}
               textAnchor="middle"
-              fill={p.name === "Helena" ? "#E7BF86" : "#F5F7FA"}
+              fill={p.name === "Helena" ? "var(--color-gold)" : "var(--color-card)"}
               fontSize="15"
               fontFamily="Inter,sans-serif"
               fontWeight="500"
@@ -53,7 +67,7 @@ export function FamilyAtlasDiagram() {
               x={p.x}
               y={p.y + 70}
               textAnchor="middle"
-              fill="#B8C8D9"
+              fill="var(--color-muted-foreground)"
               fontSize="12"
               fontFamily="Inter,sans-serif"
             >

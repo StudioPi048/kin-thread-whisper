@@ -1,5 +1,5 @@
 import { invalidateCase } from "@/lib/clinical-intel";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Background,
   BackgroundVariant,
@@ -52,12 +52,16 @@ import {
   PanelRightClose,
   PanelRightOpen,
 } from "lucide-react";
+import { personSymbol } from "./person-symbol";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
   LayoutHistory,
   saveDraft,
   readDraft,
   clearDraft,
   type Snapshot,
+  constrainSnapshotY,
 } from "@/lib/geno/layout-history";
 import { toast } from "sonner";
 import { toPng } from "html-to-image";
@@ -621,7 +625,19 @@ function buildRenderGraph(
     });
   }
 
-  return { nodes, edges, warnings: graph.warnings };
+  const extra: GenogramWarning[] = [
+    ...graph.errors.map((message, i) => ({ personId: `err-${i}`, personName: "", message })),
+    ...(placement.normalizedY
+      ? [
+          {
+            personId: "norm-y",
+            personName: "",
+            message: `${placement.normalizedY} posição(ões) salva(s) estavam fora da faixa da geração e foram alinhadas (cliente e irmãos no topo). A posição horizontal foi mantida; salve o layout para gravar.`,
+          },
+        ]
+      : []),
+  ];
+  return { nodes, edges, warnings: [...extra, ...graph.warnings] };
 }
 
 function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
@@ -685,6 +701,8 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
   const [confirmRecalc, setConfirmRecalc] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [panelOpen, setPanelOpen] = useState(true);
+  const isMobile = useIsMobile();
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [userId, setUserId] = useState<string>("");
   const [pendingDraft, setPendingDraft] = useState<Snapshot | null>(null);
@@ -883,7 +901,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
       const nextChanges = changes.map((change) => {
         if (change.type === "position" && change.position) {
           const node = rfInstance.getNode(change.id);
-          if (node?.type === "person") {
+          if (node && (node.type === "person" || node.type === "union")) {
             return {
               ...change,
               position: { x: change.position.x, y: node.position.y },
@@ -944,6 +962,18 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
     [query.data],
   );
 
+  const legendFlags = useMemo(() => {
+    const ps = query.data?.persons ?? [];
+    const sym = ps.map((p) => personSymbol(p));
+    return {
+      masculino: sym.includes("masculino"),
+      feminino: sym.includes("feminino"),
+      aborto: sym.includes("aborto"),
+      outro: sym.some((x) => x !== "masculino" && x !== "feminino" && x !== "aborto"),
+      falecido: ps.some((p) => p.is_deceased || !!p.death_date),
+    };
+  }, [query.data]);
+
   const deleteSelected = useMutation({
     mutationFn: async () => {
       const nodeIds = nodes.filter((n) => n.type === "person" && n.selected).map((n) => n.id);
@@ -972,14 +1002,16 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
   }, [rfInstance]);
   const applySnapshot = useCallback(
     (snap: Snapshot) => {
+      // Só X do snapshot; Y permanece na faixa da geração (cliente+irmãos no topo)
+      const safe = constrainSnapshotY(snap, snapshot());
       setNodes((ns) =>
         ns.map((n) =>
-          snap[n.id] ? { ...n, position: { x: snap[n.id][0], y: snap[n.id][1] } } : n,
+          safe[n.id] ? { ...n, position: { x: safe[n.id][0], y: safe[n.id][1] } } : n,
         ),
       );
       setLayoutDirty(true);
     },
-    [setNodes],
+    [setNodes, snapshot],
   );
   const undoLayout = () => {
     const prev = historyRef.current.undo(snapshot());
@@ -1156,13 +1188,13 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
         <div className="atlas-map-toolbar">
           {/* BARRA DE AÇÕES — agrupada: Identidade | Editar | Layout | Status | Extras */}
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-2 pr-2 border-r border-white/15">
+            <div className="flex items-center gap-2 pr-2 border-r border-border">
               <TreePine className="size-4 text-gold" />
-              <span className="text-xs font-medium text-white">Genossociograma</span>
+              <span className="text-xs font-medium text-foreground">Genossociograma</span>
             </div>
 
             {/* Grupo: Editar */}
-            <div className="flex items-center gap-2 pr-2 border-r border-white/15">
+            <div className="flex items-center gap-2 pr-2 border-r border-border">
               <Button
                 size="sm"
                 variant="gold"
@@ -1178,7 +1210,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                 variant="outline"
                 onClick={() => setRelDialog({ open: true })}
                 disabled={persons.length < 2}
-                className="h-9 gap-2 border-white/25 bg-transparent text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[13px]"
+                className="h-9 gap-2 border-border bg-transparent text-foreground hover:bg-muted hover:text-foreground normal-case tracking-normal font-semibold text-[13px]"
               >
                 <Link2 className="size-4" />
                 Criar vínculo
@@ -1186,13 +1218,13 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
             </div>
 
             {/* Grupo: Layout */}
-            <div className="flex items-center gap-2 pr-2 border-r border-white/15">
+            <div className="flex items-center gap-2 pr-2 border-r border-border">
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => saveLayout.mutate()}
                 disabled={saveLayout.isPending || !layoutDirty}
-                className="h-9 gap-2 border-white/25 bg-transparent text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[13px] disabled:opacity-45"
+                className="h-9 gap-2 border-border bg-transparent text-foreground hover:bg-muted hover:text-foreground normal-case tracking-normal font-semibold text-[13px] disabled:opacity-45"
               >
                 <Save className="size-4" />
                 {saveLayout.isPending ? "Salvando" : "Salvar layout"}
@@ -1203,7 +1235,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                 variant="outline"
                 onClick={() => toggleLayoutFixed.mutate()}
                 disabled={!query.data?.layout?.id || toggleLayoutFixed.isPending}
-                className={`h-11 gap-2 border-white/25 normal-case tracking-normal font-semibold text-[13px] ${isLayoutFixed ? "bg-[#405B76] text-white" : "bg-transparent text-white hover:bg-white/10 hover:text-white"}`}
+                className={`h-11 gap-2 border-border normal-case tracking-normal font-semibold text-[13px] ${isLayoutFixed ? "bg-forest text-primary-foreground" : "bg-transparent text-foreground hover:bg-muted hover:text-foreground"}`}
                 title={
                   !query.data?.layout?.id
                     ? "Salve o layout pelo menos uma vez para poder fixá-lo"
@@ -1224,7 +1256,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                 onClick={() => setConfirmRecalc(true)}
                 disabled={!query.data?.layout?.id || recalcLayout.isPending}
                 title="Recalcula as posições do zero — use se alguém aparecer preso no lugar errado"
-                className="h-9 gap-2 border-white/25 bg-transparent text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[13px] disabled:opacity-45"
+                className="h-9 gap-2 border-border bg-transparent text-foreground hover:bg-muted hover:text-foreground normal-case tracking-normal font-semibold text-[13px] disabled:opacity-45"
               >
                 <RotateCcw className="size-4" />
                 {recalcLayout.isPending ? "Recalculando" : "Recalcular"}
@@ -1232,10 +1264,10 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
             </div>
 
             {/* Grupo: Status — sempre visível (quebra linha em telas estreitas, nunca some) */}
-            <div className="flex flex-wrap items-center gap-3 pr-3 border-r border-white/15">
-              <span className="flex items-center gap-1.5 text-[13px] text-white">
+            <div className="flex flex-wrap items-center gap-3 pr-3 border-r border-border">
+              <span className="flex items-center gap-1.5 text-[13px] text-foreground">
                 <Users className="size-3.5 text-forest" />
-                <strong className="text-white">{qualifiedCount}</strong>
+                <strong className="text-foreground">{qualifiedCount}</strong>
                 <span>no mapa</span>
                 {incompleteCount > 0 && (
                   <span className="ml-1 rounded-full bg-gold/20 px-1.5 py-0.5 text-[14px] font-bold text-gold">
@@ -1243,21 +1275,21 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                   </span>
                 )}
               </span>
-              <span className="flex items-center gap-1.5 text-[13px] text-white">
+              <span className="flex items-center gap-1.5 text-[13px] text-foreground">
                 <Link2 className="size-3.5 text-gold" />
-                <strong className="text-white">{relCount}</strong> vínculos
+                <strong className="text-foreground">{relCount}</strong> vínculos
               </span>
               {warnings.length > 0 && (
                 <Popover>
                   <PopoverTrigger asChild>
-                    <button className="flex items-center gap-1.5 rounded-full bg-amber-500/20 px-2.5 py-1 text-[14px] font-bold text-amber-300 hover:bg-amber-500/30 transition-colors animate-[pulse-gold_2.2s_ease-in-out_infinite]">
+                    <button className="flex items-center gap-1.5 rounded-full bg-gold/20 px-2.5 py-1 text-[14px] font-bold text-foreground hover:bg-gold/30 transition-colors animate-[pulse-gold_2.2s_ease-in-out_infinite]">
                       <AlertTriangle className="size-3.5" />
                       {warnings.length} para revisar
                     </button>
                   </PopoverTrigger>
                   <PopoverContent className="w-96 max-h-96 overflow-y-auto" align="start">
                     <p className="mb-2 text-[13px] font-bold uppercase tracking-wide text-muted-foreground">
-                      Pessoas soltas na árvore
+                      Para revisar no mapa
                     </p>
                     <ul className="space-y-2.5">
                       {warnings.map((w) => (
@@ -1270,14 +1302,14 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                 </Popover>
               )}
               {(layoutDirty || lastSavedAt) && (
-                <span className="text-[13px] font-semibold text-white">
+                <span className="text-[13px] font-semibold text-foreground">
                   {layoutDirty ? "Não salvo" : `Salvo às ${lastSavedAt}`}
                 </span>
               )}
               <Popover>
                 <PopoverTrigger asChild>
                   <button
-                    className="flex items-center gap-1.5 rounded px-2 py-1 text-[14px] font-bold text-white/80 hover:bg-white/10 hover:text-white transition-colors"
+                    className="flex items-center gap-1.5 rounded px-2 py-1 text-[14px] font-bold text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                     title="Legenda dos símbolos"
                     aria-label="Legenda dos símbolos"
                   >
@@ -1290,39 +1322,52 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                     Legenda do mapa
                   </p>
                   <div className="grid grid-cols-1 gap-2 text-[15px]">
-                    <span className="flex items-center gap-2">
-                      <span className="inline-block size-3.5 border-2 border-forest bg-white" />
-                      Masculino
-                    </span>
-                    <span className="flex items-center gap-2">
-                      <span className="inline-block size-3.5 rounded-full border-2 border-forest bg-white" />
-                      Feminino
-                    </span>
-                    <span className="flex items-center gap-2">
-                      <span className="inline-block size-3.5 rotate-45 border-2 border-gold bg-white" />
-                      Não-binário / desconhecido
-                    </span>
-                    <span className="flex items-center gap-2">
-                      <svg
-                        viewBox="0 0 10 10"
-                        className="size-3.5"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                      >
-                        <polygon points="5,1 9,9 1,9" className="text-foreground/70" />
-                      </svg>
-                      Aborto
-                    </span>
-                    <span className="flex items-center gap-2">
-                      <span className="relative inline-block size-3.5 border-2 border-transparent bg-white">
-                        <span className="absolute inset-[-2px] w-[140%] h-[2px] bg-[#3A3A3A] rotate-[45deg] origin-top-left" />
+                    {legendFlags.masculino && (
+                      <span className="flex items-center gap-2">
+                        <span className="inline-block size-3.5 border-2 border-forest bg-white" />
+                        Masculino
                       </span>
-                      Falecido
-                    </span>
+                    )}
+                    {legendFlags.feminino && (
+                      <span className="flex items-center gap-2">
+                        <span className="inline-block size-3.5 rounded-full border-2 border-forest bg-white" />
+                        Feminino
+                      </span>
+                    )}
+                    {legendFlags.outro && (
+                      <span className="flex items-center gap-2">
+                        <span className="inline-block size-3.5 rotate-45 border-2 border-gold bg-white" />
+                        Não-binário / desconhecido
+                      </span>
+                    )}
+                    {legendFlags.aborto && (
+                      <span className="flex items-center gap-2">
+                        <svg
+                          viewBox="0 0 10 10"
+                          className="size-3.5"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                        >
+                          <polygon points="5,1 9,9 1,9" className="text-foreground/70" />
+                        </svg>
+                        Aborto
+                      </span>
+                    )}
+                    {legendFlags.falecido && (
+                      <span className="flex items-center gap-2">
+                        <span className="relative inline-block size-3.5 border-2 border-transparent bg-white">
+                          <span className="absolute inset-[-2px] w-[140%] h-[2px] bg-foreground rotate-[45deg] origin-top-left" />
+                        </span>
+                        Falecido
+                      </span>
+                    )}
                     <span className="flex items-center gap-2">
                       <span className="inline-block size-3.5 border-2 border-forest bg-forest/20" />
                       Paciente-índice
+                    </span>
+                    <span className="text-[13px] text-muted-foreground">
+                      Mostra só os símbolos presentes neste mapa.
                     </span>
                   </div>
                 </PopoverContent>
@@ -1334,7 +1379,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                 size="sm"
                 variant="outline"
                 onClick={() => setShowGuide(!showGuide)}
-                className="h-10 gap-1.5 border-transparent bg-transparent text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[13px] shadow-none"
+                className="min-h-11 gap-1.5 border-transparent bg-transparent text-foreground hover:bg-muted hover:text-foreground normal-case tracking-normal font-semibold text-[13px] shadow-none"
               >
                 <HelpCircle className="size-4" />
                 <span className="hidden sm:inline">Guia</span>
@@ -1345,7 +1390,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                 onClick={exportPdf}
                 disabled={isExportingPdf}
                 title="Exportar PDF (A3) pra imprimir com o cliente"
-                className="h-10 gap-1.5 border-transparent bg-transparent text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[13px] shadow-none"
+                className="min-h-11 gap-1.5 border-transparent bg-transparent text-foreground hover:bg-muted hover:text-foreground normal-case tracking-normal font-semibold text-[13px] shadow-none"
               >
                 {isExportingPdf ? (
                   <Loader2 className="size-4 animate-spin" />
@@ -1361,7 +1406,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                 disabled={
                   deleteSelected.isPending || (selectedPersonCount === 0 && selectedEdgeCount === 0)
                 }
-                className="h-10 gap-1.5 border-transparent bg-transparent text-white hover:bg-white/10 hover:text-red-400 normal-case tracking-normal font-semibold text-[13px] ml-4 border-l border-white/15 rounded-l-none pl-4 shadow-none"
+                className="min-h-11 gap-1.5 border-transparent bg-transparent text-foreground hover:bg-muted hover:text-destructive normal-case tracking-normal font-semibold text-[13px] ml-4 border-l border-border rounded-l-none pl-4 shadow-none"
               >
                 <Trash2 className="size-4" />
                 <span className="hidden sm:inline">Remover</span>
@@ -1418,7 +1463,10 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                 forceHistory((x) => x + 1);
               }}
               onNodeClick={(_, node) => {
-                if (node.type === "person") setFocusedPersonId(node.id);
+                if (node.type === "person") {
+                  setFocusedPersonId(node.id);
+                  if (isMobile) setMobileSheetOpen(true);
+                }
               }}
               onEdgeDoubleClick={onEdgeDoubleClick}
               nodesDraggable={!isLayoutFixed}
@@ -1436,7 +1484,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
               fitViewOptions={{ padding: 0.18, nodes: nodes.filter((n) => n.type === "person") }}
             >
               <Background
-                color="#405B76"
+                color="var(--color-border)"
                 variant={BackgroundVariant.Dots}
                 gap={24}
                 size={1}
@@ -1548,9 +1596,11 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                   size="icon"
                   variant="ghost"
                   className="min-h-11 min-w-11"
-                  aria-label={panelOpen ? "Recolher ficha" : "Mostrar ficha"}
-                  aria-expanded={panelOpen}
-                  onClick={() => setPanelOpen((v) => !v)}
+                  aria-label={
+                    isMobile ? "Abrir ficha" : panelOpen ? "Recolher ficha" : "Mostrar ficha"
+                  }
+                  aria-expanded={isMobile ? mobileSheetOpen : panelOpen}
+                  onClick={() => (isMobile ? setMobileSheetOpen(true) : setPanelOpen((v) => !v))}
                 >
                   {panelOpen ? (
                     <PanelRightClose className="size-4" />
@@ -1610,88 +1660,183 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
           )}
         </div>
       </div>
-      <aside
-        className="atlas-person-panel"
-        aria-label="Ficha da pessoa selecionada"
-        hidden={!panelOpen}
-      >
-        {focusedPerson ? (
-          <>
-            <h2>{focusedPerson.preferred_name || focusedPerson.full_name}</h2>
-            <p className="mt-2 text-xs text-muted-foreground">
-              {focusedPerson.is_proband
-                ? "Pessoa de referência"
-                : focusedPerson.relationship_to_proband || "Vínculo não informado"}
-            </p>
-            <dl>
-              <div>
-                <dt>Nome completo</dt>
-                <dd>{focusedPerson.full_name || "Não informado"}</dd>
-              </div>
-              <div>
-                <dt>Nascimento</dt>
-                <dd>
-                  {focusedPerson.birth_date
-                    ? new Date(focusedPerson.birth_date + "T12:00:00").toLocaleDateString("pt-BR")
-                    : "Não informado"}
-                </dd>
-              </div>
-              {focusedPerson.is_deceased && (
+      {isMobile ? (
+        <Sheet open={mobileSheetOpen} onOpenChange={setMobileSheetOpen}>
+          <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto">
+            <SheetHeader className="sr-only">
+              <SheetTitle>Ficha da pessoa selecionada</SheetTitle>
+            </SheetHeader>
+            <div className="atlas-person-panel atlas-person-panel--sheet">
+              {focusedPerson ? (
+                <>
+                  <h2>{focusedPerson.preferred_name || focusedPerson.full_name}</h2>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {focusedPerson.is_proband
+                      ? "Pessoa de referência"
+                      : focusedPerson.relationship_to_proband || "Vínculo não informado"}
+                  </p>
+                  <dl>
+                    <div>
+                      <dt>Nome completo</dt>
+                      <dd>{focusedPerson.full_name || "Não informado"}</dd>
+                    </div>
+                    <div>
+                      <dt>Nascimento</dt>
+                      <dd>
+                        {focusedPerson.birth_date
+                          ? new Date(focusedPerson.birth_date + "T12:00:00").toLocaleDateString(
+                              "pt-BR",
+                            )
+                          : "Não informado"}
+                      </dd>
+                    </div>
+                    {focusedPerson.is_deceased && (
+                      <div>
+                        <dt>Falecimento</dt>
+                        <dd>
+                          {focusedPerson.death_date
+                            ? new Date(focusedPerson.death_date + "T12:00:00").toLocaleDateString(
+                                "pt-BR",
+                              )
+                            : "Data não informada"}
+                        </dd>
+                      </div>
+                    )}
+                    <div>
+                      <dt>Gênero registrado</dt>
+                      <dd>{focusedPerson.gender || "Não informado"}</dd>
+                    </div>
+                    <div>
+                      <dt>Observações</dt>
+                      <dd>{focusedPerson.notes || "Nenhuma observação registrada."}</dd>
+                    </div>
+                  </dl>
+                  <div className="atlas-panel-actions">
+                    <Button variant="outline" onClick={() => setEditingPerson(focusedPerson)}>
+                      Editar pessoa
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setRelDialog({ open: true, seed: { from: focusedPerson.id } })}
+                    >
+                      Criar vínculo
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        setRelDialog({ open: true, seed: { to: focusedPerson.id, type: "parent" } })
+                      }
+                    >
+                      Definir pai ou mãe
+                    </Button>
+                  </div>
+                  <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
+                    Pai/mãe definidos aqui têm precedência sobre o parentesco da planilha — use para
+                    meios-irmãos ou familiares soltos.
+                  </p>
+                  <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
+                    Selecione uma pessoa no mapa para consultar sua ficha. Dê dois cliques para
+                    editar.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h2>Pessoas e relações</h2>
+                  <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+                    Adicione a primeira pessoa para começar o genossociograma. Os dados de cada
+                    pessoa aparecem aqui.
+                  </p>
+                </>
+              )}
+            </div>
+          </SheetContent>
+        </Sheet>
+      ) : (
+        <aside
+          className="atlas-person-panel"
+          aria-label="Ficha da pessoa selecionada"
+          hidden={!panelOpen}
+        >
+          {focusedPerson ? (
+            <>
+              <h2>{focusedPerson.preferred_name || focusedPerson.full_name}</h2>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {focusedPerson.is_proband
+                  ? "Pessoa de referência"
+                  : focusedPerson.relationship_to_proband || "Vínculo não informado"}
+              </p>
+              <dl>
                 <div>
-                  <dt>Falecimento</dt>
+                  <dt>Nome completo</dt>
+                  <dd>{focusedPerson.full_name || "Não informado"}</dd>
+                </div>
+                <div>
+                  <dt>Nascimento</dt>
                   <dd>
-                    {focusedPerson.death_date
-                      ? new Date(focusedPerson.death_date + "T12:00:00").toLocaleDateString("pt-BR")
-                      : "Data não informada"}
+                    {focusedPerson.birth_date
+                      ? new Date(focusedPerson.birth_date + "T12:00:00").toLocaleDateString("pt-BR")
+                      : "Não informado"}
                   </dd>
                 </div>
-              )}
-              <div>
-                <dt>Gênero registrado</dt>
-                <dd>{focusedPerson.gender || "Não informado"}</dd>
+                {focusedPerson.is_deceased && (
+                  <div>
+                    <dt>Falecimento</dt>
+                    <dd>
+                      {focusedPerson.death_date
+                        ? new Date(focusedPerson.death_date + "T12:00:00").toLocaleDateString(
+                            "pt-BR",
+                          )
+                        : "Data não informada"}
+                    </dd>
+                  </div>
+                )}
+                <div>
+                  <dt>Gênero registrado</dt>
+                  <dd>{focusedPerson.gender || "Não informado"}</dd>
+                </div>
+                <div>
+                  <dt>Observações</dt>
+                  <dd>{focusedPerson.notes || "Nenhuma observação registrada."}</dd>
+                </div>
+              </dl>
+              <div className="atlas-panel-actions">
+                <Button variant="outline" onClick={() => setEditingPerson(focusedPerson)}>
+                  Editar pessoa
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setRelDialog({ open: true, seed: { from: focusedPerson.id } })}
+                >
+                  Criar vínculo
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    setRelDialog({ open: true, seed: { to: focusedPerson.id, type: "parent" } })
+                  }
+                >
+                  Definir pai ou mãe
+                </Button>
               </div>
-              <div>
-                <dt>Observações</dt>
-                <dd>{focusedPerson.notes || "Nenhuma observação registrada."}</dd>
-              </div>
-            </dl>
-            <div className="atlas-panel-actions">
-              <Button variant="outline" onClick={() => setEditingPerson(focusedPerson)}>
-                Editar pessoa
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setRelDialog({ open: true, seed: { from: focusedPerson.id } })}
-              >
-                Criar vínculo
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() =>
-                  setRelDialog({ open: true, seed: { to: focusedPerson.id, type: "parent" } })
-                }
-              >
-                Definir pai ou mãe
-              </Button>
-            </div>
-            <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
-              Pai/mãe definidos aqui têm precedência sobre o parentesco da planilha — use para
-              meios-irmãos ou familiares soltos.
-            </p>
-            <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
-              Selecione uma pessoa no mapa para consultar sua ficha. Dê dois cliques para editar.
-            </p>
-          </>
-        ) : (
-          <>
-            <h2>Pessoas e relações</h2>
-            <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-              Adicione a primeira pessoa para começar o genossociograma. Os dados de cada pessoa
-              aparecem aqui.
-            </p>
-          </>
-        )}
-      </aside>
+              <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
+                Pai/mãe definidos aqui têm precedência sobre o parentesco da planilha — use para
+                meios-irmãos ou familiares soltos.
+              </p>
+              <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
+                Selecione uma pessoa no mapa para consultar sua ficha. Dê dois cliques para editar.
+              </p>
+            </>
+          ) : (
+            <>
+              <h2>Pessoas e relações</h2>
+              <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+                Adicione a primeira pessoa para começar o genossociograma. Os dados de cada pessoa
+                aparecem aqui.
+              </p>
+            </>
+          )}
+        </aside>
+      )}
 
       <PersonFormDialog
         open={creatingPerson}

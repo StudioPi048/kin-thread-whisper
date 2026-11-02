@@ -53,7 +53,7 @@ export function ClinicalDocument({
               stage === "corroborada"
                 ? "bg-forest/10 text-forest-mid border-forest/20 font-bold"
                 : stage === "observada"
-                  ? "bg-archive-old/50 text-ink/60 border-[#E5E2DC]"
+                  ? "bg-archive-old/50 text-ink/60 border-border"
                   : "bg-gray-50 text-gray-500 border-gray-200",
             )}
           >

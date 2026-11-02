@@ -85,3 +85,18 @@ export function clearDraft(userId: string, clientId: string, s = store()) {
     /* ignore */
   }
 }
+
+/**
+ * Aplica um snapshot (rascunho, desfazer/refazer) respeitando a faixa Y da
+ * geração: só o X do snapshot é usado; Y vem do nó atual (já normalizado).
+ * IDs que não existem mais são ignorados.
+ */
+export function constrainSnapshotY(snap: Snapshot, current: Snapshot): Snapshot {
+  const out: Snapshot = {};
+  for (const [id, [x]] of Object.entries(snap)) {
+    const cur = current[id];
+    if (!cur || !Number.isFinite(x)) continue;
+    out[id] = [x, cur[1]];
+  }
+  return out;
+}

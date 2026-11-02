@@ -300,7 +300,7 @@ export function PersonFormDialog({
                   value={v.relationship_to_proband}
                   onChange={(x) => set("relationship_to_proband", x)}
                   placeholder="Ex.: Pai, Tia paterna, Bisavô materno..."
-                  triggerClassName="flex h-[42px] w-full rounded-none border-0 border-b-2 border-border/60 bg-transparent px-2 text-[16px] font-medium transition-all duration-300 hover:border-forest/50 focus-visible:outline-none focus-visible:border-forest focus-visible:bg-[#EFE9E0]/50"
+                  triggerClassName="flex h-[42px] w-full rounded-none border-0 border-b-2 border-border/60 bg-transparent px-2 text-[16px] font-medium transition-all duration-300 hover:border-forest/50 focus-visible:outline-none focus-visible:border-forest focus-visible:bg-muted/50"
                 />
               </Field>
               <Row>

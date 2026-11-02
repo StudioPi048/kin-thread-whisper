@@ -13,83 +13,71 @@ export function inferGenderFromRelationship(rel?: string): "male" | "female" | u
   return undefined;
 }
 
-export function parseDateString(d?: string): string | null {
-  if (!d) return null;
-  const val = String(d).trim();
-  if (!val) return null;
+export const MIN_YEAR = 1700;
+export const maxYear = () => new Date().getFullYear() + 1;
 
-  // ISO YYYY-MM-DD (já normalizado)
+export type ParsedDate =
+  | { kind: "empty" }
+  | { kind: "exact"; iso: string }
+  /** Data incompleta (só ano, DD/MM, MM/AAAA): NUNCA vira data exata. */
+  | { kind: "partial"; raw: string; label: string }
+  | { kind: "invalid"; raw: string; reason: string };
+
+const yearOk = (y: number) => Number.isInteger(y) && y >= MIN_YEAR && y <= maxYear();
+
+export function parseDateField(d?: string): ParsedDate {
+  const val = String(d ?? "").trim();
+  if (!val) return { kind: "empty" };
+  const bad = (reason: string): ParsedDate => ({ kind: "invalid", raw: val, reason });
+
   if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
-    return isValidYMD(val) ? val : null;
+    if (!yearOk(Number(val.slice(0, 4)))) return bad(`ano fora de ${MIN_YEAR}–${maxYear()}`);
+    return isValidYMD(val) ? { kind: "exact", iso: val } : bad("dia ou mês inexistente");
   }
-
-  // Aceita separadores /, -, ., ou \ com espaços opcionais
+  if (/^\d{4}$/.test(val)) {
+    return yearOk(Number(val))
+      ? { kind: "partial", raw: val, label: "só o ano" }
+      : bad(`ano fora de ${MIN_YEAR}–${maxYear()}`);
+  }
   const parts = val
     .split(/[/\\\-. \t]/)
     .map((p) => p.trim())
     .filter(Boolean);
+  if (!parts.length || !parts.every((p) => /^\d+$/.test(p))) return bad("formato não reconhecido");
 
-  if (parts.length === 3) {
-    if (!parts.every((p) => /^\d+$/.test(p))) return null;
-    const nums = parts.map(Number);
-
-    let dd: string, mm: string, yy: string;
-
-    // Detecta o formato pelo tamanho e range dos valores
-    // Se o primeiro número > 31, provavelmente é o ano (YYYY/MM/DD)
-    if (nums[0] > 31) {
-      [yy, mm, dd] = parts;
-    }
-    // Se o terceiro número > 31 ou tem 4 dígitos, é DD/MM/YYYY ou MM/DD/YYYY
-    else if (nums[2] > 31 || parts[2].length === 4) {
-      // Distingue DD/MM/YYYY de MM/DD/YYYY:
-      // Se o primeiro número > 12, é dia (não pode ser mês)
-      if (nums[0] > 12) {
-        [dd, mm, yy] = parts; // DD/MM/YYYY (brasileiro)
-      } else if (nums[1] > 12) {
-        [mm, dd, yy] = parts; // MM/DD/YYYY (americano)
-      } else {
-        // Ambíguo: assume brasileiro (DD/MM/YYYY) por ser o padrão local
-        [dd, mm, yy] = parts;
-      }
-    } else {
-      // Fallback: assume DD/MM/YY
-      [dd, mm, yy] = parts;
-    }
-
-    // Ano com 2 dígitos: 00-30 → 2000-2030, 31-99 → 1931-1999
-    if (yy.length === 2) {
-      const n = parseInt(yy, 10);
-      yy = String(n <= 30 ? 2000 + n : 1900 + n);
-    }
-    if (yy.length !== 4) return null;
-
-    const iso = `${yy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
-    return isValidYMD(iso) ? iso : null;
-  }
-
-  // Apenas dia e mês (ex.: "01/03" ou "14\08") → assume o ano 2000 temporariamente para não perder o dado
-  if (parts.length === 2 && parts.every((p) => /^\d+$/.test(p))) {
+  if (parts.length === 2) {
     const [p1, p2] = parts;
-    let dd = p1,
-      mm = p2;
-    if (Number(p1) > 12) {
-      // P1 não pode ser mês, então é DD/MM
-      dd = p1;
-      mm = p2;
-    } else if (Number(p2) > 12) {
-      // P2 não pode ser mês, então é MM/DD
-      mm = p1;
-      dd = p2;
+    if (p2.length === 4) {
+      const m = Number(p1);
+      if (m < 1 || m > 12) return bad("mês inexistente");
+      return yearOk(Number(p2))
+        ? { kind: "partial", raw: val, label: "mês e ano, sem dia" }
+        : bad(`ano fora de ${MIN_YEAR}–${maxYear()}`);
     }
-    const iso = `2000-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
-    return isValidYMD(iso) ? iso : null;
+    const [dd, mm] = Number(p1) > 12 ? [p1, p2] : Number(p2) > 12 ? [p2, p1] : [p1, p2];
+    // Valida dia/mês num ano bissexto qualquer só para checar existência; o ano NÃO é gravado.
+    return isValidYMD(`2024-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`)
+      ? { kind: "partial", raw: val, label: "dia e mês, sem ano" }
+      : bad("dia ou mês inexistente");
   }
+  if (parts.length !== 3) return bad("formato não reconhecido");
 
-  // Apenas ano (ex.: "1985") → assume 01/01 para não perder o dado
-  if (/^\d{4}$/.test(val)) return `${val}-01-01`;
+  let dd: string, mm: string, yy: string;
+  const nums = parts.map(Number);
+  if (parts[0].length === 4) [yy, mm, dd] = parts;
+  else if (nums[0] > 12) [dd, mm, yy] = parts;
+  else if (nums[1] > 12) [mm, dd, yy] = parts;
+  else [dd, mm, yy] = parts; // ambíguo: padrão brasileiro DD/MM
+  if (yy.length !== 4) return bad("ano precisa ter 4 dígitos");
+  if (!yearOk(Number(yy))) return bad(`ano fora de ${MIN_YEAR}–${maxYear()}`);
+  const iso = `${yy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
+  return isValidYMD(iso) ? { kind: "exact", iso } : bad("dia ou mês inexistente");
+}
 
-  return null;
+/** Só datas completas e válidas; datas parciais retornam null (nunca inventa dia/mês/ano). */
+export function parseDateString(d?: string): string | null {
+  const r = parseDateField(d);
+  return r.kind === "exact" ? r.iso : null;
 }
 
 export function isValidYMD(iso: string): boolean {
@@ -173,11 +161,6 @@ export interface ImportRecord {
   notes: string | null;
 }
 
-const isApproximate = (raw: string) => {
-  const v = raw.trim();
-  return /^\d{4}$/.test(v) || /^\d{1,2}[/\\\-. ]\d{1,2}$/.test(v);
-};
-
 export function analyzeImport(
   rows: string[][],
   mapping: Mapping,
@@ -219,20 +202,38 @@ export function analyzeImport(
 
     const birthRaw = get(r, "birth");
     const deathRaw = get(r, "death");
-    const birth = parseDateString(birthRaw);
-    const death = parseDateString(deathRaw);
-    if (birthRaw && !birth) messages.push(`Nascimento inválido: "${birthRaw}"`);
-    if (deathRaw && !death && !/^(sim|x|falecid[oa])$/i.test(deathRaw))
-      messages.push(`Falecimento inválido: "${deathRaw}"`);
+    const deathFlag = /^(sim|x|falecid[oa])$/i.test(deathRaw);
+    const birthP = parseDateField(birthRaw);
+    const deathP = deathFlag ? ({ kind: "empty" } as ParsedDate) : parseDateField(deathRaw);
+    if (birthP.kind === "invalid")
+      messages.push(`Nascimento inválido: "${birthRaw}" (${birthP.reason})`);
+    if (deathP.kind === "invalid")
+      messages.push(`Falecimento inválido: "${deathRaw}" (${deathP.reason})`);
+    const birth = birthP.kind === "exact" ? birthP.iso : null;
+    const death = deathP.kind === "exact" ? deathP.iso : null;
     if (birth && death && birth > death) messages.push("Falecimento anterior ao nascimento");
     const orderRaw = get(r, "order");
-    if (orderRaw && isNaN(parseInt(orderRaw))) messages.push(`Ordem não numérica: "${orderRaw}"`);
+    if (orderRaw && !/^[1-9]\d{0,2}$/.test(orderRaw))
+      messages.push(`Ordem deve ser inteiro positivo: "${orderRaw}"`);
 
     const warnings: string[] = [];
-    if (birthRaw && birth && isApproximate(birthRaw))
-      warnings.push("Nascimento incompleto: será gravado com dia/mês/ano aproximado");
-    if (deathRaw && death && isApproximate(deathRaw))
-      warnings.push("Falecimento incompleto: será gravado com data aproximada");
+    const partialNotes: string[] = [];
+    if (birthP.kind === "partial") {
+      warnings.push(
+        `Nascimento parcial ("${birthP.raw}", ${birthP.label}): fica nas observações, sem data gravada`,
+      );
+      partialNotes.push(
+        `[Importação] Nascimento informado: "${birthP.raw}" (${birthP.label}; não gravado como data exata)`,
+      );
+    }
+    if (deathP.kind === "partial") {
+      warnings.push(
+        `Falecimento parcial ("${deathP.raw}", ${deathP.label}): fica nas observações, sem data gravada`,
+      );
+      partialNotes.push(
+        `[Importação] Falecimento informado: "${deathP.raw}" (${deathP.label}; não gravado como data exata)`,
+      );
+    }
 
     if (messages.length) return { line, status: "error", messages, record: null };
 
@@ -255,8 +256,8 @@ export function analyzeImport(
       occupation: get(r, "occupation") || null,
       vices: get(r, "vices") || null,
       temperament: get(r, "temperament") || null,
-      birth_order: orderRaw ? parseInt(orderRaw) : null,
-      notes: get(r, "notes") || null,
+      birth_order: orderRaw ? Number(orderRaw) : null,
+      notes: [get(r, "notes"), ...partialNotes].filter(Boolean).join("\n") || null,
     };
     if (dup)
       return {
