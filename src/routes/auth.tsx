@@ -54,12 +54,42 @@ function AuthPage() {
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
   const [recoverSent, setRecoverSent] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => setMode(initialMode ?? "signin"), [initialMode]);
+  useEffect(() => {
+    setFormError(null);
+    setNotice(null);
+  }, [mode]);
+
+  // Link de e-mail expirado/inválido chega com erro no hash da URL.
+  useEffect(() => {
+    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const code = hash.get("error_code") ?? new URLSearchParams(window.location.search).get("error_code");
+    if (code) {
+      setFormError(
+        code === "otp_expired"
+          ? "Este link expirou ou já foi usado. Peça um novo link abaixo."
+          : "O link não é válido. Peça um novo link abaixo.",
+      );
+      setMode("recover");
+      return;
+    }
+    if (initialMode === "reset") {
+      void supabase.auth.getSession().then(({ data }) => {
+        if (!data.session) {
+          setMode("recover");
+          setFormError("Não há uma sessão de redefinição ativa. O link pode ter expirado — peça um novo.");
+        }
+      });
+    }
+  }, [initialMode]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    setFormError(null);
     try {
       if (mode === "recover") {
         const parsedEmail = z.string().trim().email("E-mail inválido").parse(email);
@@ -90,7 +120,7 @@ function AuthPage() {
         .parse({ email, password, fullName });
 
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
+        const { data: su, error } = await supabase.auth.signUp({
           email: parsed.email,
           password: parsed.password,
           options: {
@@ -99,7 +129,14 @@ function AuthPage() {
           },
         });
         if (error) throw error;
-        toast.success("Conta criada. Redirecionando...");
+        if (!su.session) {
+          // Confirmação por e-mail ativa: não há sessão até confirmar.
+          setNotice(
+            "Conta criada. Se a confirmação por e-mail estiver ativa, abra o link enviado para entrar. Não chegou? Confira o spam ou tente entrar depois.",
+          );
+          return;
+        }
+        toast.success("Conta criada.");
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email: parsed.email,
@@ -111,7 +148,7 @@ function AuthPage() {
       navigate({ to: redirectTo ?? "/app" });
     } catch (err) {
       const message = err instanceof z.ZodError ? err.errors[0]?.message : friendlyAuthError(err);
-      toast.error(message);
+      setFormError(message ?? "Não foi possível concluir. Tente de novo.");
     } finally {
       setLoading(false);
     }
@@ -127,7 +164,9 @@ function AuthPage() {
       if (result.redirected) return;
       navigate({ to: redirectTo ?? "/app" });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Falha no login com Google");
+      setFormError(
+        `${err instanceof Error ? err.message : "Falha no login com Google"}. Tente de novo ou entre com e-mail.`,
+      );
     } finally {
       setLoading(false);
     }
@@ -185,6 +224,16 @@ function AuthPage() {
             </p>
           </div>
 
+          {formError && (
+            <div role="alert" className="mb-5 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-[15px] text-destructive">
+              {formError}
+            </div>
+          )}
+          {notice && (
+            <div role="status" className="mb-5 rounded-md border border-border bg-secondary p-3 text-[15px] text-foreground">
+              {notice}
+            </div>
+          )}
           {/* Formulário */}
           <form onSubmit={handleSubmit} className="space-y-5">
             {mode === "signup" && (
