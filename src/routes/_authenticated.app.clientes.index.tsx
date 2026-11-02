@@ -288,7 +288,16 @@ function ClientesIndex() {
             </Button>
           </div>
         ) : filtered.length === 0 ? (
-          <EmptyState hasQuery={query.length > 0} onCreate={() => setCreating(true)} tab={tab} />
+          <>
+            <EmptyState hasQuery={query.length > 0} onCreate={() => setCreating(true)} tab={tab} />
+            {query.length > 0 && (
+              <div className="mt-4 flex justify-center">
+                <Button variant="outline" className="min-h-11" onClick={() => setQuery("")}>
+                  Limpar busca
+                </Button>
+              </div>
+            )}
+          </>
         ) : viewMode === "cards" ? (
           <motion.ul
             className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-5 p-0"
