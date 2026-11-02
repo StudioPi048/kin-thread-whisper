@@ -527,7 +527,7 @@ export function buildLogicalGraph({
       !irmaoIds.has(p.id) &&
       !reachableFromParents.has(p.id),
   );
-  orphans.forEach((p) => addPerson(p, 0, "other"));
+  orphans.forEach((p) => addPerson(p, recognizedGeneration(p.relationship_to_proband), "other"));
 
   // Cada órfão vira satélite visível (bom), mas o motivo fica escondido do
   // clínico — sem isso, "por que essa pessoa está solta do lado do
@@ -550,7 +550,9 @@ export function buildLogicalGraph({
 
   // ── União central: Pai ⟷ Mãe (sintetizada mesmo sem RelRow) ─
   const rootPartners = [pai, mae].filter(Boolean) as PersonRow[];
-  const probandChildren = [proband, ...irmaos, ...orphans];
+  // Órfãos NÃO viram filhos do casal central: sem filiação conhecida não se
+  // inferem pais. Ficam visíveis (layout de fallback) com aviso.
+  const probandChildren = [proband, ...irmaos];
   if (rootPartners.length > 0 || probandChildren.length > 1) {
     addUnion({
       id: `u_root_${proband.id}`,
@@ -562,7 +564,103 @@ export function buildLogicalGraph({
     });
   }
 
+  applyExplicitFiliation(g, persons, rels, findUnionRel);
+
   return g;
+}
+
+/** Geração a partir da tag de parentesco (0 = cliente/irmãos, topo). */
+export function recognizedGeneration(rel: string | null | undefined): number {
+  const k = canonicalKey(rel);
+  if (!k) return 0;
+  if (k.includes("bisav")) return 3;
+  if (k.includes("avo") || k.includes("ava")) return 2;
+  if (k === "pai" || k === "mae" || k.includes("do pai") || k.includes("da mae")) return 1;
+  return 0;
+}
+
+/**
+ * Filiação explícita (genogram_relationships.relationship_type = "parent",
+ * from = genitor, to = filho) tem precedência sobre tags. Cada filho fica em
+ * UMA união cujo conjunto de parceiros é exatamente o conjunto de genitores
+ * declarados — assim meios-irmãos (pai compartilhado + outro genitor) caem em
+ * uniões distintas. Nunca cria pessoas nem infere genitor ausente.
+ */
+function applyExplicitFiliation(
+  g: LogicalGraph,
+  persons: PersonRow[],
+  rels: RelRow[],
+  findUnionRel: (a?: PersonRow, b?: PersonRow) => RelRow | undefined,
+) {
+  const byId = new Map(persons.map((p) => [p.id, p]));
+  const parentsOf = new Map<string, string[]>();
+  for (const r of rels) {
+    if (r.relationship_type !== "parent" || !r.from_person_id || !r.to_person_id) continue;
+    if (!byId.has(r.from_person_id) || !byId.has(r.to_person_id)) continue;
+    if (r.from_person_id === r.to_person_id) continue;
+    const list = parentsOf.get(r.to_person_id) ?? [];
+    if (!list.includes(r.from_person_id) && list.length < 2) list.push(r.from_person_id);
+    parentsOf.set(r.to_person_id, list);
+  }
+  if (parentsOf.size === 0) return;
+
+  const pairKey = (ids: string[]) => [...ids].sort().join("|");
+  const connected = new Set<string>();
+
+  for (const [childId, parentIds] of parentsOf) {
+    // Genitor fixa geração do filho (gen do filho = gen do genitor − 1) e vice-versa
+    const child = g.persons.get(childId);
+    const knownParent = parentIds.map((id) => g.persons.get(id)).find(Boolean);
+    const childGen = child?.generation ?? (knownParent ? knownParent.generation - 1 : 0);
+    const branch = child?.branchId ?? knownParent?.branchId ?? "other";
+    if (!child) g.persons.set(childId, { id: childId, row: byId.get(childId)!, generation: Math.max(0, childGen), branchId: branch });
+    for (const pid of parentIds) {
+      if (!g.persons.has(pid))
+        g.persons.set(pid, { id: pid, row: byId.get(pid)!, generation: Math.max(0, childGen) + 1, branchId: branch });
+    }
+
+    // Remove filiação por tag anterior
+    const prev = g.edges.findIndex((e) => e.kind === "child" && e.personId === childId);
+    if (prev >= 0) {
+      const u = g.unions.get(g.edges[prev].unionId);
+      if (u) u.children = u.children.filter((c) => c !== childId);
+      g.edges.splice(prev, 1);
+    }
+
+    const key = pairKey(parentIds);
+    let union = [...g.unions.values()].find((u) => pairKey(u.partners) === key);
+    if (!union) {
+      const id = `u_exp_${key.replace(/\|/g, "_")}`;
+      const rel = parentIds.length === 2 ? findUnionRel(byId.get(parentIds[0]), byId.get(parentIds[1])) : undefined;
+      const kind = deriveUnionKind(rel);
+      const order = (rel as (RelRow & { marriage_order?: number | null }) | undefined)?.marriage_order ?? null;
+      union = {
+        id,
+        partners: [...parentIds],
+        children: [],
+        kind,
+        label: unionKindLabel(kind, order),
+        generation: g.persons.get(parentIds[0])!.generation,
+        branchId: g.persons.get(parentIds[0])!.branchId,
+      };
+      g.unions.set(id, union);
+      for (const pid of parentIds) g.edges.push({ kind: "partner", personId: pid, unionId: id });
+    }
+    union.children.push(childId);
+    g.edges.push({ kind: "child", personId: childId, unionId: union.id, childKind: "biological" });
+    connected.add(childId);
+    parentIds.forEach((p) => connected.add(p));
+  }
+
+  // Remove uniões que ficaram vazias de filhos e sem casal real (ex.: só um genitor sintetizado sem filhos)
+  for (const [uid, u] of g.unions) {
+    if (u.children.length === 0 && u.partners.length < 2) {
+      g.unions.delete(uid);
+      g.edges = g.edges.filter((e) => e.unionId !== uid);
+    }
+  }
+  // Quem ganhou filiação explícita deixa de ter aviso de "solto"
+  g.warnings = g.warnings.filter((w) => !connected.has(w.personId));
 }
 
 // ── Validador estrutural ──────────────────────────────────────
