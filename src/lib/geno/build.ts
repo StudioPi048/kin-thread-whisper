@@ -768,7 +768,11 @@ export function resolveGenerations(g: LogicalGraph) {
     const comp: N[] = [start];
     seen.add(start);
     for (let i = 0; i < comp.length; i++)
-      for (const { to } of adj.get(comp[i]) ?? []) if (!seen.has(to)) (seen.add(to), comp.push(to));
+      for (const { to } of adj.get(comp[i]) ?? [])
+        if (!seen.has(to)) {
+          seen.add(to);
+          comp.push(to);
+        }
     const min = Math.min(...comp.filter((n) => n.startsWith("p:")).map((n) => gen.get(n)!));
     const hasProband = g.probandId ? comp.includes(`p:${g.probandId}`) : false;
     if (min < 0) {

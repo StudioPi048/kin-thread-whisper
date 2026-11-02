@@ -1107,8 +1107,10 @@ function ResizableTh({
         tabIndex={0}
         onPointerDown={startDrag}
         onKeyDown={(e) => {
-          if (e.key === "ArrowLeft") (e.preventDefault(), setWidth((w) => clamp(w - 20)));
-          if (e.key === "ArrowRight") (e.preventDefault(), setWidth((w) => clamp(w + 20)));
+          if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+          e.preventDefault();
+          const step = e.key === "ArrowLeft" ? -20 : 20;
+          setWidth((w) => clamp(w + step));
         }}
         className="absolute right-0 top-0 h-full w-3 cursor-col-resize border-r-2 border-transparent hover:border-forest focus-visible:border-forest focus-visible:outline-none"
       />
