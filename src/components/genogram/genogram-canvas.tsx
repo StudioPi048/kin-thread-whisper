@@ -489,6 +489,8 @@ function ShortcutsLegend() {
 
 interface CanvasProps {
   clientId: string;
+  /** Familiar a selecionar e centralizar ao abrir (ex.: vindo da linha do tempo). */
+  focusPersonId?: string;
 }
 
 export function GenogramCanvas(props: CanvasProps) {
@@ -622,7 +624,7 @@ function buildRenderGraph(
   return { nodes, edges, warnings: graph.warnings };
 }
 
-function GenogramCanvasInner({ clientId }: CanvasProps) {
+function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
   const qc = useQueryClient();
 
   const query = useQuery({
@@ -704,6 +706,25 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
     }
   }, [query.data?.layout]);
   const rfInstance = useReactFlow();
+  const focusedOnceRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!focusPersonId || focusedOnceRef.current === focusPersonId) return;
+    if (!nodes.some((n) => n.id === focusPersonId)) return;
+    focusedOnceRef.current = focusPersonId;
+    setFocusedPersonId(focusPersonId);
+    setPanelOpen(true);
+    const t = window.setTimeout(
+      () =>
+        rfInstance.fitView({
+          nodes: [{ id: focusPersonId }],
+          duration: 300,
+          maxZoom: 1.2,
+          padding: 0.6,
+        }),
+      120,
+    );
+    return () => window.clearTimeout(t);
+  }, [focusPersonId, nodes, rfInstance]);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   const exportPdf = useCallback(async () => {

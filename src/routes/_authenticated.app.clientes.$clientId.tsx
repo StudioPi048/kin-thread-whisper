@@ -105,9 +105,17 @@ const DOSSIER_TABS = [
 type DossierTab = (typeof DOSSIER_TABS)[number];
 
 export const Route = createFileRoute("/_authenticated/app/clientes/$clientId")({
-  validateSearch: (search: Record<string, unknown>): { tab?: DossierTab; from?: "agenda" } => {
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { tab?: DossierTab; from?: "agenda"; agendaDate?: string; person?: string } => {
     const tab = search.tab as string | undefined;
     return {
+      ...(typeof search.agendaDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(search.agendaDate)
+        ? { agendaDate: search.agendaDate }
+        : {}),
+      ...(typeof search.person === "string" && /^[0-9a-f-]{36}$/i.test(search.person)
+        ? { person: search.person }
+        : {}),
       ...(DOSSIER_TABS.includes(tab as DossierTab) ? { tab: tab as DossierTab } : {}),
       ...(search.from === "agenda" ? { from: "agenda" as const } : {}),
     };
@@ -118,7 +126,7 @@ export const Route = createFileRoute("/_authenticated/app/clientes/$clientId")({
 
 function ClientDossierPage() {
   const { clientId } = Route.useParams();
-  const { tab: tabFromUrl, from } = Route.useSearch();
+  const { tab: tabFromUrl, from, agendaDate, person: focusPerson } = Route.useSearch();
   const { user } = Route.useRouteContext();
   const qc = useQueryClient();
   const navigate = useNavigate();
@@ -366,7 +374,11 @@ function ClientDossierPage() {
         breadcrumb={
           <>
             {from === "agenda" ? (
-              <Link to="/app/agenda" className="hover:text-gold transition-colors">
+              <Link
+                to="/app/agenda"
+                search={agendaDate ? { date: agendaDate } : {}}
+                className="hover:text-gold transition-colors"
+              >
                 Agenda
               </Link>
             ) : (
@@ -702,7 +714,7 @@ function ClientDossierPage() {
 
               <TabsContent value="genogram">
                 <TabSuspense>
-                  <GenogramCanvas clientId={client.id} />
+                  <GenogramCanvas clientId={client.id} focusPersonId={focusPerson} />
                 </TabSuspense>
               </TabsContent>
 

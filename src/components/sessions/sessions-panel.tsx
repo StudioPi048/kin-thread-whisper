@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -13,6 +13,9 @@ import {
   AlertCircle,
   RefreshCw,
   AudioLines,
+  Save,
+  CheckCircle2,
+  Plus,
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -21,6 +24,17 @@ import { processSessionAudio } from "@/lib/ai/session-processing.functions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  AUDIO_LABEL,
+  CLINICAL_LABEL,
+  audioStateOf,
+  clinicalStatusOf,
+  confirmReview,
+  isDirty,
+  noteDraftInit,
+  noteReducer,
+  type ClinicalStatus,
+} from "@/lib/session-state";
 
 interface Props {
   clientId: string;
@@ -36,14 +50,9 @@ type Session = {
   status: string;
   error_message: string | null;
   structured_note: Record<string, unknown> | null;
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  draft: "Rascunho",
-  transcribing: "Transcrevendo…",
-  structuring: "Estruturando prontuário…",
-  ready: "Pronto",
-  error: "Erro",
+  clinical_status: string | null;
+  manual_notes: string | null;
+  ai_reviewed_at: string | null;
 };
 
 function formatDuration(sec: number | null | undefined): string {
@@ -57,7 +66,12 @@ export function SessionsPanel({ clientId }: Props) {
   const qc = useQueryClient();
   const processFn = useServerFn(processSessionAudio);
 
-  const { data: sessions = [], isLoading } = useQuery({
+  const {
+    data: sessions = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ["clinical_sessions", clientId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -81,6 +95,32 @@ export function SessionsPanel({ clientId }: Props) {
     }, 3000);
     return () => clearInterval(t);
   }, [sessions, clientId, qc]);
+
+  // ---- Proteção de saída: notas não salvas ----
+  const [dirtyIds, setDirtyIds] = useState<Set<string>>(new Set());
+  const setDirty = useCallback((id: string, dirty: boolean) => {
+    setDirtyIds((prev) => {
+      if (prev.has(id) === dirty) return prev;
+      const next = new Set(prev);
+      if (dirty) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }, []);
+  const [pendingAudio, setPendingAudio] = useState<{
+    blob: Blob;
+    mime: string;
+    seconds: number;
+  } | null>(null);
+  useEffect(() => {
+    if (dirtyIds.size === 0 && !pendingAudio) return;
+    const h = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", h);
+    return () => window.removeEventListener("beforeunload", h);
+  }, [dirtyIds, pendingAudio]);
 
   // ---- Recorder state ----
   const [recording, setRecording] = useState(false);
@@ -139,6 +179,12 @@ export function SessionsPanel({ clientId }: Props) {
       toast.error("Gravação muito curta");
       return;
     }
+    await uploadAudio(blob, mime, durationSeconds);
+  };
+
+  // O áudio fica em memória até o envio ser confirmado; falha permite reenviar.
+  const uploadAudio = async (blob: Blob, mime: string, durationSeconds: number) => {
+    setPendingAudio({ blob, mime, seconds: durationSeconds });
     setUploading(true);
     try {
       const { data: userRes } = await supabase.auth.getUser();
@@ -162,13 +208,15 @@ export function SessionsPanel({ clientId }: Props) {
           duration_seconds: durationSeconds,
           title: `Sessão de ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}`,
           status: "draft",
+          clinical_status: "pending_record",
         })
         .select()
         .single();
       if (insert.error) throw insert.error;
 
+      setPendingAudio(null);
       qc.invalidateQueries({ queryKey: ["clinical_sessions", clientId] });
-      toast.success("Áudio salvo. Processando prontuário…");
+      toast.success("Áudio salvo. Processando texto provisório…");
 
       // Fire off processing (non-blocking)
       processFn({ data: { sessionId } }).catch((err) => {
@@ -177,7 +225,9 @@ export function SessionsPanel({ clientId }: Props) {
         qc.invalidateQueries({ queryKey: ["clinical_sessions", clientId] });
       });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Falha no upload");
+      toast.error(
+        `${e instanceof Error ? e.message : "Falha no envio"}. O áudio continua nesta página — use "Reenviar áudio".`,
+      );
     } finally {
       setUploading(false);
     }
@@ -185,14 +235,36 @@ export function SessionsPanel({ clientId }: Props) {
 
   const reprocess = useMutation({
     mutationFn: async (sessionId: string) => {
+      // Novo texto gerado exige nova revisão humana.
+      await supabase.from("clinical_sessions").update({ ai_reviewed_at: null }).eq("id", sessionId);
       await processFn({ data: { sessionId } });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["clinical_sessions", clientId] }),
     onError: (e) => toast.error(e instanceof Error ? e.message : "Falha ao reprocessar"),
   });
 
+  const createManual = useMutation({
+    mutationFn: async () => {
+      const { data: userRes } = await supabase.auth.getUser();
+      const uid = userRes.user?.id;
+      if (!uid) throw new Error("Sem sessão");
+      const { error } = await supabase.from("clinical_sessions").insert({
+        client_id: clientId,
+        user_id: uid,
+        title: `Sessão de ${format(new Date(), "dd/MM/yyyy", { locale: ptBR })}`,
+        status: "ready",
+        clinical_status: "pending_record",
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["clinical_sessions", clientId] }),
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Falha ao criar registro"),
+  });
+
   const deleteSession = useMutation({
     mutationFn: async (s: Session) => {
+      if (!window.confirm("Excluir esta sessão, suas notas e o áudio? Isso não pode ser desfeito."))
+        return;
       if (s.audio_path) {
         await supabase.storage.from("session-audio").remove([s.audio_path]);
       }
@@ -262,14 +334,62 @@ export function SessionsPanel({ clientId }: Props) {
       </section>
 
       {/* History */}
+      {pendingAudio && !uploading && (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center gap-3 rounded-md border border-destructive/40 bg-destructive/5 p-4 text-[15px]"
+        >
+          <AlertCircle className="size-5 text-destructive" />
+          <span className="flex-1">
+            O áudio não foi enviado e continua guardado nesta página. Não feche a aba.
+          </span>
+          <Button
+            className="min-h-11"
+            onClick={() =>
+              void uploadAudio(pendingAudio.blob, pendingAudio.mime, pendingAudio.seconds)
+            }
+          >
+            <RefreshCw className="mr-2 size-4" /> Reenviar áudio
+          </Button>
+          <Button variant="ghost" className="min-h-11" onClick={() => setPendingAudio(null)}>
+            Descartar
+          </Button>
+        </div>
+      )}
+
       <div className="space-y-6">
-        <div className="flex items-center justify-between border-b border-border/60 pb-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-3">
           <h3 className="font-serif text-2xl font-bold text-primary">Histórico de Sessões</h3>
+          <Button
+            variant="outline"
+            className="min-h-11"
+            onClick={() => createManual.mutate()}
+            disabled={createManual.isPending}
+          >
+            <Plus className="mr-2 size-4" /> Registrar sessão sem áudio
+          </Button>
         </div>
 
-        {isLoading && <div className="h-32 animate-pulse rounded-lg bg-muted/30" />}
+        {isLoading && (
+          <div
+            className="h-32 animate-pulse rounded-lg bg-muted/30"
+            aria-label="Carregando sessões"
+          />
+        )}
 
-        {!isLoading && sessions.length === 0 && (
+        {isError && (
+          <div
+            role="alert"
+            className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-[15px]"
+          >
+            Não foi possível carregar as sessões.
+            <Button variant="outline" size="sm" className="ml-3 min-h-11" onClick={() => refetch()}>
+              <RefreshCw className="mr-1.5 size-4" /> Tentar de novo
+            </Button>
+          </div>
+        )}
+
+        {!isLoading && !isError && sessions.length === 0 && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -315,6 +435,8 @@ export function SessionsPanel({ clientId }: Props) {
             >
               <SessionCard
                 session={s}
+                clientId={clientId}
+                onDirtyChange={setDirty}
                 onReprocess={() => reprocess.mutate(s.id)}
                 onDelete={() => deleteSession.mutate(s)}
                 reprocessing={reprocess.isPending && reprocess.variables === s.id}
@@ -329,17 +451,84 @@ export function SessionsPanel({ clientId }: Props) {
 
 function SessionCard({
   session,
+  clientId,
+  onDirtyChange,
   onReprocess,
   onDelete,
   reprocessing,
 }: {
   session: Session;
+  clientId: string;
+  onDirtyChange: (id: string, dirty: boolean) => void;
   onReprocess: () => void;
   onDelete: () => void;
   reprocessing: boolean;
 }) {
+  const qc = useQueryClient();
   const [showTranscript, setShowTranscript] = useState(false);
   const note = session.structured_note as Record<string, unknown> | null;
+  const clinical = clinicalStatusOf(session);
+  const audio = audioStateOf(session);
+
+  // Notas manuais: rascunho em memória; o servidor nunca sobrescreve edição pendente.
+  const [draft, dispatch] = useReducer(noteReducer, session.manual_notes, noteDraftInit);
+  useEffect(
+    () => dispatch({ type: "reset", saved: session.manual_notes ?? "" }),
+    [session.manual_notes],
+  );
+  const dirty = isDirty(draft);
+  useEffect(() => onDirtyChange(session.id, dirty), [dirty, session.id, onDirtyChange]);
+  useEffect(() => () => onDirtyChange(session.id, false), [session.id, onDirtyChange]);
+
+  const refresh = () => qc.invalidateQueries({ queryKey: ["clinical_sessions", clientId] });
+
+  const saveNotes = async () => {
+    const text = draft.text;
+    dispatch({ type: "save_start" });
+    const { data, error } = await supabase
+      .from("clinical_sessions")
+      .update({ manual_notes: text })
+      .eq("id", session.id)
+      .select("manual_notes")
+      .maybeSingle();
+    if (error || !data) {
+      dispatch({ type: "save_fail", message: error?.message ?? "Sem permissão para salvar." });
+      return;
+    }
+    dispatch({ type: "save_ok", persisted: data.manual_notes ?? "" });
+    refresh();
+  };
+
+  const [reviewState, setReviewState] = useState<{ pending: boolean; error?: string }>({
+    pending: false,
+  });
+  const review = async () => {
+    setReviewState({ pending: true });
+    const r = await confirmReview(async () => {
+      const { data, error } = await supabase
+        .from("clinical_sessions")
+        .update({ ai_reviewed_at: new Date().toISOString() })
+        .eq("id", session.id)
+        .select("ai_reviewed_at")
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    });
+    setReviewState({ pending: false, error: r.error });
+    if (r.reviewed) refresh();
+  };
+
+  const setClinical = useMutation({
+    mutationFn: async (value: ClinicalStatus) => {
+      const { error } = await supabase
+        .from("clinical_sessions")
+        .update({ clinical_status: value })
+        .eq("id", session.id);
+      if (error) throw error;
+    },
+    onSuccess: refresh,
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Falha ao mudar estado"),
+  });
 
   const rows = useMemo(() => {
     if (!note) return [];
@@ -356,132 +545,212 @@ function SessionCard({
     ].filter(([, v]) => v && (Array.isArray(v) ? v.length > 0 : String(v).trim().length > 0));
   }, [note]);
 
-  const isProcessing = session.status === "transcribing" || session.status === "structuring";
-  const isError = session.status === "error";
-
-  const statusBadge = isError
-    ? "bg-destructive text-white"
-    : isProcessing
-      ? "bg-forest text-white"
-      : "bg-clinical-positive text-white";
+  const isProcessing = audio === "processing";
+  const isError = audio === "error";
+  const notesId = `notes-${session.id}`;
+  const clinicalId = `clinical-${session.id}`;
 
   return (
-    <article className="rounded-sm border border-border bg-surface-document shadow-sm overflow-hidden accent-bar-forest transition-shadow hover:shadow-md">
-      {/* Header */}
+    <article className="rounded-sm border border-border bg-surface-document shadow-sm overflow-hidden accent-bar-forest">
       <div className="border-b border-border/40 bg-background/50 px-6 py-4 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-[14px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-1">
-            {format(new Date(session.session_date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+          <p className="text-[14px] font-semibold text-muted-foreground mb-1">
+            {format(new Date(session.session_date), "dd 'de' MMMM 'de' yyyy, HH:mm", {
+              locale: ptBR,
+            })}
           </p>
           <h4 className="font-serif text-2xl font-bold text-primary">
             {session.title ?? "Sessão"}
           </h4>
-          <p className="text-[16px] text-muted-foreground/70 font-mono mt-1 flex items-center gap-2">
-            <Mic className="size-3" />
-            {formatDuration(session.duration_seconds)} de áudio registrado
-          </p>
+          {session.audio_path && (
+            <p className="text-[14px] text-muted-foreground mt-1 flex items-center gap-2">
+              <Mic className="size-3.5" aria-hidden />
+              {formatDuration(session.duration_seconds)} de áudio
+            </p>
+          )}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
+            <label htmlFor={clinicalId} className="text-[13px] text-muted-foreground">
+              Estado clínico
+            </label>
+            <select
+              id={clinicalId}
+              className="h-11 rounded-md border border-input bg-background px-2 text-[14px]"
+              value={clinical}
+              disabled={setClinical.isPending}
+              onChange={(e) => setClinical.mutate(e.target.value as ClinicalStatus)}
+            >
+              {(Object.keys(CLINICAL_LABEL) as ClinicalStatus[]).map((k) => (
+                <option key={k} value={k}>
+                  {CLINICAL_LABEL[k]}
+                </option>
+              ))}
+            </select>
+          </div>
           <Badge
-            className={`${statusBadge} border-0 uppercase tracking-widest text-[9px] px-2 py-1`}
+            variant="outline"
+            className="text-[13px] font-semibold"
+            aria-label={`Áudio: ${AUDIO_LABEL[audio]}`}
           >
             {isProcessing && <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />}
-            {STATUS_LABEL[session.status] ?? session.status}
+            Áudio: {AUDIO_LABEL[audio]}
           </Badge>
-
-          <div className="flex items-center gap-1 border-l border-border/60 pl-3 ml-1">
-            {(session.status === "error" || session.status === "draft") && session.audio_path && (
+          <div className="flex items-center gap-1 border-l border-border/60 pl-3">
+            {(isError || session.status === "draft") && session.audio_path && (
               <Button
-                size="icon-sm"
+                size="icon"
                 variant="ghost"
                 onClick={onReprocess}
                 disabled={reprocessing}
-                title="Reprocessar áudio"
                 aria-label="Reprocessar áudio"
+                className="min-h-11 min-w-11"
               >
-                <RefreshCw
-                  className={`h-4 w-4 text-muted-foreground hover:text-forest ${reprocessing ? "animate-spin" : ""}`}
-                />
+                <RefreshCw className={`h-4 w-4 ${reprocessing ? "animate-spin" : ""}`} />
               </Button>
             )}
             <Button
-              size="icon-sm"
+              size="icon"
               variant="ghost"
               onClick={onDelete}
-              title="Excluir sessão"
               aria-label="Excluir sessão"
+              className="min-h-11 min-w-11"
             >
-              <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+              <Trash2 className="h-4 w-4" />
             </Button>
           </div>
         </div>
       </div>
 
-      <div className="p-6">
-        {isError && session.error_message && (
-          <div className="flex items-start gap-3 rounded-md border border-destructive/30 bg-destructive/5 p-4 text-[14px] font-medium text-destructive mb-6">
+      <div className="p-6 space-y-6">
+        {isError && (
+          <div className="flex items-start gap-3 rounded-md border border-destructive/30 bg-destructive/5 p-4 text-[14px] text-destructive">
             <AlertCircle className="h-5 w-5 mt-0.5 shrink-0" />
-            <span>{session.error_message}</span>
+            <span>
+              {session.error_message ?? "Falha ao processar o áudio."} Suas notas abaixo não são
+              afetadas.
+            </span>
           </div>
         )}
 
-        {rows.length > 0 ? (
-          <div className="grid gap-6 md:grid-cols-2">
-            {rows.map(([label, value]) => (
-              <div
-                key={label as string}
-                className="bg-background border border-border/40 p-4 rounded-sm"
-              >
-                <p className="text-[14px] font-bold text-gold uppercase tracking-[0.15em] mb-2">
-                  {label as string}
-                </p>
-                {Array.isArray(value) ? (
-                  <ul className="list-disc list-inside space-y-1.5 font-serif text-[15px] leading-relaxed text-foreground/85">
-                    {(value as unknown[]).map((v, i) => (
-                      <li key={i}>{String(v)}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="whitespace-pre-wrap font-serif text-[15px] leading-relaxed text-foreground/85">
-                    {String(value)}
-                  </p>
-                )}
-              </div>
-            ))}
+        {/* Notas da profissional — independentes do áudio */}
+        <div className="space-y-2">
+          <label htmlFor={notesId} className="text-[15px] font-semibold text-primary">
+            Notas da sessão
+          </label>
+          <Textarea
+            id={notesId}
+            value={draft.text}
+            onChange={(e) => dispatch({ type: "edit", text: e.target.value })}
+            placeholder="Registro da profissional. Fica separado do texto gerado pelo áudio."
+            className="min-h-[140px] text-[16px] leading-relaxed"
+          />
+          <div className="flex flex-wrap items-center gap-3 text-[14px]">
+            <Button
+              onClick={saveNotes}
+              disabled={!dirty || draft.phase === "saving"}
+              className="min-h-11"
+            >
+              {draft.phase === "saving" ? (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              ) : (
+                <Save className="mr-2 size-4" />
+              )}
+              {draft.phase === "error" ? "Tentar salvar de novo" : "Salvar notas"}
+            </Button>
+            <span
+              role="status"
+              className={draft.phase === "error" ? "text-destructive" : "text-muted-foreground"}
+            >
+              {draft.phase === "error"
+                ? `Não salvo: ${draft.error}. O texto continua aqui.`
+                : draft.phase === "saving"
+                  ? "Salvando…"
+                  : dirty
+                    ? "Alterações não salvas"
+                    : draft.saved
+                      ? "Salvo"
+                      : ""}
+            </span>
           </div>
-        ) : (
-          !isProcessing &&
-          !isError && (
-            <p className="text-[14px] text-muted-foreground italic">
-              Nenhuma anotação estruturada extraída para esta sessão.
-            </p>
-          )
+        </div>
+
+        {rows.length > 0 && (
+          <section
+            aria-label="Texto gerado a partir do áudio"
+            className="space-y-4 border-t border-border/40 pt-6"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-[15px] font-semibold text-primary">
+                Texto gerado pela IA{" "}
+                {session.ai_reviewed_at ? "· revisado" : "· provisório, requer revisão"}
+              </p>
+              {session.ai_reviewed_at ? (
+                <span className="flex items-center gap-1.5 text-[14px] text-clinical-positive">
+                  <CheckCircle2 className="size-4" /> Revisado em{" "}
+                  {format(new Date(session.ai_reviewed_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                </span>
+              ) : (
+                <Button
+                  variant="outline"
+                  className="min-h-11"
+                  onClick={review}
+                  disabled={reviewState.pending}
+                >
+                  {reviewState.pending && <Loader2 className="mr-2 size-4 animate-spin" />}
+                  Li e revisei este texto
+                </Button>
+              )}
+            </div>
+            {reviewState.error && (
+              <p role="alert" className="text-[14px] text-destructive">
+                {reviewState.error}
+              </p>
+            )}
+            <div
+              className={`grid gap-4 md:grid-cols-2 ${session.ai_reviewed_at ? "" : "opacity-90"}`}
+            >
+              {rows.map(([label, value]) => (
+                <div
+                  key={label as string}
+                  className="bg-background border border-border/40 p-4 rounded-sm"
+                >
+                  <p className="text-[14px] font-semibold text-bronze mb-2">{label as string}</p>
+                  {Array.isArray(value) ? (
+                    <ul className="list-disc list-inside space-y-1.5 text-[15px] leading-relaxed text-foreground">
+                      {(value as unknown[]).map((v, i) => (
+                        <li key={i}>{String(v)}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-foreground">
+                      {String(value)}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
         )}
 
         {session.transcript && (
-          <div className="mt-8 border-t border-border/40 pt-4">
+          <div className="border-t border-border/40 pt-4">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setShowTranscript((v) => !v)}
-              className="text-[16px] text-muted-foreground hover:text-primary"
+              className="min-h-11 text-[15px]"
             >
               <FileText className="h-4 w-4 mr-2" />
-              {showTranscript ? "Ocultar" : "Ver"} transcrição bruta gerada pela IA
+              {showTranscript ? "Ocultar" : "Ver"} transcrição automática
             </Button>
             {showTranscript && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                className="overflow-hidden mt-3"
-              >
-                <Textarea
-                  readOnly
-                  aria-label="Transcrição da sessão"
-                  value={session.transcript}
-                  className="font-mono text-[16px] min-h-[160px] bg-background border-border/50 resize-none text-muted-foreground/80 p-4 leading-relaxed"
-                />
-              </motion.div>
+              <Textarea
+                readOnly
+                aria-label="Transcrição da sessão"
+                value={session.transcript}
+                className="mt-3 font-mono text-[15px] min-h-[160px] bg-background resize-none text-muted-foreground"
+              />
             )}
           </div>
         )}

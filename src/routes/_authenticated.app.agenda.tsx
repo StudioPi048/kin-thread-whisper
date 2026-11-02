@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { DayList, WeekView, browserTz } from "@/components/agenda/agenda-views";
 import { DocumentHeader } from "@/components/ui/document-header";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
@@ -54,9 +55,12 @@ import {
 
 export const Route = createFileRoute("/_authenticated/app/agenda")({
   component: AgendaPage,
-  validateSearch: (search: Record<string, unknown>): { date?: string } => {
+  validateSearch: (search: Record<string, unknown>): { date?: string; view?: "week" } => {
     const date = search.date;
-    return typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date) ? { date } : {};
+    return {
+      ...(typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date) ? { date } : {}),
+      ...(search.view === "week" ? { view: "week" as const } : {}),
+    };
   },
 });
 
@@ -227,7 +231,7 @@ function DateNav({
 
       <div className="hidden items-center gap-0.5 md:flex">
         {week.map((w) => {
-          const d = new Date(w.date);
+          const d = new Date(`${w.date}T12:00:00`);
           const selected = isSameDay(d, viewedDate);
           return (
             <button
@@ -282,7 +286,8 @@ function DateNav({
 
 function AgendaPage() {
   const { user } = Route.useRouteContext();
-  const { date } = Route.useSearch();
+  const { date, view } = Route.useSearch();
+  const tz = useMemo(() => browserTz(), []);
   const navigate = Route.useNavigate();
 
   const viewedDate = useMemo(() => (date ? new Date(`${date}T00:00:00`) : new Date()), [date]);
@@ -293,7 +298,10 @@ function AgendaPage() {
     const todayKey = toDateKey(new Date());
     navigate({
       from: Route.fullPath,
-      search: key === todayKey ? {} : { date: key },
+      search: (prev) => ({
+        ...(key === todayKey ? {} : { date: key }),
+        ...(prev.view ? { view: prev.view } : {}),
+      }),
       replace: true,
     });
   };
@@ -316,8 +324,8 @@ function AgendaPage() {
     profile?.full_name?.split(" ")[0] ?? user.email?.split("@")[0] ?? "Pesquisadora";
 
   const query = useQuery({
-    queryKey: ["agenda-data", date ?? "today"],
-    queryFn: () => getAgendaData({ data: date ? { date } : undefined }),
+    queryKey: ["agenda-data", date ?? "today", tz],
+    queryFn: () => getAgendaData({ data: date ? { date, tz } : { tz } }),
     staleTime: 60_000,
   });
 
@@ -385,30 +393,82 @@ function AgendaPage() {
         </div>
       </div>
 
-      {hasSessions && selected ? (
-        /* Three-column workspace */
-        <div className="container-liz py-6 grid gap-5 2xl:grid-cols-[260px_minmax(0,1fr)_320px] lg:grid-cols-[240px_minmax(0,1fr)] grid-cols-1">
-          {/* LEFT — Timeline */}
-          <TimelineColumn
-            timeline={timeline}
-            sessions={sessions}
-            selectedId={activeId}
-            onSelect={setSelectedId}
+      <div
+        className="container-liz pt-4 flex items-center gap-2"
+        role="group"
+        aria-label="Visualização"
+      >
+        {(["day", "week"] as const).map((v) => {
+          const active = (view ?? "day") === v;
+          return (
+            <Button
+              key={v}
+              size="sm"
+              variant={active ? "default" : "outline"}
+              aria-pressed={active}
+              className="min-h-11"
+              onClick={() =>
+                navigate({
+                  from: Route.fullPath,
+                  search: (prev) => ({ ...prev, view: v === "week" ? "week" : undefined }),
+                  replace: true,
+                })
+              }
+            >
+              {v === "day" ? "Dia" : "Semana"}
+            </Button>
+          );
+        })}
+        {query.isError && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="min-h-11 ml-auto"
+            onClick={() => query.refetch()}
+          >
+            Tentar carregar de novo
+          </Button>
+        )}
+      </div>
+
+      {view === "week" ? (
+        <div className="container-liz py-4">
+          <WeekView
+            dateKey={toDateKey(viewedDate)}
+            onPickDay={(k) => goToDate(new Date(`${k}T12:00:00`))}
           />
-
-          {/* CENTER — Featured session */}
-          <FeaturedSession session={selected} sessions={sessions} />
-
-          {/* RIGHT — IA + Painel */}
-          <div className="lg:col-span-2 2xl:col-span-1">
-            <RightPanel
-              session={selected}
-              stats={stats}
-              orphanClients={orphanClients}
-              prontuariosPendentes={prontuariosPendentes}
-            />
-          </div>
         </div>
+      ) : hasSessions && selected ? (
+        <>
+          <div className="container-liz pt-4">
+            <DayList sessions={query.data?.today ?? []} agendaDate={date} />
+          </div>
+          /* Three-column workspace */
+          <div className="container-liz py-6 grid gap-5 2xl:grid-cols-[260px_minmax(0,1fr)_320px] lg:grid-cols-[240px_minmax(0,1fr)] grid-cols-1">
+            {/* LEFT — Timeline */}
+            <div className="hidden lg:block">
+              <TimelineColumn
+                timeline={timeline}
+                sessions={sessions}
+                selectedId={activeId}
+                onSelect={setSelectedId}
+              />
+            </div>
+
+            {/* CENTER — Featured session */}
+            <FeaturedSession session={selected} sessions={sessions} />
+
+            {/* RIGHT — IA + Painel */}
+            <div className="lg:col-span-2 2xl:col-span-1">
+              <RightPanel
+                session={selected}
+                stats={stats}
+                orphanClients={orphanClients}
+                prontuariosPendentes={prontuariosPendentes}
+              />
+            </div>
+          </div>
+        </>
       ) : (
         <EmptyDay isLoading={query.isLoading} orphanClients={orphanClients} isToday={isToday} />
       )}
@@ -1341,16 +1401,9 @@ function RightPanel({
   );
 }
 
-const QUICK_NOTE_KEY = "genealiz.agenda.quick-note";
-
 function QuickNote() {
-  const [note, setNote] = useState(() => {
-    try {
-      return localStorage.getItem(QUICK_NOTE_KEY) ?? "";
-    } catch {
-      return "";
-    }
-  });
+  // Nota rápida só em memória: nada de texto clínico no armazenamento do navegador.
+  const [note, setNote] = useState("");
 
   return (
     <div className="rounded-xl bg-white border border-border/50 shadow-surface p-5">
@@ -1359,18 +1412,13 @@ function QuickNote() {
           <FileText className="size-3.5" /> Nota rápida
         </p>
         <span className="text-[9px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-          Salva neste dispositivo
+          Não é salva — copie para a sessão
         </span>
       </div>
       <textarea
         value={note}
         onChange={(e) => {
           setNote(e.target.value);
-          try {
-            localStorage.setItem(QUICK_NOTE_KEY, e.target.value);
-          } catch {
-            /* armazenamento indisponível — nota vive só na sessão */
-          }
         }}
         placeholder="Uma linha, uma intuição, uma hipótese..."
         aria-label="Nota rápida"

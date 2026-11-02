@@ -1,16 +1,39 @@
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarClock, HeartPulse, Sparkles, Baby, Cross } from "lucide-react";
-import { motion } from "framer-motion";
+import { Link } from "@tanstack/react-router";
+import { Baby, CalendarClock, Cross, MapPin, RefreshCw, Sparkles } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
-import { buildTimeline, type TimelineItem } from "@/lib/patterns";
+import { Button } from "@/components/ui/button";
+import {
+  buildCaseTimeline,
+  filterTimeline,
+  formatByPrecision,
+  type CaseTimelineItem,
+  type TimelineFilter,
+  type TimelineKind,
+} from "@/lib/timeline";
 
 interface Props {
   clientId: string;
 }
 
+const GEN_LABEL = (g: number) =>
+  g === 0
+    ? "Geração 0 · cliente e irmãos"
+    : g === 1
+      ? "Geração 1 · pais e tios"
+      : g === 2
+        ? "Geração 2 · avós"
+        : `Geração ${g}`;
+const KIND_LABEL: Record<TimelineKind, string> = {
+  birth: "Nascimentos",
+  death: "Falecimentos",
+  event: "Eventos de vida",
+};
+
 export function ClientTimeline({ clientId }: Props) {
-  const { data, isLoading } = useQuery({
+  const q = useQuery({
     queryKey: ["genogram", clientId, "timeline"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -18,138 +41,217 @@ export function ClientTimeline({ clientId }: Props) {
         .select("*")
         .eq("client_id", clientId);
       if (error) throw error;
-      return buildTimeline(data ?? []);
+      return data ?? [];
     },
   });
 
-  if (isLoading) {
-    return <div className="h-40 animate-pulse rounded-lg bg-muted/30" />;
-  }
+  const [filter, setFilter] = useState<TimelineFilter>({});
+  const all = useMemo(() => buildCaseTimeline(q.data ?? []), [q.data]);
+  const items = useMemo(() => filterTimeline(all, filter), [all, filter]);
+  const people = useMemo(
+    () =>
+      [...new Map(all.map((i) => [i.personId, i.personName])).entries()].sort((a, b) =>
+        a[1].localeCompare(b[1]),
+      ),
+    [all],
+  );
+  const gens = useMemo(
+    () =>
+      [...new Set(all.map((i) => i.generation).filter((g): g is number => g !== null))].sort(
+        (a, b) => a - b,
+      ),
+    [all],
+  );
+  const hasNoGen = all.some((i) => i.generation === null);
 
-  const items = data ?? [];
-  if (items.length === 0) {
+  if (q.isLoading)
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="rounded-sm border border-dashed border-border bg-forest-soft/40 p-16 text-center"
-      >
-        <CalendarClock className="mx-auto size-10 text-forest opacity-60" />
-        <p className="mt-4 font-serif text-2xl font-bold text-primary">
-          A linha do tempo se desenha a partir do genossociograma
-        </p>
-        <p className="mx-auto mt-2 max-w-md text-[14px] leading-relaxed text-muted-foreground">
-          Adicione nascimentos, mortes e eventos biográficos às pessoas do sistema. Eles aparecerão
-          aqui em ordem cronológica, revelando sincronicidades.
-        </p>
-      </motion.div>
+      <div
+        className="h-40 animate-pulse rounded-lg bg-muted/30"
+        aria-label="Carregando linha do tempo"
+      />
     );
-  }
 
-  // Group by year
-  const byYear = new Map<number, TimelineItem[]>();
-  for (const it of items) {
-    const list = byYear.get(it.year) ?? [];
-    list.push(it);
-    byYear.set(it.year, list);
-  }
-  const years = [...byYear.keys()].sort((a, b) => a - b);
+  if (q.isError)
+    return (
+      <div
+        role="alert"
+        className="rounded-md border border-destructive/40 bg-destructive/5 p-6 text-[15px]"
+      >
+        Não foi possível carregar a linha do tempo.
+        <Button variant="outline" size="sm" className="ml-3 min-h-11" onClick={() => q.refetch()}>
+          <RefreshCw className="mr-1.5 size-4" /> Tentar de novo
+        </Button>
+      </div>
+    );
+
+  if (all.length === 0)
+    return (
+      <div className="rounded-sm border border-dashed border-border bg-forest-soft/40 p-12 text-center">
+        <CalendarClock className="mx-auto size-10 text-forest opacity-60" aria-hidden />
+        <p className="mt-4 font-serif text-2xl font-bold text-primary">
+          Ainda não há datas registradas
+        </p>
+        <p className="mx-auto mt-2 max-w-md text-[15px] leading-relaxed text-muted-foreground">
+          Nascimentos, falecimentos e eventos de vida aparecem aqui quando forem preenchidos na
+          ficha de cada familiar.
+        </p>
+        <Button asChild variant="outline" className="mt-4 min-h-11">
+          <Link to="/app/clientes/$clientId" params={{ clientId }} search={{ tab: "clan" }}>
+            Abrir planilha do clã
+          </Link>
+        </Button>
+      </div>
+    );
+
+  const dated = items.filter((i) => i.precision !== "unknown");
+  const undated = items.filter((i) => i.precision === "unknown");
+  const sel = "h-11 rounded-md border border-input bg-background px-2 text-[14px]";
 
   return (
-    <div className="relative pt-6 pb-12">
-      {/* Editorial subtle timeline gradient line */}
-      <div className="pointer-events-none absolute inset-y-0 left-[8rem] w-px bg-gradient-to-b from-forest/50 via-forest/30 to-transparent" />
-
-      <motion.ol
-        className="space-y-12"
-        initial="hidden"
-        animate="visible"
-        variants={{
-          hidden: { opacity: 0 },
-          visible: { opacity: 1, transition: { staggerChildren: 0.15 } },
-        }}
+    <div className="space-y-6 pt-2">
+      <div
+        className="flex flex-wrap items-end gap-3"
+        role="group"
+        aria-label="Filtros da linha do tempo"
       >
-        {years.map((year) => (
-          <motion.li
-            key={year}
-            className="grid grid-cols-[8rem_auto_1fr] items-start gap-6"
-            variants={{
-              hidden: { opacity: 0, x: -15 },
-              visible: {
-                opacity: 1,
-                x: 0,
-                transition: { type: "spring", stiffness: 300, damping: 24 },
-              },
+        <div className="flex flex-col gap-1">
+          <label htmlFor="tl-person" className="text-[13px] font-semibold text-muted-foreground">
+            Familiar
+          </label>
+          <select
+            id="tl-person"
+            className={sel}
+            value={filter.personId ?? ""}
+            onChange={(e) => setFilter({ ...filter, personId: e.target.value || undefined })}
+          >
+            <option value="">Todos</option>
+            {people.map(([id, name]) => (
+              <option key={id} value={id}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label htmlFor="tl-gen" className="text-[13px] font-semibold text-muted-foreground">
+            Geração
+          </label>
+          <select
+            id="tl-gen"
+            className={sel}
+            value={filter.generation === undefined ? "" : String(filter.generation)}
+            onChange={(e) => {
+              const v = e.target.value;
+              setFilter({
+                ...filter,
+                generation: v === "" ? undefined : v === "none" ? "none" : Number(v),
+              });
             }}
           >
-            {/* Year Column */}
-            <div className="pt-0.5 text-right relative pr-4">
-              <span className="font-serif text-4xl font-bold text-forest/90">{year || "?"}</span>
-            </div>
+            <option value="">Todas</option>
+            {gens.map((g) => (
+              <option key={g} value={g}>
+                {GEN_LABEL(g)}
+              </option>
+            ))}
+            {hasNoGen && <option value="none">Vínculo não informado</option>}
+          </select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label htmlFor="tl-kind" className="text-[13px] font-semibold text-muted-foreground">
+            Tipo
+          </label>
+          <select
+            id="tl-kind"
+            className={sel}
+            value={filter.kind ?? ""}
+            onChange={(e) =>
+              setFilter({
+                ...filter,
+                kind: (e.target.value || undefined) as TimelineKind | undefined,
+              })
+            }
+          >
+            <option value="">Todos</option>
+            {(Object.keys(KIND_LABEL) as TimelineKind[]).map((k) => (
+              <option key={k} value={k}>
+                {KIND_LABEL[k]}
+              </option>
+            ))}
+          </select>
+        </div>
+        {(filter.personId || filter.generation !== undefined || filter.kind) && (
+          <Button variant="ghost" className="min-h-11" onClick={() => setFilter({})}>
+            Limpar filtros
+          </Button>
+        )}
+        <p className="ml-auto text-[14px] text-muted-foreground" role="status">
+          {items.length} de {all.length} registros
+        </p>
+      </div>
 
-            {/* Timeline Dot */}
-            <div className="relative mt-3.5 z-10 flex size-3.5 items-center justify-center rounded-full bg-surface-document border-[3px] border-forest shadow-sm" />
-
-            {/* Cards Column */}
-            <div className="space-y-4 pt-1">
-              {byYear.get(year)!.map((it, idx) => (
-                <TimelineCard key={`${it.personId}-${idx}`} item={it} />
+      {items.length === 0 ? (
+        <p className="rounded-md border border-border bg-background p-6 text-[15px] text-muted-foreground">
+          Nenhum registro com esses filtros.
+        </p>
+      ) : (
+        <>
+          {dated.length > 0 && (
+            <ol
+              className="space-y-3 border-l-2 border-forest/30 pl-5"
+              aria-label="Registros com data"
+            >
+              {dated.map((it) => (
+                <TimelineCard key={it.key} item={it} clientId={clientId} />
               ))}
-            </div>
-          </motion.li>
-        ))}
-      </motion.ol>
+            </ol>
+          )}
+          {undated.length > 0 && (
+            <section aria-labelledby="tl-undated" className="space-y-3">
+              <h3 id="tl-undated" className="text-[15px] font-semibold text-primary">
+                Sem data utilizável ({undated.length}) — não posicionados na cronologia
+              </h3>
+              <ol className="space-y-3">
+                {undated.map((it) => (
+                  <TimelineCard key={it.key} item={it} clientId={clientId} />
+                ))}
+              </ol>
+            </section>
+          )}
+        </>
+      )}
     </div>
   );
 }
 
-function TimelineCard({ item }: { item: TimelineItem }) {
+function TimelineCard({ item, clientId }: { item: CaseTimelineItem; clientId: string }) {
   const Icon = item.kind === "birth" ? Baby : item.kind === "death" ? Cross : Sparkles;
-  const isDeath = item.kind === "death";
-  const isBirth = item.kind === "birth";
-
-  // Editorial tones based on event
-  const accentClass = isDeath
-    ? "accent-bar-forest bg-surface-document"
-    : isBirth
-      ? "accent-bar-gold bg-surface-document"
-      : "accent-bar-forest bg-forest-soft/20";
-
-  const iconColor = isDeath ? "text-forest" : isBirth ? "text-gold" : "text-forest";
-
   return (
-    <div
-      className={`rounded-sm border border-border shadow-sm px-5 py-4 transition-shadow hover:shadow-md ${accentClass}`}
-    >
-      <div className="flex items-center gap-3">
-        <div
-          className={`flex size-8 shrink-0 items-center justify-center rounded-md bg-background border border-border ${iconColor}`}
-        >
-          <Icon className="size-4" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[14px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
-              {item.label}
-            </span>
-            <span className="font-mono text-[14px] font-bold text-muted-foreground/70 bg-background px-1.5 py-0.5 rounded border border-border">
-              {item.date}
-            </span>
-          </div>
-          <p className="mt-1 font-serif text-xl font-bold text-primary truncate leading-tight">
-            {item.personName}
-          </p>
-        </div>
+    <li className="rounded-md border border-border bg-surface-document px-4 py-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <Icon className="size-4 text-forest" aria-hidden />
+        <span className="font-mono text-[15px] font-bold tabular-nums text-primary">
+          {formatByPrecision(item.rawDate, item.precision)}
+        </span>
+        <span className="text-[15px] font-semibold">{item.label}</span>
+        <span className="text-[15px]">· {item.personName}</span>
+        {item.relationship && (
+          <span className="text-[14px] text-muted-foreground">({item.relationship})</span>
+        )}
       </div>
-
-      {item.meta && (
-        <div className="mt-3 pt-3 border-t border-border/50">
-          <p className="flex items-start gap-2 text-[14px] leading-relaxed text-foreground/80 font-serif">
-            {isDeath && <HeartPulse className="size-4 text-forest mt-0.5 shrink-0" />}
-            {item.meta}
-          </p>
-        </div>
-      )}
-    </div>
+      {item.meta && <p className="mt-1 text-[15px] leading-relaxed">{item.meta}</p>}
+      <div className="mt-2 flex flex-wrap items-center gap-3 text-[13px] text-muted-foreground">
+        <span>Fonte: {item.source}</span>
+        <Link
+          to="/app/clientes/$clientId"
+          params={{ clientId }}
+          search={{ tab: "genogram", person: item.personId }}
+          className="inline-flex min-h-11 items-center gap-1 font-semibold text-forest hover:underline"
+        >
+          <MapPin className="size-3.5" aria-hidden /> Ver no mapa
+        </Link>
+      </div>
+    </li>
   );
 }

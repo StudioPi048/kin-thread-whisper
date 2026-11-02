@@ -387,45 +387,60 @@ export type Database = {
       }
       clinical_sessions: {
         Row: {
+          ai_reviewed_at: string | null
           audio_path: string | null
           client_id: string
+          clinical_status: string | null
           created_at: string
           duration_seconds: number | null
           error_message: string | null
           id: string
+          manual_notes: string | null
+          planned_duration_minutes: number | null
           session_date: string
           status: string
           structured_note: Json | null
+          time_zone: string | null
           title: string | null
           transcript: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          ai_reviewed_at?: string | null
           audio_path?: string | null
           client_id: string
+          clinical_status?: string | null
           created_at?: string
           duration_seconds?: number | null
           error_message?: string | null
           id?: string
+          manual_notes?: string | null
+          planned_duration_minutes?: number | null
           session_date?: string
           status?: string
           structured_note?: Json | null
+          time_zone?: string | null
           title?: string | null
           transcript?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          ai_reviewed_at?: string | null
           audio_path?: string | null
           client_id?: string
+          clinical_status?: string | null
           created_at?: string
           duration_seconds?: number | null
           error_message?: string | null
           id?: string
+          manual_notes?: string | null
+          planned_duration_minutes?: number | null
           session_date?: string
           status?: string
           structured_note?: Json | null
+          time_zone?: string | null
           title?: string | null
           transcript?: string | null
           updated_at?: string
