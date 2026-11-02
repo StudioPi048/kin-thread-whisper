@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { readPref, writePref } from "@/lib/recent-activity";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -8,7 +9,7 @@ import {
   Copy,
   Link2,
 } from "lucide-react";
-import { buildLibraryItems } from "@/components/library/catalog";
+import { EDITORIAL_SOURCE, buildLibraryItems } from "@/components/library/catalog";
 import { searchLibrary } from "@/lib/library-search";
 import {
   LETICIA,
@@ -31,13 +32,29 @@ import { DocumentHeader } from "@/components/ui/document-header";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/app/biblioteca")({
+  validateSearch: (s: Record<string, unknown>): { item?: string } =>
+    typeof s.item === "string" && /^[\w-]{1,64}$/.test(s.item) ? { item: s.item } : {},
+  head: () => ({
+    meta: [
+      { title: "Biblioteca — GENEALIZ" },
+      { name: "description", content: "Conceitos, autores e obras de psicogenealogia com fonte indicada." },
+      { property: "og:title", content: "Biblioteca — GENEALIZ" },
+      { property: "og:description", content: "Consulta de conceitos, autores e obras com fonte indicada." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: BibliotecaPage,
 });
 
 function BibliotecaPage() {
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("Todos");
-  const [selected, setSelected] = useState<LibraryItem | null>(null);
+  const { item: itemKey } = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const { user } = Route.useRouteContext();
+  const [lastKey, setLastKey] = useState<string | null>(null);
+  useEffect(() => setLastKey(readPref<string | null>(user.id, "library-last", null)), [user.id]);
   const {
     data: entries = [],
     isLoading,
@@ -55,6 +72,16 @@ function BibliotecaPage() {
   });
   const items = useMemo(() => buildLibraryItems(entries), [entries]);
   const shown = searchLibrary(items, q, category);
+  // Trecho aberto vive na URL (?item=ID) — dá para voltar a ele; só o ID é lembrado.
+  const selected = itemKey ? (items.find((x) => x.key === itemKey) ?? null) : null;
+  const setSelected = (x: LibraryItem | null) => {
+    if (x) {
+      writePref(user.id, "library-last", x.key);
+      setLastKey(x.key);
+    }
+    navigate({ search: x ? { item: x.key } : {}, replace: !x });
+  };
+  const lastItem = lastKey ? items.find((x) => x.key === lastKey) : undefined;
   return (
     <div className="pb-14">
       <DocumentHeader
@@ -121,10 +148,19 @@ function BibliotecaPage() {
               aria-label="Buscar na biblioteca"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Buscar autor, obra ou conceito"
-              className="h-11 w-full rounded-md border border-input bg-white pl-11 pr-4 text-sm"
+              placeholder="Buscar conceito, autor, obra ou termo"
+              className="h-11 w-full rounded-md border border-input bg-background pl-11 pr-4 text-[15px] placeholder:text-muted-foreground"
             />
           </div>
+          {lastItem && !selected && (
+            <button
+              type="button"
+              onClick={() => setSelected(lastItem)}
+              className="mt-3 inline-flex min-h-11 items-center gap-2 text-[15px] font-semibold text-forest underline-offset-4 hover:underline"
+            >
+              Voltar ao último trecho: {lastItem.title}
+            </button>
+          )}
           <div className="flex justify-between items-center py-6">
             <h2 className="font-serif text-3xl font-semibold">{category}</h2>
             <span className="text-xs text-muted-foreground">{shown.length} resultados</span>
@@ -178,9 +214,17 @@ function BibliotecaPage() {
                   <SheetTitle className="font-serif text-3xl text-white">
                     {selected.title}
                   </SheetTitle>
-                  <p className="text-sm text-slate-300">{selected.meta}</p>
+                  <p className="text-sm text-white/85">{selected.meta}</p>
                 </SheetHeader>
                 <div className="p-8">
+                  {selected.illustrative && (
+                    <p className="mb-4 rounded-md border border-clinical-warning/40 bg-clinical-warning/10 p-3 text-[14px] font-semibold">
+                      Conteúdo ilustrativo
+                    </p>
+                  )}
+                  <p className="mb-4 text-[14px] text-muted-foreground">
+                    <strong>Fonte:</strong> {selected.source ?? EDITORIAL_SOURCE}
+                  </p>
                   <p className="text-sm leading-7 whitespace-pre-wrap">{selected.body}</p>
                   {selected.details && (
                     <ul className="mt-6 space-y-4 text-sm leading-7">
@@ -191,15 +235,15 @@ function BibliotecaPage() {
                       ))}
                     </ul>
                   )}
-                  {selected.category === "Citações" && (
+                  {selected.category === "Paráfrases" && (
                     <button
                       className="mt-7 flex items-center gap-2 text-sm font-semibold"
                       onClick={async () => {
                         try {
                           await navigator.clipboard.writeText(
-                            `${selected.body} — ${selected.meta}`,
+                            `${selected.body} — paráfrase ilustrativa (${selected.meta}); não é citação literal.`,
                           );
-                          toast.success("Citação copiada");
+                          toast.success("Paráfrase copiada com o aviso de fonte");
                         } catch {
                           toast.error(
                             "Não foi possível copiar. Selecione o texto para copiar manualmente.",
@@ -208,7 +252,7 @@ function BibliotecaPage() {
                       }}
                     >
                       <Copy size={16} />
-                      Copiar citação
+                      Copiar com aviso de fonte
                     </button>
                   )}
                 </div>
