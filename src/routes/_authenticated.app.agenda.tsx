@@ -288,7 +288,7 @@ function DateNav({
 function AgendaPage() {
   const { user } = Route.useRouteContext();
   const { date, view: viewParam } = Route.useSearch();
-  const prefsQ = usePreferences(Route.useRouteContext().user.id);
+  const prefsQ = usePreferences(user.id);
   const view = viewParam ?? (prefsQ.data?.agendaView === "week" ? "week" : undefined);
   const tz = useMemo(() => browserTz(), []);
   const navigate = Route.useNavigate();
