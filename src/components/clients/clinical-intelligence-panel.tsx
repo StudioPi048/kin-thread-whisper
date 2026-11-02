@@ -21,6 +21,7 @@ import {
   type RelationshipRow,
 } from "@/lib/patterns";
 import { Badge } from "@/components/ui/badge";
+import { buildHypotheses } from "@/lib/evidence";
 
 interface Props {
   clientId: string;
@@ -90,48 +91,11 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
     return gaps.slice(0, 3); // show top 3 gaps
   }, [data]);
 
-  // Generate dynamic clinical hypotheses based on patterns
-  const hypotheses = useMemo(() => {
-    if (patterns.length === 0) {
-      return [
-        {
-          title: "Lealdade Sistêmica Oculta",
-          description:
-            "Explore segredos de família ou dores não verbalizadas que possam estar mantendo a queixa de forma latente.",
-        },
-      ];
-    }
-
-    const list: { title: string; description: string }[] = [];
-    patterns.forEach((p) => {
-      if (p.type === "anniversary_syndrome") {
-        list.push({
-          title: "Síndrome de Aniversário Detectada",
-          description: `Investigue se a queixa atual do paciente se intensifica em datas próximas a eventos traumáticos dos ancestrais implicados.`,
-        });
-      }
-      if (p.type === "shared_cause_of_death" || p.type === "shared_health_condition") {
-        list.push({
-          title: "Somatização Transgeracional",
-          description: `A repetição de sintomas físicos aponta para um núcleo de dor ou exclusão não integrada no clã. Vale mapear a história desse sintoma.`,
-        });
-      }
-      if (p.type === "shared_occupation") {
-        list.push({
-          title: "Mandato de Carreira",
-          description: `A repetição profissional sugere um mandato invisível de reparação. O paciente pode estar exercendo a profissão para compensar perdas de antepassados.`,
-        });
-      }
-      if (p.type === "relationship_ruptures") {
-        list.push({
-          title: "Padrão de Exclusão Afetiva",
-          description: `As rupturas repetitivas apontam para um emaranhamento de exclusão. A reconciliação simbólica com os excluídos pode aliviar a tensão do cliente.`,
-        });
-      }
-    });
-
-    return list.slice(0, 3);
-  }, [patterns]);
+  // Hipóteses provisórias: só existem com evidência real (fonte única em lib/evidence)
+  const hypotheses = useMemo(
+    () => buildHypotheses(patterns, data?.persons ?? []).slice(0, 3),
+    [patterns, data],
+  );
 
   // Bibliography recommendations
   const bibliography = useMemo(() => {
@@ -293,15 +257,23 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
                 Hipóteses Clínicas
               </h4>
               <div className="space-y-3">
-                {hypotheses.map((h, i) => (
+                {hypotheses.length === 0 && (
+                  <p className="text-[15px] text-muted-foreground">
+                    Sem evidências suficientes no mapa para sugerir hipóteses. Complete datas,
+                    causas e ocupações dos familiares.
+                  </p>
+                )}
+                {hypotheses.map((h) => (
                   <div
-                    key={i}
+                    key={h.id}
                     className="p-3 bg-clinical-warning/10 border-l-2 border-clinical-warning rounded-r-xl space-y-1.5"
                   >
                     <p className="text-[16px] font-bold text-ink">{h.title}</p>
-                    <p className="text-[16px] leading-relaxed text-ink/80 font-serif">
-                      {h.description}
+                    <p className="text-[15px] leading-relaxed text-ink/80">{h.description}</p>
+                    <p className="text-[14px] text-ink/80">
+                      <strong>Fontes:</strong> {h.sources.join(", ")}
                     </p>
+                    <p className="text-[14px] text-muted-foreground">{h.limits}</p>
                   </div>
                 ))}
               </div>
