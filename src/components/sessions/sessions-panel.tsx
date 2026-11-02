@@ -55,14 +55,6 @@ type Session = {
   ai_reviewed_at: string | null;
 };
 
-const STATUS_LABEL: Record<string, string> = {
-  draft: "Rascunho",
-  transcribing: "Transcrevendo…",
-  structuring: "Estruturando prontuário…",
-  ready: "Pronto",
-  error: "Erro",
-};
-
 function formatDuration(sec: number | null | undefined): string {
   if (!sec) return "—";
   const m = Math.floor(sec / 60);
@@ -234,6 +226,8 @@ export function SessionsPanel({ clientId }: Props) {
 
   const reprocess = useMutation({
     mutationFn: async (sessionId: string) => {
+      // Novo texto gerado exige nova revisão humana.
+      await supabase.from("clinical_sessions").update({ ai_reviewed_at: null }).eq("id", sessionId);
       await processFn({ data: { sessionId } });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["clinical_sessions", clientId] }),
