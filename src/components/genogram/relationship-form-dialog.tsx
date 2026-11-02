@@ -128,6 +128,33 @@ export function RelationshipFormDialog({
         }
       }
 
+      // Filiação: no máximo 2 genitores por filho, sem duplicar e sem ciclo direto
+      if (form.relationship_type === "parent") {
+        const { data: existing, error: checkErr } = await supabase
+          .from("genogram_relationships")
+          .select("id, from_person_id, to_person_id")
+          .eq("client_id", clientId)
+          .eq("relationship_type", "parent");
+        if (checkErr) throw checkErr;
+        const others = (existing ?? []).filter((r) => !editing || r.id !== editing.id);
+        const parents = new Set(
+          others.filter((r) => r.to_person_id === form.to_person_id).map((r) => r.from_person_id),
+        );
+        if (parents.has(form.from_person_id))
+          throw new Error("Essa pessoa já está registrada como genitor(a) desse filho(a).");
+        if (parents.size >= 2)
+          throw new Error(
+            "Esse filho(a) já tem 2 genitores registrados. Remova um antes de adicionar outro (adoção: use o qualificador no vínculo existente).",
+          );
+        if (
+          others.some(
+            (r) => r.from_person_id === form.to_person_id && r.to_person_id === form.from_person_id,
+          )
+        )
+          throw new Error("Vínculo invertido: o filho(a) já está registrado como genitor(a) dessa pessoa.");
+      }
+
+
       const payload = {
         client_id: clientId,
         from_person_id: form.from_person_id,
