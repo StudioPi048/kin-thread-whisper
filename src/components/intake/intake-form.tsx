@@ -21,6 +21,8 @@ import {
   INTAKE_SECTIONS,
   SECTION_FIELDS,
   calculateCompletion,
+  sectionCompletion,
+  INTAKE_UNKNOWN,
   type ChildEntry,
   type ClientIntake,
   type IntakeSectionId,
@@ -166,8 +168,8 @@ export function IntakeForm({ clientId, professionalId }: Props) {
               onClick={() => setSection(s.id)}
               className={`block w-full rounded-md px-3 py-2 text-left text-sm transition ${
                 section === s.id
-                  ? "bg-lilac-soft text-primary font-medium"
-                  : "text-foreground/80 hover:bg-lilac-soft/50 hover:text-primary"
+                  ? "bg-accent text-accent-foreground font-medium"
+                  : "text-foreground hover:bg-accent"
               }`}
             >
               <span className="flex items-center justify-between gap-2">

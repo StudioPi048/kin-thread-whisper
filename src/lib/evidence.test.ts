@@ -51,3 +51,14 @@ describe("lacunas reais", () => {
     expect(g).toContain("Data de nascimento de Cliente desconhecida.");
   });
 });
+
+import { sectionCompletion, INTAKE_UNKNOWN } from "./intake";
+describe("progresso da anamnese", () => {
+  it("conta 'desconhecido' como respondido e separa no total", () => {
+    const r = sectionCompletion({ presenting_intention: "x", signature_notes: INTAKE_UNKNOWN }, "opening");
+    expect(r).toEqual({ filled: 2, unknown: 1, total: 2 });
+  });
+  it("vazio não conta", () => {
+    expect(sectionCompletion({ presenting_intention: "  " }, "opening").filled).toBe(0);
+  });
+});
