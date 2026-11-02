@@ -219,7 +219,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
 
   // Debounce por linha com flush explícito: sair da aba/página passa pelo
   // guard; em falha o patch volta para a fila e a edição continua na tela.
-  const [pendingCount, setPendingCount] = useState(0);
+  const [, setPendingCount] = useState(0);
   const queueRef = useRef<KeyedDebounce<TablesUpdate<"genogram_persons">> | null>(null);
   if (!queueRef.current)
     queueRef.current = new KeyedDebounce<TablesUpdate<"genogram_persons">>(
