@@ -1,3 +1,4 @@
+import { useUnsaved } from "@/components/unsaved/unsaved-guard";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -112,15 +113,8 @@ export function SessionsPanel({ clientId }: Props) {
     mime: string;
     seconds: number;
   } | null>(null);
-  useEffect(() => {
-    if (dirtyIds.size === 0 && !pendingAudio) return;
-    const h = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", h);
-    return () => window.removeEventListener("beforeunload", h);
-  }, [dirtyIds, pendingAudio]);
+  const pendingAudioRef = useRef(pendingAudio);
+  pendingAudioRef.current = pendingAudio;
 
   // ---- Recorder state ----
   const [recording, setRecording] = useState(false);
@@ -130,6 +124,41 @@ export function SessionsPanel({ clientId }: Props) {
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<number | null>(null);
   const startedAtRef = useRef<number>(0);
+  const stopWaiterRef = useRef<(() => void) | null>(null);
+
+  // Gravação, envio e áudio não enviado entram no guard de saída do app
+  useUnsaved(`audio:${clientId}`, {
+    label: recording ? "Gravação em andamento" : "Áudio da sessão não enviado",
+    isDirty: () => recording || uploading || !!pendingAudioRef.current,
+    save: async () => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        await new Promise<void>((resolve) => {
+          stopWaiterRef.current = resolve;
+          stopRecording();
+        });
+      } else if (pendingAudioRef.current) {
+        const p = pendingAudioRef.current;
+        await uploadAudio(p.blob, p.mime, p.seconds);
+      }
+      if (pendingAudioRef.current) throw new Error("o áudio não foi enviado");
+    },
+    discard: () => {
+      const mr = mediaRecorderRef.current;
+      if (mr) {
+        mr.ondataavailable = null;
+        mr.onstop = null;
+        if (mr.state !== "inactive") mr.stop();
+        mr.stream.getTracks().forEach((t) => t.stop());
+      }
+      mediaRecorderRef.current = null;
+      if (timerRef.current) window.clearInterval(timerRef.current);
+      timerRef.current = null;
+      chunksRef.current = [];
+      setRecording(false);
+      setPendingAudio(null);
+      pendingAudioRef.current = null;
+    },
+  });
 
   useEffect(
     () => () => {
@@ -148,7 +177,12 @@ export function SessionsPanel({ clientId }: Props) {
       const mr = new MediaRecorder(stream, { mimeType: mime });
       chunksRef.current = [];
       mr.ondataavailable = (e) => e.data.size && chunksRef.current.push(e.data);
-      mr.onstop = () => void handleStop(mime);
+      mr.onstop = () => {
+        void handleStop(mime).finally(() => {
+          stopWaiterRef.current?.();
+          stopWaiterRef.current = null;
+        });
+      };
       mr.start(1000);
       mediaRecorderRef.current = mr;
       startedAtRef.current = Date.now();
@@ -185,6 +219,7 @@ export function SessionsPanel({ clientId }: Props) {
   // O áudio fica em memória até o envio ser confirmado; falha permite reenviar.
   const uploadAudio = async (blob: Blob, mime: string, durationSeconds: number) => {
     setPendingAudio({ blob, mime, seconds: durationSeconds });
+    pendingAudioRef.current = { blob, mime, seconds: durationSeconds };
     setUploading(true);
     try {
       const { data: userRes } = await supabase.auth.getUser();
@@ -215,6 +250,7 @@ export function SessionsPanel({ clientId }: Props) {
       if (insert.error) throw insert.error;
 
       setPendingAudio(null);
+      pendingAudioRef.current = null;
       qc.invalidateQueries({ queryKey: ["clinical_sessions", clientId] });
       toast.success("Áudio salvo. Processando texto provisório…");
 
@@ -482,7 +518,8 @@ function SessionCard({
 
   const refresh = () => qc.invalidateQueries({ queryKey: ["clinical_sessions", clientId] });
 
-  const saveNotes = async () => {
+  /** Lança erro se o banco não confirmou (o texto continua na tela). */
+  const persistNotes = async () => {
     const text = draft.text;
     dispatch({ type: "save_start" });
     const { data, error } = await supabase
@@ -492,12 +529,20 @@ function SessionCard({
       .select("manual_notes")
       .maybeSingle();
     if (error || !data) {
-      dispatch({ type: "save_fail", message: error?.message ?? "Sem permissão para salvar." });
-      return;
+      const message = error?.message ?? "Sem permissão para salvar.";
+      dispatch({ type: "save_fail", message });
+      throw new Error(message);
     }
     dispatch({ type: "save_ok", persisted: data.manual_notes ?? "" });
     refresh();
   };
+  const saveNotes = () => persistNotes().catch(() => {});
+  useUnsaved(`note:${session.id}`, {
+    label: "Notas da sessão",
+    isDirty: () => isDirty(draft) || draft.phase === "saving",
+    save: persistNotes,
+    discard: () => dispatch({ type: "discard" }),
+  });
 
   const [reviewState, setReviewState] = useState<{ pending: boolean; error?: string }>({
     pending: false,
