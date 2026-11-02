@@ -50,3 +50,6 @@ Verificação desta revisão: `bun run test` → 15 arquivos, 100/100 testes (ap
 - Detector mecânico executado uma vez nos alvos finais: 180 apontamentos consultivos de cor, nenhum erro obrigatório. Há referências antigas de paleta/sidecar; isso não constitui aprovação estética.
 - A sessão CUA parou de responder na conferência final; capturas anteriores internas estão em `LIZ/genealiz-evolution-evidence`. Conferência final isolada solicitada pelo conector Lovable usando fixtures, sem dados clínicos reais.
 - Sem publicação de produção, sem envio de e-mail, sem teste de microfone/RLS/RPC real, sem alterações em pacientes reais.
+
+## 14. Verificação final em fixtures (caeddc0) — 02/11/2026
+Verificado no navegador com dados sintéticos: capa sem diagrama, Mesa, mapa (cliente e irmão no topo, pais e avós abaixo), ficha mobile, ferramentas mobile, agenda dia/semana, planilha, biblioteca no caso, guard de saída (Ficar preserva nota; Descartar sai). Corrigido: estouro de 6px da barra de abas em 390px. Não verificado: banco real, RLS, RPC, áudio, e-mail, "substituir". Detalhes: `final/relatorio.md`.
