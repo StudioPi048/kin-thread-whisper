@@ -4,7 +4,12 @@
  * sobre os dados reais do caso. Sem padrões detectados → nenhuma hipótese.
  * Nunca atribui causalidade nem confiança numérica.
  */
-import { detectPatterns, type DetectedPattern, type PersonRow, type RelationshipRow } from "./patterns";
+import {
+  detectPatterns,
+  type DetectedPattern,
+  type PersonRow,
+  type RelationshipRow,
+} from "./patterns";
 
 export interface Hypothesis {
   id: string;
@@ -37,12 +42,18 @@ const TEMPLATES: Partial<
   shared_health_condition: {
     title: "Repetição de condição de saúde",
     description: "Mesma condição de saúde aparece em mais de um familiar.",
-    questions: ["Quando a condição foi registrada em cada familiar?", "Há avaliação médica disponível?"],
+    questions: [
+      "Quando a condição foi registrada em cada familiar?",
+      "Há avaliação médica disponível?",
+    ],
   },
   shared_death_age: {
     title: "Repetição de idade ao falecer",
     description: "Familiares faleceram em idades próximas.",
-    questions: ["As datas de nascimento e falecimento estão confirmadas?", "Como o cliente vê essa informação?"],
+    questions: [
+      "As datas de nascimento e falecimento estão confirmadas?",
+      "Como o cliente vê essa informação?",
+    ],
   },
   shared_occupation: {
     title: "Repetição profissional",

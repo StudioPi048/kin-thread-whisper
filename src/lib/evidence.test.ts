@@ -3,7 +3,15 @@ import { buildHypotheses, evidenceForCase } from "./evidence";
 import type { PersonRow } from "./patterns";
 
 const person = (id: string, extra: Partial<PersonRow>) =>
-  ({ id, full_name: id, preferred_name: null, health_conditions: [], life_events: [], tags: [], ...extra }) as unknown as PersonRow;
+  ({
+    id,
+    full_name: id,
+    preferred_name: null,
+    health_conditions: [],
+    life_events: [],
+    tags: [],
+    ...extra,
+  }) as unknown as PersonRow;
 
 describe("evidências → hipóteses", () => {
   it("sem dados não gera hipótese (sem fallback fixo)", () => {
@@ -13,7 +21,16 @@ describe("evidências → hipóteses", () => {
   it("hipótese sempre cita fontes reais e limites, sem número de confiança", () => {
     const persons = [person("A", { occupation: "Médico" }), person("B", { occupation: "Médico" })];
     const hs = buildHypotheses(
-      [{ id: "x", type: "shared_occupation", title: "t", description: "d", severity: "info", personIds: ["A", "B"] }],
+      [
+        {
+          id: "x",
+          type: "shared_occupation",
+          title: "t",
+          description: "d",
+          severity: "info",
+          personIds: ["A", "B"],
+        },
+      ],
       persons,
     );
     expect(hs).toHaveLength(1);

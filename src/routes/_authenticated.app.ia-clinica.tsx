@@ -12,9 +12,15 @@ export const Route = createFileRoute("/_authenticated/app/ia-clinica")({
   head: () => ({
     meta: [
       { title: "Evidências e hipóteses — GENEALIZ" },
-      { name: "description", content: "Hipóteses provisórias baseadas nas evidências registradas no caso." },
+      {
+        name: "description",
+        content: "Hipóteses provisórias baseadas nas evidências registradas no caso.",
+      },
       { property: "og:title", content: "Evidências e hipóteses — GENEALIZ" },
-      { property: "og:description", content: "Hipóteses provisórias com fontes, limites e perguntas." },
+      {
+        property: "og:description",
+        content: "Hipóteses provisórias com fontes, limites e perguntas.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -86,7 +92,9 @@ function IaClinicaPage() {
               onChange={(e) => changeCase(e.target.value)}
               className="h-11 w-full rounded-md border border-input bg-background px-3 text-[15px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <option value="">{clientsQ.isLoading ? "Carregando…" : "Escolha um caso ativo"}</option>
+              <option value="">
+                {clientsQ.isLoading ? "Carregando…" : "Escolha um caso ativo"}
+              </option>
               {(clientsQ.data ?? []).map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.preferred_name || c.full_name}
@@ -101,7 +109,9 @@ function IaClinicaPage() {
             Nenhum caso selecionado. Sem caso, não há evidências nem hipóteses.
           </p>
         )}
-        {clientId && caseQ.isLoading && <p className="text-[15px] text-muted-foreground">Analisando…</p>}
+        {clientId && caseQ.isLoading && (
+          <p className="text-[15px] text-muted-foreground">Analisando…</p>
+        )}
         {clientId && caseQ.isError && (
           <div role="alert" className="flex items-center gap-3 text-[15px] text-destructive">
             Falha ao ler o caso.
@@ -125,7 +135,10 @@ function IaClinicaPage() {
               ) : (
                 <ul className="space-y-2">
                   {ev.patterns.map((p) => (
-                    <li key={p.id} className="rounded-lg border border-border bg-card p-3 text-[15px]">
+                    <li
+                      key={p.id}
+                      className="rounded-lg border border-border bg-card p-3 text-[15px]"
+                    >
                       <label className="flex min-h-11 cursor-pointer items-start gap-3">
                         <input
                           type="checkbox"
@@ -154,11 +167,17 @@ function IaClinicaPage() {
             )}
             {hyps.length > 0 && (
               <section aria-labelledby="hy-h" className="space-y-3">
-                <h2 id="hy-h" className="flex items-center gap-2 text-lg font-semibold text-foreground">
+                <h2
+                  id="hy-h"
+                  className="flex items-center gap-2 text-lg font-semibold text-foreground"
+                >
                   <Brain className="size-5" aria-hidden /> Hipóteses provisórias
                 </h2>
                 {hyps.map((h) => (
-                  <article key={h.id} className="space-y-2 rounded-lg border border-border bg-card p-4">
+                  <article
+                    key={h.id}
+                    className="space-y-2 rounded-lg border border-border bg-card p-4"
+                  >
                     <h3 className="text-[16px] font-semibold">{h.title}</h3>
                     <p className="text-[15px]">{h.description}</p>
                     <p className="text-[15px]">

@@ -3,7 +3,11 @@ import { readVisits, recordVisit, onboardingSteps } from "./recent-activity";
 
 const mem = () => {
   const m = new Map<string, string>();
-  return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v), m };
+  return {
+    getItem: (k: string) => m.get(k) ?? null,
+    setItem: (k: string, v: string) => void m.set(k, v),
+    m,
+  };
 };
 
 describe("retomada por usuário", () => {
@@ -12,7 +16,10 @@ describe("retomada por usuário", () => {
     recordVisit("u1", "c1", "genogram", s, 1);
     recordVisit("u1", "c2", "sessions", s, 2);
     recordVisit("u1", "c1", "timeline", s, 3);
-    expect(readVisits("u1", s).map((v) => `${v.clientId}:${v.tab}`)).toEqual(["c1:timeline", "c2:sessions"]);
+    expect(readVisits("u1", s).map((v) => `${v.clientId}:${v.tab}`)).toEqual([
+      "c1:timeline",
+      "c2:sessions",
+    ]);
   });
   it("isola usuários", () => {
     const s = mem();

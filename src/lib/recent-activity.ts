@@ -20,7 +20,10 @@ export function readVisits(userId: string, s: Store | null = store()): Visit[] {
     if (!Array.isArray(raw)) return [];
     return raw.filter(
       (v): v is Visit =>
-        v && typeof v.clientId === "string" && typeof v.tab === "string" && typeof v.at === "number",
+        v &&
+        typeof v.clientId === "string" &&
+        typeof v.tab === "string" &&
+        typeof v.at === "number",
     );
   } catch {
     return [];
@@ -35,7 +38,10 @@ export function recordVisit(
   now = Date.now(),
 ): Visit[] {
   if (!s || !userId || !clientId) return [];
-  const next = [{ clientId, tab, at: now }, ...readVisits(userId, s).filter((v) => v.clientId !== clientId)].slice(0, MAX);
+  const next = [
+    { clientId, tab, at: now },
+    ...readVisits(userId, s).filter((v) => v.clientId !== clientId),
+  ].slice(0, MAX);
   try {
     s.setItem(key(userId), JSON.stringify(next));
   } catch {

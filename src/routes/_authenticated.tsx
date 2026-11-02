@@ -273,7 +273,11 @@ function AuthenticatedLayout() {
             </span>
           </CommandEmpty>
           {nav
-            .filter((n) => !searchQuery.trim() || n.label.toLowerCase().includes(searchQuery.toLowerCase().trim()))
+            .filter(
+              (n) =>
+                !searchQuery.trim() ||
+                n.label.toLowerCase().includes(searchQuery.toLowerCase().trim()),
+            )
             .map((n) => (
               <CommandItem
                 key={n.to}

@@ -120,7 +120,12 @@ function ClientesIndex() {
   const [editing, setEditing] = useState<ClientRow | null>(null);
   const [deleting, setDeleting] = useState<ClientRow | null>(null);
 
-  const { data: clients = [], isLoading, isError, refetch } = useQuery({
+  const {
+    data: clients = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ["clients", tab],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -281,7 +286,10 @@ function ClientesIndex() {
             ))}
           </ul>
         ) : isError ? (
-          <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-destructive/40 bg-card p-5 text-[15px] text-destructive">
+          <div
+            role="alert"
+            className="flex flex-wrap items-center gap-3 rounded-xl border border-destructive/40 bg-card p-5 text-[15px] text-destructive"
+          >
             Não foi possível carregar os clientes.
             <Button variant="outline" className="min-h-11" onClick={() => refetch()}>
               Tentar de novo
