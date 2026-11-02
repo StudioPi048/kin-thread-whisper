@@ -64,3 +64,16 @@ describe("genossociograma: cliente e irmãos no topo", () => {
     expect(new Set(um.partners)).toEqual(new Set([persons[7].id, persons[8].id]));
   });
 });
+
+describe("múltiplas uniões", () => {
+  it("união com marriage_order 2 recebe rótulo de 2º casamento", () => {
+    n = 0;
+    const persons = [p("Consulente"), p("Pai"), p("Mãe")];
+    const rels = [{ id: "r", client_id: "c", from_person_id: persons[1].id, to_person_id: persons[2].id,
+      relationship_type: "union", qualifier: null, start_date: null, end_date: null, notes: null,
+      created_at: "", updated_at: "", marriage_order: 2 }];
+    const g = buildLogicalGraph({ persons, rels: rels as never });
+    const u = g.unions.get(parentUnion(g, persons[0].id)!)!;
+    expect(u.label).toBe("2º casamento");
+  });
+});
