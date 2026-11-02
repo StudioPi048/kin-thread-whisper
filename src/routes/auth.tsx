@@ -58,7 +58,12 @@ function AuthPage() {
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => setMode(initialMode ?? "signin"), [initialMode]);
+  const keepErrorRef = useRef(false);
   useEffect(() => {
+    if (keepErrorRef.current) {
+      keepErrorRef.current = false;
+      return;
+    }
     setFormError(null);
     setNotice(null);
   }, [mode]);
@@ -73,12 +78,14 @@ function AuthPage() {
           ? "Este link expirou ou já foi usado. Peça um novo link abaixo."
           : "O link não é válido. Peça um novo link abaixo.",
       );
+      keepErrorRef.current = true;
       setMode("recover");
       return;
     }
     if (initialMode === "reset") {
       void supabase.auth.getSession().then(({ data }) => {
         if (!data.session) {
+          keepErrorRef.current = true;
           setMode("recover");
           setFormError("Não há uma sessão de redefinição ativa. O link pode ter expirado — peça um novo.");
         }
