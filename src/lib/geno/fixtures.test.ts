@@ -43,3 +43,14 @@ for (const [name, make] of [
     });
   });
 }
+
+describe("tag repetida não cria irmandade", () => {
+  it("dois bisavôs com a mesma tag e sem filiação: o segundo não ganha pais nem irmão", () => {
+    const f = smallFamily();
+    const dup = { ...f.persons[4], id: "dup-1", full_name: "Duplicado A", relationship_to_proband: "Bisavô paterno (pai do avô)" };
+    const dup2 = { ...f.persons[4], id: "dup-2", full_name: "Duplicado B", relationship_to_proband: "Bisavô paterno (pai do avô)" };
+    const g = buildLogicalGraph({ persons: [...f.persons, dup, dup2], rels: f.rels as never, probandId: f.probandId });
+    expect(g.edges.some((e) => e.kind === "child" && e.personId === "dup-2")).toBe(false);
+    expect(g.persons.has("dup-2")).toBe(true);
+  });
+});
