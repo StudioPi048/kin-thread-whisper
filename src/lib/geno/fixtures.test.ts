@@ -3,7 +3,11 @@ import { buildLogicalGraph, layoutGraph } from "./build";
 import { largeFamily, smallFamily, type SyntheticFamily } from "./fixtures";
 
 function check(f: SyntheticFamily) {
-  const g = buildLogicalGraph({ persons: f.persons, rels: f.rels as never, probandId: f.probandId });
+  const g = buildLogicalGraph({
+    persons: f.persons,
+    rels: f.rels as never,
+    probandId: f.probandId,
+  });
   const pl = layoutGraph(g);
   return { g, pl };
 }
@@ -29,7 +33,9 @@ for (const [name, make] of [
         const child = pl.personPos.get(r.to_person_id)!;
         const parent = pl.personPos.get(r.from_person_id)!;
         expect(child.y, `${r.to_person_id} acima de ${r.from_person_id}`).toBeLessThan(parent.y);
-        const unionId = g.edges.find((e) => e.kind === "child" && e.personId === r.to_person_id)?.unionId;
+        const unionId = g.edges.find(
+          (e) => e.kind === "child" && e.personId === r.to_person_id,
+        )?.unionId;
         expect(unionId).toBeTruthy();
         expect(g.unions.get(unionId!)!.partners).toContain(r.from_person_id);
       }
@@ -38,7 +44,10 @@ for (const [name, make] of [
       const declared = new Set(f.rels.map((r) => r.to_person_id));
       for (const p of f.persons) {
         if (declared.has(p.id)) continue;
-        expect(g.edges.some((e) => e.kind === "child" && e.personId === p.id), p.full_name).toBe(false);
+        expect(
+          g.edges.some((e) => e.kind === "child" && e.personId === p.id),
+          p.full_name,
+        ).toBe(false);
       }
     });
   });
@@ -47,9 +56,23 @@ for (const [name, make] of [
 describe("tag repetida não cria irmandade", () => {
   it("dois bisavôs com a mesma tag e sem filiação: o segundo não ganha pais nem irmão", () => {
     const f = smallFamily();
-    const dup = { ...f.persons[4], id: "dup-1", full_name: "Duplicado A", relationship_to_proband: "Bisavô paterno (pai do avô)" };
-    const dup2 = { ...f.persons[4], id: "dup-2", full_name: "Duplicado B", relationship_to_proband: "Bisavô paterno (pai do avô)" };
-    const g = buildLogicalGraph({ persons: [...f.persons, dup, dup2], rels: f.rels as never, probandId: f.probandId });
+    const dup = {
+      ...f.persons[4],
+      id: "dup-1",
+      full_name: "Duplicado A",
+      relationship_to_proband: "Bisavô paterno (pai do avô)",
+    };
+    const dup2 = {
+      ...f.persons[4],
+      id: "dup-2",
+      full_name: "Duplicado B",
+      relationship_to_proband: "Bisavô paterno (pai do avô)",
+    };
+    const g = buildLogicalGraph({
+      persons: [...f.persons, dup, dup2],
+      rels: f.rels as never,
+      probandId: f.probandId,
+    });
     expect(g.edges.some((e) => e.kind === "child" && e.personId === "dup-2")).toBe(false);
     expect(g.persons.has("dup-2")).toBe(true);
   });

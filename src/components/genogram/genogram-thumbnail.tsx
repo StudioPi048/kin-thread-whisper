@@ -83,7 +83,10 @@ export function GenogramThumbnail({
               <rect x={cx - 26} y={cy - 26} width={52} height={52} rx={2} />
             )}
             {p.row.is_deceased && (
-              <path d={`M${cx - 28} ${cy + 28}L${cx + 28} ${cy - 28}`} stroke="var(--color-foreground)" />
+              <path
+                d={`M${cx - 28} ${cy + 28}L${cx + 28} ${cy - 28}`}
+                stroke="var(--color-foreground)"
+              />
             )}
           </g>
         );

@@ -65,7 +65,15 @@ describe("importação da planilha", () => {
   });
   it("ordem precisa ser inteiro positivo", () => {
     const m = autoMap(["Nome", "Parentesco", "Ordem"]);
-    const r = analyzeImport([["A", "Tio", "0"], ["B", "Tio", "2.5"], ["C", "Tio", "-1"], ["D", "Tio", "3"]], m);
+    const r = analyzeImport(
+      [
+        ["A", "Tio", "0"],
+        ["B", "Tio", "2.5"],
+        ["C", "Tio", "-1"],
+        ["D", "Tio", "3"],
+      ],
+      m,
+    );
     expect(r.map((x) => x.status)).toEqual(["error", "error", "error", "ok"]);
     expect(r[3].record?.birth_order).toBe(3);
   });

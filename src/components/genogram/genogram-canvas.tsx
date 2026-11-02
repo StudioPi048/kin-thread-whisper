@@ -1323,50 +1323,52 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                   </p>
                   <div className="grid grid-cols-1 gap-2 text-[15px]">
                     {legendFlags.masculino && (
-                    <span className="flex items-center gap-2">
-                      <span className="inline-block size-3.5 border-2 border-forest bg-white" />
-                      Masculino
-                    </span>
+                      <span className="flex items-center gap-2">
+                        <span className="inline-block size-3.5 border-2 border-forest bg-white" />
+                        Masculino
+                      </span>
                     )}
                     {legendFlags.feminino && (
-                    <span className="flex items-center gap-2">
-                      <span className="inline-block size-3.5 rounded-full border-2 border-forest bg-white" />
-                      Feminino
-                    </span>
+                      <span className="flex items-center gap-2">
+                        <span className="inline-block size-3.5 rounded-full border-2 border-forest bg-white" />
+                        Feminino
+                      </span>
                     )}
                     {legendFlags.outro && (
-                    <span className="flex items-center gap-2">
-                      <span className="inline-block size-3.5 rotate-45 border-2 border-gold bg-white" />
-                      Não-binário / desconhecido
-                    </span>
+                      <span className="flex items-center gap-2">
+                        <span className="inline-block size-3.5 rotate-45 border-2 border-gold bg-white" />
+                        Não-binário / desconhecido
+                      </span>
                     )}
                     {legendFlags.aborto && (
-                    <span className="flex items-center gap-2">
-                      <svg
-                        viewBox="0 0 10 10"
-                        className="size-3.5"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                      >
-                        <polygon points="5,1 9,9 1,9" className="text-foreground/70" />
-                      </svg>
-                      Aborto
-                    </span>
+                      <span className="flex items-center gap-2">
+                        <svg
+                          viewBox="0 0 10 10"
+                          className="size-3.5"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                        >
+                          <polygon points="5,1 9,9 1,9" className="text-foreground/70" />
+                        </svg>
+                        Aborto
+                      </span>
                     )}
                     {legendFlags.falecido && (
-                    <span className="flex items-center gap-2">
-                      <span className="relative inline-block size-3.5 border-2 border-transparent bg-white">
-                        <span className="absolute inset-[-2px] w-[140%] h-[2px] bg-foreground rotate-[45deg] origin-top-left" />
+                      <span className="flex items-center gap-2">
+                        <span className="relative inline-block size-3.5 border-2 border-transparent bg-white">
+                          <span className="absolute inset-[-2px] w-[140%] h-[2px] bg-foreground rotate-[45deg] origin-top-left" />
+                        </span>
+                        Falecido
                       </span>
-                      Falecido
-                    </span>
                     )}
                     <span className="flex items-center gap-2">
                       <span className="inline-block size-3.5 border-2 border-forest bg-forest/20" />
                       Paciente-índice
                     </span>
-                    <span className="text-[13px] text-muted-foreground">Mostra só os símbolos presentes neste mapa.</span>
+                    <span className="text-[13px] text-muted-foreground">
+                      Mostra só os símbolos presentes neste mapa.
+                    </span>
                   </div>
                 </PopoverContent>
               </Popover>
@@ -1598,9 +1600,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                     isMobile ? "Abrir ficha" : panelOpen ? "Recolher ficha" : "Mostrar ficha"
                   }
                   aria-expanded={isMobile ? mobileSheetOpen : panelOpen}
-                  onClick={() =>
-                    isMobile ? setMobileSheetOpen(true) : setPanelOpen((v) => !v)
-                  }
+                  onClick={() => (isMobile ? setMobileSheetOpen(true) : setPanelOpen((v) => !v))}
                 >
                   {panelOpen ? (
                     <PanelRightClose className="size-4" />
@@ -1667,82 +1667,87 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
               <SheetTitle>Ficha da pessoa selecionada</SheetTitle>
             </SheetHeader>
             <div className="atlas-person-panel atlas-person-panel--sheet">
-        {focusedPerson ? (
-          <>
-            <h2>{focusedPerson.preferred_name || focusedPerson.full_name}</h2>
-            <p className="mt-2 text-xs text-muted-foreground">
-              {focusedPerson.is_proband
-                ? "Pessoa de referência"
-                : focusedPerson.relationship_to_proband || "Vínculo não informado"}
-            </p>
-            <dl>
-              <div>
-                <dt>Nome completo</dt>
-                <dd>{focusedPerson.full_name || "Não informado"}</dd>
-              </div>
-              <div>
-                <dt>Nascimento</dt>
-                <dd>
-                  {focusedPerson.birth_date
-                    ? new Date(focusedPerson.birth_date + "T12:00:00").toLocaleDateString("pt-BR")
-                    : "Não informado"}
-                </dd>
-              </div>
-              {focusedPerson.is_deceased && (
-                <div>
-                  <dt>Falecimento</dt>
-                  <dd>
-                    {focusedPerson.death_date
-                      ? new Date(focusedPerson.death_date + "T12:00:00").toLocaleDateString("pt-BR")
-                      : "Data não informada"}
-                  </dd>
-                </div>
+              {focusedPerson ? (
+                <>
+                  <h2>{focusedPerson.preferred_name || focusedPerson.full_name}</h2>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {focusedPerson.is_proband
+                      ? "Pessoa de referência"
+                      : focusedPerson.relationship_to_proband || "Vínculo não informado"}
+                  </p>
+                  <dl>
+                    <div>
+                      <dt>Nome completo</dt>
+                      <dd>{focusedPerson.full_name || "Não informado"}</dd>
+                    </div>
+                    <div>
+                      <dt>Nascimento</dt>
+                      <dd>
+                        {focusedPerson.birth_date
+                          ? new Date(focusedPerson.birth_date + "T12:00:00").toLocaleDateString(
+                              "pt-BR",
+                            )
+                          : "Não informado"}
+                      </dd>
+                    </div>
+                    {focusedPerson.is_deceased && (
+                      <div>
+                        <dt>Falecimento</dt>
+                        <dd>
+                          {focusedPerson.death_date
+                            ? new Date(focusedPerson.death_date + "T12:00:00").toLocaleDateString(
+                                "pt-BR",
+                              )
+                            : "Data não informada"}
+                        </dd>
+                      </div>
+                    )}
+                    <div>
+                      <dt>Gênero registrado</dt>
+                      <dd>{focusedPerson.gender || "Não informado"}</dd>
+                    </div>
+                    <div>
+                      <dt>Observações</dt>
+                      <dd>{focusedPerson.notes || "Nenhuma observação registrada."}</dd>
+                    </div>
+                  </dl>
+                  <div className="atlas-panel-actions">
+                    <Button variant="outline" onClick={() => setEditingPerson(focusedPerson)}>
+                      Editar pessoa
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setRelDialog({ open: true, seed: { from: focusedPerson.id } })}
+                    >
+                      Criar vínculo
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        setRelDialog({ open: true, seed: { to: focusedPerson.id, type: "parent" } })
+                      }
+                    >
+                      Definir pai ou mãe
+                    </Button>
+                  </div>
+                  <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
+                    Pai/mãe definidos aqui têm precedência sobre o parentesco da planilha — use para
+                    meios-irmãos ou familiares soltos.
+                  </p>
+                  <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
+                    Selecione uma pessoa no mapa para consultar sua ficha. Dê dois cliques para
+                    editar.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h2>Pessoas e relações</h2>
+                  <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+                    Adicione a primeira pessoa para começar o genossociograma. Os dados de cada
+                    pessoa aparecem aqui.
+                  </p>
+                </>
               )}
-              <div>
-                <dt>Gênero registrado</dt>
-                <dd>{focusedPerson.gender || "Não informado"}</dd>
-              </div>
-              <div>
-                <dt>Observações</dt>
-                <dd>{focusedPerson.notes || "Nenhuma observação registrada."}</dd>
-              </div>
-            </dl>
-            <div className="atlas-panel-actions">
-              <Button variant="outline" onClick={() => setEditingPerson(focusedPerson)}>
-                Editar pessoa
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setRelDialog({ open: true, seed: { from: focusedPerson.id } })}
-              >
-                Criar vínculo
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() =>
-                  setRelDialog({ open: true, seed: { to: focusedPerson.id, type: "parent" } })
-                }
-              >
-                Definir pai ou mãe
-              </Button>
-            </div>
-            <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
-              Pai/mãe definidos aqui têm precedência sobre o parentesco da planilha — use para
-              meios-irmãos ou familiares soltos.
-            </p>
-            <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
-              Selecione uma pessoa no mapa para consultar sua ficha. Dê dois cliques para editar.
-            </p>
-          </>
-        ) : (
-          <>
-            <h2>Pessoas e relações</h2>
-            <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-              Adicione a primeira pessoa para começar o genossociograma. Os dados de cada pessoa
-              aparecem aqui.
-            </p>
-          </>
-        )}
             </div>
           </SheetContent>
         </Sheet>
@@ -1752,82 +1757,84 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
           aria-label="Ficha da pessoa selecionada"
           hidden={!panelOpen}
         >
-        {focusedPerson ? (
-          <>
-            <h2>{focusedPerson.preferred_name || focusedPerson.full_name}</h2>
-            <p className="mt-2 text-xs text-muted-foreground">
-              {focusedPerson.is_proband
-                ? "Pessoa de referência"
-                : focusedPerson.relationship_to_proband || "Vínculo não informado"}
-            </p>
-            <dl>
-              <div>
-                <dt>Nome completo</dt>
-                <dd>{focusedPerson.full_name || "Não informado"}</dd>
-              </div>
-              <div>
-                <dt>Nascimento</dt>
-                <dd>
-                  {focusedPerson.birth_date
-                    ? new Date(focusedPerson.birth_date + "T12:00:00").toLocaleDateString("pt-BR")
-                    : "Não informado"}
-                </dd>
-              </div>
-              {focusedPerson.is_deceased && (
+          {focusedPerson ? (
+            <>
+              <h2>{focusedPerson.preferred_name || focusedPerson.full_name}</h2>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {focusedPerson.is_proband
+                  ? "Pessoa de referência"
+                  : focusedPerson.relationship_to_proband || "Vínculo não informado"}
+              </p>
+              <dl>
                 <div>
-                  <dt>Falecimento</dt>
+                  <dt>Nome completo</dt>
+                  <dd>{focusedPerson.full_name || "Não informado"}</dd>
+                </div>
+                <div>
+                  <dt>Nascimento</dt>
                   <dd>
-                    {focusedPerson.death_date
-                      ? new Date(focusedPerson.death_date + "T12:00:00").toLocaleDateString("pt-BR")
-                      : "Data não informada"}
+                    {focusedPerson.birth_date
+                      ? new Date(focusedPerson.birth_date + "T12:00:00").toLocaleDateString("pt-BR")
+                      : "Não informado"}
                   </dd>
                 </div>
-              )}
-              <div>
-                <dt>Gênero registrado</dt>
-                <dd>{focusedPerson.gender || "Não informado"}</dd>
+                {focusedPerson.is_deceased && (
+                  <div>
+                    <dt>Falecimento</dt>
+                    <dd>
+                      {focusedPerson.death_date
+                        ? new Date(focusedPerson.death_date + "T12:00:00").toLocaleDateString(
+                            "pt-BR",
+                          )
+                        : "Data não informada"}
+                    </dd>
+                  </div>
+                )}
+                <div>
+                  <dt>Gênero registrado</dt>
+                  <dd>{focusedPerson.gender || "Não informado"}</dd>
+                </div>
+                <div>
+                  <dt>Observações</dt>
+                  <dd>{focusedPerson.notes || "Nenhuma observação registrada."}</dd>
+                </div>
+              </dl>
+              <div className="atlas-panel-actions">
+                <Button variant="outline" onClick={() => setEditingPerson(focusedPerson)}>
+                  Editar pessoa
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setRelDialog({ open: true, seed: { from: focusedPerson.id } })}
+                >
+                  Criar vínculo
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    setRelDialog({ open: true, seed: { to: focusedPerson.id, type: "parent" } })
+                  }
+                >
+                  Definir pai ou mãe
+                </Button>
               </div>
-              <div>
-                <dt>Observações</dt>
-                <dd>{focusedPerson.notes || "Nenhuma observação registrada."}</dd>
-              </div>
-            </dl>
-            <div className="atlas-panel-actions">
-              <Button variant="outline" onClick={() => setEditingPerson(focusedPerson)}>
-                Editar pessoa
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setRelDialog({ open: true, seed: { from: focusedPerson.id } })}
-              >
-                Criar vínculo
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() =>
-                  setRelDialog({ open: true, seed: { to: focusedPerson.id, type: "parent" } })
-                }
-              >
-                Definir pai ou mãe
-              </Button>
-            </div>
-            <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
-              Pai/mãe definidos aqui têm precedência sobre o parentesco da planilha — use para
-              meios-irmãos ou familiares soltos.
-            </p>
-            <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
-              Selecione uma pessoa no mapa para consultar sua ficha. Dê dois cliques para editar.
-            </p>
-          </>
-        ) : (
-          <>
-            <h2>Pessoas e relações</h2>
-            <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-              Adicione a primeira pessoa para começar o genossociograma. Os dados de cada pessoa
-              aparecem aqui.
-            </p>
-          </>
-        )}
+              <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
+                Pai/mãe definidos aqui têm precedência sobre o parentesco da planilha — use para
+                meios-irmãos ou familiares soltos.
+              </p>
+              <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
+                Selecione uma pessoa no mapa para consultar sua ficha. Dê dois cliques para editar.
+              </p>
+            </>
+          ) : (
+            <>
+              <h2>Pessoas e relações</h2>
+              <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+                Adicione a primeira pessoa para começar o genossociograma. Os dados de cada pessoa
+                aparecem aqui.
+              </p>
+            </>
+          )}
         </aside>
       )}
 

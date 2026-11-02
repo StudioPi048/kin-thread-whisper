@@ -58,7 +58,11 @@ export function checkLayoutInvariants(g: LogicalGraph, placement: Placement): Vi
     const p = personPos.get(pid);
     if (!p) continue;
     if (Math.abs(p.y - genY(pe.generation)) > EPS)
-      violations.push({ rule: "FORA_DA_FAIXA_DA_GERACAO", detail: `${pid} y=${p.y} geração ${pe.generation}`, ids: [pid] });
+      violations.push({
+        rule: "FORA_DA_FAIXA_DA_GERACAO",
+        detail: `${pid} y=${p.y} geração ${pe.generation}`,
+        ids: [pid],
+      });
     if (probandPos && p.y < probandPos.y - EPS)
       violations.push({ rule: "ACIMA_DO_CLIENTE", detail: `${pid} acima do cliente`, ids: [pid] });
   }
@@ -68,14 +72,26 @@ export function checkLayoutInvariants(g: LogicalGraph, placement: Placement): Vi
     const pe = g.persons.get(e.personId);
     if (!u || !p || !pe) continue;
     if (e.kind === "child" && pe.generation !== u.generation - 1)
-      violations.push({ rule: "GERACAO_FILHO_INCOERENTE", detail: `${e.personId} em ${e.unionId}`, ids: [e.personId, e.unionId] });
+      violations.push({
+        rule: "GERACAO_FILHO_INCOERENTE",
+        detail: `${e.personId} em ${e.unionId}`,
+        ids: [e.personId, e.unionId],
+      });
     if (e.kind === "partner" && pe.generation !== u.generation)
-      violations.push({ rule: "GERACAO_CASAL_INCOERENTE", detail: `${e.personId} em ${e.unionId}`, ids: [e.personId, e.unionId] });
+      violations.push({
+        rule: "GERACAO_CASAL_INCOERENTE",
+        detail: `${e.personId} em ${e.unionId}`,
+        ids: [e.personId, e.unionId],
+      });
     if (e.kind === "child")
       for (const par of u.partners) {
         const pp = personPos.get(par);
         if (pp && pp.y <= p.y + EPS)
-          violations.push({ rule: "GENITOR_ACIMA_DO_FILHO", detail: `${par} não está abaixo de ${e.personId}`, ids: [par, e.personId] });
+          violations.push({
+            rule: "GENITOR_ACIMA_DO_FILHO",
+            detail: `${par} não está abaixo de ${e.personId}`,
+            ids: [par, e.personId],
+          });
       }
   }
 

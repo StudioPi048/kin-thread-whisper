@@ -35,9 +35,14 @@ export function parseDateField(d?: string): ParsedDate {
     return isValidYMD(val) ? { kind: "exact", iso: val } : bad("dia ou mês inexistente");
   }
   if (/^\d{4}$/.test(val)) {
-    return yearOk(Number(val)) ? { kind: "partial", raw: val, label: "só o ano" } : bad(`ano fora de ${MIN_YEAR}–${maxYear()}`);
+    return yearOk(Number(val))
+      ? { kind: "partial", raw: val, label: "só o ano" }
+      : bad(`ano fora de ${MIN_YEAR}–${maxYear()}`);
   }
-  const parts = val.split(/[/\\\-. \t]/).map((p) => p.trim()).filter(Boolean);
+  const parts = val
+    .split(/[/\\\-. \t]/)
+    .map((p) => p.trim())
+    .filter(Boolean);
   if (!parts.length || !parts.every((p) => /^\d+$/.test(p))) return bad("formato não reconhecido");
 
   if (parts.length === 2) {
@@ -45,7 +50,9 @@ export function parseDateField(d?: string): ParsedDate {
     if (p2.length === 4) {
       const m = Number(p1);
       if (m < 1 || m > 12) return bad("mês inexistente");
-      return yearOk(Number(p2)) ? { kind: "partial", raw: val, label: "mês e ano, sem dia" } : bad(`ano fora de ${MIN_YEAR}–${maxYear()}`);
+      return yearOk(Number(p2))
+        ? { kind: "partial", raw: val, label: "mês e ano, sem dia" }
+        : bad(`ano fora de ${MIN_YEAR}–${maxYear()}`);
     }
     const [dd, mm] = Number(p1) > 12 ? [p1, p2] : Number(p2) > 12 ? [p2, p1] : [p1, p2];
     // Valida dia/mês num ano bissexto qualquer só para checar existência; o ano NÃO é gravado.
@@ -154,7 +161,6 @@ export interface ImportRecord {
   notes: string | null;
 }
 
-
 export function analyzeImport(
   rows: string[][],
   mapping: Mapping,
@@ -199,8 +205,10 @@ export function analyzeImport(
     const deathFlag = /^(sim|x|falecid[oa])$/i.test(deathRaw);
     const birthP = parseDateField(birthRaw);
     const deathP = deathFlag ? ({ kind: "empty" } as ParsedDate) : parseDateField(deathRaw);
-    if (birthP.kind === "invalid") messages.push(`Nascimento inválido: "${birthRaw}" (${birthP.reason})`);
-    if (deathP.kind === "invalid") messages.push(`Falecimento inválido: "${deathRaw}" (${deathP.reason})`);
+    if (birthP.kind === "invalid")
+      messages.push(`Nascimento inválido: "${birthRaw}" (${birthP.reason})`);
+    if (deathP.kind === "invalid")
+      messages.push(`Falecimento inválido: "${deathRaw}" (${deathP.reason})`);
     const birth = birthP.kind === "exact" ? birthP.iso : null;
     const death = deathP.kind === "exact" ? deathP.iso : null;
     if (birth && death && birth > death) messages.push("Falecimento anterior ao nascimento");
@@ -211,12 +219,20 @@ export function analyzeImport(
     const warnings: string[] = [];
     const partialNotes: string[] = [];
     if (birthP.kind === "partial") {
-      warnings.push(`Nascimento parcial ("${birthP.raw}", ${birthP.label}): fica nas observações, sem data gravada`);
-      partialNotes.push(`[Importação] Nascimento informado: "${birthP.raw}" (${birthP.label}; não gravado como data exata)`);
+      warnings.push(
+        `Nascimento parcial ("${birthP.raw}", ${birthP.label}): fica nas observações, sem data gravada`,
+      );
+      partialNotes.push(
+        `[Importação] Nascimento informado: "${birthP.raw}" (${birthP.label}; não gravado como data exata)`,
+      );
     }
     if (deathP.kind === "partial") {
-      warnings.push(`Falecimento parcial ("${deathP.raw}", ${deathP.label}): fica nas observações, sem data gravada`);
-      partialNotes.push(`[Importação] Falecimento informado: "${deathP.raw}" (${deathP.label}; não gravado como data exata)`);
+      warnings.push(
+        `Falecimento parcial ("${deathP.raw}", ${deathP.label}): fica nas observações, sem data gravada`,
+      );
+      partialNotes.push(
+        `[Importação] Falecimento informado: "${deathP.raw}" (${deathP.label}; não gravado como data exata)`,
+      );
     }
 
     if (messages.length) return { line, status: "error", messages, record: null };

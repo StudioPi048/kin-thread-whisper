@@ -1068,7 +1068,15 @@ function Th({ children, w, sticky }: { children?: React.ReactNode; w?: string; s
   );
 }
 /** Coluna com largura ajustável por arrasto ou teclado (setas ←/→). */
-function ResizableTh({ label, initial, sticky }: { label: string; initial: number; sticky?: boolean }) {
+function ResizableTh({
+  label,
+  initial,
+  sticky,
+}: {
+  label: string;
+  initial: number;
+  sticky?: boolean;
+}) {
   const [width, setWidth] = React.useState(initial);
   const clamp = (v: number) => Math.min(600, Math.max(90, v));
   const startDrag = (e: React.PointerEvent) => {

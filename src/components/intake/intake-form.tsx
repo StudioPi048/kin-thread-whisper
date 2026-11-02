@@ -204,7 +204,9 @@ export function IntakeForm({ clientId, professionalId }: Props) {
                   ((draft.section_sources as Record<string, string> | null) ?? {})[section] ?? ""
                 }
                 onChange={(e) => {
-                  const cur = { ...((draft.section_sources as Record<string, string> | null) ?? {}) };
+                  const cur = {
+                    ...((draft.section_sources as Record<string, string> | null) ?? {}),
+                  };
                   if (e.target.value) cur[section] = e.target.value;
                   else delete cur[section];
                   update({ section_sources: cur as ClientIntake["section_sources"] });

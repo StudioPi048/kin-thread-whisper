@@ -23,7 +23,14 @@ export function FamilyAtlasDiagram() {
         {people.map((p) => (
           <g key={p.name}>
             {p.name === "Helena" && (
-              <circle cx={p.x} cy={p.y} r="33" fill="none" stroke="var(--color-gold)" strokeWidth="2" />
+              <circle
+                cx={p.x}
+                cy={p.y}
+                r="33"
+                fill="none"
+                stroke="var(--color-gold)"
+                strokeWidth="2"
+              />
             )}
             {p.square ? (
               <rect
@@ -36,7 +43,14 @@ export function FamilyAtlasDiagram() {
                 strokeWidth="1.5"
               />
             ) : (
-              <circle cx={p.x} cy={p.y} r="26" fill="var(--color-gold)" stroke="var(--color-border)" strokeWidth="1.5" />
+              <circle
+                cx={p.x}
+                cy={p.y}
+                r="26"
+                fill="var(--color-gold)"
+                stroke="var(--color-border)"
+                strokeWidth="1.5"
+              />
             )}
             <text
               x={p.x}

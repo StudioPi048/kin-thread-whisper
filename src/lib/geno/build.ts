@@ -601,7 +601,9 @@ function applyExplicitFiliation(
     if (r.relationship_type !== "parent" || !r.from_person_id || !r.to_person_id) continue;
     if (!byId.has(r.from_person_id) || !byId.has(r.to_person_id)) continue;
     if (r.from_person_id === r.to_person_id) {
-      g.errors.push(`${byId.get(r.to_person_id)?.full_name ?? "Pessoa"} está como genitor(a) de si mesma.`);
+      g.errors.push(
+        `${byId.get(r.to_person_id)?.full_name ?? "Pessoa"} está como genitor(a) de si mesma.`,
+      );
       continue;
     }
     const list = parentsOf.get(r.to_person_id) ?? [];
@@ -629,7 +631,12 @@ function applyExplicitFiliation(
     const child = g.persons.get(childId);
     const branch = child?.branchId ?? g.persons.get(parentIds[0])?.branchId ?? "other";
     if (!child)
-      g.persons.set(childId, { id: childId, row: byId.get(childId)!, generation: 0, branchId: branch });
+      g.persons.set(childId, {
+        id: childId,
+        row: byId.get(childId)!,
+        generation: 0,
+        branchId: branch,
+      });
     for (const pid of parentIds) {
       if (!g.persons.has(pid))
         g.persons.set(pid, { id: pid, row: byId.get(pid)!, generation: 1, branchId: branch });
@@ -743,7 +750,9 @@ export function resolveGenerations(g: LogicalGraph) {
     const pid = pn.slice(2);
     const uid = un.slice(2);
     const before = g.edges.length;
-    g.edges = g.edges.filter((e) => !(e.kind === "child" && e.personId === pid && e.unionId === uid));
+    g.edges = g.edges.filter(
+      (e) => !(e.kind === "child" && e.personId === pid && e.unionId === uid),
+    );
     if (g.edges.length !== before) {
       const u = g.unions.get(uid);
       if (u) u.children = u.children.filter((c) => c !== pid);

@@ -151,9 +151,10 @@ export function RelationshipFormDialog({
             (r) => r.from_person_id === form.to_person_id && r.to_person_id === form.from_person_id,
           )
         )
-          throw new Error("Vínculo invertido: o filho(a) já está registrado como genitor(a) dessa pessoa.");
+          throw new Error(
+            "Vínculo invertido: o filho(a) já está registrado como genitor(a) dessa pessoa.",
+          );
       }
-
 
       const payload = {
         client_id: clientId,

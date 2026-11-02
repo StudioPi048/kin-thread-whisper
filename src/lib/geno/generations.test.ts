@@ -51,7 +51,7 @@ const par = (from: string, to: string, qualifier: string | null = null) => ({
   updated_at: "",
   marriage_order: null,
 });
-const shuffle = <T,>(a: T[], seed = 7) => {
+const shuffle = <T>(a: T[], seed = 7) => {
   const r = [...a];
   let s = seed;
   for (let i = r.length - 1; i > 0; i--) {
@@ -82,14 +82,29 @@ function threeGen() {
     par(avoM.id, mae.id),
     par(avaM.id, mae.id),
   ];
-  return { cli, irmao, pai, mae, avoP, avaP, avoM, avaM, persons: [cli, irmao, pai, mae, avoP, avaP, avoM, avaM], rels };
+  return {
+    cli,
+    irmao,
+    pai,
+    mae,
+    avoP,
+    avaP,
+    avoM,
+    avaM,
+    persons: [cli, irmao, pai, mae, avoP, avaP, avoM, avaM],
+    rels,
+  };
 }
 
 describe("gerações resolvidas só por filiação explícita (sem tags)", () => {
   it("três gerações, relações embaralhadas: cliente/irmão 0, pais 1, avós 2", () => {
     for (const seed of [1, 3, 11, 42]) {
       const f = threeGen();
-      const g = buildLogicalGraph({ persons: shuffle(f.persons, seed), rels: shuffle(f.rels, seed + 1) as never, probandId: f.cli.id });
+      const g = buildLogicalGraph({
+        persons: shuffle(f.persons, seed),
+        rels: shuffle(f.rels, seed + 1) as never,
+        probandId: f.cli.id,
+      });
       const gen = (id: string) => g.persons.get(id)!.generation;
       expect(gen(f.cli.id)).toBe(0);
       expect(gen(f.irmao.id)).toBe(0);
@@ -111,14 +126,24 @@ describe("gerações resolvidas só por filiação explícita (sem tags)", () =>
     const pai = p("Pai");
     const mae = p("Mãe");
     const outra = p("Outra mãe");
-    const rels = [par(outra.id, meio.id), par(pai.id, meio.id), par(pai.id, cli.id), par(mae.id, cli.id)];
-    const g = buildLogicalGraph({ persons: [meio, outra, pai, mae, cli], rels: rels as never, probandId: cli.id });
+    const rels = [
+      par(outra.id, meio.id),
+      par(pai.id, meio.id),
+      par(pai.id, cli.id),
+      par(mae.id, cli.id),
+    ];
+    const g = buildLogicalGraph({
+      persons: [meio, outra, pai, mae, cli],
+      rels: rels as never,
+      probandId: cli.id,
+    });
     const pl = layoutGraph(g);
     const y = (id: string) => pl.personPos.get(id)!.y;
     expect(y(meio.id)).toBe(y(cli.id));
     expect(y(pai.id)).toBeGreaterThan(y(meio.id));
     expect(y(outra.id)).toBeGreaterThan(y(meio.id));
-    const uOf = (id: string) => g.edges.find((e) => e.kind === "child" && e.personId === id)!.unionId;
+    const uOf = (id: string) =>
+      g.edges.find((e) => e.kind === "child" && e.personId === id)!.unionId;
     expect(uOf(meio.id)).not.toBe(uOf(cli.id));
   });
 
@@ -138,7 +163,11 @@ describe("gerações resolvidas só por filiação explícita (sem tags)", () =>
     n = 0;
     const cli = p("Cliente", { is_proband: true });
     const ps = [p("G1"), p("G2"), p("G3")];
-    const g = buildLogicalGraph({ persons: [cli, ...ps], rels: ps.map((x) => par(x.id, cli.id)) as never, probandId: cli.id });
+    const g = buildLogicalGraph({
+      persons: [cli, ...ps],
+      rels: ps.map((x) => par(x.id, cli.id)) as never,
+      probandId: cli.id,
+    });
     expect(g.errors.some((e) => /3 genitores/.test(e))).toBe(true);
     expect(g.persons.size).toBe(4);
   });
@@ -147,8 +176,14 @@ describe("gerações resolvidas só por filiação explícita (sem tags)", () =>
     n = 0;
     const cli = p("Cliente", { is_proband: true });
     const m = p("Mãe adotiva");
-    const g = buildLogicalGraph({ persons: [cli, m], rels: [par(m.id, cli.id, "adotiva")] as never, probandId: cli.id });
-    expect(g.edges.find((e) => e.kind === "child" && e.personId === cli.id)?.childKind).toBe("adoptive");
+    const g = buildLogicalGraph({
+      persons: [cli, m],
+      rels: [par(m.id, cli.id, "adotiva")] as never,
+      probandId: cli.id,
+    });
+    expect(g.edges.find((e) => e.kind === "child" && e.personId === cli.id)?.childKind).toBe(
+      "adoptive",
+    );
   });
 });
 
@@ -159,18 +194,33 @@ describe("faixa Y fixa por geração (layout salvo, arrasto, rascunho)", () => {
       { node_id: f.cli.id, node_type: "person", x: 999, y: 2000 },
       { node_id: f.avoP.id, node_type: "person", x: -555, y: -800 },
     ] as never;
-    const g = buildLogicalGraph({ persons: f.persons, rels: f.rels as never, probandId: f.cli.id, positions });
+    const g = buildLogicalGraph({
+      persons: f.persons,
+      rels: f.rels as never,
+      probandId: f.cli.id,
+      positions,
+    });
     const pl = layoutGraph(g);
     expect(pl.personPos.get(f.cli.id)).toEqual({ x: 999, y: 0 });
     expect(pl.personPos.get(f.avoP.id)).toEqual({ x: -555, y: genY(2) });
     expect(pl.normalizedY).toBe(2);
-    const orientation = ["FORA_DA_FAIXA_DA_GERACAO", "ACIMA_DO_CLIENTE", "GENITOR_ACIMA_DO_FILHO", "GERACAO_FILHO_INCOERENTE", "GERACAO_CASAL_INCOERENTE"];
+    const orientation = [
+      "FORA_DA_FAIXA_DA_GERACAO",
+      "ACIMA_DO_CLIENTE",
+      "GENITOR_ACIMA_DO_FILHO",
+      "GERACAO_FILHO_INCOERENTE",
+      "GERACAO_CASAL_INCOERENTE",
+    ];
     expect(checkLayoutInvariants(g, pl).filter((v) => orientation.includes(v.rule))).toEqual([]);
   });
 
   it("rascunho/undo inválido só aplica X; Y continua da geração", () => {
     const current = { a: [10, 0] as [number, number], b: [20, 320] as [number, number] };
-    const draft = { a: [50, 900] as [number, number], b: [70, -10] as [number, number], ghost: [1, 1] as [number, number] };
+    const draft = {
+      a: [50, 900] as [number, number],
+      b: [70, -10] as [number, number],
+      ghost: [1, 1] as [number, number],
+    };
     expect(constrainSnapshotY(draft, current)).toEqual({ a: [50, 0], b: [70, 320] });
     const h = new LayoutHistory();
     h.push(draft);
