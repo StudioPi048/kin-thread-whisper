@@ -14,7 +14,7 @@
 @import "@fontsource/inter/500.css";
 @import "@fontsource/inter/600.css";
 
-/* GENEALIZ — Atlas familiar. Approved composition: .impeccable/mocks/mapa.png */
+/* GENEALIZ — Arquivo vivo. Tokens únicos em :root abaixo; ver DESIGN.md. */
 @theme inline {
   --font-serif: "Cormorant Garamond", ui-serif, Georgia, serif;
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
@@ -116,37 +116,37 @@
 }
 
 :root {
-  --forest: #17273a;
-  --forest-mid: #243b53;
-  --forest-soft: #405b76;
-  --forest-mist: #eaf0f6;
+  --forest: #253c38;
+  --forest-mid: #36534b;
+  --forest-soft: #59706a;
+  --forest-mist: #e8ede7;
 
-  --gold: #dbac67;
-  --gold-soft: #e7bf86;
-  --gold-muted: #f4e6d0;
+  --gold: #cba56b;
+  --gold-soft: #dfbe8c;
+  --gold-muted: #f0e3ca;
 
-  --bronze: #8a5d25;
+  --bronze: #7e572a;
   --ivory: #ffffff;
-  --warm-gray: #53677e;
-  --olive: #526878;
+  --warm-gray: #647169;
+  --olive: #59706a;
   --terracotta: #a14d3e;
   --moss: #446f69;
 
-  --sepia: #596b80;
-  --wood: #405269;
-  --graphite: #586b82;
-  --parchment: #eaf0f6;
+  --sepia: #59665e;
+  --wood: #36534b;
+  --graphite: #59665e;
+  --parchment: #ecece8;
 
-  --archive: #f5f7fa;
-  --archive-old: #eaf0f6;
+  --archive: #f6f6f4;
+  --archive-old: #ecece8;
   --archive-doc: #ffffff;
-  --ink: #17273a;
-  --ink-soft: #4c6179;
-  --cream: #f5f7fa;
+  --ink: #253430;
+  --ink-soft: #59665e;
+  --cream: #f6f6f4;
 
   --clinical-critical: #8b3a3a;
   --clinical-warning: #8a6407;
-  --clinical-positive: #243b53;
+  --clinical-positive: #36534b;
 
   --background: var(--archive);
   --foreground: var(--ink);
@@ -172,8 +172,8 @@
   --destructive: var(--clinical-critical);
   --destructive-foreground: var(--ivory);
 
-  --border: #d8e1ea;
-  --input: #bdcada;
+  --border: #dddcd3;
+  --input: #c8cdc3;
   --ring: var(--forest-soft);
 
   --surface-archive: #f5f7fa;
@@ -1303,24 +1303,6 @@
 }
 
 /* GENEALIZ — Arquivo vivo. Photographic memory, precise working surfaces. */
-:root {
-  --archive: #f6f3ed;
-  --archive-old: #ece7dd;
-  --cream: #f6f3ed;
-  --forest: #253c38;
-  --forest-mid: #36534b;
-  --forest-soft: #59706a;
-  --forest-mist: #e8ede7;
-  --ink: #253430;
-  --ink-soft: #59665e;
-  --warm-gray: #647169;
-  --border: #dddcd3;
-  --input: #c8cdc3;
-  --gold: #cba56b;
-  --gold-soft: #dfbe8c;
-  --gold-muted: #f0e3ca;
-  --bronze: #7e572a;
-}
 .genealiz-wordmark {
   display: inline-flex;
   align-items: center;
