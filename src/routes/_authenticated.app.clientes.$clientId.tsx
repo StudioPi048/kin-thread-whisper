@@ -507,7 +507,7 @@ function ClientDossierPage() {
                     </>
                   ) : (
                     <>
-                      <TreePine className="size-3.5" /> Ver genograma
+                      <TreePine className="size-3.5" /> Ver genossociograma
                     </>
                   )}
                 </Button>

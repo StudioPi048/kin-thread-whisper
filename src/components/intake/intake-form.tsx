@@ -918,7 +918,7 @@ function SectionClanChecklist({ draft, update }: SectionProps) {
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Para cada item, indique o(s) membro(s) portador(es). Depois, aponte-os no genograma.
+        Para cada item, indique o(s) membro(s) portador(es). Depois, aponte-os no genossociograma.
       </p>
       <div className="grid gap-4 md:grid-cols-2">
         {CLAN_ITEMS.map((it) => (

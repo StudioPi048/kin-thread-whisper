@@ -189,7 +189,7 @@ function minutesBetween(a: string, b: string): number {
 /* Atalhos apenas para destinos que existem — a interface não promete o que não entrega */
 const QUICK_ACTIONS = [
   { label: "Arquivo de clientes", icon: Users, to: "/app/clientes" },
-  { label: "Novo genograma", icon: GitBranch, to: "/app/genossociogramas" },
+  { label: "Novo genossociograma", icon: GitBranch, to: "/app/genossociogramas" },
   { label: "Linha do tempo", icon: TimerReset, to: "/app/linha-do-tempo" },
   { label: "Abrir biblioteca", icon: BookOpen, to: "/app/biblioteca" },
 ] as const;

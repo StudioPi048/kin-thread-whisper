@@ -557,7 +557,7 @@ function EmptyState({
       title={tab === "active" ? "A jornada começa aqui." : "Nenhum dossiê arquivado."}
       description={
         tab === "active"
-          ? "Todo caso começa por um nome. O genograma, as sessões e os padrões sistêmicos se constroem a partir do paciente-índice."
+          ? "Todo caso começa por um nome. O genossociograma, as sessões e os padrões sistêmicos se constroem a partir do paciente-índice."
           : "Quando arquivar um dossiê, ele aparecerá aqui para consulta histórica."
       }
       action={

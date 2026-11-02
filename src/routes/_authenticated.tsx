@@ -50,10 +50,10 @@ const nav = [
   { to: "/app", label: "Mesa de trabalho", shortLabel: "Mesa", icon: Home, exact: true },
   { to: "/app/clientes", label: "Clientes", shortLabel: "Clientes", icon: Users },
   { to: "/app/agenda", label: "Agenda", shortLabel: "Agenda", icon: Calendar },
-  { to: "/app/genossociogramas", label: "Genossociogramas", shortLabel: "Árvores", icon: Network },
+  { to: "/app/genossociogramas", label: "Genossociogramas", shortLabel: "Mapas", icon: Network },
   { to: "/app/linha-do-tempo", label: "Linha do tempo", shortLabel: "Tempo", icon: History },
   { to: "/app/biblioteca", label: "Biblioteca", shortLabel: "Livros", icon: Library },
-  { to: "/app/ia-clinica", label: "IA clínica", shortLabel: "IA", icon: Sparkles },
+  { to: "/app/ia-clinica", label: "Evidências e hipóteses", shortLabel: "IA", icon: Sparkles },
   { to: "/app/guia", label: "Guia", shortLabel: "Guia", icon: BookOpen },
   { to: "/app/configuracoes", label: "Configurações", shortLabel: "Ajustes", icon: Settings },
 ] as const;
