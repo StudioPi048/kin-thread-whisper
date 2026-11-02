@@ -1,3 +1,4 @@
+import { readVisits } from "@/lib/recent-activity";
 import {
   createFileRoute,
   Link,
@@ -201,10 +202,10 @@ function AuthenticatedLayout() {
           <button
             className="atlas-search"
             onClick={() => setIsSearchOpen(true)}
-            aria-label="Buscar clientes"
+            aria-label="Buscar clientes ou páginas"
           >
             <Search size={18} />
-            <span>Buscar clientes...</span>
+            <span>Buscar clientes ou páginas...</span>
             <kbd>⌘ K</kbd>
           </button>
           <Link
@@ -263,21 +264,43 @@ function AuthenticatedLayout() {
         <CommandInput
           value={searchQuery}
           onValueChange={setSearchQuery}
-          placeholder="Buscar clientes ativos..."
+          placeholder="Buscar clientes ou páginas..."
         />
         <CommandList>
           <CommandEmpty>
             <span className="font-serif text-sm text-warm-gray italic">
-              Nenhum cliente encontrado.
+              Nenhum cliente ou página encontrado.
             </span>
           </CommandEmpty>
+          {nav
+            .filter((n) => !searchQuery.trim() || n.label.toLowerCase().includes(searchQuery.toLowerCase().trim()))
+            .map((n) => (
+              <CommandItem
+                key={n.to}
+                value={`page:${n.to}`}
+                onSelect={() => {
+                  setIsSearchOpen(false);
+                  navigate({ to: n.to });
+                }}
+                className="flex items-center gap-2 px-3 py-2.5 text-[15px]"
+              >
+                <n.icon className="size-4" aria-hidden />
+                {n.label}
+                <span className="ml-auto text-[13px] text-muted-foreground">Página</span>
+              </CommandItem>
+            ))}
           {searchResults.map((c) => (
             <CommandItem
               key={c.id}
               value={c.id}
               onSelect={() => {
                 setIsSearchOpen(false);
-                navigate({ to: "/app/clientes/$clientId", params: { clientId: c.id } });
+                const last = readVisits(user.id).find((v) => v.clientId === c.id);
+                navigate({
+                  to: "/app/clientes/$clientId",
+                  params: { clientId: c.id },
+                  search: last ? { tab: last.tab as "overview" } : {},
+                });
               }}
               className="flex flex-col items-start gap-0.5 px-3 py-2.5"
             >
@@ -285,7 +308,7 @@ function AuthenticatedLayout() {
                 {c.preferred_name || c.full_name}
               </span>
               {c.presenting_complaint && (
-                <span className="line-clamp-1 text-xs text-warm-gray">
+                <span className="line-clamp-1 text-[13px] text-warm-gray">
                   {c.presenting_complaint}
                 </span>
               )}
