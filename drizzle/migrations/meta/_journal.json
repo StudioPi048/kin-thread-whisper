@@ -8,6 +8,13 @@
       "when": 1793639389635,
       "tag": "0000_import_genogram_persons_rpc",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793639819889,
+      "tag": "0001_clinical_session_workflow",
+      "breakpoints": true
     }
   ]
 }
