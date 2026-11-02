@@ -98,7 +98,7 @@ export function SessionsPanel({ clientId }: Props) {
   }, [sessions, clientId, qc]);
 
   // ---- Proteção de saída: notas não salvas ----
-  const [dirtyIds, setDirtyIds] = useState<Set<string>>(new Set());
+  const [, setDirtyIds] = useState<Set<string>>(new Set());
   const setDirty = useCallback((id: string, dirty: boolean) => {
     setDirtyIds((prev) => {
       if (prev.has(id) === dirty) return prev;

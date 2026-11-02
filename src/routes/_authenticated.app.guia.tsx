@@ -67,7 +67,7 @@ const TASKS: Task[] = [
     steps: [
       "Arraste pessoas para ajustar. O layout é salvo automaticamente após 2 s; “Salvar layout” força o envio.",
       "Desfazer/Refazer valem só para posições — remover pessoas não é desfeito.",
-      "Se a conexão cair, um rascunho de posições fica neste navegador e é oferecido ao voltar (Recuperar/Descartar).",
+      "Se a conexão cair e o navegador permitir guardar dados locais, um rascunho só de posições é oferecido ao voltar (Recuperar/Descartar). Se não for possível guardar, o mapa avisa — não saia antes de salvar.",
       "“Recalcular” pede confirmação, porque substitui as posições salvas.",
     ],
     to: "/app/genossociogramas",
