@@ -19,3 +19,5 @@
 - Design tokens: a single `:root` block in `src/styles.css`; DESIGN.md is the spec — why: avoid Atlas/Arquivo vivo override contradictions.
 - Clan spreadsheet imports go through `src/lib/clan-import.ts` (preview/validation) and the transactional RPC `import_genogram_persons` — why: a failed import must never leave a partial or emptied sheet.
 - After any family/relationship mutation call `invalidateCase()` from `src/lib/clinical-intel.ts` — why: every evidence surface must refresh together.
+- Agenda times/day boundaries are computed in the viewer's IANA time zone via `src/lib/scheduling.ts`; reschedules are revalidated server-side in `rescheduleSession` — why: the server runs in UTC and conflicts must not depend on client checks.
+- Session clinical status and audio pipeline state are separate (`src/lib/session-state.ts`); professional notes live in `manual_notes`, never overwritten by audio processing, drafts kept in memory only — why: audio failure must never lose notes and no clinical text goes to browser storage.
