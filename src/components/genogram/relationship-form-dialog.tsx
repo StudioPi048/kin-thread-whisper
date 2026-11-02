@@ -36,7 +36,7 @@ interface Props {
   clientId: string;
   persons: PersonRow[];
   editing?: RelRow | null;
-  seed?: { from?: string; to?: string };
+  seed?: { from?: string; to?: string; type?: RelationshipType };
 }
 
 interface FormState {
@@ -81,7 +81,12 @@ export function RelationshipFormDialog({
         notes: editing.notes ?? "",
       });
     } else {
-      setV({ ...empty, from_person_id: seed?.from ?? "", to_person_id: seed?.to ?? "" });
+      setV({
+        ...empty,
+        from_person_id: seed?.from ?? "",
+        to_person_id: seed?.to ?? "",
+        relationship_type: seed?.type ?? empty.relationship_type,
+      });
     }
   }, [open, editing, seed]);
 

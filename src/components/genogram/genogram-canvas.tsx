@@ -673,7 +673,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
   const [defaultRelationship, setDefaultRelationship] = useState<string>("");
   const [relDialog, setRelDialog] = useState<{
     open: boolean;
-    seed?: { from?: string; to?: string };
+    seed?: { from?: string; to?: string; type?: "parent" | "union" };
     editing?: RelRow | null;
   }>({ open: false });
   const [showGuide, setShowGuide] = useState(false);
@@ -1565,7 +1565,19 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
               >
                 Criar vínculo
               </Button>
+              <Button
+                variant="outline"
+                onClick={() =>
+                  setRelDialog({ open: true, seed: { to: focusedPerson.id, type: "parent" } })
+                }
+              >
+                Definir pai ou mãe
+              </Button>
             </div>
+            <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
+              Pai/mãe definidos aqui têm precedência sobre o parentesco da planilha — use para
+              meios-irmãos ou familiares soltos.
+            </p>
             <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
               Selecione uma pessoa no mapa para consultar sua ficha. Dê dois cliques para editar.
             </p>
