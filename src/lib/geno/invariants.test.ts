@@ -203,3 +203,18 @@ describe("filiação explícita, meios-irmãos e órfãos", () => {
     expect(parentUnion(g, cli.id)).not.toBe(u.id);
   });
 });
+
+import { checkLayoutInvariants } from "./verify";
+describe("sem sobreposição de cartões", () => {
+  it("família com meio-irmão e órfão não sobrepõe cartões", () => {
+    n = 0;
+    const cli = p("Consulente"), pai = p("Pai"), mae = p("Mãe"), outra = p("", "Outra"), meio = p("", "Meio");
+    const orf = p("Avó materna", "Avó");
+    const g = buildLogicalGraph({
+      persons: [cli, pai, mae, outra, meio, orf],
+      rels: [rel(pai.id, meio.id, "parent"), rel(outra.id, meio.id, "parent")] as never,
+    });
+    const v = checkLayoutInvariants(g, layoutGraph(g)).filter((x) => x.rule.includes("SOBREP"));
+    expect(v).toEqual([]);
+  });
+});
