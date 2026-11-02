@@ -691,6 +691,56 @@ export type Database = {
           },
         ]
       }
+      hypothesis_reviews: {
+        Row: {
+          client_id: string
+          created_at: string
+          decision: string
+          evidence_fingerprint: string
+          evidence_snapshot: Json
+          hypothesis_key: string
+          hypothesis_title: string
+          id: string
+          note: string | null
+          professional_id: string
+          version: number
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          decision: string
+          evidence_fingerprint: string
+          evidence_snapshot?: Json
+          hypothesis_key: string
+          hypothesis_title: string
+          id?: string
+          note?: string | null
+          professional_id?: string
+          version?: number
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          decision?: string
+          evidence_fingerprint?: string
+          evidence_snapshot?: Json
+          hypothesis_key?: string
+          hypothesis_title?: string
+          id?: string
+          note?: string | null
+          professional_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hypothesis_reviews_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       library_entries: {
         Row: {
           author: string

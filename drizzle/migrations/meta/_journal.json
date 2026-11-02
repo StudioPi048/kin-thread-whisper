@@ -15,6 +15,13 @@
       "when": 1793639819889,
       "tag": "0001_clinical_session_workflow",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793640520297,
+      "tag": "0002_hypothesis_reviews",
+      "breakpoints": true
     }
   ]
 }
