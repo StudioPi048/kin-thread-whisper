@@ -1,3 +1,4 @@
+import { invalidateCase } from "@/lib/clinical-intel";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -35,7 +36,7 @@ interface Props {
   clientId: string;
   persons: PersonRow[];
   editing?: RelRow | null;
-  seed?: { from?: string; to?: string };
+  seed?: { from?: string; to?: string; type?: RelationshipType };
 }
 
 interface FormState {
@@ -80,7 +81,12 @@ export function RelationshipFormDialog({
         notes: editing.notes ?? "",
       });
     } else {
-      setV({ ...empty, from_person_id: seed?.from ?? "", to_person_id: seed?.to ?? "" });
+      setV({
+        ...empty,
+        from_person_id: seed?.from ?? "",
+        to_person_id: seed?.to ?? "",
+        relationship_type: seed?.type ?? empty.relationship_type,
+      });
     }
   }, [open, editing, seed]);
 
@@ -144,7 +150,7 @@ export function RelationshipFormDialog({
     },
 
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["genogram", clientId] });
+      invalidateCase(qc, clientId);
       toast.success(editing ? "Vínculo salvo." : "Vínculo criado na árvore.");
       onOpenChange(false);
     },

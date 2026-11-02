@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { invalidateCase } from "@/lib/clinical-intel";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Background,
   BackgroundVariant,
@@ -24,6 +25,7 @@ import {
   ConnectionMode,
   type NodeProps,
   type NodeChange,
+  Panel,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -42,7 +44,21 @@ import {
   Loader2,
   RotateCcw,
   Layers,
+  Undo2,
+  Redo2,
+  Maximize2,
+  Minimize2,
+  Crosshair,
+  PanelRightClose,
+  PanelRightOpen,
 } from "lucide-react";
+import {
+  LayoutHistory,
+  saveDraft,
+  readDraft,
+  clearDraft,
+  type Snapshot,
+} from "@/lib/geno/layout-history";
 import { toast } from "sonner";
 import { toPng } from "html-to-image";
 import { jsPDF } from "jspdf";
@@ -657,7 +673,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
   const [defaultRelationship, setDefaultRelationship] = useState<string>("");
   const [relDialog, setRelDialog] = useState<{
     open: boolean;
-    seed?: { from?: string; to?: string };
+    seed?: { from?: string; to?: string; type?: "parent" | "union" };
     editing?: RelRow | null;
   }>({ open: false });
   const [showGuide, setShowGuide] = useState(false);
@@ -666,6 +682,21 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
   const [isLayoutFixed, setIsLayoutFixed] = useState(false);
   const [confirmRecalc, setConfirmRecalc] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [userId, setUserId] = useState<string>("");
+  const [pendingDraft, setPendingDraft] = useState<Snapshot | null>(null);
+  const [, forceHistory] = useState(0);
+  const historyRef = useRef(new LayoutHistory());
+  const rootRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setUserId(data.session?.user.id ?? ""));
+  }, []);
+  useEffect(() => {
+    const onFs = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", onFs);
+    return () => document.removeEventListener("fullscreenchange", onFs);
+  }, []);
 
   useEffect(() => {
     if (query.data?.layout) {
@@ -755,7 +786,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
     (async () => {
       const result = await ensureProband(clientId);
       if (!cancelled && result) {
-        qc.invalidateQueries({ queryKey: ["genogram", clientId] });
+        invalidateCase(qc, clientId);
       }
     })();
     return () => {
@@ -800,6 +831,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
     setNodes(nodesWithHandlers);
     setEdges(layoutedEdges);
     setLayoutDirty(false);
+    historyRef.current.reset();
 
     const centerTimer = window.setTimeout(() => {
       if (cancelled) return;
@@ -906,11 +938,52 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
       }
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["genogram", clientId] });
+      invalidateCase(qc, clientId);
       toast.success("Removido.");
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
+
+  const snapshot = useCallback((): Snapshot => {
+    const out: Snapshot = {};
+    for (const n of rfInstance.getNodes()) out[n.id] = [n.position.x, n.position.y];
+    return out;
+  }, [rfInstance]);
+  const applySnapshot = useCallback(
+    (snap: Snapshot) => {
+      setNodes((ns) =>
+        ns.map((n) =>
+          snap[n.id] ? { ...n, position: { x: snap[n.id][0], y: snap[n.id][1] } } : n,
+        ),
+      );
+      setLayoutDirty(true);
+    },
+    [setNodes],
+  );
+  const undoLayout = () => {
+    const prev = historyRef.current.undo(snapshot());
+    if (prev) applySnapshot(prev);
+    forceHistory((x) => x + 1);
+  };
+  const redoLayout = () => {
+    const next = historyRef.current.redo(snapshot());
+    if (next) applySnapshot(next);
+    forceHistory((x) => x + 1);
+  };
+
+  // Rascunho local (IDs + coordenadas) enquanto há alteração não salva
+  useEffect(() => {
+    if (layoutDirty && userId) saveDraft(userId, clientId, snapshot());
+  }, [layoutDirty, nodes, userId, clientId, snapshot]);
+  // Oferece recuperar rascunho mais novo que o layout salvo
+  useEffect(() => {
+    if (!userId || !query.data) return;
+    const d = readDraft(userId, clientId);
+    const savedAt = query.data.layout?.updated_at
+      ? new Date(query.data.layout.updated_at).getTime()
+      : 0;
+    setPendingDraft(d && d.at > savedAt && Object.keys(d.positions).length ? d.positions : null);
+  }, [userId, clientId, query.data]);
 
   const saveLayout = useMutation({
     mutationFn: async () => {
@@ -965,14 +1038,29 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
     },
     onSuccess: (savedAt) => {
       setLayoutDirty(false);
+      if (userId) clearDraft(userId, clientId);
       setLastSavedAt(
         new Date(savedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
       );
       // Optional: quietly invalidate to keep data in sync, but avoid full remounts
-      qc.invalidateQueries({ queryKey: ["genogram", clientId] });
+      invalidateCase(qc, clientId);
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao salvar layout"),
+    onError: (e) =>
+      toast.error(
+        `Não foi possível salvar o arranjo. Ele continua guardado neste navegador. ${e instanceof Error ? e.message : ""}`,
+      ),
   });
+
+  // Proteção de saída com alterações não salvas
+  useEffect(() => {
+    if (!layoutDirty && !saveLayout.isPending) return;
+    const h = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", h);
+    return () => window.removeEventListener("beforeunload", h);
+  }, [layoutDirty, saveLayout.isPending]);
 
   // Auto-Save Effect (Debounce 2s)
   useEffect(() => {
@@ -998,7 +1086,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
     onSuccess: (newValue) => {
       setIsLayoutFixed(newValue);
       toast.success(newValue ? "Layout fixado" : "Layout destravado");
-      qc.invalidateQueries({ queryKey: ["genogram", clientId] });
+      invalidateCase(qc, clientId);
     },
     onError: (e) => toast.error("Erro ao alterar fixação do layout"),
   });
@@ -1020,7 +1108,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
     },
     onSuccess: () => {
       toast.success("Posições recalculadas a partir das regras do genossociograma.");
-      qc.invalidateQueries({ queryKey: ["genogram", clientId] });
+      invalidateCase(qc, clientId);
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao recalcular"),
   });
@@ -1038,7 +1126,10 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
   const selectedEdgeCount = edges.filter((e) => e.selected).length;
 
   return (
-    <div className="atlas-genogram">
+    <div
+      ref={rootRef}
+      className={`atlas-genogram bg-background ${panelOpen ? "" : "gv-panel-collapsed"}`}
+    >
       <div className="atlas-map-workspace">
         {/* ── CONTÊINER SUPERIOR (BARRA DE AÇÕES + LEGENDA) ── */}
         <div className="atlas-map-toolbar">
@@ -1301,6 +1392,10 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
               onNodeDoubleClick={onNodeDoubleClick}
+              onNodeDragStart={() => {
+                historyRef.current.push(snapshot());
+                forceHistory((x) => x + 1);
+              }}
               onNodeClick={(_, node) => {
                 if (node.type === "person") setFocusedPersonId(node.id);
               }}
@@ -1326,6 +1421,165 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
                 size={1}
                 style={{ opacity: 0.25 }}
               />
+              <Panel
+                position="top-right"
+                className="flex flex-wrap items-center gap-1 rounded-md border border-border bg-card p-1 shadow-sm"
+              >
+                <label className="sr-only" htmlFor="geno-locate">
+                  Localizar familiar
+                </label>
+                <select
+                  id="geno-locate"
+                  className="h-11 max-w-[180px] rounded-md border border-input bg-background px-2 text-[14px]"
+                  value=""
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    if (!id) return;
+                    setFocusedPersonId(id);
+                    setPanelOpen(true);
+                    rfInstance.fitView({
+                      nodes: [{ id }],
+                      duration: 300,
+                      maxZoom: 1.2,
+                      padding: 0.6,
+                    });
+                  }}
+                >
+                  <option value="">Localizar familiar…</option>
+                  {persons
+                    .filter((p) => nodes.some((n) => n.id === p.id))
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.preferred_name || p.full_name}
+                      </option>
+                    ))}
+                </select>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="min-h-11 min-w-11"
+                  aria-label="Localizar o cliente"
+                  onClick={() => {
+                    const pb = persons.find((p) => p.is_proband);
+                    if (pb)
+                      rfInstance.fitView({
+                        nodes: [{ id: pb.id }],
+                        duration: 300,
+                        maxZoom: 1.2,
+                        padding: 0.6,
+                      });
+                  }}
+                >
+                  <Crosshair className="size-4" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="min-h-11 min-w-11"
+                  aria-label="Ajustar mapa à tela"
+                  onClick={() =>
+                    rfInstance.fitView({
+                      nodes: nodes.filter((n) => n.type === "person"),
+                      padding: 0.18,
+                      duration: 300,
+                    })
+                  }
+                >
+                  <Layers className="size-4" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="min-h-11 min-w-11"
+                  aria-label="Desfazer posição"
+                  disabled={!historyRef.current.canUndo || isLayoutFixed}
+                  onClick={undoLayout}
+                >
+                  <Undo2 className="size-4" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="min-h-11 min-w-11"
+                  aria-label="Refazer posição"
+                  disabled={!historyRef.current.canRedo || isLayoutFixed}
+                  onClick={redoLayout}
+                >
+                  <Redo2 className="size-4" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="min-h-11 min-w-11"
+                  aria-label={isFullscreen ? "Sair da tela ampla" : "Tela ampla"}
+                  onClick={() => {
+                    if (document.fullscreenElement) void document.exitFullscreen();
+                    else void rootRef.current?.requestFullscreen?.();
+                  }}
+                >
+                  {isFullscreen ? (
+                    <Minimize2 className="size-4" />
+                  ) : (
+                    <Maximize2 className="size-4" />
+                  )}
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="min-h-11 min-w-11"
+                  aria-label={panelOpen ? "Recolher ficha" : "Mostrar ficha"}
+                  aria-expanded={panelOpen}
+                  onClick={() => setPanelOpen((v) => !v)}
+                >
+                  {panelOpen ? (
+                    <PanelRightClose className="size-4" />
+                  ) : (
+                    <PanelRightOpen className="size-4" />
+                  )}
+                </Button>
+              </Panel>
+              {(pendingDraft || saveLayout.isError) && (
+                <Panel
+                  position="bottom-center"
+                  className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-card p-2 text-[14px] shadow-sm"
+                  role="status"
+                >
+                  {saveLayout.isError ? (
+                    <>
+                      <span>Arranjo não salvo (guardado neste navegador).</span>
+                      <Button size="sm" className="min-h-11" onClick={() => saveLayout.mutate()}>
+                        Tentar salvar de novo
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <span>Há um arranjo não salvo de uma sessão anterior.</span>
+                      <Button
+                        size="sm"
+                        className="min-h-11"
+                        onClick={() => {
+                          historyRef.current.push(snapshot());
+                          applySnapshot(pendingDraft!);
+                          setPendingDraft(null);
+                        }}
+                      >
+                        Recuperar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="min-h-11"
+                        onClick={() => {
+                          if (userId) clearDraft(userId, clientId);
+                          setPendingDraft(null);
+                        }}
+                      >
+                        Descartar
+                      </Button>
+                    </>
+                  )}
+                </Panel>
+              )}
               <Controls
                 className="overflow-hidden rounded-md"
                 showInteractive={false}
@@ -1335,7 +1589,11 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
           )}
         </div>
       </div>
-      <aside className="atlas-person-panel" aria-label="Ficha da pessoa selecionada">
+      <aside
+        className="atlas-person-panel"
+        aria-label="Ficha da pessoa selecionada"
+        hidden={!panelOpen}
+      >
         {focusedPerson ? (
           <>
             <h2>{focusedPerson.preferred_name || focusedPerson.full_name}</h2>
@@ -1386,7 +1644,19 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
               >
                 Criar vínculo
               </Button>
+              <Button
+                variant="outline"
+                onClick={() =>
+                  setRelDialog({ open: true, seed: { to: focusedPerson.id, type: "parent" } })
+                }
+              >
+                Definir pai ou mãe
+              </Button>
             </div>
+            <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
+              Pai/mãe definidos aqui têm precedência sobre o parentesco da planilha — use para
+              meios-irmãos ou familiares soltos.
+            </p>
             <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
               Selecione uma pessoa no mapa para consultar sua ficha. Dê dois cliques para editar.
             </p>
@@ -1441,7 +1711,8 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
             </AlertDialogTitle>
             <AlertDialogDescription>
               Isso apaga o arranjo manual salvo desta árvore e recalcula a posição de todo mundo a
-              partir das regras atuais do genossociograma. Use se alguém aparecer preso no lugar errado.
+              partir das regras atuais do genossociograma. Use se alguém aparecer preso no lugar
+              errado.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

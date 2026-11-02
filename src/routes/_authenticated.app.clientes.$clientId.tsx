@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { lazy, Suspense } from "react";
 
 const ClientTimeline = lazy(() =>
@@ -73,6 +73,9 @@ import { ClinicalIntelligencePanel } from "@/components/clients/clinical-intelli
 import { DocumentHeader } from "@/components/ui/document-header";
 
 import { recordVisit } from "@/lib/recent-activity";
+import { clinicalIntelQuery } from "@/lib/clinical-intel";
+import { detectPatterns } from "@/lib/patterns";
+import { informationGaps } from "@/lib/evidence";
 import { calcAge, formatBirthDate, genderOptions, initialsFrom } from "@/lib/clients";
 import { JOURNEY_STAGES, deriveStage, stageIndex } from "@/lib/clinical-catalog";
 
@@ -185,18 +188,25 @@ function ClientDossierPage() {
   });
 
   // Padrões reais detectados pelo motor — alimentam a hipótese clínica sem inventar dados
-  const { data: patterns = [] } = useQuery({
-    queryKey: ["client-patterns", clientId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("patterns_detected")
-        .select("id, title, pattern_type, severity, acknowledged_at")
-        .eq("client_id", clientId)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
+  // Evidências: mesma fonte comum (clinicalIntelQuery + detectPatterns) do copiloto/IA/Agenda
+  const intelQ = useQuery(clinicalIntelQuery(clientId));
+  const patterns = useMemo(
+    () =>
+      intelQ.data
+        ? detectPatterns(intelQ.data.persons, intelQ.data.relationships).map((p) => ({
+            id: p.id,
+            title: p.title,
+            pattern_type: p.type as string,
+            severity: p.severity as string,
+            acknowledged_at: null as string | null,
+          }))
+        : [],
+    [intelQ.data],
+  );
+  const gaps = useMemo(
+    () => (intelQ.data ? informationGaps(intelQ.data.persons) : []),
+    [intelQ.data],
+  );
 
   const { data: sessionCount = 0 } = useQuery({
     queryKey: ["client-session-count", clientId],
@@ -397,25 +407,27 @@ function ClientDossierPage() {
           </div>
         }
         subtitle={
-          <div className="flex flex-wrap items-center gap-4 text-[13px] text-ink/70 not-italic mt-2 font-sans tracking-normal font-normal">
-            <div className="flex items-center gap-2">
-              <Mail className="size-3.5 opacity-50" />
-              <span className="font-medium">{client.email || "Sem e-mail"}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Phone className="size-3.5 opacity-50" />
-              <span className="font-medium">{client.phone || "Sem telefone"}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <MapPin className="size-3.5 opacity-50" />
-              <span className="font-medium">{client.birthplace || "Local não informado"}</span>
-              <span className="opacity-40 mx-1">•</span>
-              <span className="font-medium">{age !== null ? `${age} anos` : "Idade omitida"}</span>
-            </div>
-
-            <span className="text-xs text-muted-foreground">
-              {sessionCount} {sessionCount === 1 ? "sessão registrada" : "sessões registradas"}
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 font-sans text-[14px] font-normal not-italic tracking-normal text-ink-soft">
+            {age !== null && <span>{age} anos</span>}
+            {client.birthplace && <span>{client.birthplace}</span>}
+            <span>
+              {sessionCount} {sessionCount === 1 ? "sessão" : "sessões"}
             </span>
+            <span>
+              {nextSessionISO
+                ? `Próxima: ${new Date(nextSessionISO).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}`
+                : "Sem sessão agendada"}
+            </span>
+            {client.phone && (
+              <span className="inline-flex items-center gap-1">
+                <Phone className="size-3.5" aria-hidden /> {client.phone}
+              </span>
+            )}
+            {client.email && (
+              <span className="inline-flex items-center gap-1">
+                <Mail className="size-3.5" aria-hidden /> {client.email}
+              </span>
+            )}
           </div>
         }
         actions={
@@ -524,7 +536,7 @@ function ClientDossierPage() {
                   <section className="xl:col-span-2 space-y-6">
                     {/* Hipótese clínica alimentada pelos padrões reais do motor */}
                     {patterns.length > 0 ? (
-                      <ClinicalDocument title="Hipótese Clínica (IA)" grammar={hypothesisGrammar}>
+                      <ClinicalDocument title="Evidências detectadas" grammar={hypothesisGrammar}>
                         <p className="font-serif">
                           O motor de padrões identificou{" "}
                           <strong>
@@ -554,6 +566,51 @@ function ClientDossierPage() {
                         </p>
                       </section>
                     )}
+
+                    <Panel title="Lacunas do caso" accent="gold">
+                      {intelQ.isError ? (
+                        <div
+                          role="alert"
+                          className="flex flex-wrap items-center gap-3 text-[15px] text-destructive"
+                        >
+                          Não foi possível ler o genossociograma.
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="min-h-11"
+                            onClick={() => intelQ.refetch()}
+                          >
+                            Tentar de novo
+                          </Button>
+                        </div>
+                      ) : intelQ.isLoading ? (
+                        <p className="text-[15px] text-muted-foreground">Verificando…</p>
+                      ) : gaps.length === 0 ? (
+                        <p className="text-[15px] text-muted-foreground">
+                          Sem lacunas nos campos verificados.
+                        </p>
+                      ) : (
+                        <>
+                          <ul className="ml-5 list-disc space-y-1 text-[15px]">
+                            {gaps.slice(0, 6).map((g) => (
+                              <li key={g}>{g}</li>
+                            ))}
+                          </ul>
+                          {gaps.length > 6 && (
+                            <p className="mt-2 text-[14px] text-muted-foreground">
+                              + {gaps.length - 6} outras lacunas
+                            </p>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => goToTab("clan")}
+                            className="mt-3 inline-flex min-h-11 items-center text-[15px] font-medium text-primary underline underline-offset-4"
+                          >
+                            Completar na planilha do clã
+                          </button>
+                        </>
+                      )}
+                    </Panel>
 
                     <Panel title="Queixa apresentada" accent="forest">
                       {client.presenting_complaint ? (

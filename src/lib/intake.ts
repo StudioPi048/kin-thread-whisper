@@ -179,3 +179,20 @@ export function calculateCompletion(intake: Partial<ClientIntake>): number {
   }).length;
   return Math.round((filled / allFields.length) * 100);
 }
+
+/** Valor explícito para "não se sabe" — conta como respondido, distinto de vazio. */
+export const INTAKE_UNKNOWN = "Desconhecido";
+
+const isFilled = (v: unknown) => {
+  if (v === null || v === undefined) return false;
+  if (typeof v === "string") return v.trim().length > 0;
+  if (Array.isArray(v)) return v.length > 0;
+  return true;
+};
+
+export function sectionCompletion(intake: Partial<ClientIntake>, id: IntakeSectionId) {
+  const fields = SECTION_FIELDS[id];
+  const filled = fields.filter((f) => isFilled(intake[f])).length;
+  const unknown = fields.filter((f) => intake[f] === INTAKE_UNKNOWN).length;
+  return { filled, unknown, total: fields.length };
+}

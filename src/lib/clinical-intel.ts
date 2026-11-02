@@ -1,4 +1,4 @@
-import { queryOptions } from "@tanstack/react-query";
+import { queryOptions, type QueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { PersonRow, RelationshipRow } from "@/lib/patterns";
 
@@ -33,3 +33,16 @@ export const clinicalIntelQuery = (clientId: string) =>
       };
     },
   });
+
+/** Após qualquer mutação de familiares/vínculos: todas as telas que leem evidências se atualizam. */
+export function invalidateCase(qc: QueryClient, clientId: string) {
+  for (const key of [
+    "genogram",
+    "clinical-intel",
+    "case-dashboard",
+    "client-genogram",
+    "genogram-count",
+  ]) {
+    qc.invalidateQueries({ queryKey: [key, clientId] });
+  }
+}
