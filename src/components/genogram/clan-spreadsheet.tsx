@@ -1,5 +1,6 @@
 import { invalidateCase } from "@/lib/clinical-intel";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Loader2,
