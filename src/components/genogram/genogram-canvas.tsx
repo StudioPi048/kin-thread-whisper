@@ -58,6 +58,7 @@ import {
   readDraft,
   clearDraft,
   type Snapshot,
+  constrainSnapshotY,
 } from "@/lib/geno/layout-history";
 import { toast } from "sonner";
 import { toPng } from "html-to-image";
@@ -621,7 +622,19 @@ function buildRenderGraph(
     });
   }
 
-  return { nodes, edges, warnings: graph.warnings };
+  const extra: GenogramWarning[] = [
+    ...graph.errors.map((message, i) => ({ personId: `err-${i}`, personName: "", message })),
+    ...(placement.normalizedY
+      ? [
+          {
+            personId: "norm-y",
+            personName: "",
+            message: `${placement.normalizedY} posição(ões) salva(s) estavam fora da faixa da geração e foram alinhadas (cliente e irmãos no topo). A posição horizontal foi mantida; salve o layout para gravar.`,
+          },
+        ]
+      : []),
+  ];
+  return { nodes, edges, warnings: [...extra, ...graph.warnings] };
 }
 
 function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
@@ -883,7 +896,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
       const nextChanges = changes.map((change) => {
         if (change.type === "position" && change.position) {
           const node = rfInstance.getNode(change.id);
-          if (node?.type === "person") {
+          if (node && (node.type === "person" || node.type === "union")) {
             return {
               ...change,
               position: { x: change.position.x, y: node.position.y },
@@ -972,14 +985,16 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
   }, [rfInstance]);
   const applySnapshot = useCallback(
     (snap: Snapshot) => {
+      // Só X do snapshot; Y permanece na faixa da geração (cliente+irmãos no topo)
+      const safe = constrainSnapshotY(snap, snapshot());
       setNodes((ns) =>
         ns.map((n) =>
-          snap[n.id] ? { ...n, position: { x: snap[n.id][0], y: snap[n.id][1] } } : n,
+          safe[n.id] ? { ...n, position: { x: safe[n.id][0], y: safe[n.id][1] } } : n,
         ),
       );
       setLayoutDirty(true);
     },
-    [setNodes],
+    [setNodes, snapshot],
   );
   const undoLayout = () => {
     const prev = historyRef.current.undo(snapshot());
@@ -1257,7 +1272,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                   </PopoverTrigger>
                   <PopoverContent className="w-96 max-h-96 overflow-y-auto" align="start">
                     <p className="mb-2 text-[13px] font-bold uppercase tracking-wide text-muted-foreground">
-                      Pessoas soltas na árvore
+                      Para revisar no mapa
                     </p>
                     <ul className="space-y-2.5">
                       {warnings.map((w) => (
