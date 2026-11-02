@@ -52,6 +52,8 @@ import {
   PanelRightClose,
   PanelRightOpen,
 } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
   LayoutHistory,
   saveDraft,
@@ -698,6 +700,8 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
   const [confirmRecalc, setConfirmRecalc] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [panelOpen, setPanelOpen] = useState(true);
+  const isMobile = useIsMobile();
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [userId, setUserId] = useState<string>("");
   const [pendingDraft, setPendingDraft] = useState<Snapshot | null>(null);
@@ -1433,7 +1437,10 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                 forceHistory((x) => x + 1);
               }}
               onNodeClick={(_, node) => {
-                if (node.type === "person") setFocusedPersonId(node.id);
+                if (node.type === "person") {
+                  setFocusedPersonId(node.id);
+                  if (isMobile) setMobileSheetOpen(true);
+                }
               }}
               onEdgeDoubleClick={onEdgeDoubleClick}
               nodesDraggable={!isLayoutFixed}
@@ -1625,11 +1632,13 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
           )}
         </div>
       </div>
-      <aside
-        className="atlas-person-panel"
-        aria-label="Ficha da pessoa selecionada"
-        hidden={!panelOpen}
-      >
+      {isMobile ? (
+        <Sheet open={mobileSheetOpen} onOpenChange={setMobileSheetOpen}>
+          <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto">
+            <SheetHeader className="sr-only">
+              <SheetTitle>Ficha da pessoa selecionada</SheetTitle>
+            </SheetHeader>
+            <div className="atlas-person-panel atlas-person-panel--sheet">
         {focusedPerson ? (
           <>
             <h2>{focusedPerson.preferred_name || focusedPerson.full_name}</h2>
@@ -1706,7 +1715,93 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
             </p>
           </>
         )}
-      </aside>
+            </div>
+          </SheetContent>
+        </Sheet>
+      ) : (
+        <aside
+          className="atlas-person-panel"
+          aria-label="Ficha da pessoa selecionada"
+          hidden={!panelOpen}
+        >
+        {focusedPerson ? (
+          <>
+            <h2>{focusedPerson.preferred_name || focusedPerson.full_name}</h2>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {focusedPerson.is_proband
+                ? "Pessoa de referência"
+                : focusedPerson.relationship_to_proband || "Vínculo não informado"}
+            </p>
+            <dl>
+              <div>
+                <dt>Nome completo</dt>
+                <dd>{focusedPerson.full_name || "Não informado"}</dd>
+              </div>
+              <div>
+                <dt>Nascimento</dt>
+                <dd>
+                  {focusedPerson.birth_date
+                    ? new Date(focusedPerson.birth_date + "T12:00:00").toLocaleDateString("pt-BR")
+                    : "Não informado"}
+                </dd>
+              </div>
+              {focusedPerson.is_deceased && (
+                <div>
+                  <dt>Falecimento</dt>
+                  <dd>
+                    {focusedPerson.death_date
+                      ? new Date(focusedPerson.death_date + "T12:00:00").toLocaleDateString("pt-BR")
+                      : "Data não informada"}
+                  </dd>
+                </div>
+              )}
+              <div>
+                <dt>Gênero registrado</dt>
+                <dd>{focusedPerson.gender || "Não informado"}</dd>
+              </div>
+              <div>
+                <dt>Observações</dt>
+                <dd>{focusedPerson.notes || "Nenhuma observação registrada."}</dd>
+              </div>
+            </dl>
+            <div className="atlas-panel-actions">
+              <Button variant="outline" onClick={() => setEditingPerson(focusedPerson)}>
+                Editar pessoa
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setRelDialog({ open: true, seed: { from: focusedPerson.id } })}
+              >
+                Criar vínculo
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() =>
+                  setRelDialog({ open: true, seed: { to: focusedPerson.id, type: "parent" } })
+                }
+              >
+                Definir pai ou mãe
+              </Button>
+            </div>
+            <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
+              Pai/mãe definidos aqui têm precedência sobre o parentesco da planilha — use para
+              meios-irmãos ou familiares soltos.
+            </p>
+            <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
+              Selecione uma pessoa no mapa para consultar sua ficha. Dê dois cliques para editar.
+            </p>
+          </>
+        ) : (
+          <>
+            <h2>Pessoas e relações</h2>
+            <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+              Adicione a primeira pessoa para começar o genossociograma. Os dados de cada pessoa
+              aparecem aqui.
+            </p>
+          </>
+        )}
+        </aside>
+      )}
 
       <PersonFormDialog
         open={creatingPerson}
