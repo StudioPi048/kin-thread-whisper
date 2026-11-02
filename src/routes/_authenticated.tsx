@@ -1,6 +1,7 @@
 import { MotionConfig } from "framer-motion";
 import { usePreferences, useApplyPreferences } from "@/components/account/use-preferences";
 import { readVisits } from "@/lib/recent-activity";
+import { UnsavedProvider } from "@/components/unsaved/unsaved-guard";
 import { CurrentCaseStrip } from "@/components/archive/current-case-strip";
 import {
   createFileRoute,
@@ -225,7 +226,9 @@ function AuthenticatedLayout() {
         <CurrentCaseStrip userId={user.id} pathname={location.pathname} />
         <main id="conteudo" className="atlas-content">
           <MotionConfig reducedMotion={prefsQ.data?.reduceMotion ? "always" : "user"}>
-            <Outlet />
+            <UnsavedProvider>
+              <Outlet />
+            </UnsavedProvider>
           </MotionConfig>
         </main>
       </div>
