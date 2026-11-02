@@ -105,51 +105,6 @@ export function ClanSpreadsheet({ clientId }: Props) {
   const pendingPatch = useRef<Record<string, TablesUpdate<"genogram_persons">>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isImporting, setIsImporting] = useState(false);
-  const [importPreview, setImportPreview] = useState<{
-    header: string[];
-    rows: string[][];
-    mapping: Mapping;
-  } | null>(null);
-  const [importReplace, setImportReplace] = useState(false);
-  const [importDuplicates, setImportDuplicates] = useState(false);
-  const analysis = useMemo(
-    () =>
-      importPreview
-        ? analyzeImport(
-            importPreview.rows,
-            importPreview.mapping,
-            importReplace ? [] : (persons ?? []).map((p) => ({ full_name: p.full_name, birth_date: p.birth_date })),
-          )
-        : [],
-    [importPreview, importReplace, persons],
-  );
-  const toImport = analysis.filter((r) => r.status === "ok" || (importDuplicates && r.status === "duplicate"));
-  const confirmImport = useMutation({
-    mutationFn: async () => {
-      const rows = toImport.map((r) => r.record!);
-      if (rows.length === 0) throw new Error("Nenhuma linha válida para importar.");
-      const { data, error } = await supabase.rpc("import_genogram_persons", {
-        _client_id: clientId,
-        _rows: rows as never,
-        _replace: importReplace,
-      });
-      if (error) throw error;
-      await ensureProband(clientId);
-      return data as number;
-    },
-    onSuccess: (n) => {
-      qc.invalidateQueries({ queryKey: ["genogram-persons", clientId] });
-      invalidateCase(qc, clientId);
-      toast.success(`${n} familiares importados.`);
-      setImportPreview(null);
-      setImportReplace(false);
-      setImportDuplicates(false);
-    },
-    onError: (e) =>
-      toast.error(
-        `Importação não concluída — nada foi alterado. ${e instanceof Error ? e.message : ""}`,
-      ),
-  });
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const toggleExpanded = (id: string) => {
     setExpandedRows((prev) => {
@@ -334,6 +289,52 @@ export function ClanSpreadsheet({ clientId }: Props) {
     }
     toast.success("Modelo aplicado. Complete os nomes e datas.");
   };
+
+  const [importPreview, setImportPreview] = useState<{
+    header: string[];
+    rows: string[][];
+    mapping: Mapping;
+  } | null>(null);
+  const [importReplace, setImportReplace] = useState(false);
+  const [importDuplicates, setImportDuplicates] = useState(false);
+  const analysis = useMemo(
+    () =>
+      importPreview
+        ? analyzeImport(
+            importPreview.rows,
+            importPreview.mapping,
+            importReplace ? [] : (persons ?? []).map((p) => ({ full_name: p.full_name, birth_date: p.birth_date })),
+          )
+        : [],
+    [importPreview, importReplace, persons],
+  );
+  const toImport = analysis.filter((r) => r.status === "ok" || (importDuplicates && r.status === "duplicate"));
+  const confirmImport = useMutation({
+    mutationFn: async () => {
+      const rows = toImport.map((r) => r.record!);
+      if (rows.length === 0) throw new Error("Nenhuma linha válida para importar.");
+      const { data, error } = await supabase.rpc("import_genogram_persons", {
+        _client_id: clientId,
+        _rows: rows as never,
+        _replace: importReplace,
+      });
+      if (error) throw error;
+      await ensureProband(clientId);
+      return data as number;
+    },
+    onSuccess: (n) => {
+      qc.invalidateQueries({ queryKey: ["genogram-persons", clientId] });
+      invalidateCase(qc, clientId);
+      toast.success(`${n} familiares importados.`);
+      setImportPreview(null);
+      setImportReplace(false);
+      setImportDuplicates(false);
+    },
+    onError: (e) =>
+      toast.error(
+        `Importação não concluída — nada foi alterado. ${e instanceof Error ? e.message : ""}`,
+      ),
+  });
 
   const importFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -842,6 +843,102 @@ export function ClanSpreadsheet({ clientId }: Props) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <Dialog open={!!importPreview} onOpenChange={(o) => !o && !confirmImport.isPending && setImportPreview(null)}>
+        <DialogContent className="max-h-[90dvh] max-w-4xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Prévia da importação</DialogTitle>
+            <DialogDescription>
+              Confira o mapeamento das colunas e as linhas antes de gravar. Nada é salvo até você confirmar;
+              se a gravação falhar, a planilha atual fica como está.
+            </DialogDescription>
+          </DialogHeader>
+          {importPreview && (
+            <div className="space-y-4 text-[15px]">
+              <fieldset className="grid gap-2 sm:grid-cols-3">
+                <legend className="mb-2 font-semibold">Colunas do arquivo</legend>
+                {IMPORT_FIELDS.map((f) => (
+                  <label key={f.key} className="flex flex-col gap-1 text-[14px]">
+                    {f.label}
+                    <select
+                      className="h-11 rounded-md border border-input bg-background px-2"
+                      value={importPreview.mapping[f.key as FieldKey] ?? ""}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setImportPreview((p) =>
+                          p ? { ...p, mapping: { ...p.mapping, [f.key]: v === "" ? undefined : Number(v) } } : p,
+                        );
+                      }}
+                    >
+                      <option value="">— não importar —</option>
+                      {importPreview.header.map((h, i) => (
+                        <option key={i} value={i}>
+                          {h || `Coluna ${i + 1}`}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ))}
+              </fieldset>
+              <p role="status">
+                <strong>{analysis.filter((r) => r.status === "ok").length}</strong> válidas ·{" "}
+                <strong>{analysis.filter((r) => r.status === "duplicate").length}</strong> possíveis duplicidades ·{" "}
+                <strong>{analysis.filter((r) => r.status === "error").length}</strong> com erro ·{" "}
+                {analysis.filter((r) => r.status === "skip").length} ignoradas
+              </p>
+              <div className="max-h-72 overflow-auto rounded-md border border-border">
+                <table className="w-full text-[14px]">
+                  <thead className="sticky top-0 bg-muted">
+                    <tr>
+                      <th className="px-2 py-1 text-left">Linha</th>
+                      <th className="px-2 py-1 text-left">Nome</th>
+                      <th className="px-2 py-1 text-left">Parentesco</th>
+                      <th className="px-2 py-1 text-left">Situação</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {analysis.slice(0, 200).map((r) => (
+                      <tr key={r.line} className="border-t border-border align-top">
+                        <td className="px-2 py-1 tabular-nums">{r.line}</td>
+                        <td className="px-2 py-1">{r.record?.full_name ?? "—"}</td>
+                        <td className="px-2 py-1">{r.record?.relationship_to_proband ?? "—"}</td>
+                        <td className={`px-2 py-1 ${r.status === "error" ? "text-destructive" : ""}`}>
+                          {{ ok: "Ok", error: "Erro", duplicate: "Duplicidade?", skip: "Ignorada" }[r.status]}
+                          {r.messages.length > 0 && <span className="block text-[13px]">{r.messages.join("; ")}</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <label className="flex min-h-11 items-center gap-2">
+                <input type="checkbox" className="size-5" checked={importDuplicates} onChange={(e) => setImportDuplicates(e.target.checked)} />
+                Importar também as possíveis duplicidades
+              </label>
+              {(persons?.length ?? 0) > 0 && (
+                <label className="flex min-h-11 items-center gap-2">
+                  <input type="checkbox" className="size-5" checked={importReplace} onChange={(e) => setImportReplace(e.target.checked)} />
+                  Substituir os familiares atuais (o cliente é mantido; vínculos dos removidos são apagados)
+                </label>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" className="min-h-11" disabled={confirmImport.isPending} onClick={() => setImportPreview(null)}>
+              Cancelar
+            </Button>
+            <Button
+              className="min-h-11"
+              variant={importReplace ? "destructive" : "default"}
+              disabled={confirmImport.isPending || toImport.length === 0}
+              onClick={() => confirmImport.mutate()}
+            >
+              {confirmImport.isPending
+                ? "Gravando…"
+                : `${importReplace ? "Substituir e importar" : "Importar"} ${toImport.length} linha(s)`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
