@@ -951,6 +951,76 @@ export function layoutGraph(g: LogicalGraph): Placement {
   // Atribui as posições definitivas travando o eixo primário
   assignPosition(proband.id, 0, 0, "root");
 
+  // ── Fallback: pessoas/uniões fora da cadeia ancestral do cliente ──
+  // (meios-irmãos por filiação explícita, segundas uniões, órfãos).
+  // Mantém a regra: geração 0 no topo; Y = geração × GEN_GAP. Sem inferir laços.
+  {
+    const occupied = (cx: number, gen: number) =>
+      [...personPos.values()].some(
+        (p) => Math.abs(p.y - y(gen)) < 1 && Math.abs(p.x + NODE_W / 2 - cx) < NODE_W + SIBLING_GAP,
+      );
+    const freeX = (cx: number, gen: number, dir: 1 | -1) => {
+      let x = cx;
+      let guard = 0;
+      while (occupied(x, gen) && guard++ < 500) x += dir * (NODE_W + SIBLING_GAP);
+      return x;
+    };
+    const centerOf = (id: string) => {
+      const p = personPos.get(id);
+      return p ? p.x + NODE_W / 2 : null;
+    };
+    let progress = true;
+    while (progress) {
+      progress = false;
+      for (const [uid, u] of g.unions) {
+        const placedPartner = u.partners.find((pid) => personPos.has(pid));
+        const anyPlacedChild = u.children.find((c) => personPos.has(c));
+        if (!placedPartner && !anyPlacedChild) continue;
+        if (u.partners.every((p) => personPos.has(p)) && u.children.every((c) => personPos.has(c)) && unionPos.has(uid)) continue;
+        const gen = u.generation;
+        // parceiros
+        if (placedPartner) {
+          const base = centerOf(placedPartner)!;
+          const dir: 1 | -1 = base <= 0 ? -1 : 1;
+          for (const pid of u.partners) {
+            if (personPos.has(pid)) continue;
+            placePerson(pid, freeX(base + dir * (NODE_W + COUPLE_GAP), gen, dir), gen);
+            progress = true;
+          }
+        } else {
+          const base = centerOf(anyPlacedChild!)!;
+          const dir: 1 | -1 = base <= 0 ? -1 : 1;
+          for (const pid of u.partners) {
+            if (personPos.has(pid)) continue;
+            placePerson(pid, freeX(base, gen, dir), gen);
+            progress = true;
+          }
+        }
+        const xs = u.partners.map(centerOf).filter((v): v is number => v !== null);
+        const ux = xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : centerOf(anyPlacedChild!)!;
+        if (!unionPos.has(uid)) {
+          unionPos.set(uid, { x: ux, y: y(gen) + PERSON_SHAPE / 2 });
+          progress = true;
+        }
+        const childGen = Math.max(0, gen - 1);
+        const dir: 1 | -1 = ux <= 0 ? -1 : 1;
+        for (const cid of u.children) {
+          if (personPos.has(cid)) continue;
+          placePerson(cid, freeX(ux, childGen, dir), childGen);
+          progress = true;
+        }
+      }
+    }
+    // Órfãos sem nenhum laço: fila à direita, na geração reconhecida, sem pais falsos
+    let maxRight = Math.max(0, ...[...personPos.values()].map((p) => p.x + NODE_W));
+    for (const [pid, pe] of g.persons) {
+      if (personPos.has(pid)) continue;
+      maxRight += BRANCH_SEPARATION;
+      placePerson(pid, freeX(maxRight + NODE_W / 2, pe.generation, 1), pe.generation);
+      maxRight = Math.max(maxRight, personPos.get(pid)!.x + NODE_W);
+    }
+  }
+
   // ── Integração do Modelo Stateful Híbrido Incremental ──
   const finalPersonPos = new Map<string, { x: number; y: number }>();
   const finalUnionPos = new Map<string, { x: number; y: number }>();
