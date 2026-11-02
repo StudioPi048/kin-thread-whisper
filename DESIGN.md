@@ -13,6 +13,9 @@ Direção única e vigente. A direção "Atlas" (azul/âmbar) foi rejeitada; seu
 - Tokens: **um único bloco `:root`** em `src/styles.css`. Não criar segundo `:root` nem overrides por hex; usar `var(--token)` / utilitários (`bg-forest`, `text-ink`, `border-border`).
 - Fotografia familiar (`public/assets/genealiz/*`) e logo/wordmark são preservados.
 
+## Revisão da capa pública — 02/11/2026
+Pietro rejeitou o diagrama SVG de exemplo: linhas atravessavam nomes e a composição era inadequada para a capa. `GenogramDemo` foi removido; não recolocar uma variação reduzida. A seção pública usa detalhe da fotografia de arquivo existente. O mapa operacional continua na plataforma, sujeito às invariantes abaixo. A nova seção fotográfica ainda não tem aprovação estética do usuário registrada.
+
 ## Cores
 - **Verde profundo (`forest`, `forest-mid`)**: orientação — navegação, botão principal, foco, seleção.
 - **Superfícies neutras (`archive`, `archive-doc` branco, `archive-old`)**: área de trabalho clara, sem textura, pergaminho, gradiente ou brilho decorativo.
@@ -33,6 +36,7 @@ Direção única e vigente. A direção "Atlas" (azul/âmbar) foi rejeitada; seu
 | clinical-critical sobre branco | 7.60 |
 
 Todos ≥ 4.5 (AA texto normal). Não usar `gold` sobre branco nem opacidades `/50` em texto.
+Essas razões verificam os pares definidos, não certificam todas as combinações e estados da interface.
 
 ## Tipografia (modo Operate)
 - Inter em controles, dados, nomes, tabelas; mínimo 14px, corpo 15–16px.

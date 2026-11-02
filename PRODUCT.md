@@ -20,7 +20,7 @@ Agenda → dossiê → genossociograma/linha do tempo/anamnese/sessões/planilha
 
 ## Capabilities and Constraints
 
-Rotas existentes em src/routes. Preservar contratos de dados, autenticação, URLs, cadastros, importação e exportação. Não alterar dados clínicos nesta reforma. IA clínica da versão remota ainda é demonstração e deve ser identificada como tal. Não inventar relatórios, resultados, estatísticas, assinaturas ou alegações de segurança. A fonte remota parte do commit 55ab595; melhorias antigas locais não publicadas requerem recuperação separada.
+Rotas existentes em src/routes. Preservar contratos de dados, autenticação, URLs, cadastros, importação e exportação. Não alterar registros clínicos reais durante a reforma. Na evolução de 02/11/2026, o chat demonstrativo foi removido: hipóteses provisórias derivam de evidências registradas, com fontes, limites e revisão humana. Isso não equivale a diagnóstico ou validação clínica. Não inventar relatórios, resultados, estatísticas, assinaturas ou alegações de segurança. A matriz em `design/evolution-2026-11-02/status.md` registra implementação, verificações e integrações ainda não testadas.
 
 ## Brand Commitments
 
