@@ -78,7 +78,8 @@ export type NoteEvent =
   | { type: "save_start" }
   | { type: "save_ok"; persisted: string }
   | { type: "save_fail"; message: string }
-  | { type: "reset"; saved: string };
+  | { type: "reset"; saved: string }
+  | { type: "discard" };
 
 export function noteDraftInit(saved: string | null | undefined): NoteDraft {
   return { text: saved ?? "", saved: saved ?? "", phase: "idle", error: null };
@@ -96,6 +97,9 @@ export function noteReducer(s: NoteDraft, e: NoteEvent): NoteDraft {
       return { ...s, saved: e.persisted, phase: "idle", error: null };
     case "save_fail":
       return { ...s, phase: "error", error: e.message };
+    case "discard":
+      // Escolha explícita no diálogo de saída: volta ao texto confirmado
+      return { ...s, text: s.saved, phase: "idle", error: null };
     case "reset":
       // Atualização vinda do servidor nunca sobrescreve edição local pendente.
       return s.text !== s.saved ? { ...s, saved: e.saved } : noteDraftInit(e.saved);

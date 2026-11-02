@@ -1,3 +1,4 @@
+import { useUnsaved } from "@/components/unsaved/unsaved-guard";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, Save, Trash2, CheckCircle2 } from "lucide-react";
@@ -87,8 +88,28 @@ export function IntakeForm({ clientId, professionalId }: Props) {
 
   const scheduleSave = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => save.mutate({}), AUTOSAVE_MS);
+    timer.current = setTimeout(() => {
+      timer.current = null;
+      save.mutate({});
+    }, AUTOSAVE_MS);
   }, [save]);
+
+  // Sair da aba/página com autosave pendente passa pelo guard (salvar/ficar/descartar)
+  useUnsaved(`intake:${clientId}`, {
+    label: "Anamnese",
+    isDirty: () => !!timer.current || save.isPending || save.isError,
+    save: async () => {
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = null;
+      await save.mutateAsync({});
+    },
+    discard: () => {
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = null;
+      save.reset();
+      if (intake) setDraft(intake);
+    },
+  });
 
   const update = useCallback(
     (patch: Partial<ClientIntake>) => {

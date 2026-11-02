@@ -145,9 +145,14 @@ function ClientDossierPage() {
     recordVisit(user.id, clientId, activeTab);
   }, [user.id, clientId, activeTab]);
 
+  // A aba só muda depois que a navegação passa pelo guard de alterações
+  // não salvas (useBlocker); se a usuária escolher "Ficar", nada desmonta.
   const goToTab = (next: DossierTab) => {
-    setActiveTab(next);
-    navigate({ from: Route.fullPath, search: (prev) => ({ ...prev, tab: next }), replace: true });
+    void navigate({
+      from: Route.fullPath,
+      search: (prev) => ({ ...prev, tab: next }),
+      replace: true,
+    });
   };
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 

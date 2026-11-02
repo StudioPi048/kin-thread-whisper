@@ -24,3 +24,5 @@
 - Hypothesis reviews are append-only rows in `hypothesis_reviews` (owner forced by trigger, RLS by professional + client, versioned with an evidence fingerprint from `src/lib/hypothesis-review.ts`) — why: review history must be auditable and flag reviews made on outdated evidence.
 - Synthetic families for tests/landing live in `src/lib/geno/fixtures.ts`; never use real patients in fixtures, demos or screenshots — why: clinical data privacy.
 - User preferences live in `profiles.preferences` (parsed by `src/lib/preferences.ts`) — why: account settings must follow the user across devices.
+
+- Unsaved work (map layout, clan sheet, session notes/audio, intake) registers with `useUnsaved` from `src/components/unsaved/unsaved-guard.tsx`; one app-wide `useBlocker` guards page and dossier-tab changes; saves confirm only the revision captured at start (`src/lib/unsaved.ts`) — why: navigation or concurrent edits must never drop or mislabel pending work.

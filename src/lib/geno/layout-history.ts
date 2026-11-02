@@ -52,15 +52,17 @@ export function saveDraft(
   positions: Snapshot,
   s = store(),
   now = Date.now(),
-) {
-  if (!s || !userId || !clientId) return;
+): boolean {
+  if (!s || !userId || !clientId) return false;
   try {
     s.setItem(
       draftKey(userId, clientId),
       JSON.stringify({ at: now, positions } satisfies LayoutDraft),
     );
+    return true;
   } catch {
-    /* sem espaço: rascunho apenas não é salvo */
+    // sem espaço/bloqueado: a UI avisa que não há rascunho no navegador
+    return false;
   }
 }
 export function readDraft(userId: string, clientId: string, s = store()): LayoutDraft | null {
