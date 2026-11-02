@@ -150,12 +150,19 @@ export function IntakeForm({ clientId, professionalId }: Props) {
               <>Salvamento automático ativo</>
             )}
           </p>
+          <p className="mt-1 text-[13px] text-muted-foreground">
+            Percentual = campos respondidos (inclui "Não se sabe") ÷ todos os campos.
+          </p>
         </div>
 
         <nav className="rounded-lg border border-border bg-card p-2">
-          {INTAKE_SECTIONS.map((s) => (
+          {INTAKE_SECTIONS.map((s) => {
+            const sc = sectionCompletion(draft, s.id);
+            return (
             <button
               key={s.id}
+              type="button"
+              aria-current={section === s.id ? "step" : undefined}
               onClick={() => setSection(s.id)}
               className={`block w-full rounded-md px-3 py-2 text-left text-sm transition ${
                 section === s.id
@@ -163,9 +170,15 @@ export function IntakeForm({ clientId, professionalId }: Props) {
                   : "text-foreground/80 hover:bg-lilac-soft/50 hover:text-primary"
               }`}
             >
-              {s.label}
+              <span className="flex items-center justify-between gap-2">
+                <span>{s.label}</span>
+                <span className="text-[13px] tabular-nums text-muted-foreground">
+                  {sc.filled}/{sc.total}
+                </span>
+              </span>
             </button>
-          ))}
+            );
+          })}
         </nav>
       </aside>
 
@@ -222,14 +235,34 @@ function Field({
   label,
   hint,
   children,
+  id,
+  onUnknown,
+  isUnknown,
 }: {
   label: string;
   hint?: string;
   children: React.ReactNode;
+  id?: string;
+  onUnknown?: () => void;
+  isUnknown?: boolean;
 }) {
   return (
     <div className="space-y-1.5">
-      <Label className="text-sm text-foreground">{label}</Label>
+      <div className="flex items-center justify-between gap-2">
+        <Label htmlFor={id} className="text-[15px] text-foreground">
+          {label}
+        </Label>
+        {onUnknown && (
+          <button
+            type="button"
+            onClick={onUnknown}
+            aria-pressed={isUnknown}
+            className={`min-h-9 rounded-md px-2 text-[13px] underline-offset-2 hover:underline ${isUnknown ? "font-semibold text-primary" : "text-muted-foreground"}`}
+          >
+            {isUnknown ? "Marcado: desconhecido" : "Não se sabe"}
+          </button>
+        )}
+      </div>
       {children}
       {hint && <p className="text-sm text-muted-foreground">{hint}</p>}
     </div>
@@ -245,9 +278,25 @@ function TextField(props: {
   type?: string;
 }) {
   const value = (props.draft[props.field] as string | number | null | undefined) ?? "";
+  const id = useId();
+  const textual = !props.type || props.type === "text";
   return (
-    <Field label={props.label} hint={props.hint}>
+    <Field
+      id={id}
+      label={props.label}
+      hint={props.hint}
+      isUnknown={value === INTAKE_UNKNOWN}
+      onUnknown={
+        textual
+          ? () =>
+              props.update({
+                [props.field]: value === INTAKE_UNKNOWN ? "" : INTAKE_UNKNOWN,
+              } as Partial<ClientIntake>)
+          : undefined
+      }
+    >
       <Input
+        id={id}
         type={props.type ?? "text"}
         value={value as string}
         onChange={(e) =>
@@ -274,9 +323,21 @@ function AreaField(props: {
   rows?: number;
 }) {
   const value = (props.draft[props.field] as string | null | undefined) ?? "";
+  const id = useId();
   return (
-    <Field label={props.label} hint={props.hint}>
+    <Field
+      id={id}
+      label={props.label}
+      hint={props.hint}
+      isUnknown={value === INTAKE_UNKNOWN}
+      onUnknown={() =>
+        props.update({
+          [props.field]: value === INTAKE_UNKNOWN ? "" : INTAKE_UNKNOWN,
+        } as Partial<ClientIntake>)
+      }
+    >
       <Textarea
+        id={id}
         rows={props.rows ?? 4}
         value={value}
         onChange={(e) => props.update({ [props.field]: e.target.value } as Partial<ClientIntake>)}
