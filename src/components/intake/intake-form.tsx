@@ -21,7 +21,7 @@ import {
   INTAKE_SECTIONS,
   SECTION_FIELDS,
   calculateCompletion,
-  sectionCompletion,
+  sectionCompletion as calcSectionCompletion,
   INTAKE_UNKNOWN,
   type ChildEntry,
   type ClientIntake,
@@ -159,7 +159,7 @@ export function IntakeForm({ clientId, professionalId }: Props) {
 
         <nav className="rounded-lg border border-border bg-card p-2">
           {INTAKE_SECTIONS.map((s) => {
-            const sc = sectionCompletion(draft, s.id);
+            const sc = calcSectionCompletion(draft, s.id);
             return (
             <button
               key={s.id}
