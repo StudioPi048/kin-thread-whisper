@@ -1,111 +1,48 @@
 ---
 name: "GENEALIZ — Arquivo vivo"
-description: "Relações familiares em um espaço de trabalho profissional."
-colors: {"forest": "#253c38", "forest-mid": "#243b53", "forest-soft": "#405b76", "forest-mist": "#eaf0f6", "gold": "#dbac67", "gold-soft": "#e7bf86", "gold-muted": "#f4e6d0", "archive": "#f6f3ed", "archive-doc": "#ffffff", "ink-soft": "#4c6179", "warm-gray": "#53677e", "border": "#d8e1ea", "input": "#bdcada", "clinical-critical": "#8b3a3a"}
-typography: {"display": {"fontFamily": "Cormorant Garamond, ui-serif, Georgia, serif", "fontSize": "clamp(3rem, 6vw, 6rem)", "fontWeight": 600, "lineHeight": 1, "letterSpacing": "-0.025em"}, "headline": {"fontFamily": "Cormorant Garamond, ui-serif, Georgia, serif", "fontSize": "42px", "fontWeight": 600, "lineHeight": 1.04, "letterSpacing": "-0.02em"}, "title": {"fontFamily": "Cormorant Garamond, ui-serif, Georgia, serif", "fontSize": "27px", "fontWeight": 600, "lineHeight": 1.15}, "body": {"fontFamily": "Inter, ui-sans-serif, system-ui, sans-serif", "fontSize": "15px", "lineHeight": 1.65}, "label": {"fontFamily": "Inter, ui-sans-serif, system-ui, sans-serif", "fontSize": "14px", "fontWeight": 600}}
-rounded: {"chip": "4px", "nav": "5px", "sm": "6px", "md": "8px", "lg": "12px", "xl": "16px", "2xl": "20px"}
-spacing: {"2": "8px", "3": "12px", "4": "16px", "5": "20px", "6": "24px"}
-components: {"button-default": {"backgroundColor": "{colors.forest}", "textColor": "{colors.archive}", "rounded": "{rounded.md}", "height": "44px", "padding": "8px 20px"}, "button-gold": {"backgroundColor": "{colors.gold}", "textColor": "{colors.forest}", "rounded": "{rounded.md}", "height": "44px", "padding": "8px 20px"}, "button-gold-hover": {"backgroundColor": "{colors.gold-soft}"}, "button-outline": {"backgroundColor": "{colors.archive-doc}", "textColor": "{colors.forest}", "rounded": "{rounded.md}", "height": "44px", "padding": "8px 20px"}, "input": {"backgroundColor": "{colors.archive-doc}", "textColor": "{colors.forest}", "rounded": "{rounded.md}", "height": "44px", "padding": "0 12px"}, "nav-item": {"rounded": "{rounded.nav}", "padding": "13px 10px"}, "chip": {"backgroundColor": "{colors.forest-mist}", "textColor": "{colors.ink-soft}", "rounded": "{rounded.chip}", "padding": "4px 8px"}, "dossier-card": {"backgroundColor": "{colors.archive-doc}", "rounded": "{rounded.lg}", "padding": "22px"}}
+description: "Relações familiares em um espaço de trabalho profissional, claro e legível."
+colors: {"forest": "#253c38", "forest-mid": "#36534b", "forest-soft": "#59706a", "forest-mist": "#e8ede7", "gold": "#cba56b", "gold-soft": "#dfbe8c", "gold-muted": "#f0e3ca", "bronze": "#7e572a", "archive": "#f6f6f4", "archive-old": "#ecece8", "archive-doc": "#ffffff", "ink": "#253430", "ink-soft": "#59665e", "warm-gray": "#647169", "border": "#dddcd3", "input": "#c8cdc3", "clinical-critical": "#8b3a3a", "clinical-warning": "#8a6407"}
+typography: {"editorial": "Cormorant Garamond — só títulos editoriais", "ui": "Inter — controles, dados, nomes, tabelas", "body": "15–16px, entrelinha 1.6", "label": "14px mínimo"}
 ---
 
-# Design System: GENEALIZ
+# Design System: GENEALIZ — Arquivo vivo
 
-## Direção atual — Arquivo vivo
+Direção única e vigente. A direção "Atlas" (azul/âmbar) foi rejeitada; seus valores foram removidos de `:root`. Classes CSS com prefixo `atlas-` são apenas nomes legados de estrutura (shell, nav) e usam os tokens abaixo.
 
-A implementação Atlas foi rejeitada pelo usuário. A direção atual parte do AI Brain de LIZ Consultório e Studio Pi: fotografia de arquivo familiar, papel, fio vinho, luz lateral e uma superfície clara de trabalho. A aprovação estética está pendente de revisão pelo usuário no Lovable.
+## Fonte da verdade
+- Tokens: **um único bloco `:root`** em `src/styles.css`. Não criar segundo `:root` nem overrides por hex; usar `var(--token)` / utilitários (`bg-forest`, `text-ink`, `border-border`).
+- Fotografia familiar (`public/assets/genealiz/*`) e logo/wordmark são preservados.
 
-Duas imagens originais geradas estão em `public/assets/genealiz/`. A home usa fotografia dominante; a mesa reúne casos recentes, agenda e biblioteca; a galeria mostra miniaturas do motor real. O símbolo vetorial combina três fólios em G, com assinatura Inter. Títulos editoriais usam Cormorant; nomes em dossiês e controles usam Inter.
+## Cores
+- **Verde profundo (`forest`, `forest-mid`)**: orientação — navegação, botão principal, foco, seleção.
+- **Superfícies neutras (`archive`, `archive-doc` branco, `archive-old`)**: área de trabalho clara, sem textura, pergaminho, gradiente ou brilho decorativo.
+- **Bronze/dourado (`bronze`, `gold`)**: poucos destaques. `gold` só sobre fundo verde; sobre branco use `bronze`.
+- **Estados**: `clinical-critical` (erro/destrutivo), `clinical-warning` (atenção). Nunca usar cor como único sinal.
 
-Cliente no topo, pais abaixo e avós abaixo dos pais são invariantes. O motor de layout e os vínculos não foram alterados. A planilha ocupa a largura disponível; o painel complementar está na visão geral. O mapa recebe prancheta clara, cartões opacos e ficha compacta.
+## Contraste medido (WCAG 2.1, fórmula de luminância relativa)
+| Par | Razão |
+|---|---|
+| ink sobre archive | 12.04 |
+| ink-soft sobre archive | 5.57 |
+| warm-gray sobre archive | 4.72 |
+| warm-gray sobre branco | 5.11 |
+| texto archive sobre botão forest | 10.89 |
+| bronze sobre branco | 6.39 |
+| gold sobre forest | 5.13 |
+| clinical-warning sobre branco | 5.38 |
+| clinical-critical sobre branco | 7.60 |
 
-Fonte de decisões: `design/arquivo-vivo/brief.md`. Os valores e tamanhos antigos descritos abaixo documentam a base Atlas e são substituídos pelas regras Arquivo vivo ao final de `src/styles.css` quando houver divergência.
+Todos ≥ 4.5 (AA texto normal). Não usar `gold` sobre branco nem opacidades `/50` em texto.
 
-## Colors
+## Tipografia (modo Operate)
+- Inter em controles, dados, nomes, tabelas; mínimo 14px, corpo 15–16px.
+- Cormorant Garamond apenas em títulos editoriais (um título por página).
+- Um título e uma ação principal por tela.
 
-Azul profundo sustenta orientação, âmbar sinaliza destaque e os neutros frios sustentam leitura. O frontmatter contém os valores normativos extraídos; nomes históricos `forest` e `gold` são preservados para acompanhar o código.
+## Interação
+- Alvos de toque ≥ 44px; foco visível (anel 2px `ring`).
+- `prefers-reduced-motion` reduz animações a 0.01ms.
+- Mobile 390px funcional: navegação inferior; painéis laterais viram drawer sem ocultar ações.
 
-### Primary
-
-- **Azul do atlas — forest:** navegação, campo do mapa, texto principal e botão padrão.
-- **Azuis de apoio — forest-mid / forest-soft:** busca, controles do mapa e foco de componentes.
-
-### Secondary
-
-- **Âmbar — gold / gold-soft / gold-muted:** ação destacada, seleção e estados de apoio; não é sinal clínico.
-- **Crítico — clinical-critical:** ações destrutivas e comunicação de erro.
-
-### Neutral
-
-- **Arquivo claro — archive / archive-doc:** fundo e campos brancos.
-- **Névoa azul — forest-mist:** estados secundários e etiquetas.
-- **Texto auxiliar — warm-gray / ink-soft:** metadados e descrições.
-- **Linhas — border / input:** separação e limites de campos.
-
-## Typography
-
-Cormorant Garamond e Inter são carregadas localmente via Fontsource. O wordmark GENEALIZ usa a família editorial; controles usam a família sans.
-
-- **Display:** classe de títulos amplos definida no frontmatter. A entrada pública usa uma escala própria (`clamp(42px, 4.3vw, 70px)`, peso 500, entrelinha 1.06).
-- **Headline:** título de página do frontmatter, reduzido a 34px abaixo de 768px.
-- **Title:** nome em dossiê; a ficha do mapa usa 32px e itens de biblioteca usam 25px.
-- **Body:** leitura com entrelinha confortável; subtítulo de página usa 14px e largura máxima 74ch.
-- **Label:** controles 14px; navegação 13px; metadados 11–12px conforme contexto.
-
-## Layout
-
-Shell desktop em grade com coluna de navegação de 220px, ou 76px recolhida, e conteúdo flexível. Sidebar fixa durante rolagem e barra superior de 72px. Contêiner de conteúdo até 1600px com margens internas `clamp(18px, 2.5vw, 40px)`.
-
-Abaixo de 1024px, a sidebar dá lugar à navegação inferior; a barra superior tem 64px e o conteúdo reserva 80px ao rodapé. A navegação inferior respeita a área segura do dispositivo. Abaixo de 768px, cabeçalhos empilham ações; mapa e ficha ficam em coluna, com área de trabalho do mapa de 580px e ficha de até 460px com rolagem. A biblioteca passa de índice de 205px mais lista flexível para categorias horizontais e lista única. Abas podem rolar horizontalmente.
-
-## Elevation & Depth
-
-Superfícies do Atlas usam preenchimento e borda, sem sombra estrutural. Os utilitários de sombra surface/dossier/gold foram neutralizados. Permanecem sombras discretas `shadow-lifted` e `shadow-hover` para consumidores existentes; valores completos estão no sidecar. O componente legado Card ainda contém superfície quente e sombra: é uma exceção do código, não o padrão dos dossiês Atlas.
-
-Movimento predominante: transições de cor em 150ms. Skeleton pulsa em 1.6s; a preferência de redução de movimento reduz animações e transições para 0.01ms e remove rolagem suave.
-
-## Shapes
-
-Etiquetas pequenas usam cantos de 4px; navegação e controles de mapa, 5px. Botões e campos compartilhados usam o token md de 8px; CTAs públicos usam 6px. Painéis Atlas e dossiês usam 12px. Linhas de separação são de 1px. Pessoas do genograma mantêm símbolos próprios do motor; a reforma visual não redefine a semântica desses símbolos.
-
-## Components
-
-### Buttons
-
-Botão padrão azul, destaque gold/hero âmbar, outline branco com borda de campo; variantes secondary, ghost, link, forest e destructive permanecem no componente compartilhado. Altura padrão 44px; pequeno 36px, grande 48px, extra grande 56px. Hover altera cor; foco tem contorno de 2px com afastamento de 2px. Desabilitado reduz opacidade à metade e bloqueia interação. CTAs públicos têm padding de 13px por 24px e raio de 6px.
-
-### Chips
-
-Etiqueta Atlas compacta com fundo secundário, texto ink-soft e tipografia de 11px. Estados devem ter rótulo explícito. O Badge genérico também permanece disponível; não confundir sua variante padrão sombreada com a etiqueta Atlas.
-
-### Cards / Containers
-
-Dossiê branco, borda fina, padding 22px, intervalo interno 16px; hover escurece a borda. Nome editorial, detalhes em sans, rodapé separado por linha e ações de gestão existentes. No celular, padding 20px. Seções de formulário usam 24px no desktop e 20px no celular.
-
-### Inputs / Fields
-
-Campo branco com borda input, altura 44px, padding horizontal 12px, texto de 14px e placeholder auxiliar. Foco usa o contorno ring; estado desabilitado tem opacidade reduzida e cursor de indisponibilidade.
-
-### Navigation
-
-Links desktop têm altura mínima 46px, texto de 13px e ícones; a seleção usa âmbar suave, fundo translúcido e linha interna à esquerda, com `aria-current`. Hover clareia o fundo. Mobile mantém rótulos e acesso às áreas adicionais por Mais. Abas usam linha inferior no estado ativo, sem cartões ao redor dos títulos.
-
-### Mapa e ficha
-
-Campo azul com pessoas e vínculos do caso, controles de zoom e ficha clara contextual. A seleção orienta consulta e edição existentes. Rótulos de vínculos, legenda e metadados dão contexto; nenhuma relação deve ser deduzida apenas do posicionamento. Avisos de preview e demonstração pertencem ao estado real do produto.
-
-## Do's and Don'ts
-
-### Do:
-
-- **Do** preservar os nomes e rótulos dos vínculos e complementar cor com texto ou forma.
-- **Do** manter o aviso de dados fictícios visível no preview, acima da navegação móvel.
-- **Do** reutilizar controles compartilhados, foco visível e redução de movimento.
-
-### Don't:
-
-- **Don't** usar astrologia, constelações ornamentais ou inferências clínicas inventadas.
-- **Don't** aplicar brilho dourado, gradientes decorativos ou textura de pergaminho.
-- **Don't** tratar dados fictícios do preview como validação do motor de parentescos.
-
-## Revisão do usuário — 06/10/2026
-A qualidade estética global foi questionada pelo usuário: aprovação de direção não equivale à aprovação da implementação. Priorizar refinamento conservador da base existente. Cartões de nome e datas do mapa têm fundo sólido e altura mínima de 72px para preservar leitura sobre conexões; não remover essa proteção.
+## Genossociograma (inviolável)
+Cliente e irmãos no topo; pais abaixo; avós abaixo dos pais. Filiação sempre pela união correta. Cartões opacos ≥ 72px protegem nomes/datas das linhas. Testado em `src/lib/geno/invariants.test.ts`.
