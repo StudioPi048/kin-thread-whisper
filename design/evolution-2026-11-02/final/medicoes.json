@@ -1,0 +1,77 @@
+Skipping host requirements validation logic because `PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS` env variable is set.
+{
+ "desk-capa": {
+  "w": 1280,
+  "sw": 1280,
+  "unnamed": [],
+  "svgDemo": false
+ },
+ "desk-mesa": {
+  "w": 1280,
+  "sw": 1280,
+  "unnamed": [],
+  "svgDemo": false
+ },
+ "desk-mapa": {
+  "w": 1280,
+  "sw": 1280,
+  "unnamed": [],
+  "svgDemo": false
+ },
+ "desk-agenda-dia": {
+  "w": 1280,
+  "sw": 1280,
+  "unnamed": [],
+  "svgDemo": false
+ },
+ "desk-agenda-semana": {
+  "w": 1280,
+  "sw": 1280,
+  "unnamed": [],
+  "svgDemo": false
+ },
+ "desk-biblioteca": {
+  "w": 1280,
+  "sw": 1280,
+  "unnamed": [],
+  "svgDemo": false
+ },
+ "desk-errors": [],
+ "m390-capa": {
+  "w": 390,
+  "sw": 390,
+  "unnamed": [],
+  "svgDemo": false
+ },
+ "m390-mesa": {
+  "w": 390,
+  "sw": 390,
+  "unnamed": [],
+  "svgDemo": false
+ },
+ "m390-mapa": {
+  "w": 390,
+  "sw": 390,
+  "unnamed": [],
+  "svgDemo": false
+ },
+ "m390-agenda-dia": {
+  "w": 390,
+  "sw": 390,
+  "unnamed": [],
+  "svgDemo": false
+ },
+ "m390-agenda-semana": {
+  "w": 390,
+  "sw": 390,
+  "unnamed": [],
+  "svgDemo": false
+ },
+ "m390-biblioteca": {
+  "w": 390,
+  "sw": 390,
+  "unnamed": [],
+  "svgDemo": false
+ },
+ "m390-errors": []
+}
