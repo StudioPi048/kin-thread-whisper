@@ -34,6 +34,7 @@ import { smartNormalizeRelationship, genealogicalOrder } from "@/lib/relationshi
 import { ensureProband } from "@/lib/ensure-proband";
 import { RelationshipCombobox } from "./relationship-combobox";
 import { buildLogicalGraph } from "@/lib/geno/build";
+import { inferGenderFromRelationship, parseDateString } from "@/lib/clan-import";
 
 type Person = Tables<"genogram_persons">;
 type Props = { clientId: string };
@@ -890,100 +891,6 @@ export function ClanSpreadsheet({ clientId }: Props) {
       </AlertDialog>
     </div>
   );
-}
-
-function inferGenderFromRelationship(rel?: string): "male" | "female" | undefined {
-  if (!rel) return undefined;
-  const r = rel.toLowerCase();
-  if (/\b(pai|avô|bisavô|tio\b|irmão)\b/.test(r)) return "male";
-  if (/\b(mãe|avó|bisavó|tia\b|irmã)\b/.test(r)) return "female";
-  return undefined;
-}
-
-function parseDateString(d?: string): string | null {
-  if (!d) return null;
-  const val = String(d).trim();
-  if (!val) return null;
-
-  // ISO YYYY-MM-DD (já normalizado)
-  if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
-    return isValidYMD(val) ? val : null;
-  }
-
-  // Aceita separadores /, -, ., ou \ com espaços opcionais
-  const parts = val
-    .split(/[/\\\-. \t]/)
-    .map((p) => p.trim())
-    .filter(Boolean);
-
-  if (parts.length === 3) {
-    if (!parts.every((p) => /^\d+$/.test(p))) return null;
-    const nums = parts.map(Number);
-
-    let dd: string, mm: string, yy: string;
-
-    // Detecta o formato pelo tamanho e range dos valores
-    // Se o primeiro número > 31, provavelmente é o ano (YYYY/MM/DD)
-    if (nums[0] > 31) {
-      [yy, mm, dd] = parts;
-    }
-    // Se o terceiro número > 31 ou tem 4 dígitos, é DD/MM/YYYY ou MM/DD/YYYY
-    else if (nums[2] > 31 || parts[2].length === 4) {
-      // Distingue DD/MM/YYYY de MM/DD/YYYY:
-      // Se o primeiro número > 12, é dia (não pode ser mês)
-      if (nums[0] > 12) {
-        [dd, mm, yy] = parts; // DD/MM/YYYY (brasileiro)
-      } else if (nums[1] > 12) {
-        [mm, dd, yy] = parts; // MM/DD/YYYY (americano)
-      } else {
-        // Ambíguo: assume brasileiro (DD/MM/YYYY) por ser o padrão local
-        [dd, mm, yy] = parts;
-      }
-    } else {
-      // Fallback: assume DD/MM/YY
-      [dd, mm, yy] = parts;
-    }
-
-    // Ano com 2 dígitos: 00-30 → 2000-2030, 31-99 → 1931-1999
-    if (yy.length === 2) {
-      const n = parseInt(yy, 10);
-      yy = String(n <= 30 ? 2000 + n : 1900 + n);
-    }
-    if (yy.length !== 4) return null;
-
-    const iso = `${yy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
-    return isValidYMD(iso) ? iso : null;
-  }
-
-  // Apenas dia e mês (ex.: "01/03" ou "14\08") → assume o ano 2000 temporariamente para não perder o dado
-  if (parts.length === 2 && parts.every((p) => /^\d+$/.test(p))) {
-    const [p1, p2] = parts;
-    let dd = p1,
-      mm = p2;
-    if (Number(p1) > 12) {
-      // P1 não pode ser mês, então é DD/MM
-      dd = p1;
-      mm = p2;
-    } else if (Number(p2) > 12) {
-      // P2 não pode ser mês, então é MM/DD
-      mm = p1;
-      dd = p2;
-    }
-    const iso = `2000-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
-    return isValidYMD(iso) ? iso : null;
-  }
-
-  // Apenas ano (ex.: "1985") → assume 01/01 para não perder o dado
-  if (/^\d{4}$/.test(val)) return `${val}-01-01`;
-
-  return null;
-}
-
-function isValidYMD(iso: string): boolean {
-  const [y, m, d] = iso.split("-").map(Number);
-  if (m < 1 || m > 12 || d < 1 || d > 31) return false;
-  const dt = new Date(Date.UTC(y, m - 1, d));
-  return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
 }
 
 function Th({ children, w, sticky }: { children?: React.ReactNode; w?: string; sticky?: boolean }) {
