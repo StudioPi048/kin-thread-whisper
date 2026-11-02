@@ -116,3 +116,90 @@ describe("múltiplas uniões", () => {
     expect(u.label).toBe("2º casamento");
   });
 });
+
+const rel = (from: string, to: string, type: "parent" | "union", extra: Record<string, unknown> = {}) => ({
+  id: `r_${from}_${to}_${type}`, client_id: "c", from_person_id: from, to_person_id: to,
+  relationship_type: type, qualifier: null, start_date: null, end_date: null, notes: null,
+  created_at: "", updated_at: "", marriage_order: null, ...extra,
+});
+
+describe("filiação explícita, meios-irmãos e órfãos", () => {
+  function setup() {
+    n = 0;
+    const cli = p("Consulente", "Cliente");
+    const irma = p("Irmã(o)", "Irmã");
+    const pai = p("Pai");
+    const mae = p("Mãe");
+    const outra = p("", "Segunda esposa do pai");
+    const meio = p("", "Meio-irmão");
+    const avo = p("Avô paterno");
+    const orfao = p("Irmã(o) do avô materno", "Tio-avô solto");
+    const persons = [cli, irma, pai, mae, outra, meio, avo, orfao];
+    const rels = [
+      rel(pai.id, meio.id, "parent"),
+      rel(outra.id, meio.id, "parent"),
+      rel(pai.id, outra.id, "union", { marriage_order: 2 }),
+    ];
+    const g = buildLogicalGraph({ persons, rels: rels as never });
+    return { g, pl: layoutGraph(g), cli, irma, pai, mae, outra, meio, avo, orfao, persons };
+  }
+
+  it("cliente e irmãos continuam no topo; pais e avós abaixo", () => {
+    const { pl, cli, irma, pai, avo } = setup();
+    const Y = (x: PersonRow) => pl.personPos.get(x.id)!.y;
+    const minY = Math.min(...[...pl.personPos.values()].map((v) => v.y));
+    expect(Y(cli)).toBe(minY);
+    expect(Y(irma)).toBe(Y(cli));
+    expect(Y(pai)).toBeGreaterThan(Y(cli));
+    expect(Y(avo)).toBeGreaterThan(Y(pai));
+  });
+
+  it("meio-irmão fica na união Pai+Segunda esposa, não na de Pai+Mãe", () => {
+    const { g, cli, meio, pai, outra } = setup();
+    const uCli = parentUnion(g, cli.id)!;
+    const uMeio = parentUnion(g, meio.id)!;
+    expect(uMeio).toBeTruthy();
+    expect(uMeio).not.toBe(uCli);
+    expect(new Set(g.unions.get(uMeio)!.partners)).toEqual(new Set([pai.id, outra.id]));
+    expect(g.unions.get(uMeio)!.label).toBe("2º casamento");
+  });
+
+  it("meio-irmão na mesma linha do cliente (geração 0)", () => {
+    const { pl, cli, meio } = setup();
+    expect(pl.personPos.get(meio.id)!.y).toBe(pl.personPos.get(cli.id)!.y);
+  });
+
+  it("órfão não recebe pais falsos, aparece com aviso na geração reconhecida", () => {
+    const { g, pl, orfao, avo } = setup();
+    expect(parentUnion(g, orfao.id)).toBeUndefined();
+    expect(g.warnings.some((w) => w.personId === orfao.id)).toBe(true);
+    expect(pl.personPos.get(orfao.id)!.y).toBe(pl.personPos.get(avo.id)!.y);
+  });
+
+  it("ninguém duplicado nem perdido; cada filho em uma única união", () => {
+    const { g, pl, persons } = setup();
+    for (const x of persons) expect(pl.personPos.has(x.id)).toBe(true);
+    const childEdges = g.edges.filter((e) => e.kind === "child").map((e) => e.personId);
+    expect(new Set(childEdges).size).toBe(childEdges.length);
+  });
+
+  it("duas uniões do mesmo genitor têm filhos distintos", () => {
+    const { g, pai } = setup();
+    const us = [...g.unions.values()].filter((u) => u.partners.includes(pai.id) && u.partners.length === 2);
+    expect(us.length).toBe(2);
+    const [a, b] = us.map((u) => new Set(u.children));
+    for (const c of a) expect(b.has(c)).toBe(false);
+  });
+
+  it("filiação explícita tem precedência sobre a tag", () => {
+    n = 0;
+    const cli = p("Consulente");
+    const pai = p("Pai");
+    const mae = p("Mãe");
+    const x = p("Irmã(o)", "Irmão só por pai");
+    const g = buildLogicalGraph({ persons: [cli, pai, mae, x], rels: [rel(pai.id, x.id, "parent")] as never });
+    const u = g.unions.get(parentUnion(g, x.id)!)!;
+    expect(u.partners).toEqual([pai.id]);
+    expect(parentUnion(g, cli.id)).not.toBe(u.id);
+  });
+});
