@@ -709,6 +709,7 @@ export function resolveGenerations(g: LogicalGraph) {
   }
   const gen = new Map<N, number>();
   const conflicts = new Set<string>();
+  const badLinks: [N, N][] = [];
   const run = (seed: N, value: number) => {
     gen.set(seed, value);
     const queue: N[] = [seed];
@@ -721,8 +722,10 @@ export function resolveGenerations(g: LogicalGraph) {
         if (have === undefined) {
           gen.set(to, want);
           queue.push(to);
-        } else if (have !== want && to.startsWith("p:")) {
-          conflicts.add(to.slice(2));
+        } else if (have !== want) {
+          const pNode = to.startsWith("p:") ? to : cur;
+          conflicts.add(pNode.slice(2));
+          if (d !== 0) badLinks.push([cur, to]);
         }
       }
     }
@@ -732,6 +735,20 @@ export function resolveGenerations(g: LogicalGraph) {
   for (const p of rest) if (!gen.has(`p:${p.id}`)) run(`p:${p.id}`, p.generation);
   for (const [uid, u] of g.unions)
     if (!gen.has(`u:${uid}`)) run(`u:${uid}`, Math.max(1, u.generation));
+
+  // Corta a ligação filho↔união contraditória (quebra ciclos; layout nunca recursa infinitamente)
+  for (const [a, b] of badLinks) {
+    const pn = a.startsWith("p:") ? a : b;
+    const un = a.startsWith("u:") ? a : b;
+    const pid = pn.slice(2);
+    const uid = un.slice(2);
+    const before = g.edges.length;
+    g.edges = g.edges.filter((e) => !(e.kind === "child" && e.personId === pid && e.unionId === uid));
+    if (g.edges.length !== before) {
+      const u = g.unions.get(uid);
+      if (u) u.children = u.children.filter((c) => c !== pid);
+    }
+  }
 
   // Ninguém acima do cliente: componente com geração negativa é deslocado inteiro para baixo
   const shiftOf = new Map<N, number>();
@@ -865,8 +882,11 @@ export function layoutGraph(g: LogicalGraph): Placement {
   const unionD = new Map<string, number>();
 
   // PASSO 1: Bottom-up compute width (extents)
+  const inProgress = new Set<string>();
   const computeExtent = (personId: string, side: "root" | "paternal" | "maternal"): Extent => {
     if (personExtents.has(personId)) return personExtents.get(personId)!;
+    if (inProgress.has(personId)) return { left: -NODE_W / 2, right: NODE_W / 2 }; // guarda contra ciclo
+    inProgress.add(personId);
 
     let left = -NODE_W / 2;
     let right = NODE_W / 2;

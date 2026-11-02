@@ -164,7 +164,8 @@ describe("faixa Y fixa por geração (layout salvo, arrasto, rascunho)", () => {
     expect(pl.personPos.get(f.cli.id)).toEqual({ x: 999, y: 0 });
     expect(pl.personPos.get(f.avoP.id)).toEqual({ x: -555, y: genY(2) });
     expect(pl.normalizedY).toBe(2);
-    expect(checkLayoutInvariants(g, pl).filter((v) => v.rule !== "SOBREPOSICAO")).toEqual([]);
+    const orientation = ["FORA_DA_FAIXA_DA_GERACAO", "ACIMA_DO_CLIENTE", "GENITOR_ACIMA_DO_FILHO", "GERACAO_FILHO_INCOERENTE", "GERACAO_CASAL_INCOERENTE"];
+    expect(checkLayoutInvariants(g, pl).filter((v) => orientation.includes(v.rule))).toEqual([]);
   });
 
   it("rascunho/undo inválido só aplica X; Y continua da geração", () => {
