@@ -744,7 +744,9 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
   // Evidências da fonte comum (mesma do dossiê/copiloto/IA Clínica)
   const intelQ = useQuery(clinicalIntelQuery(session.clientId ?? ""));
   const evidence = intelQ.data
-    ? detectPatterns(intelQ.data.persons, intelQ.data.relationships).map((p) => `${p.title}: ${p.description}`)
+    ? detectPatterns(intelQ.data.persons, intelQ.data.relationships).map(
+        (p) => `${p.title}: ${p.description}`,
+      )
     : [];
   const mergedAlerts = Array.from(
     new Set([...session.aiAlerts, ...evidence, ...genogramAlerts.map((a) => a.message)]),

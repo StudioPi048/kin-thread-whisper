@@ -270,7 +270,9 @@ export function ClanSpreadsheet({ clientId }: Props) {
     const q = filter.trim().toLowerCase();
     if (!q) return rows;
     return rows.filter((r) =>
-      `${r.full_name ?? ""} ${r.relationship_to_proband ?? ""} ${r.occupation ?? ""}`.toLowerCase().includes(q),
+      `${r.full_name ?? ""} ${r.relationship_to_proband ?? ""} ${r.occupation ?? ""}`
+        .toLowerCase()
+        .includes(q),
     );
   }, [rows, filter]);
   // Teclado: ↑/↓ movem para a mesma coluna da linha vizinha
@@ -282,9 +284,13 @@ export function ClanSpreadsheet({ clientId }: Props) {
     const tr = el.closest("tr");
     if (!td || !tr) return;
     const col = Array.from(tr.children).indexOf(td);
-    let next = (e.key === "ArrowDown" ? tr.nextElementSibling : tr.previousElementSibling) as HTMLElement | null;
+    let next = (
+      e.key === "ArrowDown" ? tr.nextElementSibling : tr.previousElementSibling
+    ) as HTMLElement | null;
     while (next && next.children.length <= col) {
-      next = (e.key === "ArrowDown" ? next.nextElementSibling : next.previousElementSibling) as HTMLElement | null;
+      next = (
+        e.key === "ArrowDown" ? next.nextElementSibling : next.previousElementSibling
+      ) as HTMLElement | null;
     }
     const target = next?.children[col]?.querySelector("input") as HTMLInputElement | null;
     if (target) {
@@ -331,12 +337,16 @@ export function ClanSpreadsheet({ clientId }: Props) {
         ? analyzeImport(
             importPreview.rows,
             importPreview.mapping,
-            importReplace ? [] : (persons ?? []).map((p) => ({ full_name: p.full_name, birth_date: p.birth_date })),
+            importReplace
+              ? []
+              : (persons ?? []).map((p) => ({ full_name: p.full_name, birth_date: p.birth_date })),
           )
         : [],
     [importPreview, importReplace, persons],
   );
-  const toImport = analysis.filter((r) => r.status === "ok" || (importDuplicates && r.status === "duplicate"));
+  const toImport = analysis.filter(
+    (r) => r.status === "ok" || (importDuplicates && r.status === "duplicate"),
+  );
   const confirmImport = useMutation({
     mutationFn: async () => {
       const rows = toImport.map((r) => r.record!);
@@ -445,7 +455,11 @@ export function ClanSpreadsheet({ clientId }: Props) {
           parsedRows = lines.slice(1).map(splitLine);
         }
 
-        setImportPreview({ header: parsedHeader, rows: parsedRows, mapping: autoMap(parsedHeader) });
+        setImportPreview({
+          header: parsedHeader,
+          rows: parsedRows,
+          mapping: autoMap(parsedHeader),
+        });
       } catch (error) {
         console.error("Import Error:", error);
         toast.error(`Erro ao importar: ${(error as Error)?.message || "Verifique o formato."}`);
@@ -653,7 +667,12 @@ export function ClanSpreadsheet({ clientId }: Props) {
               />
             </label>
             <label className="flex min-h-11 items-center gap-2 text-[15px]">
-              <input type="checkbox" className="size-5" checked={showDates} onChange={(e) => setShowDates(e.target.checked)} />
+              <input
+                type="checkbox"
+                className="size-5"
+                checked={showDates}
+                onChange={(e) => setShowDates(e.target.checked)}
+              />
               Colunas de datas
             </label>
             <span className="text-[14px] text-muted-foreground" role="status">
@@ -736,22 +755,26 @@ export function ClanSpreadsheet({ clientId }: Props) {
                             })()}
                           </div>
                         </Td>
-                        {showDates && (<><Td>
-                          <CellInput
-                            type="date"
-                            value={r.birth_date ?? ""}
-                            onChange={(v) => scheduleSave(r.id, { birth_date: v || null })}
-                          />
-                        </Td>
-                        <Td>
-                          <CellInput
-                            type="date"
-                            value={r.death_date ?? ""}
-                            onChange={(v) =>
-                              scheduleSave(r.id, { death_date: v || null, is_deceased: !!v })
-                            }
-                          />
-                        </Td></>)}
+                        {showDates && (
+                          <>
+                            <Td>
+                              <CellInput
+                                type="date"
+                                value={r.birth_date ?? ""}
+                                onChange={(v) => scheduleSave(r.id, { birth_date: v || null })}
+                              />
+                            </Td>
+                            <Td>
+                              <CellInput
+                                type="date"
+                                value={r.death_date ?? ""}
+                                onChange={(v) =>
+                                  scheduleSave(r.id, { death_date: v || null, is_deceased: !!v })
+                                }
+                              />
+                            </Td>
+                          </>
+                        )}
                         <td className="px-1 text-center">
                           <button
                             onClick={() => toggleExpanded(r.id)}
@@ -897,13 +920,16 @@ export function ClanSpreadsheet({ clientId }: Props) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <Dialog open={!!importPreview} onOpenChange={(o) => !o && !confirmImport.isPending && setImportPreview(null)}>
+      <Dialog
+        open={!!importPreview}
+        onOpenChange={(o) => !o && !confirmImport.isPending && setImportPreview(null)}
+      >
         <DialogContent className="max-h-[90dvh] max-w-4xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Prévia da importação</DialogTitle>
             <DialogDescription>
-              Confira o mapeamento das colunas e as linhas antes de gravar. Nada é salvo até você confirmar;
-              se a gravação falhar, a planilha atual fica como está.
+              Confira o mapeamento das colunas e as linhas antes de gravar. Nada é salvo até você
+              confirmar; se a gravação falhar, a planilha atual fica como está.
             </DialogDescription>
           </DialogHeader>
           {importPreview && (
@@ -919,7 +945,15 @@ export function ClanSpreadsheet({ clientId }: Props) {
                       onChange={(e) => {
                         const v = e.target.value;
                         setImportPreview((p) =>
-                          p ? { ...p, mapping: { ...p.mapping, [f.key]: v === "" ? undefined : Number(v) } } : p,
+                          p
+                            ? {
+                                ...p,
+                                mapping: {
+                                  ...p.mapping,
+                                  [f.key]: v === "" ? undefined : Number(v),
+                                },
+                              }
+                            : p,
                         );
                       }}
                     >
@@ -935,7 +969,8 @@ export function ClanSpreadsheet({ clientId }: Props) {
               </fieldset>
               <p role="status">
                 <strong>{analysis.filter((r) => r.status === "ok").length}</strong> válidas ·{" "}
-                <strong>{analysis.filter((r) => r.status === "duplicate").length}</strong> possíveis duplicidades ·{" "}
+                <strong>{analysis.filter((r) => r.status === "duplicate").length}</strong> possíveis
+                duplicidades ·{" "}
                 <strong>{analysis.filter((r) => r.status === "error").length}</strong> com erro ·{" "}
                 {analysis.filter((r) => r.status === "skip").length} ignoradas
               </p>
@@ -955,9 +990,20 @@ export function ClanSpreadsheet({ clientId }: Props) {
                         <td className="px-2 py-1 tabular-nums">{r.line}</td>
                         <td className="px-2 py-1">{r.record?.full_name ?? "—"}</td>
                         <td className="px-2 py-1">{r.record?.relationship_to_proband ?? "—"}</td>
-                        <td className={`px-2 py-1 ${r.status === "error" ? "text-destructive" : ""}`}>
-                          {{ ok: "Ok", error: "Erro", duplicate: "Duplicidade?", skip: "Ignorada" }[r.status]}
-                          {r.messages.length > 0 && <span className="block text-[13px]">{r.messages.join("; ")}</span>}
+                        <td
+                          className={`px-2 py-1 ${r.status === "error" ? "text-destructive" : ""}`}
+                        >
+                          {
+                            {
+                              ok: "Ok",
+                              error: "Erro",
+                              duplicate: "Duplicidade?",
+                              skip: "Ignorada",
+                            }[r.status]
+                          }
+                          {r.messages.length > 0 && (
+                            <span className="block text-[13px]">{r.messages.join("; ")}</span>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -965,19 +1011,35 @@ export function ClanSpreadsheet({ clientId }: Props) {
                 </table>
               </div>
               <label className="flex min-h-11 items-center gap-2">
-                <input type="checkbox" className="size-5" checked={importDuplicates} onChange={(e) => setImportDuplicates(e.target.checked)} />
+                <input
+                  type="checkbox"
+                  className="size-5"
+                  checked={importDuplicates}
+                  onChange={(e) => setImportDuplicates(e.target.checked)}
+                />
                 Importar também as possíveis duplicidades
               </label>
               {(persons?.length ?? 0) > 0 && (
                 <label className="flex min-h-11 items-center gap-2">
-                  <input type="checkbox" className="size-5" checked={importReplace} onChange={(e) => setImportReplace(e.target.checked)} />
-                  Substituir os familiares atuais (o cliente é mantido; vínculos dos removidos são apagados)
+                  <input
+                    type="checkbox"
+                    className="size-5"
+                    checked={importReplace}
+                    onChange={(e) => setImportReplace(e.target.checked)}
+                  />
+                  Substituir os familiares atuais (o cliente é mantido; vínculos dos removidos são
+                  apagados)
                 </label>
               )}
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" className="min-h-11" disabled={confirmImport.isPending} onClick={() => setImportPreview(null)}>
+            <Button
+              variant="outline"
+              className="min-h-11"
+              disabled={confirmImport.isPending}
+              onClick={() => setImportPreview(null)}
+            >
               Cancelar
             </Button>
             <Button

@@ -161,24 +161,24 @@ export function IntakeForm({ clientId, professionalId }: Props) {
           {INTAKE_SECTIONS.map((s) => {
             const sc = calcSectionCompletion(draft, s.id);
             return (
-            <button
-              key={s.id}
-              type="button"
-              aria-current={section === s.id ? "step" : undefined}
-              onClick={() => setSection(s.id)}
-              className={`block w-full rounded-md px-3 py-2 text-left text-sm transition ${
-                section === s.id
-                  ? "bg-accent text-accent-foreground font-medium"
-                  : "text-foreground hover:bg-accent"
-              }`}
-            >
-              <span className="flex items-center justify-between gap-2">
-                <span>{s.label}</span>
-                <span className="text-[13px] tabular-nums text-muted-foreground">
-                  {sc.filled}/{sc.total}
+              <button
+                key={s.id}
+                type="button"
+                aria-current={section === s.id ? "step" : undefined}
+                onClick={() => setSection(s.id)}
+                className={`block w-full rounded-md px-3 py-2 text-left text-sm transition ${
+                  section === s.id
+                    ? "bg-accent text-accent-foreground font-medium"
+                    : "text-foreground hover:bg-accent"
+                }`}
+              >
+                <span className="flex items-center justify-between gap-2">
+                  <span>{s.label}</span>
+                  <span className="text-[13px] tabular-nums text-muted-foreground">
+                    {sc.filled}/{sc.total}
+                  </span>
                 </span>
-              </span>
-            </button>
+              </button>
             );
           })}
         </nav>

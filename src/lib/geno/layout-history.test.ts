@@ -38,7 +38,10 @@ describe("rascunho por usuário+caso", () => {
   });
   it("descarta valores inválidos", () => {
     const s = mem();
-    s.setItem("genealiz:layout-draft:u:c", JSON.stringify({ at: 1, positions: { a: [1, 2], b: "x", c: { name: "Maria" } } }));
+    s.setItem(
+      "genealiz:layout-draft:u:c",
+      JSON.stringify({ at: 1, positions: { a: [1, 2], b: "x", c: { name: "Maria" } } }),
+    );
     expect(readDraft("u", "c", s)!.positions).toEqual({ a: [1, 2] });
   });
 });

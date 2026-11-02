@@ -117,10 +117,25 @@ describe("múltiplas uniões", () => {
   });
 });
 
-const rel = (from: string, to: string, type: "parent" | "union", extra: Record<string, unknown> = {}) => ({
-  id: `r_${from}_${to}_${type}`, client_id: "c", from_person_id: from, to_person_id: to,
-  relationship_type: type, qualifier: null, start_date: null, end_date: null, notes: null,
-  created_at: "", updated_at: "", marriage_order: null, ...extra,
+const rel = (
+  from: string,
+  to: string,
+  type: "parent" | "union",
+  extra: Record<string, unknown> = {},
+) => ({
+  id: `r_${from}_${to}_${type}`,
+  client_id: "c",
+  from_person_id: from,
+  to_person_id: to,
+  relationship_type: type,
+  qualifier: null,
+  start_date: null,
+  end_date: null,
+  notes: null,
+  created_at: "",
+  updated_at: "",
+  marriage_order: null,
+  ...extra,
 });
 
 describe("filiação explícita, meios-irmãos e órfãos", () => {
@@ -185,7 +200,9 @@ describe("filiação explícita, meios-irmãos e órfãos", () => {
 
   it("duas uniões do mesmo genitor têm filhos distintos", () => {
     const { g, pai } = setup();
-    const us = [...g.unions.values()].filter((u) => u.partners.includes(pai.id) && u.partners.length === 2);
+    const us = [...g.unions.values()].filter(
+      (u) => u.partners.includes(pai.id) && u.partners.length === 2,
+    );
     expect(us.length).toBe(2);
     const [a, b] = us.map((u) => new Set(u.children));
     for (const c of a) expect(b.has(c)).toBe(false);
@@ -197,7 +214,10 @@ describe("filiação explícita, meios-irmãos e órfãos", () => {
     const pai = p("Pai");
     const mae = p("Mãe");
     const x = p("Irmã(o)", "Irmão só por pai");
-    const g = buildLogicalGraph({ persons: [cli, pai, mae, x], rels: [rel(pai.id, x.id, "parent")] as never });
+    const g = buildLogicalGraph({
+      persons: [cli, pai, mae, x],
+      rels: [rel(pai.id, x.id, "parent")] as never,
+    });
     const u = g.unions.get(parentUnion(g, x.id)!)!;
     expect(u.partners).toEqual([pai.id]);
     expect(parentUnion(g, cli.id)).not.toBe(u.id);
@@ -208,7 +228,11 @@ import { checkLayoutInvariants } from "./verify";
 describe("sem sobreposição de cartões", () => {
   it("família com meio-irmão e órfão não sobrepõe cartões", () => {
     n = 0;
-    const cli = p("Consulente"), pai = p("Pai"), mae = p("Mãe"), outra = p("", "Outra"), meio = p("", "Meio");
+    const cli = p("Consulente"),
+      pai = p("Pai"),
+      mae = p("Mãe"),
+      outra = p("", "Outra"),
+      meio = p("", "Meio");
     const orf = p("Avó materna", "Avó");
     const g = buildLogicalGraph({
       persons: [cli, pai, mae, outra, meio, orf],

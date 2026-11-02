@@ -569,16 +569,26 @@ function ClientDossierPage() {
 
                     <Panel title="Lacunas do caso" accent="gold">
                       {intelQ.isError ? (
-                        <div role="alert" className="flex flex-wrap items-center gap-3 text-[15px] text-destructive">
+                        <div
+                          role="alert"
+                          className="flex flex-wrap items-center gap-3 text-[15px] text-destructive"
+                        >
                           Não foi possível ler o genossociograma.
-                          <Button variant="outline" size="sm" className="min-h-11" onClick={() => intelQ.refetch()}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="min-h-11"
+                            onClick={() => intelQ.refetch()}
+                          >
                             Tentar de novo
                           </Button>
                         </div>
                       ) : intelQ.isLoading ? (
                         <p className="text-[15px] text-muted-foreground">Verificando…</p>
                       ) : gaps.length === 0 ? (
-                        <p className="text-[15px] text-muted-foreground">Sem lacunas nos campos verificados.</p>
+                        <p className="text-[15px] text-muted-foreground">
+                          Sem lacunas nos campos verificados.
+                        </p>
                       ) : (
                         <>
                           <ul className="ml-5 list-disc space-y-1 text-[15px]">
@@ -587,7 +597,9 @@ function ClientDossierPage() {
                             ))}
                           </ul>
                           {gaps.length > 6 && (
-                            <p className="mt-2 text-[14px] text-muted-foreground">+ {gaps.length - 6} outras lacunas</p>
+                            <p className="mt-2 text-[14px] text-muted-foreground">
+                              + {gaps.length - 6} outras lacunas
+                            </p>
                           )}
                           <button
                             type="button"

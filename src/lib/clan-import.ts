@@ -99,15 +99,30 @@ export function isValidYMD(iso: string): boolean {
   return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
 }
 
-
 export const IMPORT_FIELDS = [
   { key: "full_name", label: "Nome", aliases: ["nome", "nome completo", "name"] },
-  { key: "relationship", label: "Parentesco", aliases: ["parentesco", "vinculo", "vínculo", "relação", "relacao"] },
-  { key: "birth", label: "Nascimento", aliases: ["nascimento", "data de nascimento", "nasc", "nasceu"] },
+  {
+    key: "relationship",
+    label: "Parentesco",
+    aliases: ["parentesco", "vinculo", "vínculo", "relação", "relacao"],
+  },
+  {
+    key: "birth",
+    label: "Nascimento",
+    aliases: ["nascimento", "data de nascimento", "nasc", "nasceu"],
+  },
   { key: "gestation", label: "Gestação", aliases: ["gestação", "gestacao", "semanas"] },
   { key: "death", label: "Falecimento", aliases: ["morte", "falecimento", "óbito", "obito"] },
-  { key: "illnesses", label: "Enfermidades", aliases: ["enfermidades", "doenças", "doencas", "saúde"] },
-  { key: "occupation", label: "Profissão", aliases: ["profissão", "profissao", "ocupação", "ocupacao"] },
+  {
+    key: "illnesses",
+    label: "Enfermidades",
+    aliases: ["enfermidades", "doenças", "doencas", "saúde"],
+  },
+  {
+    key: "occupation",
+    label: "Profissão",
+    aliases: ["profissão", "profissao", "ocupação", "ocupacao"],
+  },
   { key: "vices", label: "Vícios", aliases: ["vícios", "vicios"] },
   { key: "temperament", label: "Temperamento", aliases: ["temperamento"] },
   { key: "order", label: "Ordem", aliases: ["ordem", "ordem de nascimento"] },
@@ -117,7 +132,12 @@ export type FieldKey = (typeof IMPORT_FIELDS)[number]["key"];
 export type Mapping = Partial<Record<FieldKey, number>>; // field -> índice da coluna
 
 const norm = (s: string) =>
-  s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
+  s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 
 /** Mapeia por nome de cabeçalho; sem cabeçalho reconhecido usa a ordem oficial de 11 colunas. */
 export function autoMap(header: string[]): Mapping {
@@ -174,7 +194,8 @@ export function analyzeImport(
   return rows.map((r, idx) => {
     const line = idx + 2;
     const messages: string[] = [];
-    if (r.every((c) => !String(c ?? "").trim())) return { line, status: "skip", messages: ["Linha vazia"], record: null };
+    if (r.every((c) => !String(c ?? "").trim()))
+      return { line, status: "skip", messages: ["Linha vazia"], record: null };
 
     let rel = get(r, "relationship");
     const lower = rel.toLowerCase();
@@ -186,7 +207,12 @@ export function analyzeImport(
       }
     }
     if (/^(consulente|paciente)$/i.test(rel))
-      return { line, status: "skip", messages: ["Cliente vem do cadastro — linha ignorada"], record: null };
+      return {
+        line,
+        status: "skip",
+        messages: ["Cliente vem do cadastro — linha ignorada"],
+        record: null,
+      };
 
     const name = get(r, "full_name");
     if (!name) messages.push("Nome obrigatório");
@@ -196,14 +222,17 @@ export function analyzeImport(
     const birth = parseDateString(birthRaw);
     const death = parseDateString(deathRaw);
     if (birthRaw && !birth) messages.push(`Nascimento inválido: "${birthRaw}"`);
-    if (deathRaw && !death && !/^(sim|x|falecid[oa])$/i.test(deathRaw)) messages.push(`Falecimento inválido: "${deathRaw}"`);
+    if (deathRaw && !death && !/^(sim|x|falecid[oa])$/i.test(deathRaw))
+      messages.push(`Falecimento inválido: "${deathRaw}"`);
     if (birth && death && birth > death) messages.push("Falecimento anterior ao nascimento");
     const orderRaw = get(r, "order");
     if (orderRaw && isNaN(parseInt(orderRaw))) messages.push(`Ordem não numérica: "${orderRaw}"`);
 
     const warnings: string[] = [];
-    if (birthRaw && birth && isApproximate(birthRaw)) warnings.push("Nascimento incompleto: será gravado com dia/mês/ano aproximado");
-    if (deathRaw && death && isApproximate(deathRaw)) warnings.push("Falecimento incompleto: será gravado com data aproximada");
+    if (birthRaw && birth && isApproximate(birthRaw))
+      warnings.push("Nascimento incompleto: será gravado com dia/mês/ano aproximado");
+    if (deathRaw && death && isApproximate(deathRaw))
+      warnings.push("Falecimento incompleto: será gravado com data aproximada");
 
     if (messages.length) return { line, status: "error", messages, record: null };
 
@@ -219,14 +248,23 @@ export function analyzeImport(
       gestational_weeks: get(r, "gestation") || null,
       death_date: death,
       is_deceased: !!deathRaw,
-      health_conditions: get(r, "illnesses").split(",").map((x) => x.trim()).filter(Boolean),
+      health_conditions: get(r, "illnesses")
+        .split(",")
+        .map((x) => x.trim())
+        .filter(Boolean),
       occupation: get(r, "occupation") || null,
       vices: get(r, "vices") || null,
       temperament: get(r, "temperament") || null,
       birth_order: orderRaw ? parseInt(orderRaw) : null,
       notes: get(r, "notes") || null,
     };
-    if (dup) return { line, status: "duplicate", messages: ["Possível duplicidade (mesmo nome e nascimento)", ...warnings], record };
+    if (dup)
+      return {
+        line,
+        status: "duplicate",
+        messages: ["Possível duplicidade (mesmo nome e nascimento)", ...warnings],
+        record,
+      };
     return { line, status: "ok", messages: warnings, record };
   });
 }

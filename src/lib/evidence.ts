@@ -100,13 +100,16 @@ export function evidenceForCase(persons: PersonRow[], relationships: Relationshi
 export function informationGaps(persons: PersonRow[], now = new Date()): string[] {
   const gaps: string[] = [];
   const name = (p: PersonRow) => p.preferred_name || p.full_name;
-  const has = (k: string) => persons.some((p) => (p.relationship_to_proband || "").toLowerCase().startsWith(k));
+  const has = (k: string) =>
+    persons.some((p) => (p.relationship_to_proband || "").toLowerCase().startsWith(k));
   if (persons.length === 0) return ["Nenhum familiar cadastrado no genossociograma."];
   if (!has("pai")) gaps.push("Pai não cadastrado.");
   if (!has("mãe") && !has("mae")) gaps.push("Mãe não cadastrada.");
   for (const p of persons) {
-    if (p.is_deceased && !p.death_date) gaps.push(`Data de falecimento de ${name(p)} desconhecida.`);
-    if (p.is_deceased && !p.cause_of_death) gaps.push(`Causa da morte de ${name(p)} não registrada.`);
+    if (p.is_deceased && !p.death_date)
+      gaps.push(`Data de falecimento de ${name(p)} desconhecida.`);
+    if (p.is_deceased && !p.cause_of_death)
+      gaps.push(`Causa da morte de ${name(p)} não registrada.`);
     if (!p.birth_date) gaps.push(`Data de nascimento de ${name(p)} desconhecida.`);
     else if (now.getFullYear() - new Date(p.birth_date).getFullYear() >= 18 && !p.occupation)
       gaps.push(`Profissão de ${name(p)} não registrada.`);

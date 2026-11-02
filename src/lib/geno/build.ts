@@ -613,10 +613,21 @@ function applyExplicitFiliation(
     const knownParent = parentIds.map((id) => g.persons.get(id)).find(Boolean);
     const childGen = child?.generation ?? (knownParent ? knownParent.generation - 1 : 0);
     const branch = child?.branchId ?? knownParent?.branchId ?? "other";
-    if (!child) g.persons.set(childId, { id: childId, row: byId.get(childId)!, generation: Math.max(0, childGen), branchId: branch });
+    if (!child)
+      g.persons.set(childId, {
+        id: childId,
+        row: byId.get(childId)!,
+        generation: Math.max(0, childGen),
+        branchId: branch,
+      });
     for (const pid of parentIds) {
       if (!g.persons.has(pid))
-        g.persons.set(pid, { id: pid, row: byId.get(pid)!, generation: Math.max(0, childGen) + 1, branchId: branch });
+        g.persons.set(pid, {
+          id: pid,
+          row: byId.get(pid)!,
+          generation: Math.max(0, childGen) + 1,
+          branchId: branch,
+        });
     }
 
     // Remove filiação por tag anterior
@@ -631,9 +642,13 @@ function applyExplicitFiliation(
     let union = [...g.unions.values()].find((u) => pairKey(u.partners) === key);
     if (!union) {
       const id = `u_exp_${key.replace(/\|/g, "_")}`;
-      const rel = parentIds.length === 2 ? findUnionRel(byId.get(parentIds[0]), byId.get(parentIds[1])) : undefined;
+      const rel =
+        parentIds.length === 2
+          ? findUnionRel(byId.get(parentIds[0]), byId.get(parentIds[1]))
+          : undefined;
       const kind = deriveUnionKind(rel);
-      const order = (rel as (RelRow & { marriage_order?: number | null }) | undefined)?.marriage_order ?? null;
+      const order =
+        (rel as (RelRow & { marriage_order?: number | null }) | undefined)?.marriage_order ?? null;
       union = {
         id,
         partners: [...parentIds],
@@ -976,7 +991,12 @@ export function layoutGraph(g: LogicalGraph): Placement {
         const placedPartner = u.partners.find((pid) => personPos.has(pid));
         const anyPlacedChild = u.children.find((c) => personPos.has(c));
         if (!placedPartner && !anyPlacedChild) continue;
-        if (u.partners.every((p) => personPos.has(p)) && u.children.every((c) => personPos.has(c)) && unionPos.has(uid)) continue;
+        if (
+          u.partners.every((p) => personPos.has(p)) &&
+          u.children.every((c) => personPos.has(c)) &&
+          unionPos.has(uid)
+        )
+          continue;
         const gen = u.generation;
         // parceiros
         if (placedPartner) {
@@ -997,7 +1017,9 @@ export function layoutGraph(g: LogicalGraph): Placement {
           }
         }
         const xs = u.partners.map(centerOf).filter((v): v is number => v !== null);
-        const ux = xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : centerOf(anyPlacedChild!)!;
+        const ux = xs.length
+          ? xs.reduce((a, b) => a + b, 0) / xs.length
+          : centerOf(anyPlacedChild!)!;
         if (!unionPos.has(uid)) {
           unionPos.set(uid, { x: ux, y: y(gen) + PERSON_SHAPE / 2 });
           progress = true;

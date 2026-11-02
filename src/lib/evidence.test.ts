@@ -44,7 +44,12 @@ import { informationGaps } from "./evidence";
 describe("lacunas reais", () => {
   it("aponta pai/mãe ausentes e datas desconhecidas", () => {
     const g = informationGaps([
-      { id: "a", full_name: "Cliente", relationship_to_proband: "Consulente", birth_date: null } as unknown as PersonRow,
+      {
+        id: "a",
+        full_name: "Cliente",
+        relationship_to_proband: "Consulente",
+        birth_date: null,
+      } as unknown as PersonRow,
     ]);
     expect(g).toContain("Pai não cadastrado.");
     expect(g).toContain("Mãe não cadastrada.");
@@ -55,7 +60,10 @@ describe("lacunas reais", () => {
 import { sectionCompletion, INTAKE_UNKNOWN } from "./intake";
 describe("progresso da anamnese", () => {
   it("conta 'desconhecido' como respondido e separa no total", () => {
-    const r = sectionCompletion({ presenting_intention: "x", signature_notes: INTAKE_UNKNOWN }, "opening");
+    const r = sectionCompletion(
+      { presenting_intention: "x", signature_notes: INTAKE_UNKNOWN },
+      "opening",
+    );
     expect(r).toEqual({ filled: 2, unknown: 1, total: 2 });
   });
   it("vazio não conta", () => {

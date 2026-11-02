@@ -952,7 +952,9 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
   const applySnapshot = useCallback(
     (snap: Snapshot) => {
       setNodes((ns) =>
-        ns.map((n) => (snap[n.id] ? { ...n, position: { x: snap[n.id][0], y: snap[n.id][1] } } : n)),
+        ns.map((n) =>
+          snap[n.id] ? { ...n, position: { x: snap[n.id][0], y: snap[n.id][1] } } : n,
+        ),
       );
       setLayoutDirty(true);
     },
@@ -977,7 +979,9 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
   useEffect(() => {
     if (!userId || !query.data) return;
     const d = readDraft(userId, clientId);
-    const savedAt = query.data.layout?.updated_at ? new Date(query.data.layout.updated_at).getTime() : 0;
+    const savedAt = query.data.layout?.updated_at
+      ? new Date(query.data.layout.updated_at).getTime()
+      : 0;
     setPendingDraft(d && d.at > savedAt && Object.keys(d.positions).length ? d.positions : null);
   }, [userId, clientId, query.data]);
 
@@ -1122,7 +1126,10 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
   const selectedEdgeCount = edges.filter((e) => e.selected).length;
 
   return (
-    <div ref={rootRef} className={`atlas-genogram bg-background ${panelOpen ? "" : "gv-panel-collapsed"}`}>
+    <div
+      ref={rootRef}
+      className={`atlas-genogram bg-background ${panelOpen ? "" : "gv-panel-collapsed"}`}
+    >
       <div className="atlas-map-workspace">
         {/* ── CONTÊINER SUPERIOR (BARRA DE AÇÕES + LEGENDA) ── */}
         <div className="atlas-map-toolbar">
@@ -1414,7 +1421,10 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
                 size={1}
                 style={{ opacity: 0.25 }}
               />
-              <Panel position="top-right" className="flex flex-wrap items-center gap-1 rounded-md border border-border bg-card p-1 shadow-sm">
+              <Panel
+                position="top-right"
+                className="flex flex-wrap items-center gap-1 rounded-md border border-border bg-card p-1 shadow-sm"
+              >
                 <label className="sr-only" htmlFor="geno-locate">
                   Localizar familiar
                 </label>
@@ -1427,7 +1437,12 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
                     if (!id) return;
                     setFocusedPersonId(id);
                     setPanelOpen(true);
-                    rfInstance.fitView({ nodes: [{ id }], duration: 300, maxZoom: 1.2, padding: 0.6 });
+                    rfInstance.fitView({
+                      nodes: [{ id }],
+                      duration: 300,
+                      maxZoom: 1.2,
+                      padding: 0.6,
+                    });
                   }}
                 >
                   <option value="">Localizar familiar…</option>
@@ -1439,41 +1454,96 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
                       </option>
                     ))}
                 </select>
-                <Button size="icon" variant="ghost" className="min-h-11 min-w-11" aria-label="Localizar o cliente"
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="min-h-11 min-w-11"
+                  aria-label="Localizar o cliente"
                   onClick={() => {
                     const pb = persons.find((p) => p.is_proband);
-                    if (pb) rfInstance.fitView({ nodes: [{ id: pb.id }], duration: 300, maxZoom: 1.2, padding: 0.6 });
-                  }}>
+                    if (pb)
+                      rfInstance.fitView({
+                        nodes: [{ id: pb.id }],
+                        duration: 300,
+                        maxZoom: 1.2,
+                        padding: 0.6,
+                      });
+                  }}
+                >
                   <Crosshair className="size-4" />
                 </Button>
-                <Button size="icon" variant="ghost" className="min-h-11 min-w-11" aria-label="Ajustar mapa à tela"
-                  onClick={() => rfInstance.fitView({ nodes: nodes.filter((n) => n.type === "person"), padding: 0.18, duration: 300 })}>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="min-h-11 min-w-11"
+                  aria-label="Ajustar mapa à tela"
+                  onClick={() =>
+                    rfInstance.fitView({
+                      nodes: nodes.filter((n) => n.type === "person"),
+                      padding: 0.18,
+                      duration: 300,
+                    })
+                  }
+                >
                   <Layers className="size-4" />
                 </Button>
-                <Button size="icon" variant="ghost" className="min-h-11 min-w-11" aria-label="Desfazer posição"
-                  disabled={!historyRef.current.canUndo || isLayoutFixed} onClick={undoLayout}>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="min-h-11 min-w-11"
+                  aria-label="Desfazer posição"
+                  disabled={!historyRef.current.canUndo || isLayoutFixed}
+                  onClick={undoLayout}
+                >
                   <Undo2 className="size-4" />
                 </Button>
-                <Button size="icon" variant="ghost" className="min-h-11 min-w-11" aria-label="Refazer posição"
-                  disabled={!historyRef.current.canRedo || isLayoutFixed} onClick={redoLayout}>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="min-h-11 min-w-11"
+                  aria-label="Refazer posição"
+                  disabled={!historyRef.current.canRedo || isLayoutFixed}
+                  onClick={redoLayout}
+                >
                   <Redo2 className="size-4" />
                 </Button>
-                <Button size="icon" variant="ghost" className="min-h-11 min-w-11"
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="min-h-11 min-w-11"
                   aria-label={isFullscreen ? "Sair da tela ampla" : "Tela ampla"}
                   onClick={() => {
                     if (document.fullscreenElement) void document.exitFullscreen();
                     else void rootRef.current?.requestFullscreen?.();
-                  }}>
-                  {isFullscreen ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+                  }}
+                >
+                  {isFullscreen ? (
+                    <Minimize2 className="size-4" />
+                  ) : (
+                    <Maximize2 className="size-4" />
+                  )}
                 </Button>
-                <Button size="icon" variant="ghost" className="min-h-11 min-w-11"
-                  aria-label={panelOpen ? "Recolher ficha" : "Mostrar ficha"} aria-expanded={panelOpen}
-                  onClick={() => setPanelOpen((v) => !v)}>
-                  {panelOpen ? <PanelRightClose className="size-4" /> : <PanelRightOpen className="size-4" />}
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="min-h-11 min-w-11"
+                  aria-label={panelOpen ? "Recolher ficha" : "Mostrar ficha"}
+                  aria-expanded={panelOpen}
+                  onClick={() => setPanelOpen((v) => !v)}
+                >
+                  {panelOpen ? (
+                    <PanelRightClose className="size-4" />
+                  ) : (
+                    <PanelRightOpen className="size-4" />
+                  )}
                 </Button>
               </Panel>
               {(pendingDraft || saveLayout.isError) && (
-                <Panel position="bottom-center" className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-card p-2 text-[14px] shadow-sm" role="status">
+                <Panel
+                  position="bottom-center"
+                  className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-card p-2 text-[14px] shadow-sm"
+                  role="status"
+                >
                   {saveLayout.isError ? (
                     <>
                       <span>Arranjo não salvo (guardado neste navegador).</span>
@@ -1484,17 +1554,26 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
                   ) : (
                     <>
                       <span>Há um arranjo não salvo de uma sessão anterior.</span>
-                      <Button size="sm" className="min-h-11" onClick={() => {
-                        historyRef.current.push(snapshot());
-                        applySnapshot(pendingDraft!);
-                        setPendingDraft(null);
-                      }}>
+                      <Button
+                        size="sm"
+                        className="min-h-11"
+                        onClick={() => {
+                          historyRef.current.push(snapshot());
+                          applySnapshot(pendingDraft!);
+                          setPendingDraft(null);
+                        }}
+                      >
                         Recuperar
                       </Button>
-                      <Button size="sm" variant="outline" className="min-h-11" onClick={() => {
-                        if (userId) clearDraft(userId, clientId);
-                        setPendingDraft(null);
-                      }}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="min-h-11"
+                        onClick={() => {
+                          if (userId) clearDraft(userId, clientId);
+                          setPendingDraft(null);
+                        }}
+                      >
                         Descartar
                       </Button>
                     </>
@@ -1632,7 +1711,8 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
             </AlertDialogTitle>
             <AlertDialogDescription>
               Isso apaga o arranjo manual salvo desta árvore e recalcula a posição de todo mundo a
-              partir das regras atuais do genossociograma. Use se alguém aparecer preso no lugar errado.
+              partir das regras atuais do genossociograma. Use se alguém aparecer preso no lugar
+              errado.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

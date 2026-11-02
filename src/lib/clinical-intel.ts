@@ -36,7 +36,13 @@ export const clinicalIntelQuery = (clientId: string) =>
 
 /** Após qualquer mutação de familiares/vínculos: todas as telas que leem evidências se atualizam. */
 export function invalidateCase(qc: QueryClient, clientId: string) {
-  for (const key of ["genogram", "clinical-intel", "case-dashboard", "client-genogram", "genogram-count"]) {
+  for (const key of [
+    "genogram",
+    "clinical-intel",
+    "case-dashboard",
+    "client-genogram",
+    "genogram-count",
+  ]) {
     qc.invalidateQueries({ queryKey: [key, clientId] });
   }
 }

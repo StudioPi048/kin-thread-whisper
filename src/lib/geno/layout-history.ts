@@ -46,10 +46,19 @@ const store = (): Store | null => (typeof window === "undefined" ? null : window
 export const draftKey = (userId: string, clientId: string) =>
   `genealiz:layout-draft:${userId}:${clientId}`;
 
-export function saveDraft(userId: string, clientId: string, positions: Snapshot, s = store(), now = Date.now()) {
+export function saveDraft(
+  userId: string,
+  clientId: string,
+  positions: Snapshot,
+  s = store(),
+  now = Date.now(),
+) {
   if (!s || !userId || !clientId) return;
   try {
-    s.setItem(draftKey(userId, clientId), JSON.stringify({ at: now, positions } satisfies LayoutDraft));
+    s.setItem(
+      draftKey(userId, clientId),
+      JSON.stringify({ at: now, positions } satisfies LayoutDraft),
+    );
   } catch {
     /* sem espaço: rascunho apenas não é salvo */
   }
@@ -61,7 +70,8 @@ export function readDraft(userId: string, clientId: string, s = store()): Layout
     if (!d || typeof d.at !== "number" || typeof d.positions !== "object") return null;
     const clean: Snapshot = {};
     for (const [k, v] of Object.entries(d.positions as Record<string, unknown>)) {
-      if (Array.isArray(v) && v.length === 2 && v.every((n) => typeof n === "number")) clean[k] = [v[0], v[1]];
+      if (Array.isArray(v) && v.length === 2 && v.every((n) => typeof n === "number"))
+        clean[k] = [v[0], v[1]];
     }
     return { at: d.at, positions: clean };
   } catch {
