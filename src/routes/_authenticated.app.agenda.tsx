@@ -298,7 +298,10 @@ function AgendaPage() {
     const todayKey = toDateKey(new Date());
     navigate({
       from: Route.fullPath,
-      search: (prev) => ({ ...(key === todayKey ? {} : { date: key }), ...(prev.view ? { view: prev.view } : {}) }),
+      search: (prev) => ({
+        ...(key === todayKey ? {} : { date: key }),
+        ...(prev.view ? { view: prev.view } : {}),
+      }),
       replace: true,
     });
   };
@@ -390,7 +393,11 @@ function AgendaPage() {
         </div>
       </div>
 
-      <div className="container-liz pt-4 flex items-center gap-2" role="group" aria-label="Visualização">
+      <div
+        className="container-liz pt-4 flex items-center gap-2"
+        role="group"
+        aria-label="Visualização"
+      >
         {(["day", "week"] as const).map((v) => {
           const active = (view ?? "day") === v;
           return (
@@ -401,7 +408,11 @@ function AgendaPage() {
               aria-pressed={active}
               className="min-h-11"
               onClick={() =>
-                navigate({ from: Route.fullPath, search: (prev) => ({ ...prev, view: v === "week" ? "week" : undefined }), replace: true })
+                navigate({
+                  from: Route.fullPath,
+                  search: (prev) => ({ ...prev, view: v === "week" ? "week" : undefined }),
+                  replace: true,
+                })
               }
             >
               {v === "day" ? "Dia" : "Semana"}
@@ -409,7 +420,12 @@ function AgendaPage() {
           );
         })}
         {query.isError && (
-          <Button size="sm" variant="outline" className="min-h-11 ml-auto" onClick={() => query.refetch()}>
+          <Button
+            size="sm"
+            variant="outline"
+            className="min-h-11 ml-auto"
+            onClick={() => query.refetch()}
+          >
             Tentar carregar de novo
           </Button>
         )}
@@ -417,38 +433,41 @@ function AgendaPage() {
 
       {view === "week" ? (
         <div className="container-liz py-4">
-          <WeekView dateKey={toDateKey(viewedDate)} onPickDay={(k) => goToDate(new Date(`${k}T12:00:00`))} />
+          <WeekView
+            dateKey={toDateKey(viewedDate)}
+            onPickDay={(k) => goToDate(new Date(`${k}T12:00:00`))}
+          />
         </div>
       ) : hasSessions && selected ? (
         <>
-        <div className="container-liz pt-4">
-          <DayList sessions={query.data?.today ?? []} agendaDate={date} />
-        </div>
-        /* Three-column workspace */
-        <div className="container-liz py-6 grid gap-5 2xl:grid-cols-[260px_minmax(0,1fr)_320px] lg:grid-cols-[240px_minmax(0,1fr)] grid-cols-1">
-          {/* LEFT — Timeline */}
-          <div className="hidden lg:block">
-          <TimelineColumn
-            timeline={timeline}
-            sessions={sessions}
-            selectedId={activeId}
-            onSelect={setSelectedId}
-          />
+          <div className="container-liz pt-4">
+            <DayList sessions={query.data?.today ?? []} agendaDate={date} />
           </div>
+          /* Three-column workspace */
+          <div className="container-liz py-6 grid gap-5 2xl:grid-cols-[260px_minmax(0,1fr)_320px] lg:grid-cols-[240px_minmax(0,1fr)] grid-cols-1">
+            {/* LEFT — Timeline */}
+            <div className="hidden lg:block">
+              <TimelineColumn
+                timeline={timeline}
+                sessions={sessions}
+                selectedId={activeId}
+                onSelect={setSelectedId}
+              />
+            </div>
 
-          {/* CENTER — Featured session */}
-          <FeaturedSession session={selected} sessions={sessions} />
+            {/* CENTER — Featured session */}
+            <FeaturedSession session={selected} sessions={sessions} />
 
-          {/* RIGHT — IA + Painel */}
-          <div className="lg:col-span-2 2xl:col-span-1">
-            <RightPanel
-              session={selected}
-              stats={stats}
-              orphanClients={orphanClients}
-              prontuariosPendentes={prontuariosPendentes}
-            />
+            {/* RIGHT — IA + Painel */}
+            <div className="lg:col-span-2 2xl:col-span-1">
+              <RightPanel
+                session={selected}
+                stats={stats}
+                orphanClients={orphanClients}
+                prontuariosPendentes={prontuariosPendentes}
+              />
+            </div>
           </div>
-        </div>
         </>
       ) : (
         <EmptyDay isLoading={query.isLoading} orphanClients={orphanClients} isToday={isToday} />
@@ -1381,7 +1400,6 @@ function RightPanel({
     </aside>
   );
 }
-
 
 function QuickNote() {
   // Nota rápida só em memória: nada de texto clínico no armazenamento do navegador.

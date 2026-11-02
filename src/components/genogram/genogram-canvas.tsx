@@ -714,7 +714,13 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
     setFocusedPersonId(focusPersonId);
     setPanelOpen(true);
     const t = window.setTimeout(
-      () => rfInstance.fitView({ nodes: [{ id: focusPersonId }], duration: 300, maxZoom: 1.2, padding: 0.6 }),
+      () =>
+        rfInstance.fitView({
+          nodes: [{ id: focusPersonId }],
+          duration: 300,
+          maxZoom: 1.2,
+          padding: 0.6,
+        }),
       120,
     );
     return () => window.clearTimeout(t);

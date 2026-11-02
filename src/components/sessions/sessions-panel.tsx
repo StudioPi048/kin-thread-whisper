@@ -66,7 +66,12 @@ export function SessionsPanel({ clientId }: Props) {
   const qc = useQueryClient();
   const processFn = useServerFn(processSessionAudio);
 
-  const { data: sessions = [], isLoading, isError, refetch } = useQuery({
+  const {
+    data: sessions = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ["clinical_sessions", clientId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -102,7 +107,11 @@ export function SessionsPanel({ clientId }: Props) {
       return next;
     });
   }, []);
-  const [pendingAudio, setPendingAudio] = useState<{ blob: Blob; mime: string; seconds: number } | null>(null);
+  const [pendingAudio, setPendingAudio] = useState<{
+    blob: Blob;
+    mime: string;
+    seconds: number;
+  } | null>(null);
   useEffect(() => {
     if (dirtyIds.size === 0 && !pendingAudio) return;
     const h = (e: BeforeUnloadEvent) => {
@@ -254,7 +263,8 @@ export function SessionsPanel({ clientId }: Props) {
 
   const deleteSession = useMutation({
     mutationFn: async (s: Session) => {
-      if (!window.confirm("Excluir esta sessão, suas notas e o áudio? Isso não pode ser desfeito.")) return;
+      if (!window.confirm("Excluir esta sessão, suas notas e o áudio? Isso não pode ser desfeito."))
+        return;
       if (s.audio_path) {
         await supabase.storage.from("session-audio").remove([s.audio_path]);
       }
@@ -325,12 +335,19 @@ export function SessionsPanel({ clientId }: Props) {
 
       {/* History */}
       {pendingAudio && !uploading && (
-        <div role="alert" className="flex flex-wrap items-center gap-3 rounded-md border border-destructive/40 bg-destructive/5 p-4 text-[15px]">
+        <div
+          role="alert"
+          className="flex flex-wrap items-center gap-3 rounded-md border border-destructive/40 bg-destructive/5 p-4 text-[15px]"
+        >
           <AlertCircle className="size-5 text-destructive" />
-          <span className="flex-1">O áudio não foi enviado e continua guardado nesta página. Não feche a aba.</span>
+          <span className="flex-1">
+            O áudio não foi enviado e continua guardado nesta página. Não feche a aba.
+          </span>
           <Button
             className="min-h-11"
-            onClick={() => void uploadAudio(pendingAudio.blob, pendingAudio.mime, pendingAudio.seconds)}
+            onClick={() =>
+              void uploadAudio(pendingAudio.blob, pendingAudio.mime, pendingAudio.seconds)
+            }
           >
             <RefreshCw className="mr-2 size-4" /> Reenviar áudio
           </Button>
@@ -343,15 +360,28 @@ export function SessionsPanel({ clientId }: Props) {
       <div className="space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-3">
           <h3 className="font-serif text-2xl font-bold text-primary">Histórico de Sessões</h3>
-          <Button variant="outline" className="min-h-11" onClick={() => createManual.mutate()} disabled={createManual.isPending}>
+          <Button
+            variant="outline"
+            className="min-h-11"
+            onClick={() => createManual.mutate()}
+            disabled={createManual.isPending}
+          >
             <Plus className="mr-2 size-4" /> Registrar sessão sem áudio
           </Button>
         </div>
 
-        {isLoading && <div className="h-32 animate-pulse rounded-lg bg-muted/30" aria-label="Carregando sessões" />}
+        {isLoading && (
+          <div
+            className="h-32 animate-pulse rounded-lg bg-muted/30"
+            aria-label="Carregando sessões"
+          />
+        )}
 
         {isError && (
-          <div role="alert" className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-[15px]">
+          <div
+            role="alert"
+            className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-[15px]"
+          >
             Não foi possível carregar as sessões.
             <Button variant="outline" size="sm" className="ml-3 min-h-11" onClick={() => refetch()}>
               <RefreshCw className="mr-1.5 size-4" /> Tentar de novo
@@ -442,7 +472,10 @@ function SessionCard({
 
   // Notas manuais: rascunho em memória; o servidor nunca sobrescreve edição pendente.
   const [draft, dispatch] = useReducer(noteReducer, session.manual_notes, noteDraftInit);
-  useEffect(() => dispatch({ type: "reset", saved: session.manual_notes ?? "" }), [session.manual_notes]);
+  useEffect(
+    () => dispatch({ type: "reset", saved: session.manual_notes ?? "" }),
+    [session.manual_notes],
+  );
   const dirty = isDirty(draft);
   useEffect(() => onDirtyChange(session.id, dirty), [dirty, session.id, onDirtyChange]);
   useEffect(() => () => onDirtyChange(session.id, false), [session.id, onDirtyChange]);
@@ -466,7 +499,9 @@ function SessionCard({
     refresh();
   };
 
-  const [reviewState, setReviewState] = useState<{ pending: boolean; error?: string }>({ pending: false });
+  const [reviewState, setReviewState] = useState<{ pending: boolean; error?: string }>({
+    pending: false,
+  });
   const review = async () => {
     setReviewState({ pending: true });
     const r = await confirmReview(async () => {
@@ -485,7 +520,10 @@ function SessionCard({
 
   const setClinical = useMutation({
     mutationFn: async (value: ClinicalStatus) => {
-      const { error } = await supabase.from("clinical_sessions").update({ clinical_status: value }).eq("id", session.id);
+      const { error } = await supabase
+        .from("clinical_sessions")
+        .update({ clinical_status: value })
+        .eq("id", session.id);
       if (error) throw error;
     },
     onSuccess: refresh,
@@ -517,9 +555,13 @@ function SessionCard({
       <div className="border-b border-border/40 bg-background/50 px-6 py-4 flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-[14px] font-semibold text-muted-foreground mb-1">
-            {format(new Date(session.session_date), "dd 'de' MMMM 'de' yyyy, HH:mm", { locale: ptBR })}
+            {format(new Date(session.session_date), "dd 'de' MMMM 'de' yyyy, HH:mm", {
+              locale: ptBR,
+            })}
           </p>
-          <h4 className="font-serif text-2xl font-bold text-primary">{session.title ?? "Sessão"}</h4>
+          <h4 className="font-serif text-2xl font-bold text-primary">
+            {session.title ?? "Sessão"}
+          </h4>
           {session.audio_path && (
             <p className="text-[14px] text-muted-foreground mt-1 flex items-center gap-2">
               <Mic className="size-3.5" aria-hidden />
@@ -540,21 +582,40 @@ function SessionCard({
               onChange={(e) => setClinical.mutate(e.target.value as ClinicalStatus)}
             >
               {(Object.keys(CLINICAL_LABEL) as ClinicalStatus[]).map((k) => (
-                <option key={k} value={k}>{CLINICAL_LABEL[k]}</option>
+                <option key={k} value={k}>
+                  {CLINICAL_LABEL[k]}
+                </option>
               ))}
             </select>
           </div>
-          <Badge variant="outline" className="text-[13px] font-semibold" aria-label={`Áudio: ${AUDIO_LABEL[audio]}`}>
+          <Badge
+            variant="outline"
+            className="text-[13px] font-semibold"
+            aria-label={`Áudio: ${AUDIO_LABEL[audio]}`}
+          >
             {isProcessing && <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />}
             Áudio: {AUDIO_LABEL[audio]}
           </Badge>
           <div className="flex items-center gap-1 border-l border-border/60 pl-3">
             {(isError || session.status === "draft") && session.audio_path && (
-              <Button size="icon" variant="ghost" onClick={onReprocess} disabled={reprocessing} aria-label="Reprocessar áudio" className="min-h-11 min-w-11">
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={onReprocess}
+                disabled={reprocessing}
+                aria-label="Reprocessar áudio"
+                className="min-h-11 min-w-11"
+              >
                 <RefreshCw className={`h-4 w-4 ${reprocessing ? "animate-spin" : ""}`} />
               </Button>
             )}
-            <Button size="icon" variant="ghost" onClick={onDelete} aria-label="Excluir sessão" className="min-h-11 min-w-11">
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={onDelete}
+              aria-label="Excluir sessão"
+              className="min-h-11 min-w-11"
+            >
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
@@ -566,7 +627,8 @@ function SessionCard({
           <div className="flex items-start gap-3 rounded-md border border-destructive/30 bg-destructive/5 p-4 text-[14px] text-destructive">
             <AlertCircle className="h-5 w-5 mt-0.5 shrink-0" />
             <span>
-              {session.error_message ?? "Falha ao processar o áudio."} Suas notas abaixo não são afetadas.
+              {session.error_message ?? "Falha ao processar o áudio."} Suas notas abaixo não são
+              afetadas.
             </span>
           </div>
         )}
@@ -584,11 +646,22 @@ function SessionCard({
             className="min-h-[140px] text-[16px] leading-relaxed"
           />
           <div className="flex flex-wrap items-center gap-3 text-[14px]">
-            <Button onClick={saveNotes} disabled={!dirty || draft.phase === "saving"} className="min-h-11">
-              {draft.phase === "saving" ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Save className="mr-2 size-4" />}
+            <Button
+              onClick={saveNotes}
+              disabled={!dirty || draft.phase === "saving"}
+              className="min-h-11"
+            >
+              {draft.phase === "saving" ? (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              ) : (
+                <Save className="mr-2 size-4" />
+              )}
               {draft.phase === "error" ? "Tentar salvar de novo" : "Salvar notas"}
             </Button>
-            <span role="status" className={draft.phase === "error" ? "text-destructive" : "text-muted-foreground"}>
+            <span
+              role="status"
+              className={draft.phase === "error" ? "text-destructive" : "text-muted-foreground"}
+            >
               {draft.phase === "error"
                 ? `Não salvo: ${draft.error}. O texto continua aqui.`
                 : draft.phase === "saving"
@@ -603,10 +676,14 @@ function SessionCard({
         </div>
 
         {rows.length > 0 && (
-          <section aria-label="Texto gerado a partir do áudio" className="space-y-4 border-t border-border/40 pt-6">
+          <section
+            aria-label="Texto gerado a partir do áudio"
+            className="space-y-4 border-t border-border/40 pt-6"
+          >
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-[15px] font-semibold text-primary">
-                Texto gerado pela IA {session.ai_reviewed_at ? "· revisado" : "· provisório, requer revisão"}
+                Texto gerado pela IA{" "}
+                {session.ai_reviewed_at ? "· revisado" : "· provisório, requer revisão"}
               </p>
               {session.ai_reviewed_at ? (
                 <span className="flex items-center gap-1.5 text-[14px] text-clinical-positive">
@@ -614,16 +691,30 @@ function SessionCard({
                   {format(new Date(session.ai_reviewed_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                 </span>
               ) : (
-                <Button variant="outline" className="min-h-11" onClick={review} disabled={reviewState.pending}>
+                <Button
+                  variant="outline"
+                  className="min-h-11"
+                  onClick={review}
+                  disabled={reviewState.pending}
+                >
                   {reviewState.pending && <Loader2 className="mr-2 size-4 animate-spin" />}
                   Li e revisei este texto
                 </Button>
               )}
             </div>
-            {reviewState.error && <p role="alert" className="text-[14px] text-destructive">{reviewState.error}</p>}
-            <div className={`grid gap-4 md:grid-cols-2 ${session.ai_reviewed_at ? "" : "opacity-90"}`}>
+            {reviewState.error && (
+              <p role="alert" className="text-[14px] text-destructive">
+                {reviewState.error}
+              </p>
+            )}
+            <div
+              className={`grid gap-4 md:grid-cols-2 ${session.ai_reviewed_at ? "" : "opacity-90"}`}
+            >
               {rows.map(([label, value]) => (
-                <div key={label as string} className="bg-background border border-border/40 p-4 rounded-sm">
+                <div
+                  key={label as string}
+                  className="bg-background border border-border/40 p-4 rounded-sm"
+                >
                   <p className="text-[14px] font-semibold text-bronze mb-2">{label as string}</p>
                   {Array.isArray(value) ? (
                     <ul className="list-disc list-inside space-y-1.5 text-[15px] leading-relaxed text-foreground">
@@ -632,7 +723,9 @@ function SessionCard({
                       ))}
                     </ul>
                   ) : (
-                    <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-foreground">{String(value)}</p>
+                    <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-foreground">
+                      {String(value)}
+                    </p>
                   )}
                 </div>
               ))}
@@ -642,7 +735,12 @@ function SessionCard({
 
         {session.transcript && (
           <div className="border-t border-border/40 pt-4">
-            <Button variant="ghost" size="sm" onClick={() => setShowTranscript((v) => !v)} className="min-h-11 text-[15px]">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowTranscript((v) => !v)}
+              className="min-h-11 text-[15px]"
+            >
               <FileText className="h-4 w-4 mr-2" />
               {showTranscript ? "Ocultar" : "Ver"} transcrição automática
             </Button>

@@ -29,7 +29,13 @@ function partsInTz(date: Date, tz: string): Parts {
     minute: "2-digit",
   });
   const get = (t: string) => Number(f.formatToParts(date).find((p) => p.type === t)?.value);
-  return { y: get("year"), mo: get("month"), d: get("day"), h: get("hour") % 24, mi: get("minute") };
+  return {
+    y: get("year"),
+    mo: get("month"),
+    d: get("day"),
+    h: get("hour") % 24,
+    mi: get("minute"),
+  };
 }
 
 const pad = (n: number) => n.toString().padStart(2, "0");
@@ -87,7 +93,11 @@ export type RescheduleResult =
 export function validateReschedule(input: RescheduleInput): RescheduleResult {
   const errors: string[] = [];
   if (!isValidTimeZone(input.tz)) errors.push("Fuso horário desconhecido.");
-  if (!Number.isInteger(input.durationMin) || input.durationMin < MIN_DURATION || input.durationMin > MAX_DURATION)
+  if (
+    !Number.isInteger(input.durationMin) ||
+    input.durationMin < MIN_DURATION ||
+    input.durationMin > MAX_DURATION
+  )
     errors.push(`Duração deve ser entre ${MIN_DURATION} e ${MAX_DURATION} minutos.`);
   const start = errors.length ? null : zonedLocalToUtc(input.date, input.time, input.tz);
   if (!errors.length && !start)
@@ -102,8 +112,7 @@ export function validateReschedule(input: RescheduleInput): RescheduleResult {
     const xe = xs + x.durationMin * 60_000;
     return s < xe && xs < e; // intervalos semiabertos: encostar não conflita
   });
-  if (conflicts.length)
-    return { ok: false, errors: ["Sobrepõe outro atendimento."], conflicts };
+  if (conflicts.length) return { ok: false, errors: ["Sobrepõe outro atendimento."], conflicts };
   return { ok: true, startISO: start.toISOString(), endISO: new Date(e).toISOString() };
 }
 

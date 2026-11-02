@@ -32,7 +32,8 @@ export function precisionOf(raw: string | null | undefined): DatePrecision {
 const MONTHS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 
 export function formatByPrecision(raw: string | null, p: DatePrecision): string {
-  if (!raw || p === "unknown") return raw?.trim() ? `"${raw.trim()}" (data não estruturada)` : "Data desconhecida";
+  if (!raw || p === "unknown")
+    return raw?.trim() ? `"${raw.trim()}" (data não estruturada)` : "Data desconhecida";
   const [y, m, d] = raw.split("-");
   if (p === "year") return `${y} (só o ano)`;
   if (p === "month") return `${MONTHS[Number(m) - 1]} ${y} (sem dia)`;
@@ -55,7 +56,14 @@ export function buildCaseTimeline(persons: PersonRow[]): CaseTimelineItem[] {
       relationship: p.is_proband ? "Cliente" : p.relationship_to_proband,
       generation: generationOfPerson(p),
     };
-    const push = (kind: TimelineKind, label: string, raw: string | null, source: string, meta?: string, i = 0) => {
+    const push = (
+      kind: TimelineKind,
+      label: string,
+      raw: string | null,
+      source: string,
+      meta?: string,
+      i = 0,
+    ) => {
       const precision = precisionOf(raw);
       out.push({
         ...base,
@@ -69,17 +77,27 @@ export function buildCaseTimeline(persons: PersonRow[]): CaseTimelineItem[] {
         source,
       });
     };
-    if (p.birth_date) push("birth", "Nascimento", p.birth_date, "Ficha do familiar: data de nascimento");
+    if (p.birth_date)
+      push("birth", "Nascimento", p.birth_date, "Ficha do familiar: data de nascimento");
     if (p.death_date || p.is_deceased)
       push(
         "death",
         "Falecimento",
         p.death_date,
-        p.death_date ? "Ficha do familiar: data de falecimento" : "Ficha do familiar: marcado como falecido, sem data",
+        p.death_date
+          ? "Ficha do familiar: data de falecimento"
+          : "Ficha do familiar: marcado como falecido, sem data",
         p.cause_of_death ? `causa registrada: ${p.cause_of_death}` : undefined,
       );
     personLifeEvents(p).forEach((ev, i) =>
-      push("event", ev.type || "Evento", ev.date || null, "Ficha do familiar: eventos de vida", ev.description, i),
+      push(
+        "event",
+        ev.type || "Evento",
+        ev.date || null,
+        "Ficha do familiar: eventos de vida",
+        ev.description,
+        i,
+      ),
     );
   }
   return out.sort((a, b) => {
@@ -91,7 +109,11 @@ export function buildCaseTimeline(persons: PersonRow[]): CaseTimelineItem[] {
   });
 }
 
-export type TimelineFilter = { personId?: string; generation?: number | "none"; kind?: TimelineKind };
+export type TimelineFilter = {
+  personId?: string;
+  generation?: number | "none";
+  kind?: TimelineKind;
+};
 
 export function filterTimeline(items: CaseTimelineItem[], f: TimelineFilter): CaseTimelineItem[] {
   return items.filter(

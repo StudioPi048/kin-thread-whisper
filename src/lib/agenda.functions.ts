@@ -10,7 +10,12 @@ import {
   validateReschedule,
   zonedLocalToUtc,
 } from "@/lib/scheduling";
-import { audioStateOf, clinicalStatusOf, type AudioState, type ClinicalStatus } from "@/lib/session-state";
+import {
+  audioStateOf,
+  clinicalStatusOf,
+  type AudioState,
+  type ClinicalStatus,
+} from "@/lib/session-state";
 
 export type AgendaSessionDTO = {
   id: string;
@@ -57,14 +62,19 @@ const initialsOf = (name: string) =>
     .map((p) => p[0]?.toUpperCase() ?? "")
     .join("");
 
-
 const addMinutes = (d: Date, m: number) => new Date(d.getTime() + m * 60_000);
 
 export const getAgendaData = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: { date?: string; tz?: string } | undefined) =>
     z
-      .object({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), tz: z.string().max(64).optional() })
+      .object({
+        date: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/)
+          .optional(),
+        tz: z.string().max(64).optional(),
+      })
       .optional()
       .parse(data),
   )
@@ -254,11 +264,17 @@ export type WeekSessionDTO = {
 export const getAgendaWeek = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { weekStart: string; tz?: string }) =>
-    z.object({ weekStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), tz: z.string().max(64).optional() }).parse(d),
+    z
+      .object({
+        weekStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        tz: z.string().max(64).optional(),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }): Promise<WeekSessionDTO[]> => {
     const tz = data.tz && isValidTimeZone(data.tz) ? data.tz : DEFAULT_TZ;
-    const start = zonedLocalToUtc(data.weekStart, "00:00", tz) ?? new Date(`${data.weekStart}T00:00:00Z`);
+    const start =
+      zonedLocalToUtc(data.weekStart, "00:00", tz) ?? new Date(`${data.weekStart}T00:00:00Z`);
     const end = new Date(start.getTime() + 7 * 86_400_000 + 2 * 3_600_000);
     const { data: rows, error } = await context.supabase
       .from("clinical_sessions")
@@ -297,16 +313,17 @@ export type RescheduleResponse =
 
 export const rescheduleSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { sessionId: string; date: string; time: string; durationMin: number; tz: string }) =>
-    z
-      .object({
-        sessionId: z.string().uuid(),
-        date: z.string(),
-        time: z.string(),
-        durationMin: z.number().int(),
-        tz: z.string().max(64),
-      })
-      .parse(d),
+  .inputValidator(
+    (d: { sessionId: string; date: string; time: string; durationMin: number; tz: string }) =>
+      z
+        .object({
+          sessionId: z.string().uuid(),
+          date: z.string(),
+          time: z.string(),
+          durationMin: z.number().int(),
+          tz: z.string().max(64),
+        })
+        .parse(d),
   )
   .handler(async ({ data, context }): Promise<RescheduleResponse> => {
     const { supabase, userId } = context;
@@ -315,7 +332,9 @@ export const rescheduleSession = createServerFn({ method: "POST" })
     const center = target ?? new Date();
     const { data: near, error } = await supabase
       .from("clinical_sessions")
-      .select("id, session_date, duration_seconds, planned_duration_minutes, clients(full_name, preferred_name)")
+      .select(
+        "id, session_date, duration_seconds, planned_duration_minutes, clients(full_name, preferred_name)",
+      )
       .eq("user_id", userId)
       .gte("session_date", new Date(center.getTime() - 9 * 3_600_000).toISOString())
       .lt("session_date", new Date(center.getTime() + 9 * 3_600_000).toISOString());
@@ -333,18 +352,27 @@ export const rescheduleSession = createServerFn({ method: "POST" })
         conflicts: res.conflicts.map((c) => {
           const row = near?.find((r) => r.id === c.id);
           const cl = row?.clients as { full_name: string; preferred_name: string | null } | null;
-          return { id: c.id, start: timeInTz(c.startISO, data.tz), patient: cl?.preferred_name || cl?.full_name || "Cliente" };
+          return {
+            id: c.id,
+            start: timeInTz(c.startISO, data.tz),
+            patient: cl?.preferred_name || cl?.full_name || "Cliente",
+          };
         }),
       };
     }
     const { data: upd, error: upErr } = await supabase
       .from("clinical_sessions")
-      .update({ session_date: res.startISO, planned_duration_minutes: data.durationMin, time_zone: data.tz })
+      .update({
+        session_date: res.startISO,
+        planned_duration_minutes: data.durationMin,
+        time_zone: data.tz,
+      })
       .eq("id", data.sessionId)
       .eq("user_id", userId)
       .select("id")
       .maybeSingle();
     if (upErr) throw new Error(upErr.message);
-    if (!upd) return { ok: false, errors: ["Sessão não encontrada ou sem permissão."], conflicts: [] };
+    if (!upd)
+      return { ok: false, errors: ["Sessão não encontrada ou sem permissão."], conflicts: [] };
     return { ok: true, startISO: res.startISO };
   });

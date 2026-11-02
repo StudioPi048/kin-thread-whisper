@@ -2,7 +2,16 @@ import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { AlertTriangle, ChevronDown, ChevronUp, Clock, ExternalLink, Loader2, RefreshCw, CalendarClock } from "lucide-react";
+import {
+  AlertTriangle,
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  ExternalLink,
+  Loader2,
+  RefreshCw,
+  CalendarClock,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -22,7 +31,14 @@ import {
   type AgendaSessionDTO,
   type RescheduleResponse,
 } from "@/lib/agenda.functions";
-import { DEFAULT_TZ, MAX_DURATION, MIN_DURATION, dateKeyInTz, isValidTimeZone, timeInTz } from "@/lib/scheduling";
+import {
+  DEFAULT_TZ,
+  MAX_DURATION,
+  MIN_DURATION,
+  dateKeyInTz,
+  isValidTimeZone,
+  timeInTz,
+} from "@/lib/scheduling";
 import { AUDIO_LABEL, CLINICAL_LABEL, type ClinicalStatus } from "@/lib/session-state";
 
 export function browserTz(): string {
@@ -43,7 +59,9 @@ const STATUS_TONE: Record<ClinicalStatus, string> = {
 
 export function StatusPill({ status }: { status: ClinicalStatus }) {
   return (
-    <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[13px] font-semibold ${STATUS_TONE[status]}`}>
+    <span
+      className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[13px] font-semibold ${STATUS_TONE[status]}`}
+    >
       {CLINICAL_LABEL[status]}
     </span>
   );
@@ -61,7 +79,10 @@ export function DayList({
   const [open, setOpen] = useState<string | null>(null);
   const [editing, setEditing] = useState<AgendaSessionDTO | null>(null);
   return (
-    <section aria-labelledby="day-list-title" className="surface rounded-xl border border-border p-3 md:p-4">
+    <section
+      aria-labelledby="day-list-title"
+      className="surface rounded-xl border border-border p-3 md:p-4"
+    >
       <h2 id="day-list-title" className="mb-2 text-[15px] font-semibold text-primary">
         Atendimentos do dia
       </h2>
@@ -77,14 +98,22 @@ export function DayList({
                 aria-controls={`day-${s.id}`}
                 onClick={() => setOpen(expanded ? null : s.id)}
               >
-                <span className="font-mono text-[16px] font-bold tabular-nums text-primary">{s.start}</span>
+                <span className="font-mono text-[16px] font-bold tabular-nums text-primary">
+                  {s.start}
+                </span>
                 <span className="text-[14px] text-muted-foreground tabular-nums">
                   <Clock className="mr-1 inline size-3.5" aria-hidden />
                   {s.durationMin} min
                 </span>
-                <span className="min-w-0 flex-1 truncate text-[16px] font-semibold text-foreground">{s.patient}</span>
+                <span className="min-w-0 flex-1 truncate text-[16px] font-semibold text-foreground">
+                  {s.patient}
+                </span>
                 <StatusPill status={s.clinicalStatus} />
-                {expanded ? <ChevronUp className="size-4" aria-hidden /> : <ChevronDown className="size-4" aria-hidden />}
+                {expanded ? (
+                  <ChevronUp className="size-4" aria-hidden />
+                ) : (
+                  <ChevronDown className="size-4" aria-hidden />
+                )}
               </button>
               {expanded && (
                 <div id={`day-${s.id}`} className="mt-2 space-y-3 px-2 pb-1 text-[14px]">
@@ -92,7 +121,10 @@ export function DayList({
                     <dt>Término</dt>
                     <dd className="text-foreground">{s.end}</dd>
                     <dt>Tipo</dt>
-                    <dd className="text-foreground">{s.type}{s.isFirst ? "" : ` · sessão ${s.sessionNumber}`}</dd>
+                    <dd className="text-foreground">
+                      {s.type}
+                      {s.isFirst ? "" : ` · sessão ${s.sessionNumber}`}
+                    </dd>
                     <dt>Áudio</dt>
                     <dd className="text-foreground">{AUDIO_LABEL[s.audioState]}</dd>
                     {s.lastEvolution && (
@@ -114,7 +146,12 @@ export function DayList({
                         </Link>
                       </Button>
                     )}
-                    <Button size="sm" variant="outline" className="min-h-11" onClick={() => setEditing(s)}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="min-h-11"
+                      onClick={() => setEditing(s)}
+                    >
                       <CalendarClock className="mr-1.5 size-4" /> Reagendar
                     </Button>
                   </div>
@@ -151,7 +188,15 @@ export function RescheduleDialog({
 
   const mutation = useMutation({
     mutationFn: () =>
-      fn({ data: { sessionId: session.id, date: form.date, time: form.time, durationMin: Number(form.duration), tz: form.tz } }),
+      fn({
+        data: {
+          sessionId: session.id,
+          date: form.date,
+          time: form.time,
+          durationMin: Number(form.duration),
+          tz: form.tz,
+        },
+      }),
     onSuccess: (r) => {
       setResult(r);
       if (r.ok) {
@@ -163,11 +208,27 @@ export function RescheduleDialog({
       }
     },
     // Erro de rede: o formulário permanece intacto para nova tentativa.
-    onError: (e) => setResult({ ok: false, errors: [e instanceof Error ? e.message : "Falha ao salvar."], conflicts: [] }),
+    onError: (e) =>
+      setResult({
+        ok: false,
+        errors: [e instanceof Error ? e.message : "Falha ao salvar."],
+        conflicts: [],
+      }),
   });
 
   const zones = useMemo(
-    () => Array.from(new Set([initialTz, DEFAULT_TZ, "America/Manaus", "America/Recife", "America/Rio_Branco", "Europe/Lisbon", "UTC"])),
+    () =>
+      Array.from(
+        new Set([
+          initialTz,
+          DEFAULT_TZ,
+          "America/Manaus",
+          "America/Recife",
+          "America/Rio_Branco",
+          "Europe/Lisbon",
+          "UTC",
+        ]),
+      ),
     [initialTz],
   );
 
@@ -176,7 +237,9 @@ export function RescheduleDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Reagendar atendimento</DialogTitle>
-          <DialogDescription>{session.patient}. O horário original só muda depois da confirmação do servidor.</DialogDescription>
+          <DialogDescription>
+            {session.patient}. O horário original só muda depois da confirmação do servidor.
+          </DialogDescription>
         </DialogHeader>
         <form
           className="grid gap-3 sm:grid-cols-2"
@@ -187,11 +250,23 @@ export function RescheduleDialog({
         >
           <div className="space-y-1">
             <Label htmlFor="rs-date">Data</Label>
-            <Input id="rs-date" type="date" required value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+            <Input
+              id="rs-date"
+              type="date"
+              required
+              value={form.date}
+              onChange={(e) => setForm({ ...form, date: e.target.value })}
+            />
           </div>
           <div className="space-y-1">
             <Label htmlFor="rs-time">Horário</Label>
-            <Input id="rs-time" type="time" required value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} />
+            <Input
+              id="rs-time"
+              type="time"
+              required
+              value={form.time}
+              onChange={(e) => setForm({ ...form, time: e.target.value })}
+            />
           </div>
           <div className="space-y-1">
             <Label htmlFor="rs-dur">Duração (min)</Label>
@@ -215,21 +290,40 @@ export function RescheduleDialog({
               onChange={(e) => setForm({ ...form, tz: e.target.value })}
             >
               {zones.map((z) => (
-                <option key={z} value={z}>{z}</option>
+                <option key={z} value={z}>
+                  {z}
+                </option>
               ))}
             </select>
           </div>
           {result && !result.ok && (
-            <div role="alert" className="sm:col-span-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-[14px] text-destructive">
-              <p className="flex items-center gap-2 font-semibold"><AlertTriangle className="size-4" /> Não foi reagendado</p>
+            <div
+              role="alert"
+              className="sm:col-span-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-[14px] text-destructive"
+            >
+              <p className="flex items-center gap-2 font-semibold">
+                <AlertTriangle className="size-4" /> Não foi reagendado
+              </p>
               <ul className="mt-1 list-disc pl-5">
-                {result.errors.map((e) => <li key={e}>{e}</li>)}
-                {result.conflicts.map((c) => <li key={c.id}>Conflita com {c.patient} às {c.start}</li>)}
+                {result.errors.map((e) => (
+                  <li key={e}>{e}</li>
+                ))}
+                {result.conflicts.map((c) => (
+                  <li key={c.id}>
+                    Conflita com {c.patient} às {c.start}
+                  </li>
+                ))}
               </ul>
             </div>
           )}
           <DialogFooter className="sm:col-span-2">
-            <Button type="button" variant="ghost" className="min-h-11" onClick={onClose} disabled={mutation.isPending}>
+            <Button
+              type="button"
+              variant="ghost"
+              className="min-h-11"
+              onClick={onClose}
+              disabled={mutation.isPending}
+            >
               Cancelar
             </Button>
             <Button type="submit" className="min-h-11" disabled={mutation.isPending}>
@@ -254,7 +348,13 @@ export function mondayOf(dateKey: string): string {
   return d.toISOString().slice(0, 10);
 }
 
-export function WeekView({ dateKey, onPickDay }: { dateKey: string; onPickDay: (key: string) => void }) {
+export function WeekView({
+  dateKey,
+  onPickDay,
+}: {
+  dateKey: string;
+  onPickDay: (key: string) => void;
+}) {
   const tz = browserTz();
   const weekStart = mondayOf(dateKey);
   const fn = useServerFn(getAgendaWeek);
@@ -267,9 +367,15 @@ export function WeekView({ dateKey, onPickDay }: { dateKey: string; onPickDay: (
     d.setUTCDate(d.getUTCDate() + i);
     return d.toISOString().slice(0, 10);
   });
-  const [editing, setEditing] = useState<{ id: string; startISO: string; durationMin: number; patient: string } | null>(null);
+  const [editing, setEditing] = useState<{
+    id: string;
+    startISO: string;
+    durationMin: number;
+    patient: string;
+  } | null>(null);
 
-  if (q.isLoading) return <div className="skeleton h-64 rounded-xl" aria-label="Carregando semana" />;
+  if (q.isLoading)
+    return <div className="skeleton h-64 rounded-xl" aria-label="Carregando semana" />;
   if (q.isError)
     return (
       <div role="alert" className="surface rounded-xl border border-border p-6 text-[15px]">
@@ -287,14 +393,19 @@ export function WeekView({ dateKey, onPickDay }: { dateKey: string; onPickDay: (
         const list = items.filter((s) => s.dateKey === k);
         const d = new Date(`${k}T12:00:00Z`);
         return (
-          <div key={k} className={`surface rounded-xl border p-2 ${k === dateKey ? "border-forest" : "border-border"}`}>
+          <div
+            key={k}
+            className={`surface rounded-xl border p-2 ${k === dateKey ? "border-forest" : "border-border"}`}
+          >
             <button
               type="button"
               className="mb-2 flex min-h-11 w-full items-baseline gap-2 rounded-md px-1 text-left hover:bg-secondary"
               onClick={() => onPickDay(k)}
               aria-label={`Abrir dia ${d.getUTCDate()}`}
             >
-              <span className="text-[13px] font-semibold uppercase text-muted-foreground">{WD[d.getUTCDay()]}</span>
+              <span className="text-[13px] font-semibold uppercase text-muted-foreground">
+                {WD[d.getUTCDay()]}
+              </span>
               <span className="text-[16px] font-bold text-primary">{d.getUTCDate()}</span>
             </button>
             {list.length === 0 ? (
@@ -302,8 +413,13 @@ export function WeekView({ dateKey, onPickDay }: { dateKey: string; onPickDay: (
             ) : (
               <ul className="space-y-1.5">
                 {list.map((s) => (
-                  <li key={s.id} className="rounded-md border border-border bg-background p-2 text-[14px]">
-                    <p className="font-mono font-bold tabular-nums">{s.start}–{s.end}</p>
+                  <li
+                    key={s.id}
+                    className="rounded-md border border-border bg-background p-2 text-[14px]"
+                  >
+                    <p className="font-mono font-bold tabular-nums">
+                      {s.start}–{s.end}
+                    </p>
                     <p className="truncate font-semibold">{s.patient}</p>
                     <StatusPill status={s.clinicalStatus} />
                     <div className="mt-1 flex gap-1">

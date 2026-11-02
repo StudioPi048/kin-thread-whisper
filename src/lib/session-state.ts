@@ -40,7 +40,12 @@ export type SessionLike = {
   ai_reviewed_at?: string | null;
 };
 
-const CLINICAL = new Set<ClinicalStatus>(["scheduled", "in_progress", "pending_record", "completed"]);
+const CLINICAL = new Set<ClinicalStatus>([
+  "scheduled",
+  "in_progress",
+  "pending_record",
+  "completed",
+]);
 
 export function clinicalStatusOf(s: SessionLike, now = new Date()): ClinicalStatus {
   if (s.clinical_status && CLINICAL.has(s.clinical_status as ClinicalStatus))
@@ -108,8 +113,13 @@ export async function confirmReview(
 ): Promise<{ reviewed: boolean; error?: string }> {
   try {
     const row = await persist();
-    return row?.ai_reviewed_at ? { reviewed: true } : { reviewed: false, error: "Revisão não confirmada pelo servidor." };
+    return row?.ai_reviewed_at
+      ? { reviewed: true }
+      : { reviewed: false, error: "Revisão não confirmada pelo servidor." };
   } catch (err) {
-    return { reviewed: false, error: err instanceof Error ? err.message : "Falha ao salvar revisão." };
+    return {
+      reviewed: false,
+      error: err instanceof Error ? err.message : "Falha ao salvar revisão.",
+    };
   }
 }

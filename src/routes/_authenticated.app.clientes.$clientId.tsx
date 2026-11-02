@@ -113,7 +113,9 @@ export const Route = createFileRoute("/_authenticated/app/clientes/$clientId")({
       ...(typeof search.agendaDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(search.agendaDate)
         ? { agendaDate: search.agendaDate }
         : {}),
-      ...(typeof search.person === "string" && /^[0-9a-f-]{36}$/i.test(search.person) ? { person: search.person } : {}),
+      ...(typeof search.person === "string" && /^[0-9a-f-]{36}$/i.test(search.person)
+        ? { person: search.person }
+        : {}),
       ...(DOSSIER_TABS.includes(tab as DossierTab) ? { tab: tab as DossierTab } : {}),
       ...(search.from === "agenda" ? { from: "agenda" as const } : {}),
     };
@@ -372,7 +374,11 @@ function ClientDossierPage() {
         breadcrumb={
           <>
             {from === "agenda" ? (
-              <Link to="/app/agenda" search={agendaDate ? { date: agendaDate } : {}} className="hover:text-gold transition-colors">
+              <Link
+                to="/app/agenda"
+                search={agendaDate ? { date: agendaDate } : {}}
+                className="hover:text-gold transition-colors"
+              >
                 Agenda
               </Link>
             ) : (
