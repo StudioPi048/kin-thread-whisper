@@ -1382,7 +1382,6 @@ function RightPanel({
   );
 }
 
-const QUICK_NOTE_KEY = "genealiz.agenda.quick-note";
 
 function QuickNote() {
   // Nota rápida só em memória: nada de texto clínico no armazenamento do navegador.
