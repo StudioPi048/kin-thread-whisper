@@ -8,6 +8,8 @@ import {
   Copy,
   Link2,
 } from "lucide-react";
+import { buildLibraryItems } from "@/components/library/catalog";
+import { searchLibrary } from "@/lib/library-search";
 import {
   LETICIA,
   LETICIA_WORKS,
@@ -51,72 +53,8 @@ function BibliotecaPage() {
       return data as Entry[];
     },
   });
-  const items = useMemo<LibraryItem[]>(
-    () => [
-      ...LETICIA_WORKS.map((x, i) => ({
-        key: `liz-${i}`,
-        category: "Acervo autoral",
-        title: x.title,
-        meta: `${x.kind} · ${LETICIA.name}`,
-        body: x.subtitle,
-      })),
-      ...AUTHORS.map((x, i) => ({
-        key: `author-${i}`,
-        category: "Autores",
-        title: x.name,
-        meta: x.field,
-        body: [x.years, x.nationality].filter(Boolean).join(" · "),
-      })),
-      ...ESSENTIAL_BOOKS.map((x, i) => ({
-        key: `book-${i}`,
-        category: "Livros",
-        title: x.title,
-        meta: `${x.author} · ${x.year}`,
-        body: x.subtitle,
-        details: x.concepts,
-      })),
-      ...GLOSSARY.map((x, i) => ({
-        key: `term-${i}`,
-        category: "Conceitos",
-        title: x.term,
-        meta: x.authors.join(" · "),
-        body: x.short,
-        term: x,
-      })),
-      ...PROTOCOLS.map((x, i) => ({
-        key: `protocol-${i}`,
-        category: "Protocolos",
-        title: x.title,
-        meta: `${x.duration} · ${x.indication}`,
-        body: x.goal,
-        details: x.steps,
-      })),
-      ...QUOTES.map((x, i) => ({
-        key: `quote-${i}`,
-        category: "Citações",
-        title: x.theme,
-        meta: `${x.author} · ${x.work}`,
-        body: x.text,
-      })),
-      ...entries.map((x) => ({
-        key: x.id,
-        category: "Meu acervo",
-        title: x.title,
-        meta: [x.author, x.school, x.topic].filter(Boolean).join(" · "),
-        body: x.summary || x.content || "",
-        details: x.content ? [x.content] : undefined,
-      })),
-    ],
-    [entries],
-  );
-  const shown = items.filter(
-    (x) =>
-      (category === "Todos" || x.category === category) &&
-      [x.title, x.meta, x.body, ...(x.details ?? [])]
-        .join(" ")
-        .toLowerCase()
-        .includes(q.toLowerCase()),
-  );
+  const items = useMemo(() => buildLibraryItems(entries), [entries]);
+  const shown = searchLibrary(items, q, category);
   return (
     <div className="pb-14">
       <DocumentHeader
