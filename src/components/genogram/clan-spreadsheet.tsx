@@ -253,6 +253,8 @@ export function ClanSpreadsheet({ clientId }: Props) {
     };
   }, [clientId, qc]);
 
+  const [filter, setFilter] = useState("");
+  const [showDates, setShowDates] = useState(true);
   const rows = useMemo(() => {
     const base = (persons ?? []).map((p) => ({ ...p, ...(drafts[p.id] ?? {}) }));
     // Ordena genealogicamente: Consulente no topo, depois por geração
@@ -264,6 +266,32 @@ export function ClanSpreadsheet({ clientId }: Props) {
       return (a.full_name ?? "").localeCompare(b.full_name ?? "");
     });
   }, [persons, drafts]);
+  const visibleRows = useMemo(() => {
+    const q = filter.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((r) =>
+      `${r.full_name ?? ""} ${r.relationship_to_proband ?? ""} ${r.occupation ?? ""}`.toLowerCase().includes(q),
+    );
+  }, [rows, filter]);
+  // Teclado: ↑/↓ movem para a mesma coluna da linha vizinha
+  const onGridKeyDown = (e: React.KeyboardEvent<HTMLTableSectionElement>) => {
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    const el = e.target as HTMLElement;
+    if (el.tagName !== "INPUT" || (el as HTMLInputElement).type === "date") return;
+    const td = el.closest("td");
+    const tr = el.closest("tr");
+    if (!td || !tr) return;
+    const col = Array.from(tr.children).indexOf(td);
+    let next = (e.key === "ArrowDown" ? tr.nextElementSibling : tr.previousElementSibling) as HTMLElement | null;
+    while (next && next.children.length <= col) {
+      next = (e.key === "ArrowDown" ? next.nextElementSibling : next.previousElementSibling) as HTMLElement | null;
+    }
+    const target = next?.children[col]?.querySelector("input") as HTMLInputElement | null;
+    if (target) {
+      e.preventDefault();
+      target.focus();
+    }
+  };
 
   // Mesmo motor do genossociograma, só pra saber quem vai ficar solto na
   // árvore e por quê — sem precisar abrir a aba do desenho pra descobrir.
@@ -613,23 +641,49 @@ export function ClanSpreadsheet({ clientId }: Props) {
           <p className="mb-1.5 text-[13px] font-bold uppercase tracking-[0.1em] text-muted-foreground md:hidden">
             ← Arraste pra o lado pra ver todas as colunas →
           </p>
-          <div className="overflow-x-auto rounded-sm border-2 border-border/80 bg-surface-document shadow-sm">
+          <div className="mb-3 flex flex-wrap items-center gap-3">
+            <label className="flex flex-1 items-center gap-2 text-[15px]">
+              <span className="sr-only">Buscar na planilha</span>
+              <input
+                type="search"
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                placeholder="Buscar por nome, parentesco ou profissão"
+                className="h-11 w-full max-w-md rounded-md border border-input bg-background px-3 text-[15px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </label>
+            <label className="flex min-h-11 items-center gap-2 text-[15px]">
+              <input type="checkbox" className="size-5" checked={showDates} onChange={(e) => setShowDates(e.target.checked)} />
+              Colunas de datas
+            </label>
+            <span className="text-[14px] text-muted-foreground" role="status">
+              {visibleRows.length} de {rows.length} · ↑/↓ entre linhas
+            </span>
+          </div>
+          <div className="max-h-[70vh] overflow-auto rounded-sm border-2 border-border/80 bg-surface-document shadow-sm">
             <table className="w-full min-w-[760px] border-collapse text-[16px]">
-              <thead className="bg-forest-soft/40 text-[14px] font-bold uppercase tracking-[0.15em] text-forest border-b-2 border-border/80">
+              <thead className="sticky top-0 z-30 bg-card text-[14px] font-bold uppercase tracking-[0.15em] text-forest border-b-2 border-border/80">
                 <tr>
                   <Th w="w-11">#</Th>
                   <Th w="min-w-[170px]" sticky>
                     Nome
                   </Th>
                   <Th w="min-w-[220px]">Parentesco</Th>
-                  <Th w="w-32">Nascimento</Th>
-                  <Th w="w-32">Morte</Th>
+                  {showDates && <Th w="w-32">Nascimento</Th>}
+                  {showDates && <Th w="w-32">Morte</Th>}
                   <Th w="w-14"></Th>
                   <Th w="w-10"></Th>
                 </tr>
               </thead>
-              <tbody>
-                {rows.map((r, i) => {
+              <tbody onKeyDown={onGridKeyDown}>
+                {visibleRows.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="p-4 text-[15px] text-muted-foreground">
+                      Nenhum familiar corresponde à busca.
+                    </td>
+                  </tr>
+                )}
+                {visibleRows.map((r, i) => {
                   const expanded = expandedRows.has(r.id);
                   const hasSecondaryData = !!(
                     r.gestational_weeks?.trim() ||
@@ -682,7 +736,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
                             })()}
                           </div>
                         </Td>
-                        <Td>
+                        {showDates && (<Td>
                           <CellInput
                             type="date"
                             value={r.birth_date ?? ""}
@@ -697,7 +751,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
                               scheduleSave(r.id, { death_date: v || null, is_deceased: !!v })
                             }
                           />
-                        </Td>
+                        </Td>)}
                         <td className="px-1 text-center">
                           <button
                             onClick={() => toggleExpanded(r.id)}
