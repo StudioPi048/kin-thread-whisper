@@ -928,7 +928,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
       if (hasPositionChange) markLayoutDirty();
       onNodesChange(nextChanges);
     },
-    [onNodesChange, rfInstance],
+    [onNodesChange, rfInstance, markLayoutDirty],
   );
 
   useEffect(() => {
@@ -1023,7 +1023,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
       );
       markLayoutDirty();
     },
-    [setNodes, snapshot],
+    [setNodes, snapshot, markLayoutDirty],
   );
   const undoLayout = () => {
     const prev = historyRef.current.undo(snapshot());
