@@ -21,3 +21,6 @@
 - After any family/relationship mutation call `invalidateCase()` from `src/lib/clinical-intel.ts` — why: every evidence surface must refresh together.
 - Agenda times/day boundaries are computed in the viewer's IANA time zone via `src/lib/scheduling.ts`; reschedules are revalidated server-side in `rescheduleSession` — why: the server runs in UTC and conflicts must not depend on client checks.
 - Session clinical status and audio pipeline state are separate (`src/lib/session-state.ts`); professional notes live in `manual_notes`, never overwritten by audio processing, drafts kept in memory only — why: audio failure must never lose notes and no clinical text goes to browser storage.
+- Hypothesis reviews are append-only rows in `hypothesis_reviews` (owner forced by trigger, RLS by professional + client, versioned with an evidence fingerprint from `src/lib/hypothesis-review.ts`) — why: review history must be auditable and flag reviews made on outdated evidence.
+- Synthetic families for tests/landing live in `src/lib/geno/fixtures.ts`; never use real patients in fixtures, demos or screenshots — why: clinical data privacy.
+- User preferences live in `profiles.preferences` (parsed by `src/lib/preferences.ts`) — why: account settings must follow the user across devices.

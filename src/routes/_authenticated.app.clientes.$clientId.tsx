@@ -51,6 +51,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { LibraryCasePanel } from "@/components/library/library-case-panel";
 import { motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
@@ -444,6 +445,7 @@ function ClientDossierPage() {
         }
         actions={
           <div className="flex items-center gap-1 opacity-60 hover:opacity-100 transition-opacity bg-surface-document/60 p-1 rounded-md border border-border/40">
+            <LibraryCasePanel />
             <Button
               variant="ghost"
               size="icon-sm"

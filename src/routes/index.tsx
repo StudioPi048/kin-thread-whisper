@@ -9,7 +9,26 @@ import {
   FolderOpen,
 } from "lucide-react";
 import { GenealizWordmark } from "@/components/genealiz-wordmark";
-export const Route = createFileRoute("/")({ component: Index });
+import { GenogramDemo } from "@/components/landing/genogram-demo";
+export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "GENEALIZ — espaço de trabalho em psicogenealogia" },
+      {
+        name: "description",
+        content: "Genossociograma, anamnese, linha do tempo e sessões de cada caso em um só lugar.",
+      },
+      { property: "og:title", content: "GENEALIZ — espaço de trabalho em psicogenealogia" },
+      {
+        property: "og:description",
+        content: "Genossociograma com cliente no topo, anamnese, linha do tempo e sessões.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
+  component: Index,
+});
 function Index() {
   return (
     <div className="gv-public">
@@ -127,42 +146,7 @@ function Index() {
                 Explorar os genossociogramas <ArrowUpRight size={18} />
               </Link>
             </div>
-            <div
-              className="gv-family-example"
-              aria-label="Exemplo ilustrativo da organização de um dossiê"
-            >
-              <div className="gv-example-top">
-                <span>História familiar</span>
-                <span>Exemplo ilustrativo</span>
-              </div>
-              <div className="gv-example-person">
-                <span className="gv-initial">H</span>
-                <div>
-                  <strong>Helena</strong>
-                  <small>Pessoa de referência</small>
-                </div>
-                <span className="gv-dot" />
-              </div>
-              <div className="gv-example-rule" />
-              <div className="gv-example-parents">
-                <div>
-                  <span className="gv-square" />
-                  <strong>Carlos</strong>
-                  <small>Pai</small>
-                </div>
-                <span className="gv-join">união</span>
-                <div>
-                  <span className="gv-circle" />
-                  <strong>Mariana</strong>
-                  <small>Mãe</small>
-                </div>
-              </div>
-              <div className="gv-example-bottom">
-                <span>Genossociograma</span>
-                <span>Linha do tempo</span>
-                <span>Sessões</span>
-              </div>
-            </div>
+            <GenogramDemo />
           </div>
           <div className="gv-feature-pair">
             <article>
@@ -203,7 +187,9 @@ function Index() {
             <br />
             <em>Mais clareza nos registros.</em>
           </h2>
-          <p>Prepare o seu espaço de trabalho em psicogenealogia.</p>
+          <p>
+            Prepare o seu espaço de trabalho em psicogenealogia. O cadastro é por e-mail ou Google.
+          </p>
           <Link to="/auth" search={{ mode: "signup" }} className="gv-button gv-button-gold">
             Criar minha conta <ArrowRight size={18} />
           </Link>

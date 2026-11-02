@@ -38,6 +38,7 @@ import {
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DayList, WeekView, browserTz } from "@/components/agenda/agenda-views";
+import { usePreferences } from "@/components/account/use-preferences";
 import { DocumentHeader } from "@/components/ui/document-header";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
@@ -286,7 +287,9 @@ function DateNav({
 
 function AgendaPage() {
   const { user } = Route.useRouteContext();
-  const { date, view } = Route.useSearch();
+  const { date, view: viewParam } = Route.useSearch();
+  const prefsQ = usePreferences(user.id);
+  const view = viewParam ?? (prefsQ.data?.agendaView === "week" ? "week" : undefined);
   const tz = useMemo(() => browserTz(), []);
   const navigate = Route.useNavigate();
 

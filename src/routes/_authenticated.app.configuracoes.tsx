@@ -1,4 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { AccountPreferences, DataExport } from "@/components/account/account-sections";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -11,6 +12,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 export const Route = createFileRoute("/_authenticated/app/configuracoes")({
+  head: () => ({
+    meta: [
+      { title: "Sua conta — GENEALIZ" },
+      { name: "description", content: "Perfil, preferências, exportação de dados e ajuda." },
+      { property: "og:title", content: "Sua conta — GENEALIZ" },
+      { property: "og:description", content: "Perfil, preferências, exportação de dados e ajuda." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: ConfigPage,
 });
 
@@ -68,7 +79,10 @@ function ConfigPage() {
       toast.success("Perfil atualizado.");
       queryClient.invalidateQueries({ queryKey: ["profile", user.id] });
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao salvar."),
+    onError: (e) =>
+      toast.error(
+        `${e instanceof Error ? e.message : "Erro ao salvar"}. Seus campos foram mantidos — tente de novo.`,
+      ),
   });
 
   const dirty =
@@ -163,6 +177,32 @@ function ConfigPage() {
             </div>
           </div>
         </form>
+        <div className="mt-6 max-w-2xl space-y-6">
+          <AccountPreferences userId={user.id} />
+          <DataExport userId={user.id} />
+          <section
+            className="rounded-[14px] border border-material-border bg-surface-document p-6 shadow-surface sm:p-8"
+            aria-labelledby="help-h"
+          >
+            <h2 id="help-h" className="m-0 font-serif text-2xl text-ink">
+              Ajuda
+            </h2>
+            <ul className="mt-4 space-y-2 text-[15px]">
+              <li>
+                <Link
+                  to="/app/guia"
+                  className="inline-flex min-h-11 items-center font-semibold text-forest underline-offset-4 hover:underline"
+                >
+                  Guia de tarefas: cadastrar, vincular, salvar, importar e conduzir sessões
+                </Link>
+              </li>
+              <li>
+                Senha esquecida: na tela de entrada use “Esqueci minha senha”. O envio do e-mail
+                depende da configuração de e-mail da plataforma.
+              </li>
+            </ul>
+          </section>
+        </div>
       </div>
     </div>
   );
