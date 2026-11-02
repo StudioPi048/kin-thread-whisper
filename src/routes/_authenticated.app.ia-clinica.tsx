@@ -6,15 +6,21 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { DocumentHeader } from "@/components/ui/document-header";
 import { evidenceForCase } from "@/lib/evidence";
-import type { PersonRow, RelationshipRow } from "@/lib/patterns";
+import { clinicalIntelQuery } from "@/lib/clinical-intel";
 
 export const Route = createFileRoute("/_authenticated/app/ia-clinica")({
   head: () => ({
     meta: [
       { title: "Evidências e hipóteses — GENEALIZ" },
-      { name: "description", content: "Hipóteses provisórias baseadas nas evidências registradas no caso." },
+      {
+        name: "description",
+        content: "Hipóteses provisórias baseadas nas evidências registradas no caso.",
+      },
       { property: "og:title", content: "Evidências e hipóteses — GENEALIZ" },
-      { property: "og:description", content: "Hipóteses provisórias com fontes, limites e perguntas." },
+      {
+        property: "og:description",
+        content: "Hipóteses provisórias com fontes, limites e perguntas.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -38,26 +44,27 @@ function IaClinicaPage() {
     },
   });
 
-  // Mesma chave do painel do dossiê → invalidação consistente entre telas
-  const caseQ = useQuery({
-    queryKey: ["clinical-intel", clientId],
-    enabled: !!clientId,
-    queryFn: async () => {
-      const [personsRes, relsRes] = await Promise.all([
-        supabase.from("genogram_persons").select("*").eq("client_id", clientId),
-        supabase.from("genogram_relationships").select("*").eq("client_id", clientId),
-      ]);
-      if (personsRes.error) throw personsRes.error;
-      if (relsRes.error) throw relsRes.error;
-      return {
-        client: null,
-        persons: (personsRes.data ?? []) as PersonRow[],
-        relationships: (relsRes.data ?? []) as RelationshipRow[],
-      };
-    },
-  });
+  // Mesma queryFn/formato do dossiê (lib/clinical-intel) → cache compatível
+  const caseQ = useQuery(clinicalIntelQuery(clientId));
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [showHyp, setShowHyp] = useState(false);
+  const changeCase = (id: string) => {
+    setClientId(id);
+    setSelected(new Set());
+    setShowHyp(false);
+  };
+  const toggle = (id: string) => {
+    setShowHyp(false);
+    setSelected((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  };
 
   const ev = caseQ.data ? evidenceForCase(caseQ.data.persons, caseQ.data.relationships) : null;
+  const hyps = ev && showHyp ? ev.hypotheses.filter((h) => selected.has(h.patternId)) : [];
 
   return (
     <div className="flex min-h-[calc(100dvh-72px)] flex-col">
@@ -66,7 +73,7 @@ function IaClinicaPage() {
         title="Evidências e hipóteses"
         subtitle="Selecione um caso. As hipóteses vêm apenas do que está registrado no genossociograma."
       />
-      <main className="mx-auto w-full max-w-4xl space-y-6 p-4 sm:p-6">
+      <div className="mx-auto w-full max-w-4xl space-y-6 p-4 sm:p-6">
         <div className="space-y-2">
           <label htmlFor="ia-case" className="text-[15px] font-semibold text-foreground">
             Caso
@@ -82,10 +89,12 @@ function IaClinicaPage() {
             <select
               id="ia-case"
               value={clientId}
-              onChange={(e) => setClientId(e.target.value)}
+              onChange={(e) => changeCase(e.target.value)}
               className="h-11 w-full rounded-md border border-input bg-background px-3 text-[15px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <option value="">{clientsQ.isLoading ? "Carregando…" : "Escolha um caso ativo"}</option>
+              <option value="">
+                {clientsQ.isLoading ? "Carregando…" : "Escolha um caso ativo"}
+              </option>
               {(clientsQ.data ?? []).map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.preferred_name || c.full_name}
@@ -100,7 +109,9 @@ function IaClinicaPage() {
             Nenhum caso selecionado. Sem caso, não há evidências nem hipóteses.
           </p>
         )}
-        {clientId && caseQ.isLoading && <p className="text-[15px] text-muted-foreground">Analisando…</p>}
+        {clientId && caseQ.isLoading && (
+          <p className="text-[15px] text-muted-foreground">Analisando…</p>
+        )}
         {clientId && caseQ.isError && (
           <div role="alert" className="flex items-center gap-3 text-[15px] text-destructive">
             Falha ao ler o caso.
@@ -124,21 +135,49 @@ function IaClinicaPage() {
               ) : (
                 <ul className="space-y-2">
                   {ev.patterns.map((p) => (
-                    <li key={p.id} className="rounded-lg border border-border bg-card p-3 text-[15px]">
-                      <strong>{p.title}</strong> — {p.description}
+                    <li
+                      key={p.id}
+                      className="rounded-lg border border-border bg-card p-3 text-[15px]"
+                    >
+                      <label className="flex min-h-11 cursor-pointer items-start gap-3">
+                        <input
+                          type="checkbox"
+                          className="mt-1 size-5 accent-[var(--color-primary)]"
+                          checked={selected.has(p.id)}
+                          onChange={() => toggle(p.id)}
+                        />
+                        <span>
+                          <strong>{p.title}</strong> — {p.description}
+                        </span>
+                      </label>
                     </li>
                   ))}
                 </ul>
               )}
             </section>
 
-            {ev.hypotheses.length > 0 && (
+            {ev.patterns.length > 0 && (
+              <Button
+                className="min-h-11"
+                disabled={selected.size === 0}
+                onClick={() => setShowHyp(true)}
+              >
+                Gerar hipóteses a partir de {selected.size} evidência(s) selecionada(s)
+              </Button>
+            )}
+            {hyps.length > 0 && (
               <section aria-labelledby="hy-h" className="space-y-3">
-                <h2 id="hy-h" className="flex items-center gap-2 text-lg font-semibold text-foreground">
+                <h2
+                  id="hy-h"
+                  className="flex items-center gap-2 text-lg font-semibold text-foreground"
+                >
                   <Brain className="size-5" aria-hidden /> Hipóteses provisórias
                 </h2>
-                {ev.hypotheses.map((h) => (
-                  <article key={h.id} className="space-y-2 rounded-lg border border-border bg-card p-4">
+                {hyps.map((h) => (
+                  <article
+                    key={h.id}
+                    className="space-y-2 rounded-lg border border-border bg-card p-4"
+                  >
                     <h3 className="text-[16px] font-semibold">{h.title}</h3>
                     <p className="text-[15px]">{h.description}</p>
                     <p className="text-[15px]">
@@ -168,7 +207,7 @@ function IaClinicaPage() {
             </Link>
           </>
         )}
-      </main>
+      </div>
     </div>
   );
 }

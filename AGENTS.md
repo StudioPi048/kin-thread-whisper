@@ -14,4 +14,6 @@
 ## Project rules
 - Genossociograma: CLIENTE E IRMÃOS SEMPRE NO TOPO (geração 0, menor Y); pais abaixo, avós abaixo dos pais. Never invert to ancestors-on-top. Every person links to its parents through the correct UnionNode. Guarded by `src/lib/geno/invariants.test.ts` — run `bunx vitest run` before changing `src/lib/geno/*`.
 - Clinical hypotheses come only from `src/lib/evidence.ts` (built on `detectPatterns`); no fixed fallbacks, no simulated chat, no numeric confidence — why: hypotheses must be traceable to recorded evidence.
-- Evidence queries share the React Query key `["clinical-intel", clientId]` so dossier and IA Clínica invalidate together.
+- Case evidence is fetched only via `clinicalIntelQuery` in `src/lib/clinical-intel.ts` (key `["clinical-intel", clientId]`, full shape) — why: one key must never hold two data shapes.
+- Per-user UI memory (resume visits, list filters, onboarding dismissal) lives in `src/lib/recent-activity.ts`, localStorage, IDs/tabs only — why: no clinical data in the browser storage.
+- Design tokens: a single `:root` block in `src/styles.css`; DESIGN.md is the spec — why: avoid Atlas/Arquivo vivo override contradictions.

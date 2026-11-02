@@ -6,12 +6,31 @@ let n = 0;
 function p(rel: string, name = rel, extra: Partial<PersonRow> = {}): PersonRow {
   n++;
   return {
-    id: `p${n}`, client_id: "c", full_name: name, preferred_name: null, gender: null,
-    birth_date: null, death_date: null, is_deceased: false, is_proband: rel === "Consulente",
-    occupation: null, notes: null, tags: [], position_x: 0, position_y: 0,
-    created_at: "", updated_at: "", cause_of_death: null, health_conditions: [],
-    life_events: [], relationship_to_proband: rel, temperament: null, vices: null,
-    gestational_weeks: null, birth_order: null, ...extra,
+    id: `p${n}`,
+    client_id: "c",
+    full_name: name,
+    preferred_name: null,
+    gender: null,
+    birth_date: null,
+    death_date: null,
+    is_deceased: false,
+    is_proband: rel === "Consulente",
+    occupation: null,
+    notes: null,
+    tags: [],
+    position_x: 0,
+    position_y: 0,
+    created_at: "",
+    updated_at: "",
+    cause_of_death: null,
+    health_conditions: [],
+    life_events: [],
+    relationship_to_proband: rel,
+    temperament: null,
+    vices: null,
+    gestational_weeks: null,
+    birth_order: null,
+    ...extra,
   } as PersonRow;
 }
 const parentUnion = (g: LogicalGraph, id: string) =>
@@ -20,8 +39,15 @@ const parentUnion = (g: LogicalGraph, id: string) =>
 function family() {
   n = 0;
   const persons = [
-    p("Consulente", "Cliente"), p("Irmã(o)", "Irmã"), p("Irmã(o)", "Irmão"),
-    p("Pai"), p("Mãe"), p("Avô paterno"), p("Avó paterna"), p("Avô materno"), p("Avó materna"),
+    p("Consulente", "Cliente"),
+    p("Irmã(o)", "Irmã"),
+    p("Irmã(o)", "Irmão"),
+    p("Pai"),
+    p("Mãe"),
+    p("Avô paterno"),
+    p("Avó paterna"),
+    p("Avô materno"),
+    p("Avó materna"),
   ];
   const g = buildLogicalGraph({ persons, rels: [] });
   return { persons, g, pl: layoutGraph(g) };
@@ -69,9 +95,22 @@ describe("múltiplas uniões", () => {
   it("união com marriage_order 2 recebe rótulo de 2º casamento", () => {
     n = 0;
     const persons = [p("Consulente"), p("Pai"), p("Mãe")];
-    const rels = [{ id: "r", client_id: "c", from_person_id: persons[1].id, to_person_id: persons[2].id,
-      relationship_type: "union", qualifier: null, start_date: null, end_date: null, notes: null,
-      created_at: "", updated_at: "", marriage_order: 2 }];
+    const rels = [
+      {
+        id: "r",
+        client_id: "c",
+        from_person_id: persons[1].id,
+        to_person_id: persons[2].id,
+        relationship_type: "union",
+        qualifier: null,
+        start_date: null,
+        end_date: null,
+        notes: null,
+        created_at: "",
+        updated_at: "",
+        marriage_order: 2,
+      },
+    ];
     const g = buildLogicalGraph({ persons, rels: rels as never });
     const u = g.unions.get(parentUnion(g, persons[0].id)!)!;
     expect(u.label).toBe("2º casamento");

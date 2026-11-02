@@ -1,4 +1,5 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { readPref, writePref } from "@/lib/recent-activity";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -100,14 +101,31 @@ function patternsFromTags(tags: string[] | null): PatternItem[] {
 function ClientesIndex() {
   const { user } = Route.useRouteContext();
   const qc = useQueryClient();
+  // Filtros/busca/visualização persistentes por usuário (lista operacional por padrão)
   const [tab, setTab] = useState<"active" | "archived">("active");
   const [query, setQuery] = useState("");
-  const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
+  const [viewMode, setViewMode] = useState<"cards" | "list">("list");
+  const [prefsLoaded, setPrefsLoaded] = useState(false);
+  useEffect(() => {
+    const p = readPref(user.id, "clients-filters", { tab: "active", query: "", viewMode: "list" });
+    setTab(p.tab === "archived" ? "archived" : "active");
+    setQuery(typeof p.query === "string" ? p.query : "");
+    setViewMode(p.viewMode === "cards" ? "cards" : "list");
+    setPrefsLoaded(true);
+  }, [user.id]);
+  useEffect(() => {
+    if (prefsLoaded) writePref(user.id, "clients-filters", { tab, query, viewMode });
+  }, [prefsLoaded, user.id, tab, query, viewMode]);
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<ClientRow | null>(null);
   const [deleting, setDeleting] = useState<ClientRow | null>(null);
 
-  const { data: clients = [], isLoading } = useQuery({
+  const {
+    data: clients = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ["clients", tab],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -267,8 +285,27 @@ function ClientesIndex() {
               </li>
             ))}
           </ul>
+        ) : isError ? (
+          <div
+            role="alert"
+            className="flex flex-wrap items-center gap-3 rounded-xl border border-destructive/40 bg-card p-5 text-[15px] text-destructive"
+          >
+            Não foi possível carregar os clientes.
+            <Button variant="outline" className="min-h-11" onClick={() => refetch()}>
+              Tentar de novo
+            </Button>
+          </div>
         ) : filtered.length === 0 ? (
-          <EmptyState hasQuery={query.length > 0} onCreate={() => setCreating(true)} tab={tab} />
+          <>
+            <EmptyState hasQuery={query.length > 0} onCreate={() => setCreating(true)} tab={tab} />
+            {query.length > 0 && (
+              <div className="mt-4 flex justify-center">
+                <Button variant="outline" className="min-h-11" onClick={() => setQuery("")}>
+                  Limpar busca
+                </Button>
+              </div>
+            )}
+          </>
         ) : viewMode === "cards" ? (
           <motion.ul
             className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-5 p-0"
@@ -528,7 +565,7 @@ function EmptyState({
       title={tab === "active" ? "A jornada começa aqui." : "Nenhum dossiê arquivado."}
       description={
         tab === "active"
-          ? "Todo caso começa por um nome. O genograma, as sessões e os padrões sistêmicos se constroem a partir do paciente-índice."
+          ? "Todo caso começa por um nome. O genossociograma, as sessões e os padrões sistêmicos se constroem a partir do paciente-índice."
           : "Quando arquivar um dossiê, ele aparecerá aqui para consulta histórica."
       }
       action={

@@ -4,7 +4,12 @@
  * sobre os dados reais do caso. Sem padrões detectados → nenhuma hipótese.
  * Nunca atribui causalidade nem confiança numérica.
  */
-import { detectPatterns, type DetectedPattern, type PersonRow, type RelationshipRow } from "./patterns";
+import {
+  detectPatterns,
+  type DetectedPattern,
+  type PersonRow,
+  type RelationshipRow,
+} from "./patterns";
 
 export interface Hypothesis {
   id: string;
@@ -25,34 +30,40 @@ const TEMPLATES: Partial<
     description:
       "Datas de eventos se repetem entre gerações. Vale investigar se a queixa atual oscila perto dessas datas.",
     questions: [
-      "A queixa se intensifica em alguma época do ano?",
-      "A família comenta essas datas ou elas são silenciadas?",
+      "Quais são as datas registradas de cada evento?",
+      "O cliente percebe alguma relação com essas datas?",
     ],
   },
   shared_cause_of_death: {
     title: "Repetição de causa de morte",
     description: "Mesma causa registrada para mais de um familiar.",
-    questions: ["Como essas mortes foram contadas na família?", "Existe medo associado a essa causa?"],
+    questions: ["O que se sabe sobre cada falecimento?", "Há registros a confirmar?"],
   },
   shared_health_condition: {
     title: "Repetição de condição de saúde",
     description: "Mesma condição de saúde aparece em mais de um familiar.",
-    questions: ["Quando o sintoma apareceu em cada familiar?", "Há fatores hereditários conhecidos?"],
+    questions: [
+      "Quando a condição foi registrada em cada familiar?",
+      "Há avaliação médica disponível?",
+    ],
   },
   shared_death_age: {
     title: "Repetição de idade ao falecer",
     description: "Familiares faleceram em idades próximas.",
-    questions: ["O cliente está próximo dessa idade?", "Essa idade é mencionada como marco na família?"],
+    questions: [
+      "As datas de nascimento e falecimento estão confirmadas?",
+      "Como o cliente vê essa informação?",
+    ],
   },
   shared_occupation: {
     title: "Repetição profissional",
     description: "A mesma ocupação aparece em mais de um familiar.",
-    questions: ["A escolha profissional foi livre?", "Quem na família esperava essa profissão?"],
+    questions: ["Como cada familiar chegou a essa profissão?", "O que o cliente sabe sobre isso?"],
   },
   relationship_ruptures: {
     title: "Rupturas repetidas de vínculo",
     description: "Há várias separações/rupturas registradas.",
-    questions: ["Quem rompeu com quem e em que contexto?", "Há familiares excluídos das histórias?"],
+    questions: ["Em que contexto cada ruptura aconteceu?", "Há datas a completar?"],
   },
 };
 

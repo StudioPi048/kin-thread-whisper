@@ -1019,7 +1019,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Posições recalculadas a partir das regras do genograma.");
+      toast.success("Posições recalculadas a partir das regras do genossociograma.");
       qc.invalidateQueries({ queryKey: ["genogram", clientId] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao recalcular"),
@@ -1441,7 +1441,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
             </AlertDialogTitle>
             <AlertDialogDescription>
               Isso apaga o arranjo manual salvo desta árvore e recalcula a posição de todo mundo a
-              partir das regras atuais do genograma. Use se alguém aparecer preso no lugar errado.
+              partir das regras atuais do genossociograma. Use se alguém aparecer preso no lugar errado.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

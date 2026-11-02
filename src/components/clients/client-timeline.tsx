@@ -36,7 +36,7 @@ export function ClientTimeline({ clientId }: Props) {
       >
         <CalendarClock className="mx-auto size-10 text-forest opacity-60" />
         <p className="mt-4 font-serif text-2xl font-bold text-primary">
-          A linha do tempo se desenha a partir do genograma
+          A linha do tempo se desenha a partir do genossociograma
         </p>
         <p className="mx-auto mt-2 max-w-md text-[14px] leading-relaxed text-muted-foreground">
           Adicione nascimentos, mortes e eventos biográficos às pessoas do sistema. Eles aparecerão
