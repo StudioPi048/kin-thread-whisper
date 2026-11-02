@@ -840,6 +840,7 @@ export type Database = {
           formation: string | null
           full_name: string | null
           id: string
+          preferences: Json
           updated_at: string
         }
         Insert: {
@@ -851,6 +852,7 @@ export type Database = {
           formation?: string | null
           full_name?: string | null
           id: string
+          preferences?: Json
           updated_at?: string
         }
         Update: {
@@ -862,6 +864,7 @@ export type Database = {
           formation?: string | null
           full_name?: string | null
           id?: string
+          preferences?: Json
           updated_at?: string
         }
         Relationships: []
