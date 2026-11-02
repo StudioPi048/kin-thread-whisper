@@ -8,10 +8,11 @@ import { readVisits, type Visit } from "@/lib/recent-activity";
 const TAB_LABEL: Record<string, string> = {
   overview: "Visão geral",
   genogram: "Genossociograma",
-  spreadsheet: "Planilha do clã",
-  anamnese: "Anamnese",
+  clan: "Planilha do clã",
+  intake: "Anamnese",
   sessions: "Sessões",
   timeline: "Linha do tempo",
+  patterns: "Padrões",
 };
 
 /**
