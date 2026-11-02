@@ -971,9 +971,6 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
       aborto: sym.includes("aborto"),
       outro: sym.some((x) => x !== "masculino" && x !== "feminino" && x !== "aborto"),
       falecido: ps.some((p) => p.is_deceased || !!p.death_date),
-      adocao: (query.data?.rels ?? []).some(
-        (r) => r.relationship_type === "parent" && /adot|acolh|guarda/i.test(r.qualifier ?? ""),
-      ),
     };
   }, [query.data]);
 
@@ -1360,23 +1357,15 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                     {legendFlags.falecido && (
                     <span className="flex items-center gap-2">
                       <span className="relative inline-block size-3.5 border-2 border-transparent bg-white">
-                        <span className="absolute inset-[-2px] w-[140%] h-[2px] bg-[#3A3A3A] rotate-[45deg] origin-top-left" />
+                        <span className="absolute inset-[-2px] w-[140%] h-[2px] bg-foreground rotate-[45deg] origin-top-left" />
                       </span>
                       Falecido
                     </span>
                     )}
-                    {true && (
                     <span className="flex items-center gap-2">
                       <span className="inline-block size-3.5 border-2 border-forest bg-forest/20" />
                       Paciente-índice
                     </span>
-                    )}
-                    {legendFlags.adocao && (
-                      <span className="flex items-center gap-2">
-                        <span className="inline-block h-0 w-4 border-t-2 border-dashed border-forest" />
-                        Filiação adotiva/acolhimento
-                      </span>
-                    )}
                     <span className="text-[13px] text-muted-foreground">Mostra só os símbolos presentes neste mapa.</span>
                   </div>
                 </PopoverContent>
