@@ -34,7 +34,7 @@ function Editor() {
   return (
     <div>
       <p>editor</p>
-      <Link to="/outra">sair</Link>
+      <Link to="/auth">sair</Link>
       <Link to="/" search={{ tab: "b" }}>
         aba b
       </Link>
@@ -58,7 +58,7 @@ function setup() {
   });
   const other = createRoute({
     getParentRoute: () => root,
-    path: "/outra",
+    path: "/auth",
     component: () => <p>outra página</p>,
   });
   const router = createRouter({
