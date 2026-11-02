@@ -834,6 +834,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      import_genogram_persons: {
+        Args: { _client_id: string; _replace?: boolean; _rows: Json }
+        Returns: number
+      }
     }
     Enums: {
       app_role: "admin" | "professional"
