@@ -9,7 +9,6 @@ import {
   FolderOpen,
 } from "lucide-react";
 import { GenealizWordmark } from "@/components/genealiz-wordmark";
-import { GenogramDemo } from "@/components/landing/genogram-demo";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
@@ -146,7 +145,16 @@ function Index() {
                 Explorar os genossociogramas <ArrowUpRight size={18} />
               </Link>
             </div>
-            <GenogramDemo />
+            <figure className="gv-family-photo">
+              <img
+                src="/assets/genealiz/archive-hero.jpg"
+                alt="Detalhe ilustrativo de mãos reunindo fotografias de diferentes gerações de uma família."
+                loading="lazy"
+                width={1536}
+                height={1024}
+              />
+              <figcaption>Memórias, pessoas e vínculos. Composição ilustrativa.</figcaption>
+            </figure>
           </div>
           <div className="gv-feature-pair">
             <article>
