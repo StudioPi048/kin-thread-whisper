@@ -684,12 +684,10 @@ export function ClanSpreadsheet({ clientId }: Props) {
               <thead className="sticky top-0 z-30 bg-card text-[14px] font-bold uppercase tracking-[0.15em] text-forest border-b-2 border-border/80">
                 <tr>
                   <Th w="w-11">#</Th>
-                  <Th w="min-w-[170px]" sticky>
-                    Nome
-                  </Th>
-                  <Th w="min-w-[220px]">Parentesco</Th>
-                  {showDates && <Th w="w-32">Nascimento</Th>}
-                  {showDates && <Th w="w-32">Morte</Th>}
+                  <ResizableTh label="Nome" initial={200} sticky />
+                  <ResizableTh label="Parentesco" initial={240} />
+                  {showDates && <ResizableTh label="Nascimento" initial={140} />}
+                  {showDates && <ResizableTh label="Morte" initial={140} />}
                   <Th w="w-14"></Th>
                   <Th w="w-10"></Th>
                 </tr>
@@ -1065,6 +1063,46 @@ function Th({ children, w, sticky }: { children?: React.ReactNode; w?: string; s
       className={`px-3 py-3 text-left font-bold ${w ?? ""} ${sticky ? "sticky left-0 z-20 bg-forest-soft/40 shadow-[4px_0_6px_-4px_rgba(58,45,30,0.25)]" : ""}`}
     >
       {children}
+    </th>
+  );
+}
+/** Coluna com largura ajustável por arrasto ou teclado (setas ←/→). */
+function ResizableTh({ label, initial, sticky }: { label: string; initial: number; sticky?: boolean }) {
+  const [width, setWidth] = React.useState(initial);
+  const clamp = (v: number) => Math.min(600, Math.max(90, v));
+  const startDrag = (e: React.PointerEvent) => {
+    e.preventDefault();
+    const x0 = e.clientX;
+    const w0 = width;
+    const move = (ev: PointerEvent) => setWidth(clamp(w0 + ev.clientX - x0));
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
+  return (
+    <th
+      style={{ width, minWidth: width }}
+      className={`relative px-3 py-3 text-left font-bold ${sticky ? "sticky left-0 z-20 bg-forest-soft/40" : ""}`}
+    >
+      {label}
+      <span
+        role="separator"
+        aria-orientation="vertical"
+        aria-label={`Ajustar largura da coluna ${label}`}
+        aria-valuenow={width}
+        aria-valuemin={90}
+        aria-valuemax={600}
+        tabIndex={0}
+        onPointerDown={startDrag}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowLeft") (e.preventDefault(), setWidth((w) => clamp(w - 20)));
+          if (e.key === "ArrowRight") (e.preventDefault(), setWidth((w) => clamp(w + 20)));
+        }}
+        className="absolute right-0 top-0 h-full w-3 cursor-col-resize border-r-2 border-transparent hover:border-forest focus-visible:border-forest focus-visible:outline-none"
+      />
     </th>
   );
 }
