@@ -678,57 +678,6 @@
   display: flex;
   flex-direction: column;
 }
-.atlas-map-toolbar {
-  position: relative;
-  z-index: 10;
-  padding: 12px;
-  background: #17273a;
-  border-bottom: 1px solid #3c526a;
-}
-.atlas-map-toolbar > div {
-  flex-wrap: wrap;
-}
-.atlas-map-stage {
-  flex: 1;
-  min-height: 450px;
-  position: relative;
-  --color-forest: #c4d1e0;
-  --color-forest-mid: #b7c7da;
-  --color-forest-soft: #b7c7da;
-  --color-gold: #dbac67;
-  --color-card: #243b53;
-  --color-foreground: #f5f7fa;
-  --color-ink: #e8eef5;
-  --color-border: #405b76;
-  --graphite: #d5dfeb;
-  --color-surface-document: #90a6bf;
-  --color-surface-dossier: transparent;
-  --color-material-border: transparent;
-  --color-background: #17273a;
-}
-.atlas-map-stage .react-flow__background {
-  background: #17273a;
-}
-.atlas-map-stage .react-flow__controls {
-  border: 1px solid #50667e;
-  border-radius: 5px;
-  box-shadow: none;
-  overflow: hidden;
-}
-.atlas-map-stage .react-flow__controls-button {
-  background: #243b53;
-  color: #e8eef5;
-  border-color: #50667e;
-  width: 34px;
-  height: 34px;
-}
-.atlas-map-stage .react-flow__controls-button:hover {
-  background: #405b76;
-}
-.atlas-map-stage .react-flow__minimap {
-  border: 1px solid #50667e;
-  border-radius: 5px;
-}
 .atlas-person-info {
   position: relative;
   z-index: 10;
@@ -1209,8 +1158,8 @@
   display: none;
 }
 .atlas-map-toolbar button {
-  font-size: 12px;
-  height: 36px;
+  font-size: 14px;
+  min-height: 44px;
 }
 .atlas-map-toolbar > div > div:last-child {
   margin-left: 0;
@@ -1425,42 +1374,28 @@
   overflow: hidden;
   grid-template-columns: minmax(0, 1fr) 250px;
 }
+/* Mapa (Arquivo vivo): uma única definição, sem !important. */
 .atlas-map-toolbar {
-  background: #fffefa;
-  border-bottom: 1px solid #d6dace;
+  position: relative;
+  z-index: 10;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
   padding: 10px 12px;
-}
-.atlas-map-toolbar button {
-  color: #364a40 !important;
-  border-color: #d6dcd0 !important;
-  height: 34px !important;
-  min-height: 34px !important;
-  font-size: 11px !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  padding-inline: 10px !important;
-}
-.atlas-map-toolbar button.gv-add-person {
-  background: #2c4a3e !important;
-  color: #fff !important;
-  border-color: #2c4a3e !important;
-}
-.atlas-map-toolbar button:hover {
-  background: #e5ebdf !important;
-  color: #233b2f !important;
-}
-.atlas-map-toolbar button:disabled {
-  opacity: 0.4;
-}
-.atlas-map-toolbar strong,
-.atlas-map-toolbar span {
-  color: inherit;
+  color: var(--foreground);
 }
 .atlas-map-toolbar > div {
-  color: #536458 !important;
-  gap: 6px !important;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.atlas-map-toolbar button {
+  min-height: 44px;
+  font-size: 14px;
+  padding-inline: 12px;
 }
 .atlas-map-stage {
+  flex: 1;
+  min-height: 450px;
+  position: relative;
   --color-forest: #67796e;
   --color-forest-mid: #78897b;
   --color-foreground: #354a3e;
@@ -1469,13 +1404,13 @@
   --color-card: #f7f7ee;
   --color-background: #f1f2e9;
   --color-border: #a7b3a2;
-  background: #f1f2e9;
+  background: var(--color-background);
 }
 .atlas-map-stage .react-flow__background {
-  background: #f1f2e9;
+  background: var(--color-background);
 }
 .atlas-map-stage .react-flow__minimap {
-  display: none !important;
+  display: none;
 }
 .atlas-map-stage .react-flow__controls {
   box-shadow: 0 4px 14px #2d3c2a14;
@@ -1501,12 +1436,6 @@
 }
 .atlas-person-info > span {
   color: #866139;
-}
-.atlas-map-stage .react-flow__node-person .bg-\[\#90A6BF\] {
-  background: #b8c9ba;
-}
-.atlas-map-stage .react-flow__node-person .bg-\[\#C9969F\] {
-  background: #ddc0b3;
 }
 .gv-category {
   display: block;
@@ -2378,7 +2307,7 @@
   margin-top: 25px;
 }
 .atlas-auth-aside {
-  background: #203930 !important;
+  background: var(--forest);
 }
 .atlas-library {
   margin-bottom: 30px;

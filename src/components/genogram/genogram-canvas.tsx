@@ -1188,13 +1188,13 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
         <div className="atlas-map-toolbar">
           {/* BARRA DE AÇÕES — agrupada: Identidade | Editar | Layout | Status | Extras */}
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-2 pr-2 border-r border-white/15">
+            <div className="flex items-center gap-2 pr-2 border-r border-border">
               <TreePine className="size-4 text-gold" />
-              <span className="text-xs font-medium text-white">Genossociograma</span>
+              <span className="text-xs font-medium text-foreground">Genossociograma</span>
             </div>
 
             {/* Grupo: Editar */}
-            <div className="flex items-center gap-2 pr-2 border-r border-white/15">
+            <div className="flex items-center gap-2 pr-2 border-r border-border">
               <Button
                 size="sm"
                 variant="gold"
@@ -1210,7 +1210,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                 variant="outline"
                 onClick={() => setRelDialog({ open: true })}
                 disabled={persons.length < 2}
-                className="h-9 gap-2 border-white/25 bg-transparent text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[13px]"
+                className="h-9 gap-2 border-border bg-transparent text-foreground hover:bg-muted hover:text-foreground normal-case tracking-normal font-semibold text-[13px]"
               >
                 <Link2 className="size-4" />
                 Criar vínculo
@@ -1218,13 +1218,13 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
             </div>
 
             {/* Grupo: Layout */}
-            <div className="flex items-center gap-2 pr-2 border-r border-white/15">
+            <div className="flex items-center gap-2 pr-2 border-r border-border">
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => saveLayout.mutate()}
                 disabled={saveLayout.isPending || !layoutDirty}
-                className="h-9 gap-2 border-white/25 bg-transparent text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[13px] disabled:opacity-45"
+                className="h-9 gap-2 border-border bg-transparent text-foreground hover:bg-muted hover:text-foreground normal-case tracking-normal font-semibold text-[13px] disabled:opacity-45"
               >
                 <Save className="size-4" />
                 {saveLayout.isPending ? "Salvando" : "Salvar layout"}
@@ -1235,7 +1235,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                 variant="outline"
                 onClick={() => toggleLayoutFixed.mutate()}
                 disabled={!query.data?.layout?.id || toggleLayoutFixed.isPending}
-                className={`h-11 gap-2 border-white/25 normal-case tracking-normal font-semibold text-[13px] ${isLayoutFixed ? "bg-forest text-primary-foreground" : "bg-transparent text-white hover:bg-white/10 hover:text-white"}`}
+                className={`h-11 gap-2 border-border normal-case tracking-normal font-semibold text-[13px] ${isLayoutFixed ? "bg-forest text-primary-foreground" : "bg-transparent text-foreground hover:bg-muted hover:text-foreground"}`}
                 title={
                   !query.data?.layout?.id
                     ? "Salve o layout pelo menos uma vez para poder fixá-lo"
@@ -1256,7 +1256,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                 onClick={() => setConfirmRecalc(true)}
                 disabled={!query.data?.layout?.id || recalcLayout.isPending}
                 title="Recalcula as posições do zero — use se alguém aparecer preso no lugar errado"
-                className="h-9 gap-2 border-white/25 bg-transparent text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[13px] disabled:opacity-45"
+                className="h-9 gap-2 border-border bg-transparent text-foreground hover:bg-muted hover:text-foreground normal-case tracking-normal font-semibold text-[13px] disabled:opacity-45"
               >
                 <RotateCcw className="size-4" />
                 {recalcLayout.isPending ? "Recalculando" : "Recalcular"}
@@ -1264,10 +1264,10 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
             </div>
 
             {/* Grupo: Status — sempre visível (quebra linha em telas estreitas, nunca some) */}
-            <div className="flex flex-wrap items-center gap-3 pr-3 border-r border-white/15">
-              <span className="flex items-center gap-1.5 text-[13px] text-white">
+            <div className="flex flex-wrap items-center gap-3 pr-3 border-r border-border">
+              <span className="flex items-center gap-1.5 text-[13px] text-foreground">
                 <Users className="size-3.5 text-forest" />
-                <strong className="text-white">{qualifiedCount}</strong>
+                <strong className="text-foreground">{qualifiedCount}</strong>
                 <span>no mapa</span>
                 {incompleteCount > 0 && (
                   <span className="ml-1 rounded-full bg-gold/20 px-1.5 py-0.5 text-[14px] font-bold text-gold">
@@ -1275,14 +1275,14 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                   </span>
                 )}
               </span>
-              <span className="flex items-center gap-1.5 text-[13px] text-white">
+              <span className="flex items-center gap-1.5 text-[13px] text-foreground">
                 <Link2 className="size-3.5 text-gold" />
-                <strong className="text-white">{relCount}</strong> vínculos
+                <strong className="text-foreground">{relCount}</strong> vínculos
               </span>
               {warnings.length > 0 && (
                 <Popover>
                   <PopoverTrigger asChild>
-                    <button className="flex items-center gap-1.5 rounded-full bg-amber-500/20 px-2.5 py-1 text-[14px] font-bold text-amber-300 hover:bg-amber-500/30 transition-colors animate-[pulse-gold_2.2s_ease-in-out_infinite]">
+                    <button className="flex items-center gap-1.5 rounded-full bg-gold/20 px-2.5 py-1 text-[14px] font-bold text-foreground hover:bg-gold/30 transition-colors animate-[pulse-gold_2.2s_ease-in-out_infinite]">
                       <AlertTriangle className="size-3.5" />
                       {warnings.length} para revisar
                     </button>
@@ -1302,14 +1302,14 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                 </Popover>
               )}
               {(layoutDirty || lastSavedAt) && (
-                <span className="text-[13px] font-semibold text-white">
+                <span className="text-[13px] font-semibold text-foreground">
                   {layoutDirty ? "Não salvo" : `Salvo às ${lastSavedAt}`}
                 </span>
               )}
               <Popover>
                 <PopoverTrigger asChild>
                   <button
-                    className="flex items-center gap-1.5 rounded px-2 py-1 text-[14px] font-bold text-white/80 hover:bg-white/10 hover:text-white transition-colors"
+                    className="flex items-center gap-1.5 rounded px-2 py-1 text-[14px] font-bold text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                     title="Legenda dos símbolos"
                     aria-label="Legenda dos símbolos"
                   >
@@ -1377,7 +1377,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                 size="sm"
                 variant="outline"
                 onClick={() => setShowGuide(!showGuide)}
-                className="h-10 gap-1.5 border-transparent bg-transparent text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[13px] shadow-none"
+                className="min-h-11 gap-1.5 border-transparent bg-transparent text-foreground hover:bg-muted hover:text-foreground normal-case tracking-normal font-semibold text-[13px] shadow-none"
               >
                 <HelpCircle className="size-4" />
                 <span className="hidden sm:inline">Guia</span>
@@ -1388,7 +1388,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                 onClick={exportPdf}
                 disabled={isExportingPdf}
                 title="Exportar PDF (A3) pra imprimir com o cliente"
-                className="h-10 gap-1.5 border-transparent bg-transparent text-white hover:bg-white/10 hover:text-white normal-case tracking-normal font-semibold text-[13px] shadow-none"
+                className="min-h-11 gap-1.5 border-transparent bg-transparent text-foreground hover:bg-muted hover:text-foreground normal-case tracking-normal font-semibold text-[13px] shadow-none"
               >
                 {isExportingPdf ? (
                   <Loader2 className="size-4 animate-spin" />
@@ -1404,7 +1404,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                 disabled={
                   deleteSelected.isPending || (selectedPersonCount === 0 && selectedEdgeCount === 0)
                 }
-                className="h-10 gap-1.5 border-transparent bg-transparent text-white hover:bg-white/10 hover:text-red-400 normal-case tracking-normal font-semibold text-[13px] ml-4 border-l border-white/15 rounded-l-none pl-4 shadow-none"
+                className="min-h-11 gap-1.5 border-transparent bg-transparent text-foreground hover:bg-muted hover:text-destructive normal-case tracking-normal font-semibold text-[13px] ml-4 border-l border-border rounded-l-none pl-4 shadow-none"
               >
                 <Trash2 className="size-4" />
                 <span className="hidden sm:inline">Remover</span>
