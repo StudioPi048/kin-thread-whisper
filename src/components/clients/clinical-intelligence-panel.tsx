@@ -22,6 +22,7 @@ import {
 } from "@/lib/patterns";
 import { Badge } from "@/components/ui/badge";
 import { buildHypotheses } from "@/lib/evidence";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { clinicalIntelQuery } from "@/lib/clinical-intel";
 
 interface Props {
@@ -108,32 +109,11 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
     return Array.from(new Map(list.map((x) => [x.title, x])).values()).slice(0, 3);
   }, [patterns]);
 
-  // Suggested questions for next session
-  const suggestedQuestions = useMemo(() => {
-    const list: string[] = [];
-
-    patterns.forEach((p) => {
-      if (p.type === "anniversary_syndrome") {
-        list.push("Como você se sente ao notar a coincidência de datas com seu antepassado?");
-        list.push("Houve algum evento de grande impacto na família nas datas repetidas?");
-      }
-      if (p.type === "shared_cause_of_death" || p.type === "shared_health_condition") {
-        list.push("O que este sintoma físico diz a respeito da dor emocional de seus ancestrais?");
-      }
-      if (p.type === "shared_occupation") {
-        list.push(
-          "Você sente que escolheu sua profissão por livre escolha ou para orgulhar o clã?",
-        );
-      }
-    });
-
-    if (list.length === 0) {
-      list.push("Como era a dinâmica de afeto entre seus pais e seus avós?");
-      list.push("Quem no clã foi esquecido, excluído ou raramente é mencionado nas conversas?");
-    }
-
-    return list.slice(0, 3);
-  }, [patterns]);
+  // Perguntas: apenas as vinculadas às hipóteses com evidência (neutras, sem fallback)
+  const suggestedQuestions = useMemo(
+    () => Array.from(new Set(hypotheses.flatMap((h) => h.questions))).slice(0, 3),
+    [hypotheses],
+  );
 
   // Alertas de consistência — cálculo real sobre datas de nascimento/morte
   const consistencyAlerts = useMemo(() => {
@@ -171,25 +151,8 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
     );
   }
 
-  return (
-    <div className="relative shrink-0 hidden lg:block transition-all duration-300">
-      {/* Toggle button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="absolute -left-3 top-20 z-50 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-white text-forest shadow-md transition-transform hover:scale-105 hover:bg-slate-50 cursor-pointer"
-      >
-        {isOpen ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}
-      </button>
-
-      <AnimatePresence initial={false} mode="wait">
-        {isOpen ? (
-          <motion.div
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 350, opacity: 1 }}
-            exit={{ width: 0, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="w-[350px] h-fit bg-white border border-border/50 rounded-2xl p-6 shadow-sm overflow-hidden flex flex-col gap-6"
-          >
+  const body = (
+    <>
             {/* Header */}
             <div className="flex items-center gap-2 pb-4 border-b border-border/40">
               <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-forest/5">
@@ -401,6 +364,48 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
                 </span>
               </div>
             </div>
+    </>
+  );
+
+  return (
+    <>
+    <Sheet>
+      <SheetTrigger asChild>
+        <button
+          type="button"
+          className="fixed bottom-20 right-4 z-40 inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-4 text-[15px] font-semibold text-forest shadow-md lg:hidden"
+        >
+          <Sparkles className="size-4" aria-hidden /> Copiloto
+        </button>
+      </SheetTrigger>
+      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-md">
+        <SheetHeader>
+          <SheetTitle>Copiloto Clínico</SheetTitle>
+        </SheetHeader>
+        <div className="mt-4 flex flex-col gap-6">{body}</div>
+      </SheetContent>
+    </Sheet>
+    <div className="relative shrink-0 hidden lg:block transition-all duration-300">
+      {/* Toggle button */}
+      <button
+        type="button"
+        aria-label={isOpen ? "Recolher copiloto" : "Abrir copiloto"}
+        onClick={() => setIsOpen(!isOpen)}
+        className="absolute -left-3 top-20 z-50 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-white text-forest shadow-md transition-transform hover:scale-105 hover:bg-slate-50 cursor-pointer"
+      >
+        {isOpen ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}
+      </button>
+
+      <AnimatePresence initial={false} mode="wait">
+        {isOpen ? (
+          <motion.div
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: 350, opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            className="w-[350px] h-fit bg-white border border-border/50 rounded-2xl p-6 shadow-sm overflow-hidden flex flex-col gap-6"
+          >
+            {body}
           </motion.div>
         ) : (
           <motion.div
@@ -428,5 +433,6 @@ export function ClinicalIntelligencePanel({ clientId }: Props) {
         }
       `}</style>
     </div>
+    </>
   );
 }
