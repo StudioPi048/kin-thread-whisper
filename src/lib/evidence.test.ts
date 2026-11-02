@@ -39,3 +39,15 @@ describe("evidências → hipóteses", () => {
     expect(JSON.stringify(hs[0])).not.toMatch(/\d+\s?%/);
   });
 });
+
+import { informationGaps } from "./evidence";
+describe("lacunas reais", () => {
+  it("aponta pai/mãe ausentes e datas desconhecidas", () => {
+    const g = informationGaps([
+      { id: "a", full_name: "Cliente", relationship_to_proband: "Consulente", birth_date: null } as unknown as PersonRow,
+    ]);
+    expect(g).toContain("Pai não cadastrado.");
+    expect(g).toContain("Mãe não cadastrada.");
+    expect(g).toContain("Data de nascimento de Cliente desconhecida.");
+  });
+});
