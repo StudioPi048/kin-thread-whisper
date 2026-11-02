@@ -36,8 +36,15 @@ function stable(v: unknown): string {
 }
 
 /** Hash determinístico (FNV-1a 32 bits) do conteúdo da evidência. */
-export function evidenceFingerprint(p: Pick<DetectedPattern, "id" | "type" | "personIds" | "details">): string {
-  const s = stable({ id: p.id, type: p.type, persons: [...p.personIds].sort(), details: p.details ?? null });
+export function evidenceFingerprint(
+  p: Pick<DetectedPattern, "id" | "type" | "personIds" | "details">,
+): string {
+  const s = stable({
+    id: p.id,
+    type: p.type,
+    persons: [...p.personIds].sort(),
+    details: p.details ?? null,
+  });
   let h = 0x811c9dc5;
   for (let i = 0; i < s.length; i++) {
     h ^= s.charCodeAt(i);
@@ -52,7 +59,9 @@ export function evidenceSnapshot(p: DetectedPattern) {
 }
 
 export function latestReview(rows: ReviewRow[], key: string): ReviewRow | null {
-  return rows.filter((r) => r.hypothesis_key === key).sort((a, b) => b.version - a.version)[0] ?? null;
+  return (
+    rows.filter((r) => r.hypothesis_key === key).sort((a, b) => b.version - a.version)[0] ?? null
+  );
 }
 
 export function isStale(review: ReviewRow | null, currentFingerprint: string): boolean {

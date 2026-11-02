@@ -2,13 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { readPref, writePref } from "@/lib/recent-activity";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Search,
-  BookOpen,
-  ChevronRight,
-  Copy,
-  Link2,
-} from "lucide-react";
+import { Search, BookOpen, ChevronRight, Copy, Link2 } from "lucide-react";
 import { EDITORIAL_SOURCE, buildLibraryItems } from "@/components/library/catalog";
 import { searchLibrary } from "@/lib/library-search";
 import {
@@ -37,9 +31,15 @@ export const Route = createFileRoute("/_authenticated/app/biblioteca")({
   head: () => ({
     meta: [
       { title: "Biblioteca — GENEALIZ" },
-      { name: "description", content: "Conceitos, autores e obras de psicogenealogia com fonte indicada." },
+      {
+        name: "description",
+        content: "Conceitos, autores e obras de psicogenealogia com fonte indicada.",
+      },
       { property: "og:title", content: "Biblioteca — GENEALIZ" },
-      { property: "og:description", content: "Consulta de conceitos, autores e obras com fonte indicada." },
+      {
+        property: "og:description",
+        content: "Consulta de conceitos, autores e obras com fonte indicada.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],

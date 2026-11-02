@@ -5,7 +5,12 @@ import { BookOpen, ChevronLeft, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { EDITORIAL_SOURCE, buildLibraryItems, type Entry, type LibraryItem } from "@/components/library/catalog";
+import {
+  EDITORIAL_SOURCE,
+  buildLibraryItems,
+  type Entry,
+  type LibraryItem,
+} from "@/components/library/catalog";
 import { searchLibrary } from "@/lib/library-search";
 
 /** Consulta à Biblioteca sem sair do caso (painel lateral; tela cheia no celular). */
@@ -47,7 +52,9 @@ export function LibraryCasePanel() {
                 Conteúdo ilustrativo
               </p>
             )}
-            <p className="whitespace-pre-wrap text-[15px] leading-7">{open.term?.full ?? open.body}</p>
+            <p className="whitespace-pre-wrap text-[15px] leading-7">
+              {open.term?.full ?? open.body}
+            </p>
             {open.details && (
               <ul className="list-disc space-y-1 pl-5 text-[15px]">
                 {open.details.map((d, i) => (
@@ -74,7 +81,12 @@ export function LibraryCasePanel() {
             {entriesQ.isError && (
               <p role="alert" className="text-[14px] text-destructive">
                 Seu acervo não carregou; o acervo editorial continua disponível.{" "}
-                <Button size="sm" variant="outline" className="min-h-11" onClick={() => entriesQ.refetch()}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="min-h-11"
+                  onClick={() => entriesQ.refetch()}
+                >
                   <RefreshCw className="mr-1 size-4" /> Tentar de novo
                 </Button>
               </p>
@@ -94,7 +106,9 @@ export function LibraryCasePanel() {
                   >
                     <span className="text-[13px] text-muted-foreground">{x.category}</span>
                     <span className="block text-[15px] font-semibold">{x.title}</span>
-                    <span className="line-clamp-2 block text-[14px] text-muted-foreground">{x.body}</span>
+                    <span className="line-clamp-2 block text-[14px] text-muted-foreground">
+                      {x.body}
+                    </span>
                   </button>
                 </li>
               ))}

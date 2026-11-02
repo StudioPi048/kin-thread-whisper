@@ -198,7 +198,12 @@ function IaClinicaPage() {
                     {(() => {
                       const pt = ev.patterns.find((x) => x.id === h.patternId);
                       return pt ? (
-                        <HypothesisReview clientId={clientId} hypothesisKey={h.id} title={h.title} pattern={pt} />
+                        <HypothesisReview
+                          clientId={clientId}
+                          hypothesisKey={h.id}
+                          title={h.title}
+                          pattern={pt}
+                        />
                       ) : null;
                     })()}
                   </article>

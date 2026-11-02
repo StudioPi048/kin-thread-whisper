@@ -71,7 +71,8 @@ function AuthPage() {
   // Link de e-mail expirado/inválido chega com erro no hash da URL.
   useEffect(() => {
     const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-    const code = hash.get("error_code") ?? new URLSearchParams(window.location.search).get("error_code");
+    const code =
+      hash.get("error_code") ?? new URLSearchParams(window.location.search).get("error_code");
     if (code) {
       setFormError(
         code === "otp_expired"
@@ -87,7 +88,9 @@ function AuthPage() {
         if (!data.session) {
           keepErrorRef.current = true;
           setMode("recover");
-          setFormError("Não há uma sessão de redefinição ativa. O link pode ter expirado — peça um novo.");
+          setFormError(
+            "Não há uma sessão de redefinição ativa. O link pode ter expirado — peça um novo.",
+          );
         }
       });
     }
@@ -232,12 +235,18 @@ function AuthPage() {
           </div>
 
           {formError && (
-            <div role="alert" className="mb-5 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-[15px] text-destructive">
+            <div
+              role="alert"
+              className="mb-5 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-[15px] text-destructive"
+            >
               {formError}
             </div>
           )}
           {notice && (
-            <div role="status" className="mb-5 rounded-md border border-border bg-secondary p-3 text-[15px] text-foreground">
+            <div
+              role="status"
+              className="mb-5 rounded-md border border-border bg-secondary p-3 text-[15px] text-foreground"
+            >
               {notice}
             </div>
           )}

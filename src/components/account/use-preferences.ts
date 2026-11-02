@@ -7,7 +7,11 @@ export function usePreferences(userId: string) {
   return useQuery({
     queryKey: preferencesKey(userId),
     queryFn: async (): Promise<Preferences> => {
-      const { data, error } = await supabase.from("profiles").select("preferences").eq("id", userId).maybeSingle();
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("preferences")
+        .eq("id", userId)
+        .maybeSingle();
       if (error) throw error;
       return parsePreferences(data?.preferences);
     },

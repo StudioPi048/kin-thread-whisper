@@ -1,0 +1,163 @@
+{
+ "desktop/": {
+  "overflowX": false,
+  "lowContrast": [],
+  "alerts": []
+ },
+ "desktop/auth": {
+  "overflowX": false,
+  "lowContrast": [
+   {
+    "placeholder": "seu@email.com",
+    "r": 5.11
+   },
+   {
+    "placeholder": "Sua senha",
+    "r": 5.11
+   }
+  ],
+  "alerts": []
+ },
+ "desktop/auth?mode=signup": {
+  "overflowX": false,
+  "lowContrast": [
+   {
+    "placeholder": "Como você assina profissionalm",
+    "r": 5.11
+   },
+   {
+    "placeholder": "seu@email.com",
+    "r": 5.11
+   },
+   {
+    "placeholder": "Mínimo 8 caracteres",
+    "r": 5.11
+   }
+  ],
+  "alerts": []
+ },
+ "desktop/auth#error_code=otp_expired": {
+  "overflowX": false,
+  "lowContrast": [
+   {
+    "placeholder": "seu@email.com",
+    "r": 5.11
+   }
+  ],
+  "alerts": [
+   "Este link expirou ou já foi usado. Peça um novo link abaixo."
+  ]
+ },
+ "desktop_errors": [],
+ "tablet/": {
+  "overflowX": false,
+  "lowContrast": [],
+  "alerts": []
+ },
+ "tablet/auth": {
+  "overflowX": false,
+  "lowContrast": [
+   {
+    "placeholder": "seu@email.com",
+    "r": 5.11
+   },
+   {
+    "placeholder": "Sua senha",
+    "r": 5.11
+   }
+  ],
+  "alerts": []
+ },
+ "tablet/auth?mode=signup": {
+  "overflowX": false,
+  "lowContrast": [
+   {
+    "placeholder": "Como você assina profissionalm",
+    "r": 5.11
+   },
+   {
+    "placeholder": "seu@email.com",
+    "r": 5.11
+   },
+   {
+    "placeholder": "Mínimo 8 caracteres",
+    "r": 5.11
+   }
+  ],
+  "alerts": []
+ },
+ "tablet/auth#error_code=otp_expired": {
+  "overflowX": false,
+  "lowContrast": [
+   {
+    "placeholder": "seu@email.com",
+    "r": 5.11
+   }
+  ],
+  "alerts": [
+   "Este link expirou ou já foi usado. Peça um novo link abaixo."
+  ]
+ },
+ "tablet_errors": [],
+ "mobile/": {
+  "overflowX": false,
+  "lowContrast": [],
+  "alerts": []
+ },
+ "mobile/auth": {
+  "overflowX": false,
+  "lowContrast": [
+   {
+    "placeholder": "seu@email.com",
+    "r": 5.11
+   },
+   {
+    "placeholder": "Sua senha",
+    "r": 5.11
+   }
+  ],
+  "alerts": []
+ },
+ "mobile/auth?mode=signup": {
+  "overflowX": false,
+  "lowContrast": [
+   {
+    "placeholder": "Como você assina profissionalm",
+    "r": 5.11
+   },
+   {
+    "placeholder": "seu@email.com",
+    "r": 5.11
+   },
+   {
+    "placeholder": "Mínimo 8 caracteres",
+    "r": 5.11
+   }
+  ],
+  "alerts": []
+ },
+ "mobile/auth#error_code=otp_expired": {
+  "overflowX": false,
+  "lowContrast": [
+   {
+    "placeholder": "seu@email.com",
+    "r": 5.11
+   }
+  ],
+  "alerts": [
+   "Este link expirou ou já foi usado. Peça um novo link abaixo."
+  ]
+ },
+ "mobile_errors": [],
+ "zoom200_overflow": false,
+ "auth_tab_order": [
+  "A:GENEALIZ:outline=solid",
+  "INPUT:email:outline=solid",
+  "BUTTON:Esqueci minha senha:outline=solid",
+  "INPUT:password:outline=solid",
+  "BUTTON:Entrar na plataforma:outline=solid",
+  "BUTTON:Continuar com Google:outline=solid",
+  "BUTTON:Criar conta:outline=solid",
+  "BODY:GENEALIZ\nEntrar\n\nBem-vind:outline=none"
+ ]
+}

@@ -98,7 +98,8 @@ export function HypothesisReview({
           </span>
         ) : latest ? (
           <span>
-            <strong>Revisão salva (v{latest.version}):</strong> {DECISION_LABEL[latest.decision as ReviewDecision]} em{" "}
+            <strong>Revisão salva (v{latest.version}):</strong>{" "}
+            {DECISION_LABEL[latest.decision as ReviewDecision]} em{" "}
             {format(new Date(latest.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
             {stale && (
               <span className="ml-1 font-semibold text-clinical-warning">
@@ -107,7 +108,9 @@ export function HypothesisReview({
             )}
           </span>
         ) : (
-          <span className="text-muted-foreground">Ainda não revisada. Selecionar evidências não conta como revisão.</span>
+          <span className="text-muted-foreground">
+            Ainda não revisada. Selecionar evidências não conta como revisão.
+          </span>
         )}
       </div>
 
@@ -115,8 +118,18 @@ export function HypothesisReview({
         <legend className="text-[15px] font-semibold">Registrar revisão</legend>
         <div className="flex flex-wrap gap-2">
           {(Object.keys(DECISION_LABEL) as ReviewDecision[]).map((d) => (
-            <label key={d} className="flex min-h-11 cursor-pointer items-center gap-2 rounded-md border border-border px-3 text-[15px]">
-              <input type="radio" name={name} value={d} checked={decision === d} onChange={() => setDecision(d)} className="size-4" />
+            <label
+              key={d}
+              className="flex min-h-11 cursor-pointer items-center gap-2 rounded-md border border-border px-3 text-[15px]"
+            >
+              <input
+                type="radio"
+                name={name}
+                value={d}
+                checked={decision === d}
+                onChange={() => setDecision(d)}
+                className="size-4"
+              />
               {DECISION_LABEL[d]}
             </label>
           ))}
@@ -124,19 +137,34 @@ export function HypothesisReview({
         <label htmlFor={`${name}-note`} className="block text-[14px] text-muted-foreground">
           Justificativa (opcional)
         </label>
-        <Textarea id={`${name}-note`} value={note} onChange={(e) => setNote(e.target.value)} className="min-h-[72px] text-[15px]" />
+        <Textarea
+          id={`${name}-note`}
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          className="min-h-[72px] text-[15px]"
+        />
         <div className="flex flex-wrap items-center gap-3">
-          <Button className="min-h-11" disabled={!decision || save.isPending} onClick={() => save.mutate()}>
+          <Button
+            className="min-h-11"
+            disabled={!decision || save.isPending}
+            onClick={() => save.mutate()}
+          >
             {save.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
             {save.isError ? "Tentar salvar de novo" : "Salvar revisão"}
           </Button>
           {save.isError && (
             <span role="alert" className="text-[14px] text-destructive">
-              Não salvo: {save.error instanceof Error ? save.error.message : "erro"}. Sua escolha continua aqui.
+              Não salvo: {save.error instanceof Error ? save.error.message : "erro"}. Sua escolha
+              continua aqui.
             </span>
           )}
           {rows.length > 0 && (
-            <Button variant="ghost" className="min-h-11" aria-expanded={showHistory} onClick={() => setShowHistory((v) => !v)}>
+            <Button
+              variant="ghost"
+              className="min-h-11"
+              aria-expanded={showHistory}
+              onClick={() => setShowHistory((v) => !v)}
+            >
               <History className="mr-1.5 size-4" /> Histórico ({rows.length})
             </Button>
           )}

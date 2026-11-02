@@ -5,7 +5,11 @@ export type Preferences = {
   agendaView: "day" | "week";
 };
 
-export const DEFAULT_PREFERENCES: Preferences = { textSize: "normal", reduceMotion: false, agendaView: "day" };
+export const DEFAULT_PREFERENCES: Preferences = {
+  textSize: "normal",
+  reduceMotion: false,
+  agendaView: "day",
+};
 
 export function parsePreferences(raw: unknown): Preferences {
   const r = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};

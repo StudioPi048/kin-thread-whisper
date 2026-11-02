@@ -11,7 +11,11 @@ const BOX = 64; // tamanho do símbolo desenhado na demonstração
 export function GenogramDemo() {
   const { nodes, lines, vb } = useMemo(() => {
     const f = smallFamily();
-    const g = buildLogicalGraph({ persons: f.persons, rels: f.rels as never, probandId: f.probandId });
+    const g = buildLogicalGraph({
+      persons: f.persons,
+      rels: f.rels as never,
+      probandId: f.probandId,
+    });
     const pl = layoutGraph(g);
     const center = (id: string) => {
       const p = pl.personPos.get(id)!;
@@ -25,8 +29,16 @@ export function GenogramDemo() {
       const u = pl.unionPos.get(e.unionId);
       if (!u || !pl.personPos.has(e.personId)) continue;
       const c = center(e.personId);
-      if (e.kind === "partner") lines.push({ x1: c.x, y1: c.y, x2: u.x, y2: u.y, k: `p-${e.personId}-${e.unionId}` });
-      else lines.push({ x1: u.x, y1: u.y, x2: c.x, y2: c.y + BOX / 2, k: `c-${e.personId}-${e.unionId}` });
+      if (e.kind === "partner")
+        lines.push({ x1: c.x, y1: c.y, x2: u.x, y2: u.y, k: `p-${e.personId}-${e.unionId}` });
+      else
+        lines.push({
+          x1: u.x,
+          y1: u.y,
+          x2: c.x,
+          y2: c.y + BOX / 2,
+          k: `c-${e.personId}-${e.unionId}`,
+        });
     }
     const xs = nodes.map((n) => n.c.x);
     const ys = nodes.map((n) => n.c.y);
@@ -41,29 +53,85 @@ export function GenogramDemo() {
         <span>Genossociograma</span>
         <span>Exemplo sintético · nomes fictícios</span>
       </div>
-      <svg viewBox={vb} role="img" aria-label="Exemplo: cliente e irmã no topo, pais abaixo, avós paternos abaixo do pai" className="h-auto w-full">
+      <svg
+        viewBox={vb}
+        role="img"
+        aria-label="Exemplo: cliente e irmã no topo, pais abaixo, avós paternos abaixo do pai"
+        className="h-auto w-full"
+      >
         {lines.map((l) => (
-          <line key={l.k} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2} stroke="currentColor" strokeOpacity={0.55} strokeWidth={3} />
+          <line
+            key={l.k}
+            x1={l.x1}
+            y1={l.y1}
+            x2={l.x2}
+            y2={l.y2}
+            stroke="currentColor"
+            strokeOpacity={0.55}
+            strokeWidth={3}
+          />
         ))}
         {nodes.map(({ p, c }) => {
           const fem = p.gender === "F";
           return (
             <g key={p.id}>
               {fem ? (
-                <circle cx={c.x} cy={c.y} r={BOX / 2} fill="var(--color-background, #fff)" stroke="currentColor" strokeWidth={p.is_proband ? 6 : 3} />
+                <circle
+                  cx={c.x}
+                  cy={c.y}
+                  r={BOX / 2}
+                  fill="var(--color-background, #fff)"
+                  stroke="currentColor"
+                  strokeWidth={p.is_proband ? 6 : 3}
+                />
               ) : (
-                <rect x={c.x - BOX / 2} y={c.y - BOX / 2} width={BOX} height={BOX} fill="var(--color-background, #fff)" stroke="currentColor" strokeWidth={3} />
+                <rect
+                  x={c.x - BOX / 2}
+                  y={c.y - BOX / 2}
+                  width={BOX}
+                  height={BOX}
+                  fill="var(--color-background, #fff)"
+                  stroke="currentColor"
+                  strokeWidth={3}
+                />
               )}
               {p.is_deceased && (
                 <>
-                  <line x1={c.x - BOX / 2} y1={c.y - BOX / 2} x2={c.x + BOX / 2} y2={c.y + BOX / 2} stroke="currentColor" strokeWidth={3} />
-                  <line x1={c.x + BOX / 2} y1={c.y - BOX / 2} x2={c.x - BOX / 2} y2={c.y + BOX / 2} stroke="currentColor" strokeWidth={3} />
+                  <line
+                    x1={c.x - BOX / 2}
+                    y1={c.y - BOX / 2}
+                    x2={c.x + BOX / 2}
+                    y2={c.y + BOX / 2}
+                    stroke="currentColor"
+                    strokeWidth={3}
+                  />
+                  <line
+                    x1={c.x + BOX / 2}
+                    y1={c.y - BOX / 2}
+                    x2={c.x - BOX / 2}
+                    y2={c.y + BOX / 2}
+                    stroke="currentColor"
+                    strokeWidth={3}
+                  />
                 </>
               )}
-              <text x={c.x} y={c.y + BOX / 2 + 30} textAnchor="middle" fontSize={24} fill="currentColor">
+              <text
+                x={c.x}
+                y={c.y + BOX / 2 + 30}
+                textAnchor="middle"
+                fontSize={24}
+                fill="currentColor"
+              >
                 {p.full_name.replace(/ \(fictíci[oa]\)/, "")}
               </text>
-              <text x={c.x} y={c.y + BOX / 2 + 56} textAnchor="middle" fontSize={19} fill="currentColor" opacity={0.75}>
+              <text
+                x={c.x}
+                y={c.y + BOX / 2 + 56}
+                textAnchor="middle"
+                fontSize={19}
+                fill="currentColor"
+                opacity={0.75}
+              >
                 {p.is_proband ? "Cliente" : p.relationship_to_proband}
               </text>
             </g>

@@ -6,9 +6,15 @@ export const Route = createFileRoute("/_authenticated/app/guia")({
   head: () => ({
     meta: [
       { title: "Guia de tarefas — GENEALIZ" },
-      { name: "description", content: "Passo a passo para cadastrar, vincular, salvar, importar e conduzir sessões." },
+      {
+        name: "description",
+        content: "Passo a passo para cadastrar, vincular, salvar, importar e conduzir sessões.",
+      },
       { property: "og:title", content: "Guia de tarefas — GENEALIZ" },
-      { property: "og:description", content: "Como realizar cada tarefa do atendimento na GENEALIZ." },
+      {
+        property: "og:description",
+        content: "Como realizar cada tarefa do atendimento na GENEALIZ.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -21,7 +27,12 @@ type Task = {
   title: string;
   steps: string[];
   note?: string;
-  to: "/app/clientes" | "/app/genossociogramas" | "/app/agenda" | "/app/ia-clinica" | "/app/biblioteca";
+  to:
+    | "/app/clientes"
+    | "/app/genossociogramas"
+    | "/app/agenda"
+    | "/app/ia-clinica"
+    | "/app/biblioteca";
   action: string;
 };
 
@@ -113,11 +124,19 @@ const TASKS: Task[] = [
 function GuiaPage() {
   return (
     <div className="pb-16">
-      <DocumentHeader breadcrumb="Guia" title="Guia de tarefas" subtitle="O que fazer, passo a passo, em cada etapa do atendimento." />
+      <DocumentHeader
+        breadcrumb="Guia"
+        title="Guia de tarefas"
+        subtitle="O que fazer, passo a passo, em cada etapa do atendimento."
+      />
       <div className="container-liz grid gap-10 lg:grid-cols-[220px_minmax(0,760px)]">
         <nav aria-label="Tarefas" className="space-y-1 self-start lg:sticky lg:top-6">
           {TASKS.map((t) => (
-            <a key={t.id} href={`#${t.id}`} className="flex min-h-11 items-center rounded-md px-3 text-[15px] text-foreground hover:bg-secondary">
+            <a
+              key={t.id}
+              href={`#${t.id}`}
+              className="flex min-h-11 items-center rounded-md px-3 text-[15px] text-foreground hover:bg-secondary"
+            >
               {t.title}
             </a>
           ))}
@@ -131,8 +150,15 @@ function GuiaPage() {
                   <li key={s}>{s}</li>
                 ))}
               </ol>
-              {t.note && <p className="mt-4 rounded-md border border-forest/30 bg-forest/5 p-3 text-[15px] font-semibold">{t.note}</p>}
-              <Link to={t.to} className="mt-5 inline-flex min-h-11 items-center gap-2 text-[15px] font-semibold text-forest">
+              {t.note && (
+                <p className="mt-4 rounded-md border border-forest/30 bg-forest/5 p-3 text-[15px] font-semibold">
+                  {t.note}
+                </p>
+              )}
+              <Link
+                to={t.to}
+                className="mt-5 inline-flex min-h-11 items-center gap-2 text-[15px] font-semibold text-forest"
+              >
                 {t.action} <ArrowRight size={16} aria-hidden />
               </Link>
             </section>

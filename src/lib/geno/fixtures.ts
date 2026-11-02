@@ -5,7 +5,12 @@
 import type { PersonRow, RelationshipRow } from "@/lib/patterns";
 
 let seq = 0;
-function person(rel: string, name: string, gender: "M" | "F", extra: Partial<PersonRow> = {}): PersonRow {
+function person(
+  rel: string,
+  name: string,
+  gender: "M" | "F",
+  extra: Partial<PersonRow> = {},
+): PersonRow {
   seq++;
   return {
     id: `syn-${seq}`,
@@ -62,7 +67,10 @@ export function smallFamily(): SyntheticFamily {
   const s = person("Irmã(o)", "Lia (fictícia)", "F", { birth_date: "1993-08-01" });
   const pai = person("Pai", "Carlos (fictício)", "M", { birth_date: "1961-02-20" });
   const mae = person("Mãe", "Mariana (fictícia)", "F", { birth_date: "1963-11-05" });
-  const avo = person("Avô paterno", "Antônio (fictício)", "M", { is_deceased: true, death_date: "2010-06-01" });
+  const avo = person("Avô paterno", "Antônio (fictício)", "M", {
+    is_deceased: true,
+    death_date: "2010-06-01",
+  });
   const ava = person("Avó paterna", "Rosa (fictícia)", "F");
   const persons = [c, s, pai, mae, avo, ava];
   const rels = [
@@ -83,7 +91,9 @@ export function largeFamily(): SyntheticFamily {
   const rels: RelationshipRow[] = [];
   const c = person("Consulente", "Cliente fictício", "F");
   persons.push(c);
-  const sibs = ["Irmão A", "Irmã B", "Irmão C"].map((n, i) => person("Irmã(o)", `${n} (fictício)`, i % 2 ? "F" : "M"));
+  const sibs = ["Irmão A", "Irmã B", "Irmão C"].map((n, i) =>
+    person("Irmã(o)", `${n} (fictício)`, i % 2 ? "F" : "M"),
+  );
   persons.push(...sibs);
   const pai = person("Pai", "Pai fictício", "M");
   const mae = person("Mãe", "Mãe fictícia", "F");
@@ -91,7 +101,11 @@ export function largeFamily(): SyntheticFamily {
   for (const k of [c, ...sibs]) rels.push(parentRel(pai.id, k.id), parentRel(mae.id, k.id));
   const grand = (side: "paterno" | "materno", child: PersonRow) => {
     const a = person(`Avô ${side}`, `Avô ${side} fictício`, "M");
-    const b = person(side === "paterno" ? "Avó paterna" : "Avó materna", `Avó ${side} fictícia`, "F");
+    const b = person(
+      side === "paterno" ? "Avó paterna" : "Avó materna",
+      `Avó ${side} fictícia`,
+      "F",
+    );
     persons.push(a, b);
     rels.push(parentRel(a.id, child.id), parentRel(b.id, child.id));
     return [a, b];

@@ -79,7 +79,10 @@ function ConfigPage() {
       toast.success("Perfil atualizado.");
       queryClient.invalidateQueries({ queryKey: ["profile", user.id] });
     },
-    onError: (e) => toast.error(`${e instanceof Error ? e.message : "Erro ao salvar"}. Seus campos foram mantidos — tente de novo.`),
+    onError: (e) =>
+      toast.error(
+        `${e instanceof Error ? e.message : "Erro ao salvar"}. Seus campos foram mantidos — tente de novo.`,
+      ),
   });
 
   const dirty =
@@ -177,16 +180,25 @@ function ConfigPage() {
         <div className="mt-6 max-w-2xl space-y-6">
           <AccountPreferences userId={user.id} />
           <DataExport userId={user.id} />
-          <section className="rounded-[14px] border border-material-border bg-surface-document p-6 shadow-surface sm:p-8" aria-labelledby="help-h">
-            <h2 id="help-h" className="m-0 font-serif text-2xl text-ink">Ajuda</h2>
+          <section
+            className="rounded-[14px] border border-material-border bg-surface-document p-6 shadow-surface sm:p-8"
+            aria-labelledby="help-h"
+          >
+            <h2 id="help-h" className="m-0 font-serif text-2xl text-ink">
+              Ajuda
+            </h2>
             <ul className="mt-4 space-y-2 text-[15px]">
               <li>
-                <Link to="/app/guia" className="inline-flex min-h-11 items-center font-semibold text-forest underline-offset-4 hover:underline">
+                <Link
+                  to="/app/guia"
+                  className="inline-flex min-h-11 items-center font-semibold text-forest underline-offset-4 hover:underline"
+                >
                   Guia de tarefas: cadastrar, vincular, salvar, importar e conduzir sessões
                 </Link>
               </li>
               <li>
-                Senha esquecida: na tela de entrada use “Esqueci minha senha”. O envio do e-mail depende da configuração de e-mail da plataforma.
+                Senha esquecida: na tela de entrada use “Esqueci minha senha”. O envio do e-mail
+                depende da configuração de e-mail da plataforma.
               </li>
             </ul>
           </section>

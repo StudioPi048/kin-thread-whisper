@@ -14,9 +14,15 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "GENEALIZ — espaço de trabalho em psicogenealogia" },
-      { name: "description", content: "Genossociograma, anamnese, linha do tempo e sessões de cada caso em um só lugar." },
+      {
+        name: "description",
+        content: "Genossociograma, anamnese, linha do tempo e sessões de cada caso em um só lugar.",
+      },
       { property: "og:title", content: "GENEALIZ — espaço de trabalho em psicogenealogia" },
-      { property: "og:description", content: "Genossociograma com cliente no topo, anamnese, linha do tempo e sessões." },
+      {
+        property: "og:description",
+        content: "Genossociograma com cliente no topo, anamnese, linha do tempo e sessões.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -181,7 +187,9 @@ function Index() {
             <br />
             <em>Mais clareza nos registros.</em>
           </h2>
-          <p>Prepare o seu espaço de trabalho em psicogenealogia. O cadastro é por e-mail ou Google.</p>
+          <p>
+            Prepare o seu espaço de trabalho em psicogenealogia. O cadastro é por e-mail ou Google.
+          </p>
           <Link to="/auth" search={{ mode: "signup" }} className="gv-button gv-button-gold">
             Criar minha conta <ArrowRight size={18} />
           </Link>
