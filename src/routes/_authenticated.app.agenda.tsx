@@ -1,3 +1,5 @@
+import { clinicalIntelQuery } from "@/lib/clinical-intel";
+import { detectPatterns } from "@/lib/patterns";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -739,7 +741,14 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
   });
 
   const genogramAlerts = genogramQuery.data?.alerts ?? [];
-  const mergedAlerts = [...session.aiAlerts, ...genogramAlerts.map((a) => a.message)];
+  // Evidências da fonte comum (mesma do dossiê/copiloto/IA Clínica)
+  const intelQ = useQuery(clinicalIntelQuery(session.clientId ?? ""));
+  const evidence = intelQ.data
+    ? detectPatterns(intelQ.data.persons, intelQ.data.relationships).map((p) => `${p.title}: ${p.description}`)
+    : [];
+  const mergedAlerts = Array.from(
+    new Set([...session.aiAlerts, ...evidence, ...genogramAlerts.map((a) => a.message)]),
+  );
 
   const accentBar = {
     forest: "bg-gradient-to-b from-forest to-forest",

@@ -1,3 +1,4 @@
+import { invalidateCase } from "@/lib/clinical-intel";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Background,
@@ -785,7 +786,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
     (async () => {
       const result = await ensureProband(clientId);
       if (!cancelled && result) {
-        qc.invalidateQueries({ queryKey: ["genogram", clientId] });
+        invalidateCase(qc, clientId);
       }
     })();
     return () => {
@@ -937,7 +938,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
       }
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["genogram", clientId] });
+      invalidateCase(qc, clientId);
       toast.success("Removido.");
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
@@ -1038,7 +1039,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
         new Date(savedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
       );
       // Optional: quietly invalidate to keep data in sync, but avoid full remounts
-      qc.invalidateQueries({ queryKey: ["genogram", clientId] });
+      invalidateCase(qc, clientId);
     },
     onError: (e) =>
       toast.error(
@@ -1081,7 +1082,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
     onSuccess: (newValue) => {
       setIsLayoutFixed(newValue);
       toast.success(newValue ? "Layout fixado" : "Layout destravado");
-      qc.invalidateQueries({ queryKey: ["genogram", clientId] });
+      invalidateCase(qc, clientId);
     },
     onError: (e) => toast.error("Erro ao alterar fixação do layout"),
   });
@@ -1103,7 +1104,7 @@ function GenogramCanvasInner({ clientId }: CanvasProps) {
     },
     onSuccess: () => {
       toast.success("Posições recalculadas a partir das regras do genossociograma.");
-      qc.invalidateQueries({ queryKey: ["genogram", clientId] });
+      invalidateCase(qc, clientId);
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao recalcular"),
   });

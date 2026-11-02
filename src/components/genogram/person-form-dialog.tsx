@@ -1,3 +1,4 @@
+import { invalidateCase } from "@/lib/clinical-intel";
 import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -161,7 +162,7 @@ export function PersonFormDialog({
       }
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["genogram", clientId] });
+      invalidateCase(qc, clientId);
       toast.success(editing ? "Dossiê salvo." : "Pessoa adicionada.");
       onOpenChange(false);
     },

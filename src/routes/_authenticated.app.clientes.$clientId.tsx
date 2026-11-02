@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { lazy, Suspense } from "react";
 
 const ClientTimeline = lazy(() =>
@@ -73,6 +73,9 @@ import { ClinicalIntelligencePanel } from "@/components/clients/clinical-intelli
 import { DocumentHeader } from "@/components/ui/document-header";
 
 import { recordVisit } from "@/lib/recent-activity";
+import { clinicalIntelQuery } from "@/lib/clinical-intel";
+import { detectPatterns } from "@/lib/patterns";
+import { informationGaps } from "@/lib/evidence";
 import { calcAge, formatBirthDate, genderOptions, initialsFrom } from "@/lib/clients";
 import { JOURNEY_STAGES, deriveStage, stageIndex } from "@/lib/clinical-catalog";
 
@@ -185,18 +188,25 @@ function ClientDossierPage() {
   });
 
   // Padrões reais detectados pelo motor — alimentam a hipótese clínica sem inventar dados
-  const { data: patterns = [] } = useQuery({
-    queryKey: ["client-patterns", clientId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("patterns_detected")
-        .select("id, title, pattern_type, severity, acknowledged_at")
-        .eq("client_id", clientId)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
+  // Evidências: mesma fonte comum (clinicalIntelQuery + detectPatterns) do copiloto/IA/Agenda
+  const intelQ = useQuery(clinicalIntelQuery(clientId));
+  const patterns = useMemo(
+    () =>
+      intelQ.data
+        ? detectPatterns(intelQ.data.persons, intelQ.data.relationships).map((p) => ({
+            id: p.id,
+            title: p.title,
+            pattern_type: p.type as string,
+            severity: p.severity as string,
+            acknowledged_at: null as string | null,
+          }))
+        : [],
+    [intelQ.data],
+  );
+  const gaps = useMemo(
+    () => (intelQ.data ? informationGaps(intelQ.data.persons) : []),
+    [intelQ.data],
+  );
 
   const { data: sessionCount = 0 } = useQuery({
     queryKey: ["client-session-count", clientId],

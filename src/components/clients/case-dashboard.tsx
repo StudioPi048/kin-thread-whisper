@@ -1,3 +1,5 @@
+import { clinicalIntelQuery } from "@/lib/clinical-intel";
+import { detectPatterns } from "@/lib/patterns";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
@@ -14,20 +16,17 @@ type Person = {
 };
 
 export function CaseDashboard({ clientId }: Props) {
+  const { data: intel } = useQuery(clinicalIntelQuery(clientId));
   const { data } = useQuery({
     queryKey: ["case-dashboard", clientId],
     queryFn: async () => {
-      const [persons, rels, patterns, sessions] = await Promise.all([
+      const [persons, rels, sessions] = await Promise.all([
         supabase
           .from("genogram_persons")
           .select("gender, is_deceased, health_conditions, cause_of_death")
           .eq("client_id", clientId),
         supabase
           .from("genogram_relationships")
-          .select("id", { count: "exact", head: true })
-          .eq("client_id", clientId),
-        supabase
-          .from("patterns_detected")
           .select("id", { count: "exact", head: true })
           .eq("client_id", clientId),
         supabase
@@ -38,7 +37,6 @@ export function CaseDashboard({ clientId }: Props) {
       return {
         persons: (persons.data ?? []) as Person[],
         relationships: rels.count ?? 0,
-        patterns: patterns.count ?? 0,
         sessions: sessions.count ?? 0,
       };
     },
@@ -46,7 +44,8 @@ export function CaseDashboard({ clientId }: Props) {
 
   if (!data) return null;
 
-  const { persons, relationships, patterns, sessions } = data;
+  const { persons, relationships, sessions } = data;
+  const patterns = intel ? detectPatterns(intel.persons, intel.relationships).length : 0;
   // "feminino"/"masculino" é o que o formulário principal de pessoa grava;
   // "female"/"male" só aparece em pessoas criadas via planilha/importação.
   const female = persons.filter((p) => p.gender === "feminino" || p.gender === "female").length;

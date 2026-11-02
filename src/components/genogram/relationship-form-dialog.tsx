@@ -1,3 +1,4 @@
+import { invalidateCase } from "@/lib/clinical-intel";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -144,7 +145,7 @@ export function RelationshipFormDialog({
     },
 
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["genogram", clientId] });
+      invalidateCase(qc, clientId);
       toast.success(editing ? "Vínculo salvo." : "Vínculo criado na árvore.");
       onOpenChange(false);
     },

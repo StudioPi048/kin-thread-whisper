@@ -1,3 +1,4 @@
+import { invalidateCase } from "@/lib/clinical-intel";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -227,7 +228,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
       const result = await ensureProband(clientId);
       if (!cancelled && result) {
         qc.invalidateQueries({ queryKey: ["genogram-persons", clientId] });
-        qc.invalidateQueries({ queryKey: ["genogram", clientId] });
+        invalidateCase(qc, clientId);
       }
     })();
     return () => {
@@ -457,7 +458,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
           await ensureProband(clientId);
 
           qc.invalidateQueries({ queryKey: ["genogram-persons", clientId] });
-          qc.invalidateQueries({ queryKey: ["genogram", clientId] });
+          invalidateCase(qc, clientId);
           toast.success(`${inserts.length} familiares importados com sucesso!`);
         } else {
           toast.info("Nenhum dado válido encontrado para importar.");
