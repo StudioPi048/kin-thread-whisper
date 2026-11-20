@@ -1,7 +1,8 @@
-import { CatchBoundary, createFileRoute, Link } from "@tanstack/react-router";
+import { CatchBoundary, createFileRoute } from "@tanstack/react-router";
 import { ArrowDown, ArrowRight, ArrowUpRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { ComponentType, MouseEvent } from "react";
+import { HomeCasePreview } from "@/components/demo/home-case-preview";
 import { GenealizWordmark } from "@/components/genealiz-wordmark";
 import "@/landing.css";
 
@@ -74,9 +75,9 @@ function Index() {
       </a>
       <header className="public-masthead">
         <div className="public-wrap">
-          <Link to="/" className="public-brand" aria-label="Genealiz — início">
+          <a href="/" className="public-brand" aria-label="Genealiz — início">
             <GenealizWordmark />
-          </Link>
+          </a>
           <nav aria-label="Navegação pública">
             <a href="#pratica" className="public-nav-detail">
               Como funciona
@@ -84,9 +85,9 @@ function Index() {
             <a href="#caso-ficticio" className="public-nav-detail" onClick={followDemoLink}>
               Demonstração
             </a>
-            <Link to="/auth" className="public-signin">
+            <a href="/auth" className="public-signin">
               Entrar <ArrowUpRight size={17} aria-hidden />
-            </Link>
+            </a>
           </nav>
         </div>
       </header>
@@ -95,36 +96,22 @@ function Index() {
         <section className="public-intro public-wrap" aria-labelledby="public-title">
           <div className="public-intro-copy">
             <h1 id="public-title">
-              <span>Genossociogramas</span> <span>para a prática em</span> <em>psicogenealogia.</em>
+              A história da família, <em>vínculo por vínculo.</em>
             </h1>
             <p>
-              Monte a árvore familiar, acompanhe acontecimentos e registre cada atendimento em um só
-              dossiê.
+              Genossociograma, linha do tempo e registros de atendimento em um só dossiê para
+              psicogenealogistas.
             </p>
             <div className="public-actions">
-              <a className="public-button" href="#caso-ficticio" onClick={followDemoLink}>
-                Explorar caso fictício <ArrowDown size={17} aria-hidden />
+              <a className="public-button" href="/auth">
+                Entrar no Genealiz <ArrowRight size={17} aria-hidden />
               </a>
-              <Link to="/auth" search={{ mode: "signup" }} className="public-text-link">
-                Criar conta <ArrowUpRight size={16} aria-hidden />
-              </Link>
+              <a className="public-text-link" href="#caso-ficticio" onClick={followDemoLink}>
+                Testar a demonstração <ArrowDown size={16} aria-hidden />
+              </a>
             </div>
           </div>
-          <figure className="public-intro-photo">
-            <img
-              src="/assets/genealiz/archive-hero.webp"
-              srcSet="/assets/genealiz/archive-hero-768.webp 768w, /assets/genealiz/archive-hero.webp 1536w"
-              sizes="(max-width: 760px) 100vw, (max-width: 1450px) 53vw, 720px"
-              width={1536}
-              height={1024}
-              alt="Mãos organizam fotografias de três gerações em um álbum."
-              fetchPriority="high"
-            />
-            <figcaption>
-              <span>Toda história começa antes.</span>
-              <span>Composição ilustrativa</span>
-            </figcaption>
-          </figure>
+          <HomeCasePreview onOpenCase={followDemoLink} />
         </section>
 
         <section id="caso-ficticio" className="public-case" aria-labelledby="public-case-title">
@@ -134,8 +121,8 @@ function Index() {
                 Uma família, duas uniões.
               </h2>
               <p>
-                Experimente com uma família fictícia. Localize Sofia e confira os filhos de cada
-                união de Mariana. Revise uma filiação, desfaça e observe a mesma árvore em 2D e 3D.
+                Abra o caso fictício, encontre Sofia e confira a que união ela está ligada. Você
+                pode revisar uma filiação, desfazer a mudança e alternar entre 2D e 3D.
               </p>
             </div>
             {Demo ? (
@@ -223,9 +210,9 @@ function Index() {
                 Letícia K. Baccin. Na plataforma, o mapa, a ficha e a linha do tempo ficam ligados
                 para acompanhar cada caso.
               </p>
-              <Link to="/auth" search={{ mode: "signup" }} className="public-text-link">
+              <a href="/auth?mode=signup" className="public-text-link">
                 Criar conta <ArrowUpRight size={17} aria-hidden />
-              </Link>
+              </a>
             </div>
           </div>
         </section>
@@ -233,18 +220,16 @@ function Index() {
 
       <footer className="public-footer">
         <div className="public-wrap">
-          <Link to="/" className="public-brand" aria-label="Genealiz — início">
+          <a href="/" className="public-brand" aria-label="Genealiz — início">
             <GenealizWordmark />
-          </Link>
+          </a>
           <p>Instituto Liz</p>
           <nav aria-label="Acesso e conta">
             <a href="#caso-ficticio" onClick={followDemoLink}>
               Demonstração
             </a>
-            <Link to="/auth" search={{ redirect: "/app/guia" }}>
-              Guia no aplicativo
-            </Link>
-            <Link to="/auth">Entrar</Link>
+            <a href="/auth?redirect=%2Fapp%2Fguia">Guia no aplicativo</a>
+            <a href="/auth">Entrar</a>
           </nav>
         </div>
       </footer>
