@@ -1,4 +1,4 @@
-import { parentLinePatterns, validateParentLink } from "@/lib/family-relationships";
+import { parentLinePatterns } from "@/lib/family-relationships";
 import { clinicalIntelQuery, getMappablePersons, invalidateCase } from "@/lib/clinical-intel";
 import {
   lazy,
@@ -17,6 +17,7 @@ import {
   Controls,
   ReactFlow,
   ReactFlowProvider,
+  ViewportPortal,
   useEdgesState,
   useNodesState,
   useReactFlow,
@@ -62,6 +63,7 @@ import {
   PanelRightClose,
   PanelRightOpen,
   Table2,
+  X,
 } from "lucide-react";
 import { personSymbol } from "./person-symbol";
 import { useUnsaved } from "@/components/unsaved/unsaved-guard";
@@ -100,6 +102,28 @@ import { relationshipLabel, relationshipQualifiers } from "@/lib/genogram";
 import { ensureProband } from "@/lib/ensure-proband";
 import type { Database } from "@/integrations/supabase/types";
 
+import { ParentageReviewPanel, type ParentageDraft } from "./parentage-review-panel";
+import type { ParentagePreview } from "./parentage-preview";
+import {
+  parentageSources,
+  parentageSnapshot,
+  validateParentagePlan,
+  type ParentageCandidate,
+  type ParentageSource,
+} from "@/lib/parentage-review";
+
+const recognizedParentKinds = new Set([
+  ...relationshipQualifiers.parent.map((option) => option.value),
+  "unknown",
+]);
+const reviewParents = (draft: ParentageDraft): ParentageCandidate[] =>
+  draft.proposed
+    .filter(({ personId }) => personId)
+    .map(({ personId, kind }) => ({
+      personId,
+      ...(recognizedParentKinds.has(kind) ? { kind: kind as ParentageCandidate["kind"] } : {}),
+    }));
+
 type PersonRow = Database["public"]["Tables"]["genogram_persons"]["Row"];
 type RelRow = Database["public"]["Tables"]["genogram_relationships"]["Row"];
 type NodePositionRow = Database["public"]["Tables"]["genogram_node_positions"]["Row"];
@@ -110,7 +134,6 @@ const SpatialView = lazy(() =>
 );
 
 type QuickRelative = { personId: string; kind: "Pai" | "Mãe" | "Filho(a)" | "Irmã(o)" };
-type ParentProposal = { childId: string; parentIds: string[] };
 type RelationshipSeed = {
   from?: string;
   to?: string;
@@ -341,6 +364,51 @@ function nodeBottomY(node: Node | undefined): number {
 function nodeUnionY(node: Node | undefined): number {
   if (!node) return 0;
   return node.position.y + nodeShapeSize(node) / 2;
+}
+
+function ParentagePaths({ preview, nodes }: { preview: ParentagePreview; nodes: Node[] }) {
+  const child = nodes.find(({ id }) => id === preview.childId);
+  if (!child) return null;
+  const paths = (ids: readonly string[], offset: number) => {
+    const parents = nodes.filter(({ id }) => ids.includes(id));
+    if (!parents.length) return "";
+    const childX = nodeCenterX(child);
+    const childBottom = nodeBottomY(child) + 7;
+    return parents
+      .map((parent) => {
+        const parentX = nodeCenterX(parent);
+        const parentIsBelow = parent.position.y >= child.position.y;
+        const childY = parentIsBelow ? childBottom : child.position.y - 7;
+        const parentY =
+          Math.abs(parent.position.y - child.position.y) < 1
+            ? nodeBottomY(parent) + 7
+            : parentIsBelow
+              ? parent.position.y - 7
+              : nodeBottomY(parent) + 7;
+        const midY =
+          (parentY > childY && parentIsBelow) || (parentY < childY && !parentIsBelow)
+            ? (parentY + childY) / 2 + offset
+            : Math.max(nodeBottomY(parent), nodeBottomY(child)) + 25 + offset;
+        const exitX = childX + offset;
+        return `M ${exitX} ${childY} V ${midY} H ${parentX + offset} V ${parentY}`;
+      })
+      .join(" ");
+  };
+  const current = preview.phase === "draft" ? paths(preview.previousParentIds, -4) : "";
+  const proposed = paths(preview.proposedParentIds, 4);
+  return (
+    <ViewportPortal>
+      <svg aria-hidden="true" className="geno-parentage-paths" width="1" height="1">
+        {current && <path d={current} data-parentage-preview="current" />}
+        {proposed && (
+          <path
+            d={proposed}
+            data-parentage-preview={preview.phase === "confirmed" ? "confirmed" : "proposed"}
+          />
+        )}
+      </svg>
+    </ViewportPortal>
+  );
 }
 
 /**
@@ -709,7 +777,10 @@ function GenogramCanvasInner({
   const warnings = renderGraph?.warnings ?? [];
   const [view, setView] = useState<"2d" | "3d">("2d");
   const [spatialFitRequest, setSpatialFitRequest] = useState(0);
-  const [focusRequest, setFocusRequest] = useState<{ personId: string }>();
+  const [focusRequest, setFocusRequest] = useState<{
+    personId: string;
+    relatedPersonIds?: readonly string[];
+  }>();
   const [connection, setConnection] = useState<{ originId: string | null } | null>(null);
   const [toolsOpen, setToolsOpen] = useState(false);
   useEffect(() => {
@@ -739,7 +810,31 @@ function GenogramCanvasInner({
   const [isLayoutFixed, setIsLayoutFixed] = useState(false);
   const canMoveLayout = !isLayoutFixed && !connection;
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [parentProposal, setParentProposal] = useState<ParentProposal | null>(null);
+  const [parentageDraft, setParentageDraft] = useState<ParentageDraft | null>(null);
+  const [pickingParentSlot, setPickingParentSlot] = useState<number | null>(null);
+  const [reviewDirty, setReviewDirty] = useState(false);
+  const reviewSavedRef = useRef(false);
+  const [warningsOpen, setWarningsOpen] = useState(false);
+  const [reviewCollapsed, setReviewCollapsed] = useState(false);
+  useEffect(() => {
+    if (pickingParentSlot === null) return;
+    const cancelPick = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      setPickingParentSlot(null);
+      setReviewCollapsed(false);
+    };
+    window.addEventListener("keydown", cancelPick);
+    return () => window.removeEventListener("keydown", cancelPick);
+  }, [pickingParentSlot]);
+  const [confirmedParentage, setConfirmedParentage] = useState<{
+    reviewId: string;
+    childId: string;
+    parentIds: string[];
+    source: ParentageSource;
+  } | null>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const reviewTriggerRef = useRef<HTMLElement | null>(null);
+  const reviewEditTriggerRef = useRef<HTMLButtonElement | null>(null);
   const [panelOpen, setPanelOpen] = useState(true);
   // Revisões do arranjo: um save só limpa o que existia quando começou
   const revRef = useRef(new RevisionTracker());
@@ -1230,53 +1325,90 @@ function GenogramCanvasInner({
     );
   };
 
-  const confirmParents = useMutation({
-    mutationFn: async ({ childId, parentIds }: ParentProposal) => {
-      const latest = await qc.fetchQuery({ ...clinicalIntelQuery(clientId), staleTime: 0 });
-      const graph = buildLogicalGraph({
-        persons: getMappablePersons(latest.persons, latest.relationships),
-        rels: latest.relationships,
-        probandId: latest.persons.find((person) => person.is_proband)?.id,
-      });
-      const candidates = getSuggestedParents(graph, childId).map((parent) => parent.personId);
-      if (
-        candidates.length !== parentIds.length ||
-        parentIds.some((id) => !candidates.includes(id))
-      ) {
-        throw new Error("A filiação mudou. Abra a ficha e revise os pais sugeridos.");
-      }
-      const existing = latest.relationships.filter((rel) => rel.relationship_type === "parent");
-      for (const parentId of parentIds) {
-        const reason = validateParentLink(parentId, childId, existing);
-        if (reason) throw new Error(reason);
-        existing.push({
-          id: `pending-${parentId}`,
-          from_person_id: parentId,
-          to_person_id: childId,
-        } as RelRow);
-      }
-      const { error } = await supabase.from("genogram_relationships").insert(
-        parentIds.map((id) => ({
-          client_id: clientId,
-          from_person_id: id,
-          to_person_id: childId,
-          relationship_type: "parent",
-          qualifier: "biological",
-        })),
+  const confirmParentage = useMutation({
+    mutationFn: async (draft: ParentageDraft) => {
+      const parents = reviewParents(draft);
+      const removesOrChanges = draft.current.some(
+        (current) =>
+          !parents.some(
+            (parent) =>
+              parent.personId === current.personId &&
+              (!parent.kind || parent.kind === current.kind),
+          ),
       );
-      if (error) throw error;
+      const { data, error } = await supabase.rpc("review_parentage", {
+        _client_id: clientId,
+        _child_id: draft.childId,
+        _expected: draft.expected,
+        _parents: parents,
+        _decision: removesOrChanges ? "edit" : "confirm",
+        _source: draft.source,
+        _note: draft.note.trim() || undefined,
+      });
+      if (error?.code === "PGRST202")
+        throw new Error("O banco ainda precisa da atualização para salvar a revisão.");
+      if (error) throw new Error(error.message);
+      if (!data) throw new Error("O servidor não confirmou a revisão.");
+      return {
+        reviewId: data,
+        childId: draft.childId,
+        parentIds: parents.map(({ personId }) => personId),
+        source: draft.source,
+      };
+    },
+    onSuccess: async (result) => {
+      await invalidateCase(qc, clientId);
+      void qc.invalidateQueries({ queryKey: ["genogram-parentage-review", clientId] });
+      reviewSavedRef.current = true;
+      setConfirmedParentage(result);
+      setParentageDraft(null);
+      setPickingParentSlot(null);
+      setReviewDirty(false);
+      setReviewCollapsed(false);
+      requestAnimationFrame(() => stageRef.current?.scrollIntoView({ block: "nearest" }));
+    },
+    onError: () => void invalidateCase(qc, clientId),
+  });
+
+  const undoParentage = useMutation({
+    mutationFn: async (reviewId: string) => {
+      const { data, error } = await supabase.rpc("undo_parentage_review", {
+        _client_id: clientId,
+        _review_id: reviewId,
+      });
+      if (error) throw new Error(error.message);
+      if (!data) throw new Error("O servidor não confirmou o desfazer.");
     },
     onSuccess: async () => {
       await invalidateCase(qc, clientId);
-      setParentProposal(null);
-      toast.success("Filiação confirmada.");
+      setConfirmedParentage(null);
+      void qc.invalidateQueries({ queryKey: ["genogram-parentage-review", clientId] });
+      toast.success("Filiação anterior restaurada.");
     },
-    onError: (error) =>
-      toast.error(
-        error instanceof Error ? error.message : "Não foi possível registrar a filiação.",
-      ),
+    onError: (error) => {
+      void invalidateCase(qc, clientId);
+      toast.error(error.message);
+    },
   });
 
+  const reviewedChildId = parentageDraft?.childId ?? focusedPersonId ?? probandId;
+  const parentageSource = useQuery({
+    queryKey: ["genogram-parentage-review", clientId, reviewedChildId],
+    enabled: !!parentageDraft && !!reviewedChildId,
+    retry: false,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("genogram_parentage_reviews")
+        .select("source, note, after_links")
+        .eq("client_id", clientId)
+        .eq("child_id", reviewedChildId!)
+        .order("review_number", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
   const persons = data?.persons ?? [];
   const focusedPerson =
     persons.find((p) => p.id === focusedPersonId) ??
@@ -1303,6 +1435,190 @@ function GenogramCanvasInner({
       (rel.from_person_id === focusedPerson?.id || rel.to_person_id === focusedPerson?.id) &&
       !directParents.some((parent) => parent.relationshipId === rel.id),
   );
+  const reviewChild = parentageDraft?.childId;
+  const reviewCurrent = parentageDraft?.current;
+  const reviewProposal = parentageDraft?.proposed;
+  const parentagePreview = useMemo<ParentagePreview | undefined>(() => {
+    if (reviewChild && reviewCurrent && reviewProposal) {
+      return {
+        childId: reviewChild,
+        previousParentIds: reviewCurrent.map(({ personId }) => personId),
+        proposedParentIds: reviewProposal.map(({ personId }) => personId).filter(Boolean),
+        phase: "draft",
+      };
+    }
+    return confirmedParentage
+      ? {
+          childId: confirmedParentage.childId,
+          previousParentIds: [],
+          proposedParentIds: confirmedParentage.parentIds,
+          phase: "confirmed",
+        }
+      : undefined;
+  }, [reviewChild, reviewCurrent, reviewProposal, confirmedParentage]);
+  const reviewHighlights = new Set(
+    parentagePreview
+      ? [
+          parentagePreview.childId,
+          ...parentagePreview.previousParentIds,
+          ...parentagePreview.proposedParentIds,
+        ]
+      : [],
+  );
+
+  const startParentageReview = (childId: string, opener?: HTMLElement) => {
+    if (confirmParentage.isPending || undoParentage.isPending || !data || !renderGraph) return;
+    reviewTriggerRef.current = opener ?? null;
+    const current = data.rels
+      .filter((link) => link.relationship_type === "parent" && link.to_person_id === childId)
+      .map((link) => ({
+        personId: link.from_person_id,
+        kind: link.qualifier ?? "",
+        notes: link.notes,
+      }));
+    const suggested = getSuggestedParents(renderGraph.graph, childId);
+    const candidates = new Map(current.map((parent) => [parent.personId, parent]));
+    for (const parent of suggested) {
+      if (!candidates.has(parent.personId)) {
+        candidates.set(parent.personId, {
+          personId: parent.personId,
+          kind: parent.kind,
+          notes: null,
+        });
+      }
+    }
+    const [firstParent, secondParent] = candidates.values();
+    const empty = { personId: "", kind: "" };
+    confirmParentage.reset();
+    reviewSavedRef.current = false;
+    setReviewDirty(false);
+    setParentageDraft({
+      childId,
+      current,
+      expected: parentageSnapshot(data.rels, childId),
+      proposed: [firstParent ?? empty, secondParent ?? empty],
+      suggestedIds: suggested.map(({ personId }) => personId),
+      source: "unverified",
+      note: "",
+    });
+    setReviewCollapsed(false);
+    setPickingParentSlot(null);
+    setWarningsOpen(false);
+    setMobileSheetOpen(false);
+    setConnection(null);
+    setFocusedPersonId(childId);
+    setPanelOpen(true);
+    requestAnimationFrame(() =>
+      frameParentage(childId, [
+        ...current.map((parent) => parent.personId),
+        firstParent?.personId ?? "",
+        secondParent?.personId ?? "",
+      ]),
+    );
+  };
+
+  const closeParentageReview = () => {
+    if (confirmParentage.isPending) return;
+    setParentageDraft(null);
+    setPickingParentSlot(null);
+    setReviewDirty(false);
+    setReviewCollapsed(false);
+    requestAnimationFrame(() => {
+      const target = reviewTriggerRef.current?.isConnected
+        ? reviewTriggerRef.current
+        : (reviewEditTriggerRef.current ?? stageRef.current);
+      target?.focus({ preventScroll: true });
+    });
+  };
+
+  const frameParentage = (childId: string, ids: readonly string[]) => {
+    const relatedPersonIds = [...new Set(ids.filter(Boolean))];
+    setFocusRequest({ personId: childId, relatedPersonIds });
+    if (view !== "2d") return;
+    const included = new Set([childId, ...relatedPersonIds]);
+    const reduced =
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
+      document.documentElement.dataset.reduceMotion === "true";
+    const stage = stageRef.current?.getBoundingClientRect();
+    const people = rfInstance.getNodes().filter(({ id }) => included.has(id));
+    if (!stage?.width || !stage.height || !people.length) return;
+    const viewport = getViewportForBounds(
+      getNodesBounds(people),
+      stage.width,
+      stage.height,
+      0.075,
+      1.02,
+      0.27,
+    );
+    void rfInstance.setViewport(viewport, { duration: reduced ? 0 : 210 });
+  };
+
+  const showParentageOnMap = () => {
+    if (!parentagePreview) return;
+    frameParentage(parentagePreview.childId, [
+      ...parentagePreview.previousParentIds,
+      ...parentagePreview.proposedParentIds,
+    ]);
+    if (isMobile) setReviewCollapsed(true);
+    requestAnimationFrame(() => {
+      stageRef.current?.scrollIntoView({ block: "nearest" });
+      stageRef.current?.focus({ preventScroll: true });
+    });
+  };
+
+  const parentageValidation = (() => {
+    if (!parentageDraft || !data) return null;
+    if (
+      JSON.stringify(parentageDraft.expected) !==
+      JSON.stringify(parentageSnapshot(data.rels, parentageDraft.childId))
+    )
+      return "Os vínculos registrados mudaram. Feche e reabra a revisão para comparar os dados atualizados.";
+    const proposal = reviewParents(parentageDraft);
+    if (!proposal.length && !parentageDraft.current.length)
+      return "Escolha um genitor para revisar a filiação.";
+    return validateParentagePlan(parentageDraft.childId, proposal, data.rels);
+  })();
+  const recordedSource = parentageSource.data;
+  const savedLinks = Array.isArray(recordedSource?.after_links) ? recordedSource.after_links : [];
+  const sourceStillApplies =
+    !!parentageDraft &&
+    savedLinks.length === parentageDraft.expected.length &&
+    parentageDraft.expected.every((current) =>
+      savedLinks.some(
+        (link) =>
+          link !== null &&
+          typeof link === "object" &&
+          !Array.isArray(link) &&
+          link.id === current.id &&
+          link.updated_at === current.updatedAt,
+      ),
+    );
+  const previousSource =
+    recordedSource &&
+    sourceStillApplies &&
+    Object.hasOwn(parentageSources, recordedSource.source) &&
+    (recordedSource.source !== "unverified" || recordedSource.note)
+      ? { source: recordedSource.source as ParentageSource, note: recordedSource.note }
+      : undefined;
+
+  useUnsaved(`parentage:${clientId}`, {
+    label: "Revisão de filiação",
+    isDirty: () =>
+      Boolean(
+        !reviewSavedRef.current && parentageDraft && (reviewDirty || confirmParentage.isPending),
+      ),
+    save: async () => {
+      if (!parentageDraft) return;
+      if (parentageValidation) throw new Error(parentageValidation);
+      if (confirmParentage.isPending) throw new Error("Aguarde a confirmação da filiação.");
+      await confirmParentage.mutateAsync(parentageDraft);
+    },
+    discard: () => {
+      if (confirmParentage.isPending) throw new Error("Aguarde a confirmação da filiação.");
+      closeParentageReview();
+    },
+  });
+
   const quickTarget = persons.find((person) => person.id === quickRelative?.personId);
   const quickTag =
     quickTarget?.is_proband && quickRelative?.kind !== "Irmã(o)" ? quickRelative?.kind : undefined;
@@ -1331,6 +1647,7 @@ function GenogramCanvasInner({
   const originName = persons.find((person) => person.id === originId);
   const startConnection = (id: string | null = null) => {
     setMobileSheetOpen(false);
+    setPickingParentSlot(null);
     setConnection({ originId: id });
   };
 
@@ -1362,6 +1679,27 @@ function GenogramCanvasInner({
 
   const activatePerson = useCallback(
     (id: string) => {
+      if (parentageDraft && pickingParentSlot !== null) {
+        if (
+          id === parentageDraft.childId ||
+          id === parentageDraft.proposed[1 - pickingParentSlot].personId
+        ) {
+          toast.error("Escolha outra pessoa para este vínculo.");
+          return;
+        }
+        const current = parentageDraft.current.find(({ personId }) => personId === id);
+        const previous = parentageDraft.proposed[pickingParentSlot];
+        const proposed: ParentageDraft["proposed"] = [...parentageDraft.proposed];
+        proposed[pickingParentSlot] = {
+          personId: id,
+          kind: id === previous.personId ? previous.kind : (current?.kind ?? ""),
+        };
+        setParentageDraft({ ...parentageDraft, proposed });
+        setReviewDirty(true);
+        setPickingParentSlot(null);
+        setReviewCollapsed(false);
+        return;
+      }
       if (!connection) return openPerson(id);
       if (!connection.originId) {
         setConnection({ originId: id });
@@ -1369,7 +1707,7 @@ function GenogramCanvasInner({
       }
       if (connection.originId !== id) selectPair(connection.originId, id);
     },
-    [connection, openPerson, selectPair],
+    [connection, openPerson, parentageDraft, pickingParentSlot, selectPair],
   );
 
   const onConnect = useCallback(
@@ -1433,7 +1771,6 @@ function GenogramCanvasInner({
           <ul className="mt-2 divide-y divide-border">
             {directParents.map((parent) => {
               const person = persons.find((row) => row.id === parent.personId);
-              const entry = data?.rels.find((row) => row.id === parent.relationshipId);
               const kind = relationshipQualifiers.parent.find(
                 (item) => item.value === parent.kind,
               )?.label;
@@ -1454,64 +1791,23 @@ function GenogramCanvasInner({
                       ? kind || "Natureza por confirmar"
                       : "Sugerido pelo parentesco"}
                   </p>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="mt-2 min-h-11"
-                    onClick={() => {
-                      setMobileSheetOpen(false);
-                      setRelDialog({
-                        open: true,
-                        editing: entry,
-                        seed: { from: parent.personId, to: focusedPerson.id, type: "parent" },
-                      });
-                    }}
-                  >
-                    {entry ? "Revisar vínculo" : "Confirmar filiação"}
-                  </Button>
                 </li>
               );
             })}
           </ul>
         ) : (
-          <p className="my-2 text-sm text-muted-foreground">
-            Nenhum pai ou mãe identificado no mapa.
-          </p>
+          <p className="my-2 text-sm text-muted-foreground">Sem filiação registrada no mapa.</p>
         )}
-        {suggestedParents.length > 0 && (
-          <div className="my-3 rounded-md border border-border bg-background p-3">
-            <p className="text-sm text-muted-foreground">
-              Use a confirmação conjunta somente se todos os pais sugeridos forem biológicos.
-            </p>
-            <Button
-              size="sm"
-              variant="outline"
-              className="mt-2 min-h-11"
-              onClick={() => {
-                setMobileSheetOpen(false);
-                setParentProposal({
-                  childId: focusedPerson.id,
-                  parentIds: suggestedParents.map((parent) => parent.personId),
-                });
-              }}
-            >
-              {suggestedParents.length === 1 ? "Confirmar sugestão" : "Confirmar pais sugeridos"}
-            </Button>
-          </div>
-        )}
-        {resolvedParents.filter((parent) => parent.source === "explicit").length < 2 && (
-          <Button
-            size="sm"
-            variant="forest"
-            className="mt-2 min-h-11"
-            onClick={() => {
-              setMobileSheetOpen(false);
-              setRelDialog({ open: true, seed: { to: focusedPerson.id, type: "parent" } });
-            }}
-          >
-            <Link2 className="size-4" /> Definir filiação
-          </Button>
-        )}
+        <Button
+          ref={reviewEditTriggerRef}
+          size="sm"
+          variant="forest"
+          className="mt-2 min-h-11"
+          onClick={(event) => startParentageReview(focusedPerson.id, event.currentTarget)}
+        >
+          <Link2 className="size-4" aria-hidden />{" "}
+          {directParents.length ? "Revisar filiação" : "Definir filiação"}
+        </Button>
       </section>
       <div className="mt-4 flex flex-wrap gap-2">
         <Button
@@ -1611,12 +1907,42 @@ function GenogramCanvasInner({
     </>
   );
 
+  const reviewPanel = parentageDraft && (
+    <ParentageReviewPanel
+      draft={parentageDraft}
+      people={qualifiedPersons}
+      previousSource={previousSource}
+      error={confirmParentage.error?.message}
+      validation={parentageValidation}
+      pending={confirmParentage.isPending}
+      onChange={(draft) => {
+        confirmParentage.reset();
+        setReviewDirty(true);
+        setParentageDraft(draft);
+      }}
+      onConfirm={() => confirmParentage.mutate(parentageDraft)}
+      onClose={closeParentageReview}
+      onShowMap={showParentageOnMap}
+      onPickParent={(slot) => {
+        setConnection(null);
+        setPickingParentSlot(slot);
+        if (isMobile) setReviewCollapsed(true);
+        requestAnimationFrame(() => {
+          stageRef.current?.scrollIntoView({ block: "nearest" });
+          stageRef.current?.focus({ preventScroll: true });
+        });
+      }}
+    />
+  );
+
   return (
     <div
       ref={rootRef}
       className={cn(
         "atlas-genogram bg-background",
-        !panelOpen && "gv-panel-collapsed",
+        !panelOpen && !parentageDraft && "gv-panel-collapsed",
+        parentageDraft && "geno-editor-reviewing",
+        pickingParentSlot !== null && "geno-parentage-picking",
         isFullscreen && "geno-editor-expanded",
       )}
     >
@@ -1695,6 +2021,7 @@ function GenogramCanvasInner({
               {isFullscreen ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
             </Button>
             <Button
+              hidden={!!parentageDraft}
               size="icon"
               variant="ghost"
               className="hidden md:inline-flex"
@@ -1924,20 +2251,92 @@ function GenogramCanvasInner({
           </div>
         )}
 
+        {pickingParentSlot !== null && (
+          <div className="geno-parentage-feedback">
+            <span role="status">Selecione o genitor {pickingParentSlot + 1} na árvore.</span>
+            <Button
+              className="min-h-11"
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setPickingParentSlot(null);
+                setReviewCollapsed(false);
+              }}
+            >
+              Cancelar seleção
+            </Button>
+          </div>
+        )}
+        {isMobile && parentageDraft && reviewCollapsed && pickingParentSlot === null && (
+          <div className="geno-parentage-feedback">
+            <span>
+              Prévia de filiação ·{" "}
+              {personName(persons.find((person) => person.id === parentageDraft.childId))}
+            </span>
+            <Button
+              className="min-h-11"
+              size="sm"
+              variant="outline"
+              onClick={() => setReviewCollapsed(false)}
+            >
+              Voltar à revisão
+            </Button>
+          </div>
+        )}
+        {confirmedParentage && !parentageDraft && (
+          <div className="geno-parentage-feedback">
+            <span role="status">
+              {confirmedParentage.parentIds.length ? "Filiação confirmada" : "Filiação atualizada"}{" "}
+              · {personName(persons.find((person) => person.id === confirmedParentage.childId))}
+              {confirmedParentage.source !== "unverified" && (
+                <small className="block font-normal">
+                  {parentageSources[confirmedParentage.source]}
+                </small>
+              )}
+            </span>
+            <Button
+              className="min-h-11"
+              size="sm"
+              variant="outline"
+              disabled={undoParentage.isPending}
+              onClick={() => undoParentage.mutate(confirmedParentage.reviewId)}
+            >
+              <Undo2 className="size-4" aria-hidden />{" "}
+              {undoParentage.isPending ? "Restaurando…" : "Desfazer filiação"}
+            </Button>
+            <Button
+              className="size-11 shrink-0"
+              variant="ghost"
+              aria-label="Fechar confirmação"
+              disabled={undoParentage.isPending}
+              onClick={() => setConfirmedParentage(null)}
+            >
+              <X className="size-4" aria-hidden />
+            </Button>
+          </div>
+        )}
         {/* ── CANVAS ──────── */}
-        <div className="atlas-map-stage">
+        <div className="atlas-map-stage" ref={stageRef} tabIndex={-1} aria-label="Mapa da família">
           {qualifiedCount > 0 && !connection && (
             <div className="geno-editor-status">
               {warnings.length > 0 && (
-                <Popover>
+                <Popover open={warningsOpen} onOpenChange={setWarningsOpen}>
                   <PopoverTrigger asChild>
-                    <Button size="sm" variant="outline" className="geno-editor-review">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="geno-editor-review"
+                      aria-label={`${warnings.length} para revisar`}
+                    >
                       <AlertTriangle className="size-4" /> {warnings.length} para revisar
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent
                     className="w-[min(24rem,calc(100vw-2rem))] max-h-96 overflow-y-auto"
                     align="start"
+                    onCloseAutoFocus={(event) => {
+                      if (parentageDraft) event.preventDefault();
+                    }}
                   >
                     <h3 className="mb-2 text-sm font-semibold">Pendências do mapa</h3>
                     <ul className="divide-y divide-border">
@@ -1950,10 +2349,7 @@ function GenogramCanvasInner({
                             <button
                               type="button"
                               className="min-h-11 text-left hover:underline"
-                              onClick={() => {
-                                locatePerson(warning.personId);
-                                if (isMobile) setMobileSheetOpen(true);
-                              }}
+                              onClick={() => startParentageReview(warning.personId)}
                             >
                               {warning.message}
                             </button>
@@ -2050,7 +2446,11 @@ function GenogramCanvasInner({
                 }}
               >
                 <ReactFlow
-                  nodes={interactiveNodes}
+                  nodes={interactiveNodes.map((node) =>
+                    reviewHighlights.has(node.id)
+                      ? { ...node, className: cn(node.className, "geno-parentage-highlight") }
+                      : node,
+                  )}
                   edges={visibleEdges}
                   nodeTypes={nodeTypes}
                   edgeTypes={edgeTypes}
@@ -2102,6 +2502,9 @@ function GenogramCanvasInner({
                     size={1}
                     style={{ opacity: 0.25 }}
                   />
+                  {parentagePreview && (
+                    <ParentagePaths preview={parentagePreview} nodes={positionedNodes} />
+                  )}
                   <Controls
                     className="geno-editor-map-controls overflow-hidden rounded-md"
                     showInteractive={false}
@@ -2128,6 +2531,7 @@ function GenogramCanvasInner({
                     connectionOriginId={originId}
                     selectedPersonId={connection ? originId : focusedPerson?.id}
                     focusRequest={focusRequest}
+                    parentagePreview={parentagePreview}
                     fitRequest={spatialFitRequest}
                     canMovePeople={canMoveLayout}
                     onMovePerson={moveSpatialPerson}
@@ -2183,6 +2587,7 @@ function GenogramCanvasInner({
             </>
           )}
         </div>
+        {isMobile && !reviewCollapsed && reviewPanel}
       </div>
       {isMobile ? (
         <Sheet open={mobileSheetOpen} onOpenChange={setMobileSheetOpen}>
@@ -2193,6 +2598,8 @@ function GenogramCanvasInner({
             <div className="atlas-person-panel atlas-person-panel--sheet">{personPanel}</div>
           </SheetContent>
         </Sheet>
+      ) : parentageDraft ? (
+        reviewPanel
       ) : (
         <aside
           className="atlas-person-panel"
@@ -2242,39 +2649,6 @@ function GenogramCanvasInner({
         seed={relDialog.seed}
         editing={relDialog.editing}
       />
-
-      <AlertDialog
-        open={!!parentProposal}
-        onOpenChange={(open) => {
-          if (!open && !confirmParents.isPending) setParentProposal(null);
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Registrar filiação biológica?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {personName(persons.find((person) => person.id === parentProposal?.childId))}
-              {" ficará com a filiação registrada para "}
-              {parentProposal?.parentIds
-                .map((id) => personName(persons.find((person) => person.id === id)))
-                .join(" e ")}
-              .
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={confirmParents.isPending}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={!parentProposal || confirmParents.isPending}
-              onClick={(event) => {
-                event.preventDefault();
-                if (parentProposal) confirmParents.mutate(parentProposal);
-              }}
-            >
-              {confirmParents.isPending ? "Registrando…" : "Registrar filiação"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogContent>

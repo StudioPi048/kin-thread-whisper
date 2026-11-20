@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { formatDateBR, relationshipLabel, relationshipQualifiers } from "@/lib/genogram";
 import { cn } from "@/lib/utils";
 import type { PersonNodeData } from "./person-node";
+import type { ParentagePreview } from "./parentage-preview";
 import { personSymbol } from "./person-symbol";
 import {
   buildSpatialLayout,
@@ -43,7 +44,8 @@ interface GenogramSpatialViewProps {
   onSelectPerson: (id: string) => void;
   selectedPersonId?: string | null;
   connectionOriginId?: string | null;
-  focusRequest?: { personId: string };
+  parentagePreview?: ParentagePreview | null;
+  focusRequest?: { personId: string; relatedPersonIds?: readonly string[] };
   fitRequest?: number;
   canMovePeople?: boolean;
   getMovePersonDelta?: (id: string, deltaX: number) => number;
@@ -108,8 +110,15 @@ function plaqueNameSize(name: string, scale: number) {
 }
 
 function fitCamera(layout: Layout, frame: Frame, angles: SpatialAngles): Camera {
+  return fitProjectedPeople(projectSpatialLayout(layout, angles).people, frame, angles);
+}
+
+function fitProjectedPeople(
+  projected: ProjectedPerson[],
+  frame: Frame,
+  angles: SpatialAngles,
+): Camera {
   const { yaw, pitch } = angles;
-  const projected = projectSpatialLayout(layout, { yaw, pitch }).people;
   if (!projected.length || !frame.width || !frame.height) {
     return { x: 0, y: 0, zoom: 1, yaw, pitch };
   }
@@ -245,6 +254,7 @@ export function GenogramSpatialView({
   onSelectPerson,
   selectedPersonId,
   connectionOriginId,
+  parentagePreview,
   focusRequest,
   fitRequest,
   canMovePeople,
@@ -327,9 +337,17 @@ export function GenogramSpatialView({
         displayLayout,
         { yaw: camera.yaw, pitch: camera.pitch },
         selectedPersonId,
-        { separateLinks, expandedPersonId },
+        { separateLinks, expandedPersonId, parentagePreview },
       ),
-    [displayLayout, camera.yaw, camera.pitch, selectedPersonId, separateLinks, expandedPersonId],
+    [
+      displayLayout,
+      camera.yaw,
+      camera.pitch,
+      selectedPersonId,
+      separateLinks,
+      expandedPersonId,
+      parentagePreview,
+    ],
   );
   const names = useMemo(
     () => display.people.map((person) => ({ person, ...spatialPersonLabel(person.data) })),
@@ -361,10 +379,15 @@ export function GenogramSpatialView({
     const requested = display.people.find(({ id }) => id === focusRequest.personId);
     if (!requested) return;
     lastFocus.current = focusRequest;
-    changeCamera((current) =>
-      centerPerson(current, requested, Math.max(1.08 / requested.scale, current.zoom)),
+    const related = display.people.filter(
+      ({ id }) => focusRequest.relatedPersonIds?.includes(id) && id !== requested.id,
     );
-  }, [changeCamera, focusRequest, hasFrame, display.people]);
+    changeCamera((current) =>
+      related.length
+        ? fitProjectedPeople([requested, ...related], frame, current)
+        : centerPerson(current, requested, Math.max(1.08 / requested.scale, current.zoom)),
+    );
+  }, [changeCamera, focusRequest, frame, hasFrame, display.people]);
 
   useEffect(() => {
     const viewport = viewportRef.current;
@@ -636,13 +659,17 @@ export function GenogramSpatialView({
   const expandedUnion = shownUnions.find(({ id }) => id === chosenUnion);
   const highlightedUnion = expandedUnion?.id ?? activeRoute?.unionId;
   const routeIsActive = (route: SpatialRoute) =>
-    highlightedUnion
-      ? route.unionId === highlightedUnion
-      : activeRoute
-        ? route.id === activeRoute.id
-        : route.highlighted;
+    parentagePreview
+      ? false
+      : highlightedUnion
+        ? route.unionId === highlightedUnion
+        : activeRoute
+          ? route.id === activeRoute.id
+          : route.highlighted;
   const routeIsMuted = (route: SpatialRoute) =>
-    (activeRoute || expandedUnion) && !routeIsActive(route) ? true : undefined;
+    parentagePreview || ((activeRoute || expandedUnion) && !routeIsActive(route))
+      ? true
+      : undefined;
   const routeClass = (route: SpatialRoute) =>
     cn(
       "geno-spatial-link",
@@ -836,6 +863,31 @@ export function GenogramSpatialView({
                         )}
                       </g>
                     ))}
+                  {display.parentageTracks.map(({ role, paths }) => (
+                    <g
+                      key={role}
+                      data-parentage-track={role}
+                      className="geno-spatial-parentage-track"
+                    >
+                      {paths.map((path, index) => (
+                        <path
+                          key={index}
+                          d={path}
+                          className="geno-spatial-parentage-clearance"
+                          vectorEffect="non-scaling-stroke"
+                        />
+                      ))}
+                      {paths.map((path, index) => (
+                        <path
+                          key={index}
+                          d={path}
+                          className="geno-spatial-parentage-line"
+                          data-parentage-preview={role === "previous" ? "current" : role}
+                          vectorEffect="non-scaling-stroke"
+                        />
+                      ))}
+                    </g>
+                  ))}
                 </g>
               </svg>
               <div className="geno-spatial-ruler" aria-hidden="true">
@@ -855,11 +907,37 @@ export function GenogramSpatialView({
                   const birth = formatDateBR(data.birth_date);
                   const death = formatDateBR(data.death_date);
                   const plaqueScale = person.scale * camera.zoom;
+                  const isSubject = parentagePreview?.childId === person.id;
+                  const isPrevious =
+                    parentagePreview?.phase === "draft" &&
+                    parentagePreview.previousParentIds.includes(person.id);
+                  const isProposed = parentagePreview?.proposedParentIds.includes(person.id);
+                  const parentageRole = isSubject
+                    ? "subject"
+                    : isProposed && parentagePreview?.phase === "confirmed"
+                      ? "confirmed"
+                      : isPrevious && isProposed
+                        ? "retained"
+                        : isPrevious
+                          ? "previous"
+                          : isProposed
+                            ? "proposed"
+                            : undefined;
+                  const roleLabel =
+                    parentageRole &&
+                    {
+                      subject: "Pessoa cuja filiação está em revisão",
+                      retained: "Genitor comum à filiação atual e à proposta",
+                      previous: "Genitor atual",
+                      proposed: "Genitor proposto",
+                      confirmed: "Genitor confirmado",
+                    }[parentageRole];
                   const label = [
                     name,
                     relationship,
                     birth && `Nascimento ${birth}`,
                     death ? `Falecimento ${death}` : data.is_deceased && "Falecimento registrado",
+                    roleLabel,
                   ]
                     .filter(Boolean)
                     .join(", ");
@@ -887,6 +965,7 @@ export function GenogramSpatialView({
                       data-branch={person.branch}
                       data-person-id={person.id}
                       data-generation={person.generation}
+                      data-parentage-person={parentageRole}
                       data-connecting={person.id === connectionOriginId || undefined}
                       onClick={(event) => {
                         if (event.detail && skipPersonClick.current) return;

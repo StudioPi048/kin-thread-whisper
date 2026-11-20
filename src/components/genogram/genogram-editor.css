@@ -259,3 +259,286 @@
     display: none;
   }
 }
+
+/* The comparison stays beside the working map. */
+.geno-parentage-review {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px;
+  border-inline-start: 1px solid var(--border);
+  color: var(--ink);
+  background: var(--surface-document);
+}
+
+.geno-parentage-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.geno-parentage-header h2 {
+  font-size: 1.0625rem;
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.geno-parentage-header p {
+  margin-top: 6px;
+  color: var(--forest);
+  font-size: 1rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.geno-parentage-review h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+  font-size: 0.9375rem;
+  font-weight: 650;
+}
+
+.geno-parentage-review fieldset {
+  display: grid;
+  min-width: 0;
+}
+
+.geno-parentage-review label {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  color: var(--ink);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.geno-parentage-review select,
+.geno-parentage-review textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 6px 8px;
+  border: 1px solid var(--input);
+  border-radius: 6px;
+  background: var(--card);
+  font-size: 1rem;
+}
+
+.geno-parentage-current,
+.geno-parentage-proposal,
+.geno-parentage-source {
+  padding-block: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.geno-parentage-proposal h3 {
+  color: var(--bronze);
+}
+
+.geno-parentage-stroke {
+  display: inline-block;
+  width: 20px;
+  border-top: 2px solid var(--forest);
+}
+
+.geno-parentage-stroke--proposal {
+  border-top-style: dashed;
+  border-color: var(--bronze);
+}
+
+.geno-parentage-current ul {
+  display: grid;
+  gap: 8px;
+  padding-top: 3px;
+}
+
+.geno-parentage-current li {
+  display: flex;
+  flex-direction: column;
+  overflow-wrap: anywhere;
+  font-size: 0.875rem;
+}
+
+.geno-parentage-current li span,
+.geno-parentage-current p,
+.geno-parentage-selected span {
+  color: var(--ink-soft);
+  font-size: 0.875rem;
+}
+
+.geno-parentage-slot {
+  display: grid;
+  gap: 6px;
+  padding-top: 8px;
+}
+
+.geno-parentage-slot + .geno-parentage-slot {
+  margin-top: 9px;
+  border-top: 1px solid var(--border);
+}
+
+.geno-parentage-selected {
+  font-size: 0.875rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.geno-parentage-removals,
+.geno-parentage-error {
+  margin-top: 10px;
+  color: var(--clinical-critical);
+  font-size: 0.875rem;
+}
+
+.geno-parentage-source summary {
+  min-height: 32px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.geno-parentage-source label + label {
+  margin-top: 8px;
+}
+
+.geno-parentage-review footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.geno-parentage-feedback {
+  z-index: 11;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 5px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--forest-mist);
+  color: var(--forest);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.geno-parentage-feedback span {
+  min-width: 0;
+  flex: 1 1 165px;
+  overflow-wrap: anywhere;
+}
+
+.geno-parentage-paths {
+  position: absolute;
+  inset: 0 auto auto 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.geno-parentage-paths path {
+  fill: none;
+  stroke: var(--forest);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.geno-parentage-paths path[data-parentage-preview="proposed"] {
+  stroke: var(--bronze);
+  stroke-dasharray: 6 5;
+}
+
+.geno-parentage-paths path[data-parentage-preview="confirmed"] {
+  animation: geno-parentage-confirmed 1.8s ease-out forwards;
+}
+
+.geno-parentage-highlight .geno-person-name {
+  outline: 1px solid var(--forest);
+}
+
+@keyframes geno-parentage-confirmed {
+  from {
+    opacity: 1;
+  }
+  60% {
+    opacity: 0.85;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .geno-parentage-paths path[data-parentage-preview="confirmed"] {
+    animation: none;
+  }
+}
+
+@media (min-width: 768px) {
+  .atlas-genogram.geno-editor-reviewing {
+    grid-template-columns: minmax(0, 1fr) clamp(280px, 27vw, 350px);
+  }
+
+  .geno-parentage-review {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .geno-parentage-header {
+    flex: none;
+    padding: 14px 18px 10px;
+  }
+
+  .geno-parentage-review form {
+    display: flex;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
+  }
+
+  .geno-parentage-fields {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding-inline: 18px;
+  }
+
+  .geno-parentage-review .geno-parentage-error {
+    padding-inline: 18px;
+  }
+
+  .geno-parentage-review footer {
+    flex: none;
+    margin: 0;
+    padding: 10px 18px;
+    border-top: 1px solid var(--border);
+  }
+}
+
+@media (max-width: 767px) {
+  .geno-parentage-review {
+    padding: 14px;
+    border-inline-start: 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .geno-editor-expanded.geno-editor-reviewing .atlas-map-workspace {
+    overflow-y: auto;
+  }
+
+  .geno-editor-expanded.geno-editor-reviewing .atlas-map-stage {
+    flex: 1 0 min(54dvh, 440px);
+  }
+}
+
+.geno-parentage-picking .react-flow__node-person,
+.geno-parentage-picking .geno-spatial-person {
+  cursor: crosshair;
+}

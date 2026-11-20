@@ -5,6 +5,7 @@ export type ExportTable =
   | "client_intakes"
   | "genogram_persons"
   | "genogram_relationships"
+  | "genogram_parentage_reviews"
   | "genogram_layouts"
   | "genogram_node_positions"
   | "clinical_sessions"
@@ -44,6 +45,7 @@ const caseTables = [
   "client_intakes",
   "genogram_persons",
   "genogram_relationships",
+  "genogram_parentage_reviews",
   "genogram_layouts",
   "clinical_sessions",
   "hypothesis_reviews",

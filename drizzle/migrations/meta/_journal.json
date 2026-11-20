@@ -57,6 +57,13 @@
       "when": 1795201260000,
       "tag": "0007_genogram_source_integrity",
       "breakpoints": false
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1795203300000,
+      "tag": "0008_parentage_reviews",
+      "breakpoints": false
     }
   ]
 }

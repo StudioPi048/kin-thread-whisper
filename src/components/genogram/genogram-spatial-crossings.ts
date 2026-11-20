@@ -22,8 +22,20 @@ const EPSILON = 0.01;
 const BRIDGE_RADIUS = 15;
 const BRIDGE_HEIGHT = 19;
 
-function pathThrough(points: SpatialPoint2D[]) {
+export function pathThrough(points: SpatialPoint2D[]) {
   return points.map(({ x, y }, index) => `${index === 0 ? "M" : "L"} ${x} ${y}`).join(" ");
+}
+
+export function avoidCards(x: number, cards: { left: number; right: number }[]) {
+  const merged: typeof cards = [];
+  for (const card of cards.sort((a, b) => a.left - b.left)) {
+    const last = merged.at(-1);
+    if (last && card.left <= last.right) last.right = Math.max(last.right, card.right);
+    else merged.push({ ...card });
+  }
+  const blocked = merged.find(({ left, right }) => x > left && x < right);
+  if (!blocked) return x;
+  return x - blocked.left < blocked.right - x ? blocked.left : blocked.right;
 }
 
 function coordinates(segment: Segment, along: number, normal = 0) {

@@ -348,7 +348,11 @@ export function buildLogicalGraph({
     });
   }
 
-  const declaredChildren = new Set<string>();
+  // A review can explicitly leave a parent unknown. Keep a legacy role from
+  // recreating a relationship that the professional just removed.
+  const reviewedChildren = new Set(persons.filter((p) => p.parentage_reviewed).map((p) => p.id));
+  const declaredChildren = new Set(reviewedChildren);
+  const childrenWithRecords = new Set<string>();
   const invalidChildren = new Set<string>();
   const unionRels = new Map<string, RelRow>();
   const siblings = new Map<string, Set<string>>();
@@ -358,6 +362,7 @@ export function buildLogicalGraph({
     const to = byId.get(r.to_person_id);
     if (r.relationship_type === "parent" && to) {
       declaredChildren.add(to.id);
+      childrenWithRecords.add(to.id);
       if (!from || from.client_id !== to.client_id || r.client_id !== to.client_id) {
         warn(to.id, "um dos pais informados não consta neste dossiê. Revise a filiação.");
         continue;
@@ -532,7 +537,7 @@ export function buildLogicalGraph({
       if (!shared) continue;
     }
     const parents = getResolvedParents(g, id);
-    if (shared || (declaredBlood && parents.length === 0 && !declaredChildren.has(id))) {
+    if (shared || (declaredBlood && parents.length === 0 && !childrenWithRecords.has(id))) {
       g.topRowIds.add(id);
       if (parents.length === 0)
         warn(id, "irmandade declarada. Informe os pais conhecidos para conectar a filiação.");
@@ -558,7 +563,11 @@ export function buildLogicalGraph({
     if (!resolved.length || resolved.some((parent) => parent.kind !== "biological")) continue;
     let candidatePair = [...resolved];
 
-    if (resolved.length === 1 && resolved[0].source === "explicit") {
+    if (
+      resolved.length === 1 &&
+      resolved[0].source === "explicit" &&
+      !reviewedChildren.has(anchor.id)
+    ) {
       const [recorded] = resolved;
       const role = smartNormalizeRelationship(byId.get(recorded.personId)?.relationship_to_proband);
       const matched = family.parents.findIndex((slot) => slot === role);

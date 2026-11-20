@@ -143,6 +143,37 @@
   stroke-width: 6;
 }
 
+.geno-spatial-parentage-track {
+  --track-ink: var(--forest-mid);
+  pointer-events: none;
+}
+
+.geno-spatial-parentage-track[data-parentage-track="proposed"] {
+  --track-ink: var(--bronze);
+  stroke-dasharray: 7 7;
+}
+
+.geno-spatial-parentage-track[data-parentage-track="confirmed"] {
+  --track-ink: var(--forest);
+}
+
+.geno-spatial-parentage-line,
+.geno-spatial-parentage-clearance {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.geno-spatial-parentage-line {
+  stroke: var(--track-ink);
+  stroke-width: 3;
+}
+
+.geno-spatial-parentage-clearance {
+  stroke: var(--spatial-field);
+  stroke-width: 6;
+}
+
 .geno-spatial-link-hit {
   stroke: transparent;
   stroke-width: 10;
@@ -236,6 +267,30 @@
 
 .geno-spatial-person[data-connecting="true"] {
   outline-style: dashed;
+}
+
+.geno-spatial-person[data-parentage-person] {
+  z-index: 1;
+  outline: 4px solid var(--forest-mid);
+  outline-offset: 3px;
+}
+
+.geno-spatial-person[data-parentage-person="subject"] {
+  background: var(--forest-mist);
+}
+
+.geno-spatial-person[data-parentage-person="proposed"] {
+  outline-color: var(--bronze);
+  outline-style: dashed;
+}
+
+.geno-spatial-person[data-parentage-person="retained"] {
+  outline-style: double;
+}
+
+.geno-spatial-person[data-parentage-person]:focus-visible {
+  outline: 4px solid var(--ring);
+  outline-offset: 8px;
 }
 
 .geno-spatial-symbol {

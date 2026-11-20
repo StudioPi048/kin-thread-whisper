@@ -297,4 +297,108 @@ describe("spatial genossociograma", () => {
     expect(people[0].height).toBeGreaterThan(people[1].height);
     expect(people[0].x + people[0].width / 2).toBeLessThan(people[1].x - people[1].width / 2);
   });
+
+  it("compares one person's filiation without tracing the sibling or changing the rest of the map", () => {
+    const nodes = [
+      person("consultante", -350, 0),
+      person("irmã", 350, 0),
+      person("Clara", -380, 1),
+      person("Paulo", -25, 1),
+      person("Miguel", 330, 1),
+      union("Clara-Paulo", -185, 1),
+    ];
+    const edges = [
+      partner("Clara", "Clara-Paulo"),
+      partner("Paulo", "Clara-Paulo"),
+      pedigree("Clara-Paulo", ["consultante", "irmã"]),
+    ];
+    const layout = buildSpatialLayout(nodes, edges);
+    const angles = { yaw: SPATIAL_MAX_YAW, pitch: SPATIAL_MAX_PITCH };
+    const base = projectSpatialLayout(layout, angles, "consultante");
+    const { parentageTracks, ...comparison } = projectSpatialLayout(layout, angles, "consultante", {
+      parentagePreview: {
+        phase: "draft",
+        childId: "consultante",
+        previousParentIds: ["Paulo", "Clara"],
+        proposedParentIds: ["Miguel", "Clara"],
+      },
+    });
+    expect(comparison).toEqual({
+      people: base.people,
+      unions: base.unions,
+      rows: base.rows,
+      routes: base.routes,
+      bridgeCount: base.bridgeCount,
+    });
+    const personAt = (id: string) => base.people.find((item) => item.id === id)!;
+    const [current, proposed] = parentageTracks;
+    expect([current.role, proposed.role]).toEqual(["previous", "proposed"]);
+    const child = personAt("consultante");
+    const sibling = personAt("irmã");
+    const Miguel = personAt("Miguel");
+    expect(current.paths.join(" ")).toContain(`L ${child.x} ${child.y + child.height}`);
+    expect(current.paths.join(" ")).not.toContain(`L ${sibling.x} ${sibling.y + sibling.height}`);
+    expect(current.paths.slice(0, 2)).toEqual(base.routes.slice(0, 2).map(({ path }) => path));
+    expect(proposed.paths.join(" ")).toContain(`L ${Miguel.x} ${Miguel.y}`);
+  });
+
+  it("draws just the confirmed route and omits unpublished destinations", () => {
+    const layout = buildSpatialLayout(
+      [person("consultante", -172, 0), person("Clara", 60, 1), person("Paulo", -60, 1)],
+      [],
+    );
+    const confirmed = projectSpatialLayout(layout, { yaw: 0, pitch: 0 }, "consultante", {
+      parentagePreview: {
+        phase: "confirmed",
+        childId: "consultante",
+        previousParentIds: ["Paulo"],
+        proposedParentIds: ["Clara"],
+      },
+    });
+    expect(confirmed.parentageTracks.map(({ role }) => role)).toEqual(["confirmed"]);
+    const unnamed = projectSpatialLayout(layout, { yaw: 0, pitch: 0 }, "consultante", {
+      parentagePreview: {
+        phase: "draft",
+        childId: "consultante",
+        previousParentIds: [],
+        proposedParentIds: ["Clara", "unknown"],
+      },
+    });
+    expect(unnamed.parentageTracks).toEqual([]);
+    expect(unnamed.people).toEqual(confirmed.people);
+  });
+
+  it("does not claim an unspecified repeated union for a new filiation", () => {
+    const first = "Clara-Paulo-1";
+    const second = "Clara-Paulo-2";
+    const layout = buildSpatialLayout(
+      [
+        person("consultante", -350, 0),
+        person("Clara", -320, 1),
+        person("Paulo", 320, 1),
+        union(first, 0, 1),
+        union(second, 0, 1),
+      ],
+      [
+        partner("Clara", first),
+        partner("Paulo", first),
+        partner("Clara", second),
+        partner("Paulo", second),
+      ],
+    );
+    const result = projectSpatialLayout(layout, { yaw: 0, pitch: 0 }, "consultante", {
+      expandedPersonId: "Clara",
+      parentagePreview: {
+        phase: "draft",
+        childId: "consultante",
+        previousParentIds: [],
+        proposedParentIds: ["Clara", "Paulo"],
+      },
+    });
+    const [proposed] = result.parentageTracks;
+    for (const route of result.routes) expect(proposed.paths).not.toContain(route.path);
+    for (const { id, x, y } of result.people.filter(({ id }) => id !== "consultante")) {
+      expect(proposed.paths.join(" "), id).toContain(`L ${x} ${y}`);
+    }
+  });
 });

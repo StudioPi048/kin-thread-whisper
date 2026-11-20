@@ -1,5 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // Test-only in-memory data. Loaded exclusively by vite.visual.config.ts.
+import {
+  parentageSnapshot,
+  validateParentagePlan,
+  type ParentageCandidate,
+} from "../../src/lib/parentage-review";
 const uid = "00000000-0000-4000-8000-000000000001";
 export const cid = "00000000-0000-4000-8000-000000000002";
 const now = new Date();
@@ -135,6 +140,7 @@ const db: Record<string, any[]> = {
   clients,
   genogram_persons: persons,
   genogram_relationships: rels,
+  genogram_parentage_reviews: [],
   clinical_sessions: sessions,
   audio_consent_events: [],
   profiles: [
@@ -319,9 +325,131 @@ const disabled = async () => ({
 });
 const fixtureAudio = new Map<string, Blob>();
 
+function fixtureResult(data: string) {
+  return { data, error: null };
+}
+
+function fixtureError(message: string) {
+  return { data: null, error: new Error(message) };
+}
+
+function reviewFixtureParentage(args: Record<string, unknown>) {
+  const childId = String(args._child_id);
+  const clientId = String(args._client_id);
+  const child = db.genogram_persons.find((row) => row.client_id === clientId && row.id === childId);
+  if (!child) return fixtureError("Pessoa indisponível.");
+  const beforeReviewed = Boolean(child.parentage_reviewed);
+  const relationships = db.genogram_relationships.filter((row) => row.client_id === clientId);
+  if (JSON.stringify(parentageSnapshot(relationships, childId)) !== JSON.stringify(args._expected))
+    return fixtureError("A filiação mudou. Reabra a revisão.");
+  const parents = args._parents as ParentageCandidate[];
+  const reason = validateParentagePlan(childId, parents, relationships);
+  if (reason) return fixtureError(reason);
+  const current = relationships.filter(
+    (row) => row.to_person_id === childId && row.relationship_type === "parent",
+  );
+  const before = current.map((link) => ({ ...link }));
+  const now = new Date().toISOString();
+  const after = parents.map(({ personId, kind }) => {
+    const existing = current.find((row) => row.from_person_id === personId);
+    if (existing)
+      return kind && kind !== existing.qualifier
+        ? { ...existing, qualifier: kind, updated_at: now }
+        : existing;
+    return {
+      id: crypto.randomUUID(),
+      client_id: clientId,
+      from_person_id: personId,
+      to_person_id: childId,
+      relationship_type: "parent",
+      qualifier: kind,
+      notes: null,
+      start_date: null,
+      end_date: null,
+      marriage_order: null,
+      created_at: now,
+      updated_at: now,
+    };
+  });
+  db.genogram_relationships = [
+    ...db.genogram_relationships.filter((link) => !current.includes(link)),
+    ...after,
+  ];
+  db.genogram_persons = db.genogram_persons.map((row) =>
+    row === child ? { ...row, parentage_reviewed: true } : row,
+  );
+  const id = crypto.randomUUID();
+  db.genogram_parentage_reviews.push({
+    id,
+    client_id: clientId,
+    child_id: childId,
+    professional_id: uid,
+    review_number: db.genogram_parentage_reviews.length + 1,
+    decision: args._decision,
+    source: args._source,
+    note: args._note ?? null,
+    before_links: before,
+    before_reviewed: beforeReviewed,
+    after_reviewed: true,
+    after_links: after.map((link) => ({ ...link })),
+    created_at: now,
+    undone_review_id: null,
+  });
+  return fixtureResult(id);
+}
+
+function undoFixtureParentage(args: Record<string, unknown>) {
+  const review = db.genogram_parentage_reviews.find(
+    (row) => row.id === args._review_id && row.client_id === args._client_id,
+  );
+  if (!review) return fixtureError("Revisão indisponível.");
+  const history = db.genogram_parentage_reviews.filter(
+    (row) => row.client_id === review.client_id && row.child_id === review.child_id,
+  );
+  const links = db.genogram_relationships.filter((row) => row.client_id === review.client_id);
+  if (
+    history.at(-1)?.id !== review.id ||
+    JSON.stringify(parentageSnapshot(links, review.child_id)) !==
+      JSON.stringify(parentageSnapshot(review.after_links, review.child_id))
+  )
+    return fixtureError("A filiação mudou depois da revisão.");
+  db.genogram_relationships = [
+    ...db.genogram_relationships.filter(
+      (row) =>
+        row.client_id !== review.client_id ||
+        row.to_person_id !== review.child_id ||
+        row.relationship_type !== "parent",
+    ),
+    ...review.before_links,
+  ];
+  db.genogram_persons = db.genogram_persons.map((row) =>
+    row.id === review.child_id && row.client_id === review.client_id
+      ? { ...row, parentage_reviewed: review.before_reviewed }
+      : row,
+  );
+  const id = crypto.randomUUID();
+  db.genogram_parentage_reviews.push({
+    ...review,
+    id,
+    review_number: db.genogram_parentage_reviews.length + 1,
+    decision: "undo",
+    source: history.at(-2)?.source ?? "unverified",
+    note: history.at(-2)?.note ?? null,
+    before_links: review.after_links,
+    after_links: review.before_links,
+    before_reviewed: review.after_reviewed,
+    after_reviewed: review.before_reviewed,
+    undone_review_id: review.id,
+    created_at: new Date().toISOString(),
+  });
+  return fixtureResult(id);
+}
+
 export const supabase: any = {
   from: (table: string) => new Query(table),
   rpc: async (name: string, args: Record<string, unknown>) => {
+    if (name === "review_parentage") return reviewFixtureParentage(args);
+    if (name === "undo_parentage_review") return undoFixtureParentage(args);
     if (name !== "record_audio_consent") return disabled();
     db.audio_consent_events.push({
       id: crypto.randomUUID(),

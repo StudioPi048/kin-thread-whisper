@@ -1,6 +1,13 @@
 import type { Edge, Node } from "@xyflow/react";
 import { GEN_GAP, NODE_W, PERSON_SHAPE, type ParentKind } from "@/lib/geno/build";
-import { renderSpatialRoutes, type SpatialPoint2D } from "./genogram-spatial-crossings";
+import {
+  avoidCards,
+  pathThrough,
+  renderSpatialRoutes,
+  type SpatialPoint2D,
+} from "./genogram-spatial-crossings";
+import { buildSpatialParentageTracks } from "./genogram-spatial-parentage";
+import type { ParentagePreview } from "./parentage-preview";
 import type { PersonNodeData } from "./person-node";
 
 export const SPATIAL_CARD_WIDTH = 222;
@@ -22,7 +29,11 @@ const UNION_SEPARATION = 32;
 type SpatialPoint = SpatialPoint2D & { z: number };
 export type SpatialAngles = { yaw: number; pitch: number };
 export type SpatialBranch = "paternal" | "maternal" | "common";
-type SpatialLayoutOptions = { separateLinks?: boolean; expandedPersonId?: string | null };
+type SpatialLayoutOptions = {
+  separateLinks?: boolean;
+  expandedPersonId?: string | null;
+  parentagePreview?: ParentagePreview | null;
+};
 
 type SpatialPerson = SpatialPoint & {
   id: string;
@@ -223,23 +234,11 @@ function reserveRail(rails: Map<string, Span[][]>, key: string, span: Span) {
   return lane;
 }
 
-function avoidCards(x: number, cards: Span[]) {
-  const merged: Span[] = [];
-  for (const card of cards.sort((a, b) => a.left - b.left)) {
-    const last = merged.at(-1);
-    if (last && card.left <= last.right) last.right = Math.max(last.right, card.right);
-    else merged.push({ ...card });
-  }
-  const blocked = merged.find((card) => x > card.left && x < card.right);
-  if (!blocked) return x;
-  return x - blocked.left < blocked.right - x ? blocked.left : blocked.right;
-}
-
 export function projectSpatialLayout(
   layout: ReturnType<typeof buildSpatialLayout>,
   angles: SpatialAngles,
   selectedId?: string | null,
-  { separateLinks = false, expandedPersonId }: SpatialLayoutOptions = {},
+  { separateLinks = false, expandedPersonId, parentagePreview }: SpatialLayoutOptions = {},
 ) {
   const rows = new Map(
     layout.rows.map(([_, row]) => {
@@ -344,6 +343,7 @@ export function projectSpatialLayout(
     }
   }
   const routes: SpatialRoute[] = [];
+  const childStrokes = new Map<string, string[]>();
   for (const edge of layout.edges) {
     if (edge.type === "pedigree") {
       const union = unionsById.get(String(edge.data?.unionId ?? edge.source));
@@ -427,8 +427,23 @@ export function projectSpatialLayout(
           selectedUnions.has(union.id) &&
           (union.partners.includes(selectedId ?? "") ||
             children.some((person) => person.id === selectedId));
+        const id = `${edge.id}-${key}`;
+        if (parentagePreview && !suggested) {
+          const childIndex = children.findIndex((child) => child.id === parentagePreview.childId);
+          if (childIndex !== -1) {
+            const childAnchor = anchors[childIndex];
+            childStrokes.set(id, [
+              pathThrough(strokes[0]),
+              pathThrough([
+                { x: column, y: barY },
+                { x: childAnchor.x, y: barY },
+              ]),
+              pathThrough(strokes[childIndex + 2]),
+            ]);
+          }
+        }
         routes.push({
-          id: `${edge.id}-${key}`,
+          id,
           strokes,
           edge,
           branch: union.branch,
@@ -501,5 +516,12 @@ export function projectSpatialLayout(
     separateLinks ? { x: bridgeDepth.x / 5, y: -bridgeDepth.y } : null,
   );
   const bridgeCount = rendered.reduce((sum, route) => sum + route.bridgePaths.length, 0);
-  return { people, unions, rows, routes: rendered, bridgeCount };
+  const parentageTracks = buildSpatialParentageTracks({
+    preview: parentagePreview,
+    people,
+    unions,
+    routes: rendered,
+    childStrokes,
+  });
+  return { people, unions, rows, routes: rendered, bridgeCount, parentageTracks };
 }

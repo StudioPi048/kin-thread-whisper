@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { buildLogicalGraph, layoutGraph, genY, GEN_GAP } from "./build";
+import {
+  buildLogicalGraph,
+  getResolvedParents,
+  getSuggestedParents,
+  layoutGraph,
+  genY,
+  GEN_GAP,
+} from "./build";
 import { checkLayoutInvariants } from "./verify";
 import { LayoutHistory } from "./layout-history";
 import { constrainSnapshotY } from "./layout-history";
@@ -95,6 +102,51 @@ function threeGen() {
     rels,
   };
 }
+
+describe("filiação revisada e etiquetas legadas", () => {
+  it("não recria pais removidos de uma pessoa revisada e restaura a leitura legada ao desfazer a primeira revisão", () => {
+    const consultante = p("Consultante", { is_proband: true, parentage_reviewed: true });
+    const pai = p("Pai", { relationship_to_proband: "Pai" });
+    const mae = p("Mãe", { relationship_to_proband: "Mãe" });
+    const irma = p("Irmã", { relationship_to_proband: "Irmã biológica", parentage_reviewed: true });
+    const rels = [
+      { ...par(consultante.id, irma.id), relationship_type: "sibling", qualifier: "biological" },
+    ];
+    const graph = buildLogicalGraph({ persons: [consultante, pai, mae, irma], rels });
+    expect(getResolvedParents(graph, consultante.id)).toEqual([]);
+    expect(getSuggestedParents(graph, consultante.id)).toEqual([]);
+    expect(getResolvedParents(graph, irma.id)).toEqual([]);
+    expect(graph.topRowIds).toEqual(new Set([consultante.id, irma.id]));
+
+    const restored = buildLogicalGraph({
+      persons: [{ ...consultante, parentage_reviewed: false }, pai, mae, irma],
+      rels,
+    });
+    expect(getResolvedParents(restored, consultante.id).map(({ personId }) => personId)).toEqual([
+      pai.id,
+      mae.id,
+    ]);
+    expect(restored.topRowIds).toEqual(new Set([consultante.id, irma.id]));
+  });
+
+  it("respeita a decisão de manter só um genitor e de não confirmar o ramo de um tio", () => {
+    const consultante = p("Consultante", { is_proband: true });
+    const pai = p("Pai", { relationship_to_proband: "Pai", parentage_reviewed: true });
+    const avo = p("Avô", { relationship_to_proband: "Avô paterno" });
+    const ava = p("Avó", { relationship_to_proband: "Avó paterna" });
+    const tio = p("Tio", { relationship_to_proband: "Irmã(o) do Pai", parentage_reviewed: true });
+    const persons = [consultante, pai, avo, ava, tio];
+    const rels = [par(pai.id, consultante.id), par(avo.id, pai.id)];
+    const graph = buildLogicalGraph({ persons, rels });
+    expect(getResolvedParents(graph, pai.id).map(({ personId }) => personId)).toEqual([avo.id]);
+    expect(getSuggestedParents(graph, pai.id)).toEqual([]);
+
+    const twoGrandparents = buildLogicalGraph({ persons, rels: [...rels, par(ava.id, pai.id)] });
+    expect(getResolvedParents(twoGrandparents, tio.id)).toEqual([]);
+    expect(getSuggestedParents(twoGrandparents, tio.id)).toEqual([]);
+    expect(twoGrandparents.persons.get(tio.id)?.generation).toBe(1);
+  });
+});
 
 describe("gerações resolvidas só por filiação explícita (sem tags)", () => {
   it("três gerações, relações embaralhadas: cliente/irmão 0, pais 1, avós 2", () => {

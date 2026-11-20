@@ -574,6 +574,7 @@ export type Database = {
           id: string
           is_deceased: boolean
           is_proband: boolean
+          parentage_reviewed?: boolean
           life_events: Json
           notes: string | null
           occupation: string | null
@@ -600,6 +601,7 @@ export type Database = {
           id?: string
           is_deceased?: boolean
           is_proband?: boolean
+          parentage_reviewed?: boolean
           life_events?: Json
           notes?: string | null
           occupation?: string | null
@@ -626,6 +628,7 @@ export type Database = {
           id?: string
           is_deceased?: boolean
           is_proband?: boolean
+          parentage_reviewed?: boolean
           life_events?: Json
           notes?: string | null
           occupation?: string | null
@@ -644,6 +647,77 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      genogram_parentage_reviews: {
+        Row: {
+          id: string
+          review_number: number
+          client_id: string
+          child_id: string
+          professional_id: string
+          decision: string
+          source: string
+          note: string | null
+          before_links: Json
+          after_links: Json
+          before_reviewed: boolean
+          after_reviewed: boolean
+          undone_review_id: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          client_id: string
+          child_id: string
+          professional_id: string
+          decision: string
+          source: string
+          note?: string | null
+          before_links: Json
+          after_links: Json
+          before_reviewed: boolean
+          after_reviewed: boolean
+          undone_review_id?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          client_id?: string
+          child_id?: string
+          professional_id?: string
+          decision?: string
+          source?: string
+          note?: string | null
+          before_links?: Json
+          after_links?: Json
+          before_reviewed?: boolean
+          after_reviewed?: boolean
+          undone_review_id?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "genogram_parentage_reviews_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "genogram_parentage_reviews_child_id_fkey"
+            columns: ["child_id"]
+            isOneToOne: false
+            referencedRelation: "genogram_persons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "genogram_parentage_reviews_undone_review_id_fkey"
+            columns: ["undone_review_id"]
+            isOneToOne: false
+            referencedRelation: "genogram_parentage_reviews"
             referencedColumns: ["id"]
           },
         ]
@@ -951,6 +1025,19 @@ export type Database = {
         Returns: Json
       }
       pending_clinical_record_count: { Args: Record<string, never>; Returns: number }
+      review_parentage: {
+        Args: {
+          _client_id: string
+          _child_id: string
+          _expected: Json
+          _parents: Json
+          _decision: string
+          _source: string
+          _note?: string
+        }
+        Returns: string
+      }
+      undo_parentage_review: { Args: { _client_id: string; _review_id: string }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "professional"
