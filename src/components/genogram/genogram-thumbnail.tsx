@@ -1,6 +1,7 @@
 import { personSymbol } from "./person-symbol";
 import { useMemo } from "react";
 import { buildLogicalGraph, layoutGraph, NODE_W } from "@/lib/geno/build";
+import { getMappablePersons } from "@/lib/clinical-intel";
 import type { PersonRow, RelationshipRow } from "@/lib/patterns";
 /** Read-only projection of the SAME graph engine; never persists or invents a relationship. */
 export function GenogramThumbnail({
@@ -12,7 +13,7 @@ export function GenogramThumbnail({
 }) {
   const { graph, placement, box } = useMemo(() => {
     const graph = buildLogicalGraph({
-      persons,
+      persons: getMappablePersons(persons, rels),
       rels,
       probandId: persons.find((p) => p.is_proband)?.id,
     });
@@ -26,7 +27,7 @@ export function GenogramThumbnail({
       box: `${minX} ${minY} ${Math.max(200, ...points.map((p) => p.x + NODE_W)) - minX + 60} ${Math.max(120, ...points.map((p) => p.y + 120)) - minY + 60}`,
     };
   }, [persons, rels]);
-  if (!persons.length)
+  if (!graph.persons.size)
     return <div className="gv-map-empty">A história começa com a primeira pessoa.</div>;
   return (
     <svg
@@ -44,7 +45,7 @@ export function GenogramThumbnail({
               {u.partners.map((pid) => {
                 const p = placement.personPos.get(pid);
                 return p ? (
-                  <path key={pid} d={`M${p.x + NODE_W / 2} ${p.y + 38}H${pos.x}`} />
+                  <path key={pid} d={`M${p.x + NODE_W / 2} ${p.y + 38}V${pos.y}H${pos.x}`} />
                 ) : null;
               })}
               {u.children.map((pid) => {
@@ -52,7 +53,7 @@ export function GenogramThumbnail({
                 return p ? (
                   <path
                     key={pid}
-                    d={`M${p.x + NODE_W / 2} ${p.y + 50}V${(p.y + pos.y) / 2}H${pos.x}V${pos.y}`}
+                    d={`M${p.x + NODE_W / 2} ${p.y + (u.direction === "down" ? 10 : 66)}V${(p.y + pos.y) / 2}H${pos.x}V${pos.y}`}
                   />
                 ) : null;
               })}
@@ -69,7 +70,7 @@ export function GenogramThumbnail({
         return (
           <g
             key={id}
-            fill={p.row.is_proband ? "var(--color-forest)" : "var(--color-muted)"}
+            fill={p.row.is_proband ? "var(--color-forest-mist)" : "var(--color-muted)"}
             stroke={p.row.is_proband ? "var(--color-forest)" : "var(--color-muted-foreground)"}
             strokeWidth="3"
           >
@@ -82,11 +83,8 @@ export function GenogramThumbnail({
             ) : (
               <rect x={cx - 26} y={cy - 26} width={52} height={52} rx={2} />
             )}
-            {p.row.is_deceased && (
-              <path
-                d={`M${cx - 28} ${cy + 28}L${cx + 28} ${cy - 28}`}
-                stroke="var(--color-foreground)"
-              />
+            {(p.row.is_deceased || p.row.death_date) && (
+              <path d={`M${cx - 19} ${cy - 13}H${cx + 19}`} stroke="var(--color-foreground)" />
             )}
           </g>
         );

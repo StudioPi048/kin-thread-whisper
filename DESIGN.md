@@ -49,4 +49,4 @@ Essas razões verificam os pares definidos, não certificam todas as combinaçõ
 - Mobile 390px funcional: navegação inferior; painéis laterais viram drawer sem ocultar ações.
 
 ## Genossociograma (inviolável)
-Cliente e irmãos no topo; pais abaixo; avós abaixo dos pais. Filiação sempre pela união correta. Cartões opacos ≥ 72px protegem nomes/datas das linhas. Testado em `src/lib/geno/invariants.test.ts`.
+O consultante e os irmãos consanguíneos ocupam o topo. Pais, avós e antepassados descem em faixas. Cada parentesco usa o grafo comum. Cartões opacos protegem nomes e datas das linhas. A vista 3D mantém os cartões voltados para leitura e o eixo vertical fixo. A câmera gira e aproxima sem modificar posições salvas. O traço horizontal superior marca falecimento, segundo o Manual da Psicogenealogia, p. 164. A ficha escreve a natureza da filiação ao lado do vínculo.

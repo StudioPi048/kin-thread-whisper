@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { autoMap, analyzeImport, parseDateField, parseDateString } from "./clan-import";
+import {
+  autoMap,
+  analyzeImport,
+  parseDateField,
+  parseDateString,
+  readClanFile,
+  inferGenderFromRelationship,
+} from "./clan-import";
 
 describe("importação da planilha", () => {
   it("mapeia colunas pelo cabeçalho em qualquer ordem", () => {
@@ -80,5 +87,55 @@ describe("importação da planilha", () => {
   it("linha do cliente é ignorada (vem do cadastro)", () => {
     const m = autoMap(["Nome", "Parentesco"]);
     expect(analyzeImport([["Eu", "Consulente"]], m)[0].status).toBe("skip");
+  });
+  it("não transforma irmãos de referência desconhecida em irmãos da linha anterior", () => {
+    const mapping = autoMap(["Nome", "Parentesco"]);
+    const [_, vague, explicit, canonical] = analyzeImport(
+      [
+        ["Antônio", "Avô paterno"],
+        ["Pedro", "Irmão"],
+        ["Maria", "Irmã(o) da Bisavó paterna (mãe do avô)"],
+        ["João", "Irmã(o)"],
+      ],
+      mapping,
+    );
+
+    expect(vague.record?.relationship_to_proband).toBe("Irmão (referência não informada)");
+    expect(vague.messages.join(" ")).toContain("Irmão de quem?");
+    expect(explicit.record?.relationship_to_proband).toBe("Irmã(o) da Bisavó paterna (mãe do avô)");
+    expect(canonical.record?.relationship_to_proband).toBe("Irmã(o)");
+  });
+  it("lê cabeçalhos reais do CSV de exportação e mantém aspas, separadores e vazios", async () => {
+    const file = new TextEncoder().encode(
+      "\uFEFFNOME;PARENTESCO;Data Nascimento;Tempo gestacional;Data Morte;ENFERMIDADES;PROFISSÕES;VÍCIOS;Temperamento;Ordem;Observações\n" +
+        '"Ana";"Mãe";"1960";"40";"Sim";"";"Docente";"";"";"2";"disse ""oi"";\nem casa"',
+    );
+    const { header, rows } = await readClanFile(file.buffer, "csv");
+    const [row] = analyzeImport(rows, autoMap(header));
+    expect(row.record).toMatchObject({
+      full_name: "Ana",
+      relationship_to_proband: "Mãe",
+      birth_date: null,
+      gestational_weeks: "40",
+      is_deceased: true,
+      health_conditions: [],
+      occupation: "Docente",
+      vices: null,
+      birth_order: 2,
+    });
+    expect(row.record?.notes).toContain('disse "oi";\nem casa');
+  });
+  it("preserva nomes e parentesco em CSV UTF-8 sem BOM", async () => {
+    const file = new TextEncoder().encode("Nome,Parentesco\nÁlvaro,Irmão do avô");
+    const { header, rows } = await readClanFile(file.buffer, "csv");
+    expect(rows).toEqual([["Álvaro", "Irmão do avô"]]);
+    const [row] = analyzeImport(rows, autoMap(header));
+    expect(row.record?.relationship_to_proband).toBe("Irmão do avô");
+  });
+
+  it("lê o gênero da pessoa e não do parente mencionado no rótulo", () => {
+    expect(inferGenderFromRelationship("Irmã do avô paterno")).toBe("feminino");
+    expect(inferGenderFromRelationship("Irmão da avó")).toBe("masculino");
+    expect(inferGenderFromRelationship("Irmã(o)")).toBeUndefined();
   });
 });

@@ -1,4 +1,6 @@
-import { clinicalIntelQuery } from "@/lib/clinical-intel";
+import { clinicalIntelQuery, type ClinicalIntelData } from "@/lib/clinical-intel";
+import { GenogramThumbnail } from "@/components/genogram/genogram-thumbnail";
+import { summarizeCaseGenogram } from "@/lib/genogram-summary";
 import { detectPatterns } from "@/lib/patterns";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -32,7 +34,6 @@ import {
   Users,
   ChevronRight,
   ChevronLeft,
-  Circle,
   Loader2,
 } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -48,11 +49,6 @@ import {
   type AgendaSessionDTO,
   type OrphanClientDTO,
 } from "@/lib/agenda.functions";
-import {
-  getClientGenogram,
-  type ClientGenogramDTO,
-  type GenogramPersonDTO,
-} from "@/lib/genogram.functions";
 
 export const Route = createFileRoute("/_authenticated/app/agenda")({
   component: AgendaPage,
@@ -794,18 +790,12 @@ function TimelineColumn({
 /* --------------------------- Featured Session Card ------------------------ */
 
 function FeaturedSession({ session, sessions }: { session: Session; sessions: Session[] }) {
-  // Progressive genogram load — only fetches when a real client is attached.
-  const genogramQuery = useQuery({
-    queryKey: ["client-genogram", session.clientId],
-    queryFn: () => getClientGenogram({ data: { clientId: session.clientId! } }),
-    enabled: !!session.clientId,
-    staleTime: 5 * 60_000,
-    retry: 1,
-  });
-
-  const genogramAlerts = genogramQuery.data?.alerts ?? [];
-  // Evidências da fonte comum (mesma do dossiê/copiloto/IA Clínica)
   const intelQ = useQuery(clinicalIntelQuery(session.clientId ?? ""));
+  const genogram = useMemo(
+    () => intelQ.data && summarizeCaseGenogram(intelQ.data.persons, intelQ.data.relationships),
+    [intelQ.data],
+  );
+  const genogramAlerts = genogram?.alerts ?? [];
   const evidence = intelQ.data
     ? detectPatterns(intelQ.data.persons, intelQ.data.relationships).map(
         (p) => `${p.title}: ${p.description}`,
@@ -914,7 +904,7 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
               <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-forest">
                 Padrões detectados
               </p>
-              {genogramQuery.isLoading && session.clientId && (
+              {intelQ.isLoading && session.clientId && (
                 <Loader2 className="size-3 animate-spin text-forest/60 ml-1" />
               )}
             </div>
@@ -930,13 +920,15 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
                   </li>
                 ))}
               </ul>
-            ) : genogramQuery.isLoading ? (
+            ) : intelQ.isLoading ? (
               <p className="text-[12px] text-muted-foreground italic">
                 Analisando genossociograma…
               </p>
             ) : (
               <p className="text-[12px] text-muted-foreground italic">
-                Nenhum padrão detectado — genossociograma completo e sem alertas por regra.
+                {intelQ.isError
+                  ? "Não foi possível consultar o genossociograma."
+                  : "Sem alertas nos dados disponíveis."}
               </p>
             )}
           </div>
@@ -999,8 +991,10 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
       <div className="grid md:grid-cols-2 gap-4">
         <MiniTreePreview
           session={session}
-          genogram={genogramQuery.data}
-          isLoading={genogramQuery.isLoading}
+          data={intelQ.data}
+          totalPersons={genogram?.totalPersons ?? 0}
+          isLoading={intelQ.isLoading}
+          isError={intelQ.isError}
         />
         <UpcomingList currentId={session.id} sessions={sessions} />
       </div>
@@ -1010,203 +1004,71 @@ function FeaturedSession({ session, sessions }: { session: Session; sessions: Se
 
 function MiniTreePreview({
   session,
-  genogram,
+  data,
+  totalPersons,
   isLoading,
+  isError,
 }: {
   session: Session;
-  genogram: ClientGenogramDTO | undefined;
+  data: ClinicalIntelData | undefined;
+  totalPersons: number;
   isLoading: boolean;
+  isError: boolean;
 }) {
-  const hasData = !!genogram && genogram.hasGenogram;
-  const totalPersons = genogram?.totalPersons ?? 0;
+  const { date } = Route.useSearch();
+  const hasData = Boolean(data && totalPersons > 0);
 
   return (
-    <div className="rounded-xl bg-surface-document/85  border border-border/50 shadow-surface p-5">
+    <div className="rounded-xl bg-surface-document/85 border border-border/50 shadow-surface p-5">
       <div className="flex items-center justify-between mb-4">
         <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground flex items-center gap-2">
           <GitBranch className="size-3.5" /> Genossociograma
         </p>
         <span className="text-[10px] text-muted-foreground">
-          {hasData ? `${totalPersons} pessoas` : isLoading ? "carregando…" : "sem dados"}
+          {hasData
+            ? `${totalPersons} pessoas`
+            : isLoading
+              ? "carregando…"
+              : isError
+                ? "indisponível"
+                : "sem dados"}
         </span>
       </div>
 
-      {isLoading && !genogram ? (
-        <div className="h-32 flex items-center justify-center text-muted-foreground">
+      {isLoading && !data ? (
+        <div className="h-40 flex items-center justify-center text-muted-foreground">
           <Loader2 className="size-5 animate-spin" />
         </div>
-      ) : hasData ? (
-        <RealMiniTree genogram={genogram!} session={session} />
+      ) : hasData && data ? (
+        <div className="h-40 rounded-lg bg-forest/5">
+          <GenogramThumbnail persons={data.persons} rels={data.relationships} />
+        </div>
       ) : (
-        <div className="h-32 flex flex-col items-center justify-center text-center px-4">
+        <div className="h-40 flex flex-col items-center justify-center text-center px-4">
           <GitBranch className="size-6 text-muted-foreground/40 mb-2" />
           <p className="text-[11.5px] text-muted-foreground italic leading-snug">
-            {session.clientId
-              ? "Genossociograma ainda não iniciado para este cliente."
-              : "Sem cliente vinculado à sessão."}
+            {isError
+              ? "Não foi possível carregar o genossociograma."
+              : session.clientId
+                ? "Genossociograma ainda não iniciado para este cliente."
+                : "Sem cliente vinculado à sessão."}
           </p>
         </div>
       )}
 
-      <div className="mt-3 flex items-center justify-between text-[11px]">
-        <div className="flex items-center gap-3 text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <Circle className="size-2 fill-gold text-gold" /> Paciente
-          </span>
-          <span className="flex items-center gap-1">
-            <Circle className="size-2 fill-forest text-forest" /> Masc.
-          </span>
-          <span className="flex items-center gap-1">
-            <Circle className="size-2 fill-forest text-forest" /> Fem.
-          </span>
+      {session.clientId && (
+        <div className="mt-3 flex justify-end text-[11px]">
+          <Link
+            to="/app/clientes/$clientId"
+            params={{ clientId: session.clientId }}
+            search={{ tab: "genogram", from: "agenda", agendaDate: date }}
+            className="text-forest font-bold hover:underline flex items-center gap-1"
+          >
+            Abrir genossociograma <ChevronRight className="size-3" />
+          </Link>
         </div>
-        <Link
-          to="/app/genossociogramas"
-          className="text-forest font-bold hover:underline flex items-center gap-1"
-        >
-          Abrir <ChevronRight className="size-3" />
-        </Link>
-      </div>
+      )}
     </div>
-  );
-}
-
-function RealMiniTree({ genogram, session }: { genogram: ClientGenogramDTO; session: Session }) {
-  const { proband, parents, grandparents } = genogram.generations;
-  const father = parents.find((p) => p.role === "father");
-  const mother = parents.find((p) => p.role === "mother");
-  const patGf = grandparents.find((p) => p.role === "grandfather");
-  const patGm = grandparents.find((p) => p.role === "grandmother");
-  const matGf = grandparents.filter((p) => p.role === "grandfather")[1] ?? null;
-  const matGm = grandparents.filter((p) => p.role === "grandmother")[1] ?? null;
-
-  const Node = ({
-    person,
-    x,
-    y,
-    highlight,
-  }: {
-    person: GenogramPersonDTO | null | undefined;
-    x: number;
-    y: number;
-    highlight?: boolean;
-  }) => {
-    if (!person) {
-      return (
-        <circle
-          cx={x}
-          cy={y}
-          r="10"
-          className="fill-cream stroke-border"
-          strokeWidth="1"
-          strokeDasharray="2 2"
-        />
-      );
-    }
-    const isMasc =
-      person.gender?.toLowerCase().startsWith("m") ??
-      (person.role === "father" || person.role === "grandfather");
-    const isFem =
-      person.gender?.toLowerCase().startsWith("f") ??
-      (person.role === "mother" || person.role === "grandmother");
-    const stroke = highlight
-      ? "stroke-gold"
-      : isMasc
-        ? "stroke-forest/60"
-        : isFem
-          ? "stroke-forest/70"
-          : "stroke-border";
-    const fill = highlight
-      ? "fill-gold/25"
-      : isMasc
-        ? "fill-forest/12"
-        : isFem
-          ? "fill-forest/20"
-          : "fill-cream";
-    const sw = highlight ? 2 : 1.5;
-    const commonProps = { className: `${fill} ${stroke}`, strokeWidth: sw } as const;
-    return isFem && !isMasc ? (
-      <>
-        <circle cx={x} cy={y} r="11" {...commonProps} />
-        {person.isDeceased && (
-          <line
-            x1={x - 10}
-            y1={y - 10}
-            x2={x + 10}
-            y2={y + 10}
-            className="stroke-graphite"
-            strokeWidth="1.2"
-          />
-        )}
-      </>
-    ) : (
-      <>
-        <rect x={x - 11} y={y - 11} width="22" height="22" rx="3" {...commonProps} />
-        {person.isDeceased && (
-          <line
-            x1={x - 11}
-            y1={y - 11}
-            x2={x + 11}
-            y2={y + 11}
-            className="stroke-graphite"
-            strokeWidth="1.2"
-          />
-        )}
-      </>
-    );
-  };
-
-  return (
-    <svg viewBox="0 0 300 160" className="w-full h-32">
-      {/* Generation lines */}
-      <line x1="20" y1="55" x2="280" y2="55" className="stroke-border/40" strokeDasharray="2 3" />
-      <line x1="60" y1="105" x2="240" y2="105" className="stroke-border/40" strokeDasharray="2 3" />
-
-      {/* Grandparents row */}
-      <Node person={patGf} x={35} y={25} />
-      <Node person={patGm} x={95} y={25} />
-      <Node person={matGf} x={205} y={25} />
-      <Node person={matGm} x={265} y={25} />
-      {/* couple links */}
-      <line x1="46" y1="25" x2="84" y2="25" className="stroke-border" />
-      <line x1="216" y1="25" x2="254" y2="25" className="stroke-border" />
-      {/* to parents */}
-      <line x1="65" y1="36" x2="90" y2="75" className="stroke-border" />
-      <line x1="235" y1="36" x2="210" y2="75" className="stroke-border" />
-
-      {/* Parents row */}
-      <Node person={father} x={90} y={85} />
-      <Node person={mother} x={210} y={85} />
-      <line x1="101" y1="85" x2="199" y2="85" className="stroke-border" />
-
-      {/* to proband */}
-      <line x1="150" y1="85" x2="150" y2="120" className="stroke-border" />
-
-      {/* Proband */}
-      <Node
-        person={
-          proband ?? {
-            ...({} as GenogramPersonDTO),
-            id: "p",
-            fullName: session.patient,
-            preferredName: null,
-            gender: null,
-            isProband: true,
-            isDeceased: false,
-            hasBirthDate: false,
-            hasDeathDate: false,
-            relationshipTo: null,
-            role: "proband",
-          }
-        }
-        x={150}
-        y={135}
-        highlight
-      />
-      <text x={150} y={155} textAnchor="middle" className="fill-primary font-bold" fontSize="9">
-        {session.initials}
-      </text>
-    </svg>
   );
 }
 

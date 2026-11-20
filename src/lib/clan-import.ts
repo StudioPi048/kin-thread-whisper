@@ -5,11 +5,19 @@
  */
 import { smartNormalizeRelationship } from "@/lib/relationship-normalizer";
 
-export function inferGenderFromRelationship(rel?: string): "male" | "female" | undefined {
-  if (!rel) return undefined;
-  const r = rel.toLowerCase();
-  if (/\b(pai|avô|bisavô|tio\b|irmão)\b/.test(r)) return "male";
-  if (/\b(mãe|avó|bisavó|tia\b|irmã)\b/.test(r)) return "female";
+export function inferGenderFromRelationship(
+  relationship?: string,
+): "masculino" | "feminino" | undefined {
+  const role = relationship
+    ?.trim()
+    .toLowerCase()
+    .replace(/^mei[oa][- ]/, "")
+    .split(/[\s-]+/)[0];
+  if (!role) return undefined;
+  if (["pai", "avô", "bisavô", "trisavô", "tio", "irmão", "irmao", "filho"].includes(role))
+    return "masculino";
+  if (["mãe", "mae", "avó", "bisavó", "trisavó", "tia", "irmã", "irma", "filha"].includes(role))
+    return "feminino";
   return undefined;
 }
 
@@ -97,10 +105,10 @@ export const IMPORT_FIELDS = [
   {
     key: "birth",
     label: "Nascimento",
-    aliases: ["nascimento", "data de nascimento", "nasc", "nasceu"],
+    aliases: ["nascimento", "data de nascimento", "data nascimento", "nasc", "nasceu"],
   },
-  { key: "gestation", label: "Gestação", aliases: ["gestação", "gestacao", "semanas"] },
-  { key: "death", label: "Falecimento", aliases: ["morte", "falecimento", "óbito", "obito"] },
+  { key: "gestation", label: "Gestação", aliases: ["gestação", "tempo gestacional", "semanas"] },
+  { key: "death", label: "Falecimento", aliases: ["morte", "data morte", "falecimento", "óbito"] },
   {
     key: "illnesses",
     label: "Enfermidades",
@@ -109,7 +117,7 @@ export const IMPORT_FIELDS = [
   {
     key: "occupation",
     label: "Profissão",
-    aliases: ["profissão", "profissao", "ocupação", "ocupacao"],
+    aliases: ["profissão", "profissões", "ocupação", "ocupações"],
   },
   { key: "vices", label: "Vícios", aliases: ["vícios", "vicios"] },
   { key: "temperament", label: "Temperamento", aliases: ["temperamento"] },
@@ -118,6 +126,46 @@ export const IMPORT_FIELDS = [
 ] as const;
 export type FieldKey = (typeof IMPORT_FIELDS)[number]["key"];
 export type Mapping = Partial<Record<FieldKey, number>>; // field -> índice da coluna
+
+function decodeCsv(file: ArrayBuffer): string {
+  const bytes = new Uint8Array(file);
+  if (bytes[0] === 0xff && bytes[1] === 0xfe) return new TextDecoder("utf-16le").decode(file);
+  if (bytes[0] === 0xfe && bytes[1] === 0xff) return new TextDecoder("utf-16be").decode(file);
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(file);
+  } catch {
+    return new TextDecoder("windows-1252").decode(file);
+  }
+}
+
+/** Preserva texto e campos vazios no CSV; só datas tipadas do Excel viram ISO. */
+export async function readClanFile(file: ArrayBuffer, format: "csv" | "xlsx") {
+  const XLSX = await import("xlsx");
+  const workbook =
+    format === "csv"
+      ? XLSX.read(decodeCsv(file), { type: "string", raw: true })
+      : XLSX.read(file, { type: "array", raw: true, cellDates: true });
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  if (!sheet) throw new Error("Arquivo sem planilhas.");
+  const data = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
+    header: 1,
+    raw: true,
+    defval: "",
+    blankrows: true,
+  });
+  const [first, ...rest] = data;
+  if (!first || !rest.length) throw new Error("Arquivo vazio ou sem cabeçalho.");
+  return {
+    header: first.map((cell) => String(cell ?? "")),
+    rows: rest.map((row) =>
+      row.map((cell) =>
+        cell instanceof Date && !Number.isNaN(cell.getTime())
+          ? cell.toISOString().slice(0, 10)
+          : String(cell ?? ""),
+      ),
+    ),
+  };
+}
 
 const norm = (s: string) =>
   s
@@ -161,6 +209,12 @@ export interface ImportRecord {
   notes: string | null;
 }
 
+function needsSiblingReference(relationship: string) {
+  return /^(?:irmao|irma|irmaos|irmas)(?: mais (?:velho|velha|novo|nova))?$/.test(
+    norm(relationship),
+  );
+}
+
 export function analyzeImport(
   rows: string[][],
   mapping: Mapping,
@@ -172,24 +226,19 @@ export function analyzeImport(
   };
   const key = (name: string, birth: string | null) => `${norm(name)}|${birth ?? ""}`;
   const seen = new Set(existing.map((e) => key(e.full_name, e.birth_date)));
-  let context = "Consulente";
-
   return rows.map((r, idx) => {
     const line = idx + 2;
     const messages: string[] = [];
     if (r.every((c) => !String(c ?? "").trim()))
       return { line, status: "skip", messages: ["Linha vazia"], record: null };
 
-    let rel = get(r, "relationship");
-    const lower = rel.toLowerCase();
-    if (rel && !lower.includes("irmã") && !lower.includes("irmão")) context = rel;
-    else if (["irmãos", "irmãs", "irmão", "irmã", "irmao", "irma", "irmaos"].includes(lower)) {
-      if (context !== "Consulente" && context !== "Paciente") {
-        const prep = /mãe|avó|bisavó/i.test(context) ? "da" : "do";
-        rel = `Irmã(o) ${prep} ${context}`;
-      }
-    }
-    if (/^(consulente|paciente)$/i.test(rel))
+    const rawRelationship = get(r, "relationship");
+    const ambiguousSibling = needsSiblingReference(rawRelationship);
+    const rel = ambiguousSibling
+      ? `${rawRelationship} (referência não informada)`
+      : rawRelationship;
+    const relCanonical = rel ? smartNormalizeRelationship(rel) : null;
+    if (relCanonical === "Consulente")
       return {
         line,
         status: "skip",
@@ -217,6 +266,10 @@ export function analyzeImport(
       messages.push(`Ordem deve ser inteiro positivo: "${orderRaw}"`);
 
     const warnings: string[] = [];
+    if (ambiguousSibling)
+      warnings.push(
+        "Irmão de quem? Indique a pessoa de referência ou registre a filiação no mapa.",
+      );
     const partialNotes: string[] = [];
     if (birthP.kind === "partial") {
       warnings.push(
@@ -240,11 +293,10 @@ export function analyzeImport(
     const k = key(name, birth);
     const dup = seen.has(k);
     seen.add(k);
-    const relCanonical = rel ? smartNormalizeRelationship(rel) : null;
     const record: ImportRecord = {
       full_name: name,
       relationship_to_proband: rel || null,
-      gender: inferGenderFromRelationship(relCanonical ?? "") || "unknown",
+      gender: inferGenderFromRelationship(relCanonical ?? "") || "desconhecido",
       birth_date: birth,
       gestational_weeks: get(r, "gestation") || null,
       death_date: death,

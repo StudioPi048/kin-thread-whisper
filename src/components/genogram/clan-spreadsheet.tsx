@@ -1,9 +1,15 @@
-import { invalidateCase } from "@/lib/clinical-intel";
+import {
+  clinicalIntelQuery,
+  getMappablePersons,
+  invalidateCase,
+  type ClinicalIntelData,
+} from "@/lib/clinical-intel";
 import { useUnsaved } from "@/components/unsaved/unsaved-guard";
 import { KeyedDebounce } from "@/lib/unsaved";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import {
   Loader2,
   Plus,
@@ -12,12 +18,11 @@ import {
   Table2,
   Upload,
   Sparkles,
-  AlertCircle,
+  MapPin,
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
-import { motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -33,18 +38,18 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables, TablesUpdate } from "@/integrations/supabase/types";
 
-import { smartNormalizeRelationship, genealogicalOrder } from "@/lib/relationship-normalizer";
+import { genealogicalOrder } from "@/lib/relationship-normalizer";
 import { ensureProband } from "@/lib/ensure-proband";
 import { RelationshipCombobox } from "./relationship-combobox";
-import { buildLogicalGraph } from "@/lib/geno/build";
+import { buildLogicalGraph, getResolvedParents, type LogicalGraph } from "@/lib/geno/build";
 import {
   inferGenderFromRelationship,
-  parseDateString,
+  readClanFile,
   autoMap,
   analyzeImport,
   IMPORT_FIELDS,
   type Mapping,
-  type FieldKey,
+  type ImportRecord,
 } from "@/lib/clan-import";
 import {
   Dialog,
@@ -59,7 +64,6 @@ type Person = Tables<"genogram_persons">;
 type Props = { clientId: string };
 
 const RELATIONSHIP_TEMPLATE = [
-  "Consulente",
   "Irmã(o)",
   "Irmã(o)",
   "Irmã(o)",
@@ -101,11 +105,38 @@ const RELATIONSHIP_TEMPLATE = [
   "Irmã(o) da Bisavó materna (mãe da avó)",
 ] as const;
 
+function previewPerson(clientId: string, line: number, record: ImportRecord): Person {
+  return {
+    ...record,
+    id: `import:${line}`,
+    client_id: clientId,
+    is_proband: false,
+    preferred_name: null,
+    cause_of_death: null,
+    life_events: [],
+    position_x: 0,
+    position_y: 0,
+    tags: [],
+    created_at: "",
+    updated_at: "",
+  };
+}
+
+function parentSummary(graph: LogicalGraph, personId: string) {
+  const parents = getResolvedParents(graph, personId);
+  const names = parents.map(
+    (parent) => graph.persons.get(parent.personId)?.row.full_name.trim() || "Pessoa sem nome",
+  );
+  return { parents, names };
+}
+
 export function ClanSpreadsheet({ clientId }: Props) {
   const qc = useQueryClient();
   const [drafts, setDrafts] = useState<Record<string, Partial<Person>>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
+  const [newPersonId, setNewPersonId] = useState<string | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const toggleExpanded = (id: string) => {
     setExpandedRows((prev) => {
@@ -134,26 +165,49 @@ export function ClanSpreadsheet({ clientId }: Props) {
     destructive?: boolean;
   }) => new Promise<boolean>((resolve) => setConfirmState({ ...opts, resolve }));
 
-  const { data: persons, isLoading } = useQuery({
-    queryKey: ["genogram-persons", clientId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("genogram_persons")
-        .select("*")
-        .eq("client_id", clientId)
-        .order("created_at", { ascending: true });
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
+  const familyQuery = clinicalIntelQuery(clientId);
+  const { data: family, isLoading, isError, refetch } = useQuery(familyQuery);
+  const persons = family?.persons;
+  const relationships = family?.relationships;
 
   const savePerson = useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: TablesUpdate<"genogram_persons"> }) => {
-      const { error } = await supabase.from("genogram_persons").update(patch).eq("id", id);
+      const { data, error } = await supabase
+        .from("genogram_persons")
+        .update(patch)
+        .eq("client_id", clientId)
+        .eq("id", id)
+        .select()
+        .single();
       if (error) throw error;
+      return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["genogram-persons", clientId] }),
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao salvar"),
+    onSuccess: (saved, { id, patch }) => {
+      qc.setQueryData<ClinicalIntelData>(
+        familyQuery.queryKey,
+        (current) =>
+          current && {
+            ...current,
+            persons: current.persons.map((person) => (person.id === id ? saved : person)),
+          },
+      );
+      setDrafts((current) => {
+        if (!current[id]) return current;
+        const next = { ...current[id] };
+        for (const key of Object.keys(patch) as (keyof Person)[]) {
+          if (Object.is(next[key], patch[key])) delete next[key];
+        }
+        const pending = { ...current };
+        if (Object.keys(next).length) pending[id] = next;
+        else delete pending[id];
+        return pending;
+      });
+      void invalidateCase(qc, clientId);
+    },
+    onError: () => {
+      setSaveFailed(true);
+      toast.error("Não foi possível salvar a linha. Suas alterações continuam na planilha.");
+    },
   });
 
   const addPerson = useMutation({
@@ -172,33 +226,54 @@ export function ClanSpreadsheet({ clientId }: Props) {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["genogram-persons", clientId] }),
+    onSuccess: async (person) => {
+      setFilter("");
+      setOnlyPending(false);
+      setNewPersonId(person.id);
+      await invalidateCase(qc, clientId);
+    },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao adicionar"),
   });
 
   const removePerson = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("genogram_persons").delete().eq("id", id);
+      await queueRef.current!.flush();
+      const { error } = await supabase
+        .from("genogram_persons")
+        .delete()
+        .eq("client_id", clientId)
+        .eq("id", id)
+        .eq("is_proband", false);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["genogram-persons", clientId] }),
+    onSuccess: () => invalidateCase(qc, clientId),
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao remover pessoa"),
   });
 
   const removeEmptyPersons = useMutation({
     mutationFn: async () => {
-      const emptyIds = (persons ?? [])
-        .filter((p) => !p.is_proband && !p.full_name?.trim() && !p.birth_date?.trim())
-        .map((p) => p.id);
+      await queueRef.current!.flush();
+      const latest = await qc.fetchQuery({ ...familyQuery, staleTime: 0 });
+      const keepIds = new Set(
+        getMappablePersons(latest.persons, latest.relationships).map(({ id }) => id),
+      );
+      const emptyIds = latest.persons
+        .filter((person) => !keepIds.has(person.id))
+        .map((person) => person.id);
 
       if (emptyIds.length === 0) return 0;
 
-      const { error } = await supabase.from("genogram_persons").delete().in("id", emptyIds);
+      const { error } = await supabase
+        .from("genogram_persons")
+        .delete()
+        .eq("client_id", clientId)
+        .eq("is_proband", false)
+        .in("id", emptyIds);
       if (error) throw error;
       return emptyIds.length;
     },
-    onSuccess: (count) => {
-      qc.invalidateQueries({ queryKey: ["genogram-persons", clientId] });
+    onSuccess: async (count) => {
+      await invalidateCase(qc, clientId);
       if (count > 0) toast.success(`${count} linhas vazias removidas.`);
       else toast.info("Nenhuma linha vazia encontrada.");
     },
@@ -207,47 +282,73 @@ export function ClanSpreadsheet({ clientId }: Props) {
 
   const deleteAllPersons = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("genogram_persons").delete().eq("client_id", clientId);
+      await queueRef.current!.flush();
+      const { error } = await supabase
+        .from("genogram_persons")
+        .delete()
+        .eq("client_id", clientId)
+        .eq("is_proband", false);
       if (error) throw error;
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["genogram-persons", clientId] });
-      toast.success("Planilha completamente apagada.");
+    onSuccess: async () => {
+      await invalidateCase(qc, clientId);
+      toast.success("Familiares removidos. O cadastro do consulente foi mantido.");
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao apagar planilha"),
   });
 
+  const addTemplate = useMutation({
+    mutationFn: async () => {
+      await queueRef.current!.flush();
+      const latest = await qc.fetchQuery({ ...familyQuery, staleTime: 0 });
+      if (latest.persons.some((person) => !person.is_proband)) {
+        throw new Error("O modelo pode ser aplicado quando só o consulente estiver na planilha.");
+      }
+      const { error } = await supabase.from("genogram_persons").insert(
+        RELATIONSHIP_TEMPLATE.map((relationship) => ({
+          client_id: clientId,
+          full_name: "",
+          gender: inferGenderFromRelationship(relationship) ?? "desconhecido",
+          relationship_to_proband: relationship,
+        })),
+      );
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      await invalidateCase(qc, clientId);
+      toast.success("Modelo adicionado. Preencha os familiares que deseja mapear.");
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Não foi possível aplicar o modelo."),
+  });
+
   // Debounce por linha com flush explícito: sair da aba/página passa pelo
   // guard; em falha o patch volta para a fila e a edição continua na tela.
-  const [, setPendingCount] = useState(0);
   const queueRef = useRef<KeyedDebounce<TablesUpdate<"genogram_persons">> | null>(null);
   if (!queueRef.current)
-    queueRef.current = new KeyedDebounce<TablesUpdate<"genogram_persons">>(async (id, patch) => {
-      try {
-        await savePersonRef.current({ id, patch });
-      } finally {
-        setPendingCount(queueRef.current?.hasPending() ? 1 : 0);
-      }
-    }, 900);
+    queueRef.current = new KeyedDebounce<TablesUpdate<"genogram_persons">>(
+      (id, patch) => savePersonRef.current({ id, patch }).then(() => {}),
+      900,
+    );
   const savePersonRef = useRef(savePerson.mutateAsync);
   savePersonRef.current = savePerson.mutateAsync;
 
   const scheduleSave = (id: string, patch: TablesUpdate<"genogram_persons">) => {
+    if (!queueRef.current!.hasPending()) setSaveFailed(false);
     setDrafts((d) => ({ ...d, [id]: { ...d[id], ...patch } }));
     queueRef.current!.push(id, patch);
-    setPendingCount(1);
   };
 
   useUnsaved(`clan:${clientId}`, {
     label: "Planilha do clã",
-    isDirty: () => !!queueRef.current?.hasPending() || savePerson.isPending,
+    isDirty: () => !!queueRef.current?.hasPending(),
     save: async () => {
       await queueRef.current!.flush();
     },
     discard: () => {
       queueRef.current!.discard();
       setDrafts({});
-      setPendingCount(0);
+      setSaveFailed(false);
     },
   });
 
@@ -266,8 +367,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
     (async () => {
       const result = await ensureProband(clientId);
       if (!cancelled && result) {
-        qc.invalidateQueries({ queryKey: ["genogram-persons", clientId] });
-        invalidateCase(qc, clientId);
+        void invalidateCase(qc, clientId);
       }
     })();
     return () => {
@@ -277,26 +377,54 @@ export function ClanSpreadsheet({ clientId }: Props) {
 
   const [filter, setFilter] = useState("");
   const [showDates, setShowDates] = useState(true);
+  const [onlyPending, setOnlyPending] = useState(false);
+  const hasDrafts = Object.keys(drafts).length > 0;
+  const graph = useMemo(() => {
+    const rels = relationships ?? [];
+    const mappable = getMappablePersons(persons ?? [], rels);
+    return buildLogicalGraph({
+      persons: mappable,
+      rels,
+      probandId: mappable.find((person) => person.is_proband)?.id,
+    });
+  }, [persons, relationships]);
+  const warningByPersonId = useMemo(
+    () => new Map(graph.warnings.map((warning) => [warning.personId, warning.message])),
+    [graph],
+  );
   const rows = useMemo(() => {
-    const base = (persons ?? []).map((p) => ({ ...p, ...(drafts[p.id] ?? {}) }));
-    // Ordena genealogicamente: Consulente no topo, depois por geração
-    return base.sort((a, b) => {
+    const ordered = [...(persons ?? [])].sort((a, b) => {
+      if (a.is_proband !== b.is_proband) return a.is_proband ? -1 : 1;
+      if (graph.topRowIds.has(a.id) !== graph.topRowIds.has(b.id)) {
+        return graph.topRowIds.has(a.id) ? -1 : 1;
+      }
+      const generationA = graph.persons.get(a.id)?.generation ?? Infinity;
+      const generationB = graph.persons.get(b.id)?.generation ?? Infinity;
+      if (generationA !== generationB) return generationA - generationB;
       const orderA = genealogicalOrder(a.relationship_to_proband);
       const orderB = genealogicalOrder(b.relationship_to_proband);
       if (orderA !== orderB) return orderA - orderB;
-      // Dentro do mesmo rank, ordena por nome
-      return (a.full_name ?? "").localeCompare(b.full_name ?? "");
+      return a.full_name.localeCompare(b.full_name) || a.id.localeCompare(b.id);
     });
-  }, [persons, drafts]);
+    return ordered.map((person) => ({ ...person, ...drafts[person.id] }));
+  }, [persons, drafts, graph]);
   const visibleRows = useMemo(() => {
     const q = filter.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter((r) =>
-      `${r.full_name ?? ""} ${r.relationship_to_proband ?? ""} ${r.occupation ?? ""}`
-        .toLowerCase()
-        .includes(q),
-    );
-  }, [rows, filter]);
+    return rows.filter((row) => {
+      if (onlyPending && !graph.pendingPersonIds.has(row.id)) return false;
+      return (
+        !q ||
+        `${row.full_name} ${row.relationship_to_proband ?? ""} ${row.occupation ?? ""}`
+          .toLowerCase()
+          .includes(q)
+      );
+    });
+  }, [rows, filter, onlyPending, graph]);
+  useEffect(() => {
+    if (!newPersonId || !visibleRows.some((person) => person.id === newPersonId)) return;
+    document.getElementById(`clan-person-${newPersonId}`)?.focus();
+    setNewPersonId(null);
+  }, [newPersonId, visibleRows]);
   // Teclado: ↑/↓ movem para a mesma coluna da linha vizinha
   const onGridKeyDown = (e: React.KeyboardEvent<HTMLTableSectionElement>) => {
     if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
@@ -321,31 +449,6 @@ export function ClanSpreadsheet({ clientId }: Props) {
     }
   };
 
-  // Mesmo motor do genossociograma, só pra saber quem vai ficar solto na
-  // árvore e por quê — sem precisar abrir a aba do desenho pra descobrir.
-  const warningsByPersonId = useMemo(() => {
-    const map = new Map<string, string>();
-    if (rows.length === 0) return map;
-    const g = buildLogicalGraph({ persons: rows, rels: [] });
-    for (const w of g.warnings) map.set(w.personId, w.message);
-    return map;
-  }, [rows]);
-
-  const scaffoldTemplate = async () => {
-    if (rows.length > 0) {
-      const ok = await askConfirm({
-        title: "Aplicar modelo mesmo assim?",
-        description: `Já existem ${rows.length} pessoas cadastradas. Adicionar as ${RELATIONSHIP_TEMPLATE.length} linhas do modelo mesmo assim?`,
-        confirmLabel: "Aplicar modelo",
-      });
-      if (!ok) return;
-    }
-    for (const rel of RELATIONSHIP_TEMPLATE) {
-      await addPerson.mutateAsync(rel);
-    }
-    toast.success("Modelo aplicado. Complete os nomes e datas.");
-  };
-
   const [importPreview, setImportPreview] = useState<{
     header: string[];
     rows: string[][];
@@ -366,25 +469,58 @@ export function ClanSpreadsheet({ clientId }: Props) {
         : [],
     [importPreview, importReplace, persons],
   );
-  const toImport = analysis.filter(
-    (r) => r.status === "ok" || (importDuplicates && r.status === "duplicate"),
+  const toImport = useMemo(
+    () =>
+      analysis.filter(
+        (row) => row.status === "ok" || (importDuplicates && row.status === "duplicate"),
+      ),
+    [analysis, importDuplicates],
   );
+  const hasRegisteredLinks = !!relationships?.length;
+  const importGraph = useMemo(() => {
+    if (!importPreview) return null;
+    const original = importReplace ? (persons ?? []).filter((p) => p.is_proband) : (persons ?? []);
+    const imported = toImport.flatMap((row) =>
+      row.record ? [previewPerson(clientId, row.line, row.record)] : [],
+    );
+    const rels = importReplace ? [] : (relationships ?? []);
+    return buildLogicalGraph({
+      persons: getMappablePersons([...original, ...imported], rels),
+      rels,
+      probandId: original.find((person) => person.is_proband)?.id,
+    });
+  }, [clientId, importPreview, importReplace, persons, relationships, toImport]);
   const confirmImport = useMutation({
     mutationFn: async () => {
-      const rows = toImport.map((r) => r.record!);
-      if (rows.length === 0) throw new Error("Nenhuma linha válida para importar.");
+      await queueRef.current!.flush();
+      const latest = await qc.fetchQuery({ ...familyQuery, staleTime: 0 });
+      if (importReplace && latest.relationships.length) {
+        throw new Error("Há vínculos registrados. Adicione as linhas ou edite a planilha atual.");
+      }
+      if (!importPreview) throw new Error("Abra uma planilha para importar.");
+      const currentAnalysis = analyzeImport(
+        importPreview.rows,
+        importPreview.mapping,
+        importReplace ? [] : latest.persons,
+      );
+      const selected = currentAnalysis.filter(
+        (row) => row.status === "ok" || (importDuplicates && row.status === "duplicate"),
+      );
+      if (selected.map((row) => row.line).join(",") !== toImport.map((row) => row.line).join(",")) {
+        throw new Error("A planilha mudou. Confira as linhas na prévia antes de confirmar.");
+      }
+      const records = selected.flatMap((row) => (row.record ? [row.record] : []));
+      if (!records.length) throw new Error("Nenhuma linha válida para importar.");
       const { data, error } = await supabase.rpc("import_genogram_persons", {
         _client_id: clientId,
-        _rows: rows as never,
+        _rows: records as never,
         _replace: importReplace,
       });
       if (error) throw error;
-      await ensureProband(clientId);
       return data as number;
     },
-    onSuccess: (n) => {
-      qc.invalidateQueries({ queryKey: ["genogram-persons", clientId] });
-      invalidateCase(qc, clientId);
+    onSuccess: async (n) => {
+      await invalidateCase(qc, clientId);
       toast.success(`${n} familiares importados.`);
       setImportPreview(null);
       setImportReplace(false);
@@ -392,109 +528,29 @@ export function ClanSpreadsheet({ clientId }: Props) {
     },
     onError: (e) =>
       toast.error(
-        `Importação não concluída — nada foi alterado. ${e instanceof Error ? e.message : ""}`,
+        e instanceof Error
+          ? e.message
+          : "Não foi possível concluir a importação. Confira a conexão e a prévia.",
       ),
   });
 
-  const importFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const importFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
     if (!file) return;
-
+    event.target.value = "";
     setIsImporting(true);
-    const reader = new FileReader();
-
-    reader.onload = async (event) => {
-      try {
-        let parsedRows: string[][] = [];
-        let parsedHeader: string[] = [];
-
-        if (file.name.toLowerCase().endsWith(".xlsx")) {
-          // Process Excel
-          const XLSX = await import("xlsx");
-          const data = new Uint8Array(event.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: "array", cellDates: true });
-          const firstSheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[firstSheetName];
-          // cellDates:true garante que células de data do Excel virem como Date objects
-          const jsonData = XLSX.utils.sheet_to_json(worksheet, {
-            header: 1,
-            raw: true,
-          }) as unknown[][];
-
-          if (jsonData.length < 2) throw new Error("Arquivo vazio ou sem cabeçalho.");
-
-          parsedHeader = (jsonData[0] ?? []).map((c) => String(c ?? ""));
-          parsedRows = jsonData
-            .slice(1)
-            .filter((row) =>
-              row.some((cell) => cell !== undefined && cell !== null && String(cell).trim() !== ""),
-            )
-            .map((row) =>
-              Array.from({ length: Math.max(11, row.length) }).map((_, i) => {
-                const cell = row[i];
-
-                // 1) Objeto Date nativo (cellDates:true funcionou)
-                if (cell instanceof Date) {
-                  const y = cell.getUTCFullYear();
-                  const m = String(cell.getUTCMonth() + 1).padStart(2, "0");
-                  const d = String(cell.getUTCDate()).padStart(2, "0");
-                  return `${y}-${m}-${d}`;
-                }
-
-                // 2) Número serial do Excel (ex: 44927 = 2023-01-01)
-                // Fórmula: epoch Excel = 1899-12-30, epoch JS = 1970-01-01
-                // Diferença = 25569 dias. (serial - 25569) * 86400000 = ms JS
-                if (typeof cell === "number" && cell > 25000 && cell < 60000) {
-                  const jsDate = new Date((cell - 25569) * 86400000);
-                  const y = jsDate.getUTCFullYear();
-                  const m = String(jsDate.getUTCMonth() + 1).padStart(2, "0");
-                  const d = String(jsDate.getUTCDate()).padStart(2, "0");
-                  return `${y}-${m}-${d}`;
-                }
-
-                return cell !== undefined && cell !== null ? String(cell) : "";
-              }),
-            );
-        } else {
-          // Process CSV
-          const text = event.target?.result as string;
-          if (!text) throw new Error("Erro ao ler o texto do arquivo.");
-
-          const lines = text.split(/\r?\n/).filter((line) => line.trim());
-          if (lines.length < 2) throw new Error("Arquivo vazio ou sem cabeçalho.");
-
-          const separator = lines[0].includes(";") ? ";" : ",";
-          const splitLine = (line: string) => {
-            const regex = new RegExp(`(?:^|${separator})(?:"([^"]*)"|([^${separator}]*))`, "g");
-            const row: string[] = [];
-            let match;
-            while ((match = regex.exec(line)) !== null) {
-              row.push(match[1] || match[2] || "");
-            }
-            return row;
-          };
-          parsedHeader = splitLine(lines[0]);
-          parsedRows = lines.slice(1).map(splitLine);
-        }
-
-        setImportPreview({
-          header: parsedHeader,
-          rows: parsedRows,
-          mapping: autoMap(parsedHeader),
-        });
-      } catch (error) {
-        console.error("Import Error:", error);
-        toast.error(`Erro ao importar: ${(error as Error)?.message || "Verifique o formato."}`);
-      } finally {
-        setIsImporting(false);
-        if (fileInputRef.current) fileInputRef.current.value = "";
-      }
-    };
-
-    if (file.name.toLowerCase().endsWith(".xlsx")) {
-      reader.readAsArrayBuffer(file);
-    } else {
-      reader.readAsText(file);
+    try {
+      const { header, rows } = await readClanFile(
+        await file.arrayBuffer(),
+        /\.csv$/i.test(file.name) ? "csv" : "xlsx",
+      );
+      setImportReplace(false);
+      setImportDuplicates(false);
+      setImportPreview({ header, rows, mapping: autoMap(header) });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Verifique o formato do arquivo.");
+    } finally {
+      setIsImporting(false);
     }
   };
 
@@ -520,13 +576,13 @@ export function ClanSpreadsheet({ clientId }: Props) {
           r.relationship_to_proband ?? "",
           r.birth_date ?? "",
           r.gestational_weeks ?? "",
-          r.death_date ?? "",
+          r.death_date ?? (r.is_deceased ? "Sim" : ""),
           (r.health_conditions ?? []).join(", "),
           r.occupation ?? "",
           r.vices ?? "",
           r.temperament ?? "",
           r.birth_order ?? "",
-          (r.notes ?? "").replace(/;/g, ","),
+          r.notes ?? "",
         ]
           .map((v) => `"${String(v).replace(/"/g, '""')}"`)
           .join(";"),
@@ -549,20 +605,44 @@ export function ClanSpreadsheet({ clientId }: Props) {
     );
   }
 
+  if (isError && !family) {
+    return (
+      <div role="alert" className="rounded-md border border-border bg-surface-document p-5">
+        <p className="font-semibold text-clinical-critical">
+          Não foi possível carregar a planilha.
+        </p>
+        <p className="mt-1 text-[15px] text-muted-foreground">
+          Tente novamente para consultar os familiares e seus vínculos.
+        </p>
+        <Button variant="outline" className="mt-3 min-h-11" onClick={() => void refetch()}>
+          Tentar novamente
+        </Button>
+      </div>
+    );
+  }
+
+  const columnCount = showDates ? 8 : 6;
+  const hasRelatives = rows.some((row) => !row.is_proband);
+  const pendingCount = graph.pendingPersonIds.size;
+  const isChangingRows =
+    addPerson.isPending ||
+    addTemplate.isPending ||
+    removePerson.isPending ||
+    removeEmptyPersons.isPending ||
+    deleteAllPersons.isPending;
+  const isRemovingRows =
+    removePerson.isPending || removeEmptyPersons.isPending || deleteAllPersons.isPending;
+
   return (
-    <div className="space-y-6 pb-12">
+    <div className="min-w-0 space-y-4 pb-12">
       <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border/60 pb-4">
         <div>
-          <p className="text-[14px] font-bold uppercase tracking-[0.2em] text-gold mb-1">
-            Planilha do Clã
-          </p>
-          <h2 className="font-serif text-3xl font-bold text-primary">Atlas Familiar</h2>
+          <h2 className="text-xl font-semibold text-ink">Planilha do clã</h2>
           <p className="mt-2 text-[14px] text-muted-foreground max-w-xl leading-relaxed">
-            Mapeie o sistema familiar de forma ágil em lista. Cada linha digitada aqui atualiza o
-            Genograma e alimenta o motor de padrões clínicos.
+            Edite os dados dos familiares aqui. A coluna Filiação mostra as conexões do mapa.
           </p>
         </div>
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-2">
           <input
             type="file"
             accept=".csv, .xlsx"
@@ -572,111 +652,67 @@ export function ClanSpreadsheet({ clientId }: Props) {
           />
           <Button
             variant="outline"
-            size="sm"
+            className="min-h-11"
             onClick={() => fileInputRef.current?.click()}
-            disabled={isImporting}
-            className="font-bold border-forest/20 text-forest hover:bg-forest/5"
+            disabled={isImporting || isChangingRows || isError}
           >
             {isImporting ? (
               <Loader2 className="size-4 mr-2 animate-spin" />
             ) : (
               <Upload className="size-4 mr-2" />
             )}
-            Importar XLS/CSV
+            Importar CSV/XLSX
           </Button>
           <Button
             variant="outline"
-            size="sm"
-            onClick={() => removeEmptyPersons.mutate()}
-            disabled={removeEmptyPersons.isPending}
-            className="font-bold border-clinical-warning/25 text-clinical-warning hover:bg-clinical-warning/5"
-            title="Remove linhas sem nome e data"
-          >
-            {removeEmptyPersons.isPending ? (
-              <Loader2 className="size-4 mr-2 animate-spin" />
-            ) : (
-              <Sparkles className="size-4 mr-2" />
-            )}
-            Limpar vazios
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={async () => {
-              const ok = await askConfirm({
-                title: "Apagar toda a planilha?",
-                description:
-                  "Isso remove TODAS as linhas cadastradas para este cliente. Esta ação não pode ser desfeita.",
-                confirmLabel: "Apagar tudo",
-                destructive: true,
-              });
-              if (ok) deleteAllPersons.mutate();
-            }}
-            disabled={deleteAllPersons.isPending}
-            className="font-bold border-destructive/20 text-destructive hover:bg-destructive/5"
-            title="Apaga a planilha inteira"
-          >
-            {deleteAllPersons.isPending ? (
-              <Loader2 className="size-4 mr-2 animate-spin" />
-            ) : (
-              <Trash2 className="size-4 mr-2" />
-            )}
-            Limpar Tudo
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
+            className="min-h-11"
             onClick={exportCsv}
             disabled={rows.length === 0}
-            className="font-bold"
           >
             <Download className="size-4 mr-2" /> Exportar CSV
           </Button>
-          <Button size="sm" onClick={() => addPerson.mutate(undefined)} variant="forest">
+          <Button
+            className="min-h-11"
+            onClick={() => addPerson.mutate(undefined)}
+            variant="forest"
+            disabled={isChangingRows || isError}
+          >
             <Plus className="size-4 mr-2" /> Nova pessoa
           </Button>
         </div>
       </header>
 
-      {rows.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="rounded-sm border-2 border-dashed border-border bg-surface-document shadow-sm p-12 text-center relative overflow-hidden"
+      {isError && (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center gap-3 rounded-md border border-border p-3"
         >
-          <div className="absolute top-0 right-0 opacity-10 pointer-events-none">
-            <img src="/data_import.png" alt="" className="w-[300px] h-[300px] object-cover" />
-          </div>
-          <div className="relative z-10 flex flex-col items-center">
-            <Table2 className="mx-auto size-12 text-forest opacity-80 mb-4" />
-            <h3 className="font-serif text-3xl font-bold text-primary">Nenhum dado mapeado</h3>
-            <p className="mx-auto mt-3 max-w-md text-[14px] text-muted-foreground leading-relaxed">
-              Você pode importar uma planilha CSV com os dados da família, aplicar o modelo de 4
-              gerações ou adicionar as pessoas uma a uma.
-            </p>
-            <div className="mt-8 flex flex-wrap justify-center gap-4">
-              <Button
-                className="font-bold"
-                variant="forest"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <Upload className="size-4 mr-2" /> Importar CSV/XLSX
-              </Button>
-              <Button className="font-bold" variant="outline" onClick={scaffoldTemplate}>
-                <Table2 className="size-4 mr-2" /> Aplicar Modelo Próprio
-              </Button>
-            </div>
-          </div>
-        </motion.div>
-      ) : (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          <p className="mb-1.5 text-[13px] font-bold uppercase tracking-[0.1em] text-muted-foreground md:hidden">
-            ← Arraste pra o lado pra ver todas as colunas →
+          <p className="text-[14px] text-clinical-warning">A planilha pode estar desatualizada.</p>
+          <Button variant="outline" className="min-h-11" onClick={() => void refetch()}>
+            Atualizar dados
+          </Button>
+        </div>
+      )}
+
+      {!hasRelatives && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-surface-document p-4">
+          <p className="max-w-lg text-[14px] text-muted-foreground">
+            Adicione familiares individualmente ou comece com campos para quatro gerações.
           </p>
+          <Button
+            className="min-h-11"
+            variant="outline"
+            onClick={() => addTemplate.mutate()}
+            disabled={isChangingRows || isError}
+          >
+            <Table2 className="size-4 mr-2" />
+            {addTemplate.isPending ? "Aplicando…" : "Usar modelo de 4 gerações"}
+          </Button>
+        </div>
+      )}
+
+      {rows.length > 0 && (
+        <div>
           <div className="mb-3 flex flex-wrap items-center gap-3">
             <label className="flex flex-1 items-center gap-2 text-[15px]">
               <span className="sr-only">Buscar na planilha</span>
@@ -698,16 +734,40 @@ export function ClanSpreadsheet({ clientId }: Props) {
               Colunas de datas
             </label>
             <span className="text-[14px] text-muted-foreground" role="status">
-              {visibleRows.length} de {rows.length} · ↑/↓ entre linhas
+              {visibleRows.length} de {rows.length}
             </span>
+            {pendingCount > 0 && (
+              <Button
+                variant="outline"
+                className="min-h-11"
+                aria-pressed={onlyPending}
+                onClick={() => setOnlyPending((active) => !active)}
+              >
+                {onlyPending
+                  ? "Mostrar todos"
+                  : `${pendingCount} ${pendingCount === 1 ? "filiação a revisar" : "filiações a revisar"}`}
+              </Button>
+            )}
+            {pendingCount === 0 && onlyPending && (
+              <Button variant="outline" className="min-h-11" onClick={() => setOnlyPending(false)}>
+                Mostrar todos
+              </Button>
+            )}
           </div>
-          <div className="max-h-[70vh] overflow-auto rounded-sm border-2 border-border/80 bg-surface-document shadow-sm">
+          <p className="mb-2 text-[14px] text-muted-foreground md:hidden">
+            Deslize na tabela para ver as outras colunas.
+          </p>
+          <fieldset
+            disabled={isRemovingRows || confirmImport.isPending}
+            className="min-w-0 max-h-[70vh] overflow-auto rounded-md border border-border bg-surface-document"
+          >
             <table className="w-full min-w-[760px] border-collapse text-[16px]">
-              <thead className="sticky top-0 z-30 bg-card text-[14px] font-bold uppercase tracking-[0.15em] text-forest border-b-2 border-border/80">
+              <thead className="sticky top-0 z-30 border-b border-border bg-card text-[14px] font-semibold text-forest">
                 <tr>
                   <Th w="w-11">#</Th>
                   <ResizableTh label="Nome" initial={200} sticky />
-                  <ResizableTh label="Parentesco" initial={240} />
+                  <ResizableTh label="Parentesco informado" initial={210} />
+                  <ResizableTh label="Filiação no mapa" initial={215} />
                   {showDates && <ResizableTh label="Nascimento" initial={140} />}
                   {showDates && <ResizableTh label="Morte" initial={140} />}
                   <Th w="w-14"></Th>
@@ -717,13 +777,20 @@ export function ClanSpreadsheet({ clientId }: Props) {
               <tbody onKeyDown={onGridKeyDown}>
                 {visibleRows.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="p-4 text-[15px] text-muted-foreground">
+                    <td colSpan={columnCount} className="p-4 text-[15px] text-muted-foreground">
                       Nenhum familiar corresponde à busca.
                     </td>
                   </tr>
                 )}
                 {visibleRows.map((r, i) => {
                   const expanded = expandedRows.has(r.id);
+                  const onMap = graph.persons.has(r.id);
+                  const { parents, names } = parentSummary(graph, r.id);
+                  const warning = warningByPersonId.get(r.id);
+                  const pending = graph.pendingPersonIds.has(r.id);
+                  const relationLabel = parents.some((parent) => parent.source === "legacy")
+                    ? "Sugerida pelo parentesco"
+                    : "Registrada";
                   const hasSecondaryData = !!(
                     r.gestational_weeks?.trim() ||
                     (r.health_conditions ?? []).length > 0 ||
@@ -736,43 +803,70 @@ export function ClanSpreadsheet({ clientId }: Props) {
                   return (
                     <Fragment key={r.id}>
                       <tr className="border-b border-border/40 hover:bg-forest-soft/20 transition-colors">
-                        <td className="px-3 text-center text-[14px] font-mono font-medium text-muted-foreground">
+                        <td className="px-3 text-center text-[14px] tabular-nums text-muted-foreground">
                           {i + 1}
                         </td>
-                        <td className="px-1 py-1 sticky left-0 z-10 bg-surface-document shadow-[4px_0_6px_-4px_rgba(58,45,30,0.2)]">
+                        <td className="px-1 py-1 bg-surface-document md:sticky md:left-0 md:z-10">
                           <CellInput
+                            id={`clan-person-${r.id}`}
                             value={r.full_name ?? ""}
                             onChange={(v) => scheduleSave(r.id, { full_name: v })}
+                            ariaLabel={`Nome da linha ${i + 1}`}
                           />
                         </td>
                         <Td>
-                          <div className="relative flex w-full items-center">
+                          {r.is_proband ? (
+                            <span className="px-2 text-[15px] font-medium">Consulente</span>
+                          ) : (
                             <RelationshipCombobox
                               value={r.relationship_to_proband ?? ""}
                               onChange={(v) => scheduleSave(r.id, { relationship_to_proband: v })}
-                              hasWarning={
-                                (!r.relationship_to_proband?.trim() && !!r.full_name?.trim()) ||
-                                warningsByPersonId.has(r.id)
-                              }
+                              hasWarning={pending || Boolean(warning)}
                               triggerClassName="w-full h-11 rounded-sm border-0 bg-transparent px-2 text-[16px] font-medium ring-1 ring-transparent hover:bg-forest-soft/20 focus:bg-forest-soft/30 focus:ring-forest"
                             />
-                            {(() => {
-                              const missingRel =
-                                !r.relationship_to_proband?.trim() && !!r.full_name?.trim();
-                              const graphWarning = warningsByPersonId.get(r.id);
-                              const title = missingRel
-                                ? "Vínculo pendente! Esta pessoa não aparecerá conectada na árvore."
-                                : graphWarning;
-                              if (!title) return null;
-                              return (
-                                <div
-                                  className="absolute right-2 text-clinical-critical"
-                                  title={title}
+                          )}
+                        </Td>
+                        <Td>
+                          <div className="space-y-0.5 px-2 py-1 text-[14px] leading-snug">
+                            {names.length > 0 && (
+                              <p className="font-medium text-ink [overflow-wrap:anywhere]">
+                                {names.join(" · ")}
+                              </p>
+                            )}
+                            {onMap ? (
+                              <>
+                                <p
+                                  className={
+                                    pending || warning
+                                      ? "text-clinical-warning"
+                                      : "text-muted-foreground"
+                                  }
                                 >
-                                  <AlertCircle className="size-4" />
-                                </div>
-                              );
-                            })()}
+                                  {warning ??
+                                    (pending
+                                      ? "Filiação a revisar"
+                                      : names.length
+                                        ? relationLabel
+                                        : "Sem filiação informada")}
+                                </p>
+                                <Link
+                                  to="/app/clientes/$clientId"
+                                  params={{ clientId }}
+                                  search={(previous) => ({
+                                    ...previous,
+                                    tab: "genogram",
+                                    person: r.id,
+                                  })}
+                                  aria-label={`Revisar no mapa: ${r.full_name || `linha ${i + 1}`}`}
+                                  className="inline-flex min-h-11 items-center gap-1.5 font-medium text-forest underline-offset-4 hover:underline focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                >
+                                  <MapPin className="size-4" aria-hidden />
+                                  Revisar no mapa
+                                </Link>
+                              </>
+                            ) : (
+                              <p className="text-muted-foreground">A preencher</p>
+                            )}
                           </div>
                         </Td>
                         {showDates && (
@@ -781,6 +875,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
                               <CellInput
                                 type="date"
                                 value={r.birth_date ?? ""}
+                                ariaLabel={`Nascimento da linha ${i + 1}`}
                                 onChange={(v) => scheduleSave(r.id, { birth_date: v || null })}
                               />
                             </Td>
@@ -788,6 +883,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
                               <CellInput
                                 type="date"
                                 value={r.death_date ?? ""}
+                                ariaLabel={`Falecimento da linha ${i + 1}`}
                                 onChange={(v) =>
                                   scheduleSave(r.id, { death_date: v || null, is_deceased: !!v })
                                 }
@@ -799,7 +895,8 @@ export function ClanSpreadsheet({ clientId }: Props) {
                           <button
                             onClick={() => toggleExpanded(r.id)}
                             className="relative rounded h-11 w-11 flex items-center justify-center text-muted-foreground transition-colors hover:bg-forest-soft/40 hover:text-forest"
-                            title="Enfermidades, profissão, vícios, temperamento, ordem, observações e gestação"
+                            aria-expanded={expanded}
+                            aria-label={`Detalhes de ${r.full_name || `linha ${i + 1}`}`}
                           >
                             {expanded ? (
                               <ChevronDown className="size-4" />
@@ -812,26 +909,29 @@ export function ClanSpreadsheet({ clientId }: Props) {
                           </button>
                         </td>
                         <td className="px-1 text-center">
-                          <button
-                            onClick={async () => {
-                              const ok = await askConfirm({
-                                title: "Remover pessoa?",
-                                description: `Remover ${r.full_name || "pessoa sem nome"} da planilha?`,
-                                confirmLabel: "Remover",
-                                destructive: true,
-                              });
-                              if (ok) removePerson.mutate(r.id);
-                            }}
-                            className="rounded h-11 w-11 flex items-center justify-center text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                            title="Remover"
-                          >
-                            <Trash2 className="size-4" />
-                          </button>
+                          {!r.is_proband && (
+                            <button
+                              disabled={isChangingRows || isError}
+                              onClick={async () => {
+                                const ok = await askConfirm({
+                                  title: "Remover pessoa?",
+                                  description: `Remover ${r.full_name || "esta pessoa"} da planilha e do mapa? Os vínculos registrados com esta pessoa também serão removidos.`,
+                                  confirmLabel: "Remover",
+                                  destructive: true,
+                                });
+                                if (ok) removePerson.mutate(r.id);
+                              }}
+                              className="rounded h-11 w-11 flex items-center justify-center text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                              aria-label={`Remover ${r.full_name || `linha ${i + 1}`}`}
+                            >
+                              <Trash2 className="size-4" />
+                            </button>
+                          )}
                         </td>
                       </tr>
                       {expanded && (
                         <tr className="border-b border-border/40 bg-forest-soft/10">
-                          <td colSpan={7} className="px-4 py-3">
+                          <td colSpan={columnCount} className="px-4 py-3">
                             <div className="flex flex-wrap gap-4">
                               <DetailField label="Gestação" w="w-24">
                                 <CellInput
@@ -900,13 +1000,65 @@ export function ClanSpreadsheet({ clientId }: Props) {
                 })}
               </tbody>
             </table>
-          </div>
-          <div className="mt-3 flex items-center justify-between">
-            <p className="text-[14px] uppercase tracking-[0.1em] font-bold text-muted-foreground">
-              Salvamento automático a cada digitação (0.9s)
+          </fieldset>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+            <p
+              role="status"
+              className={`text-[14px] ${hasDrafts && saveFailed ? "text-clinical-critical" : "text-muted-foreground"}`}
+            >
+              {hasDrafts
+                ? saveFailed
+                  ? "Alterações aguardando novo envio."
+                  : "Salvando alterações…"
+                : "As alterações são salvas automaticamente."}
             </p>
+            {hasDrafts && saveFailed && (
+              <Button
+                variant="outline"
+                className="min-h-11"
+                onClick={() => void queueRef.current!.flush().catch(() => {})}
+              >
+                Tentar salvar novamente
+              </Button>
+            )}
           </div>
-        </motion.div>
+        </div>
+      )}
+
+      {hasRelatives && (
+        <details className="rounded-md border border-border bg-surface-document px-4">
+          <summary className="min-h-11 cursor-pointer content-center text-[14px] font-medium">
+            Organizar a planilha
+          </summary>
+          <div className="flex flex-wrap gap-2 pb-3">
+            <Button
+              variant="outline"
+              className="min-h-11"
+              onClick={() => removeEmptyPersons.mutate()}
+              disabled={isChangingRows || isError}
+            >
+              <Sparkles className="size-4 mr-2" />
+              {removeEmptyPersons.isPending ? "Removendo…" : "Remover linhas vazias"}
+            </Button>
+            <Button
+              variant="outline"
+              className="min-h-11 text-destructive"
+              disabled={isChangingRows || isError}
+              onClick={async () => {
+                const ok = await askConfirm({
+                  title: "Remover todos os familiares?",
+                  description:
+                    "Os familiares e seus vínculos serão removidos da planilha e do mapa. O cadastro do consulente será mantido.",
+                  confirmLabel: "Remover familiares",
+                  destructive: true,
+                });
+                if (ok) deleteAllPersons.mutate();
+              }}
+            >
+              <Trash2 className="size-4 mr-2" /> Remover familiares
+            </Button>
+          </div>
+        </details>
       )}
 
       <AlertDialog
@@ -948,20 +1100,20 @@ export function ClanSpreadsheet({ clientId }: Props) {
           <DialogHeader>
             <DialogTitle>Prévia da importação</DialogTitle>
             <DialogDescription>
-              Confira o mapeamento das colunas e as linhas antes de gravar. Nada é salvo até você
-              confirmar; se a gravação falhar, a planilha atual fica como está.
+              Confira as colunas e as sugestões de filiação. O arquivo traz dados das pessoas.
+              Vínculos registrados são revisados no mapa.
             </DialogDescription>
           </DialogHeader>
           {importPreview && (
             <div className="space-y-4 text-[15px]">
-              <fieldset className="grid gap-2 sm:grid-cols-3">
+              <fieldset className="grid gap-2 sm:grid-cols-3" disabled={confirmImport.isPending}>
                 <legend className="mb-2 font-semibold">Colunas do arquivo</legend>
                 {IMPORT_FIELDS.map((f) => (
                   <label key={f.key} className="flex flex-col gap-1 text-[14px]">
                     {f.label}
                     <select
                       className="h-11 rounded-md border border-input bg-background px-2"
-                      value={importPreview.mapping[f.key as FieldKey] ?? ""}
+                      value={importPreview.mapping[f.key] ?? ""}
                       onChange={(e) => {
                         const v = e.target.value;
                         setImportPreview((p) =>
@@ -1001,32 +1153,46 @@ export function ClanSpreadsheet({ clientId }: Props) {
                       <th className="px-2 py-1 text-left">Linha</th>
                       <th className="px-2 py-1 text-left">Nome</th>
                       <th className="px-2 py-1 text-left">Parentesco</th>
+                      <th className="px-2 py-1 text-left">Filiação prevista</th>
                       <th className="px-2 py-1 text-left">Situação</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {analysis.slice(0, 200).map((r) => (
-                      <tr key={r.line} className="border-t border-border align-top">
-                        <td className="px-2 py-1 tabular-nums">{r.line}</td>
-                        <td className="px-2 py-1">{r.record?.full_name ?? "—"}</td>
-                        <td className="px-2 py-1">{r.record?.relationship_to_proband ?? "—"}</td>
-                        <td
-                          className={`px-2 py-1 ${r.status === "error" ? "text-destructive" : ""}`}
-                        >
-                          {
+                    {analysis.slice(0, 200).map((r) => {
+                      const id = `import:${r.line}`;
+                      const inPreview = importGraph?.persons.has(id);
+                      const previewNames =
+                        importGraph && inPreview ? parentSummary(importGraph, id).names : [];
+                      return (
+                        <tr key={r.line} className="border-t border-border align-top">
+                          <td className="px-2 py-1 tabular-nums">{r.line}</td>
+                          <td className="px-2 py-1">{r.record?.full_name ?? "—"}</td>
+                          <td className="px-2 py-1">{r.record?.relationship_to_proband ?? "—"}</td>
+                          <td className="px-2 py-1">
+                            {previewNames.length > 0
+                              ? `Sugestão: ${previewNames.join(" · ")}`
+                              : inPreview
+                                ? "Sem pais identificados"
+                                : "—"}
+                          </td>
+                          <td
+                            className={`px-2 py-1 ${r.status === "error" ? "text-destructive" : ""}`}
+                          >
                             {
-                              ok: "Ok",
-                              error: "Erro",
-                              duplicate: "Duplicidade?",
-                              skip: "Ignorada",
-                            }[r.status]
-                          }
-                          {r.messages.length > 0 && (
-                            <span className="block text-[13px]">{r.messages.join("; ")}</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                              {
+                                ok: "Ok",
+                                error: "Erro",
+                                duplicate: "Duplicidade?",
+                                skip: "Ignorada",
+                              }[r.status]
+                            }
+                            {r.messages.length > 0 && (
+                              <span className="block text-[13px]">{r.messages.join("; ")}</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -1035,21 +1201,33 @@ export function ClanSpreadsheet({ clientId }: Props) {
                   type="checkbox"
                   className="size-5"
                   checked={importDuplicates}
+                  disabled={confirmImport.isPending}
                   onChange={(e) => setImportDuplicates(e.target.checked)}
                 />
                 Importar também as possíveis duplicidades
               </label>
-              {(persons?.length ?? 0) > 0 && (
-                <label className="flex min-h-11 items-center gap-2">
-                  <input
-                    type="checkbox"
-                    className="size-5"
-                    checked={importReplace}
-                    onChange={(e) => setImportReplace(e.target.checked)}
-                  />
-                  Substituir os familiares atuais (o cliente é mantido; vínculos dos removidos são
-                  apagados)
-                </label>
+              {hasRelatives &&
+                (hasRegisteredLinks && !importReplace ? (
+                  <p className="text-[14px] text-clinical-warning">
+                    Esta família tem vínculos registrados. Adicione as linhas do arquivo ou edite a
+                    planilha atual para preservar as conexões.
+                  </p>
+                ) : (
+                  <label className="flex min-h-11 items-center gap-2">
+                    <input
+                      type="checkbox"
+                      className="size-5"
+                      checked={importReplace}
+                      disabled={confirmImport.isPending}
+                      onChange={(e) => setImportReplace(e.target.checked)}
+                    />
+                    Substituir os familiares atuais e manter o cadastro do consulente
+                  </label>
+                ))}
+              {hasRegisteredLinks && importReplace && (
+                <p role="alert" className="text-[14px] text-clinical-warning">
+                  Há vínculos registrados. Desmarque a opção de substituir para manter as conexões.
+                </p>
               )}
             </div>
           )}
@@ -1065,7 +1243,11 @@ export function ClanSpreadsheet({ clientId }: Props) {
             <Button
               className="min-h-11"
               variant={importReplace ? "destructive" : "default"}
-              disabled={confirmImport.isPending || toImport.length === 0}
+              disabled={
+                confirmImport.isPending ||
+                toImport.length === 0 ||
+                (importReplace && hasRegisteredLinks)
+              }
               onClick={() => confirmImport.mutate()}
             >
               {confirmImport.isPending
@@ -1079,14 +1261,8 @@ export function ClanSpreadsheet({ clientId }: Props) {
   );
 }
 
-function Th({ children, w, sticky }: { children?: React.ReactNode; w?: string; sticky?: boolean }) {
-  return (
-    <th
-      className={`px-3 py-3 text-left font-bold ${w ?? ""} ${sticky ? "sticky left-0 z-20 bg-forest-soft/40 shadow-[4px_0_6px_-4px_rgba(58,45,30,0.25)]" : ""}`}
-    >
-      {children}
-    </th>
-  );
+function Th({ children, w }: { children?: React.ReactNode; w?: string }) {
+  return <th className={`px-3 py-3 text-left ${w ?? ""}`}>{children}</th>;
 }
 /** Coluna com largura ajustável por arrasto ou teclado (setas ←/→). */
 function ResizableTh({
@@ -1115,7 +1291,7 @@ function ResizableTh({
   return (
     <th
       style={{ width, minWidth: width }}
-      className={`relative px-3 py-3 text-left font-bold ${sticky ? "sticky left-0 z-20 bg-forest-soft/40" : ""}`}
+      className={`relative px-3 py-3 text-left ${sticky ? "md:sticky md:left-0 md:z-20 md:bg-card" : ""}`}
     >
       {label}
       <span
@@ -1162,6 +1338,8 @@ function DetailField({
 }
 
 function CellInput(props: {
+  id?: string;
+  ariaLabel?: string;
   value: string;
   onChange: (v: string) => void;
   type?: string;
@@ -1171,6 +1349,8 @@ function CellInput(props: {
 }) {
   return (
     <input
+      id={props.id}
+      aria-label={props.ariaLabel}
       type={props.type ?? "text"}
       value={props.value}
       onChange={(e) => props.onChange(e.target.value)}

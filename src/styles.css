@@ -911,7 +911,7 @@
     height: auto;
   }
   .atlas-map-workspace {
-    height: 580px;
+    min-height: 580px;
   }
   .atlas-map-stage {
     min-height: 360px;
@@ -1153,9 +1153,6 @@
 }
 .atlas-map-toolbar {
   padding: 10px;
-}
-.atlas-map-toolbar > div > div:first-child {
-  display: none;
 }
 .atlas-map-toolbar button {
   font-size: 14px;

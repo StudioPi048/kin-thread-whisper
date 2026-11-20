@@ -32,7 +32,7 @@ export interface PersonNodeData {
  *  ○ círculo    = feminino   (borda lavanda)
  *  △ triângulo  = aborto
  *  ◇ losango    = não-binário / desconhecido (borda dourada)
- *  ✕ diagonal   = pessoa falecida
+ *  Traço superior = pessoa falecida (Psicogenealogia Viva)
  *
  * Foco: LEGIBILIDADE. Nome e datas sempre em primeiro plano, com fundo
  * sólido; o símbolo é a moldura, nunca cobre o texto. Cliente destacado
@@ -130,18 +130,18 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
           </div>
         )}
 
-        {/* Linha diagonal de falecido — Convenção McGoldrick/Gerson */}
-        {d.is_deceased && (
+        {/* Sinal de falecimento — Manual da Psicogenealogia, p. 164 */}
+        {(d.is_deceased || d.death_date) && (
           <svg
             aria-hidden
             className="pointer-events-none absolute inset-0 size-full"
             viewBox="0 0 100 100"
           >
             <line
-              x1="15"
-              y1="85"
-              x2="85"
-              y2="15"
+              x1="14"
+              y1="24"
+              x2="86"
+              y2="24"
               stroke="var(--graphite)"
               strokeWidth="4"
               strokeLinecap="round"
@@ -217,24 +217,7 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
       <div className="atlas-person-info">
         <p className="text-sm font-semibold leading-tight break-words">{displayName}</p>
         {dates && <p className="atlas-person-dates tabular-nums">{dates}</p>}
-        {d.is_proband && <span className="text-[10px] text-gold">Pessoa de referência</span>}
-      </div>
-
-      {/* Visual drag handle to connect people — visível ao selecionar (touch) ou hover (mouse) */}
-      <div
-        className={cn(
-          "absolute -bottom-7 left-1/2 -translate-x-1/2 transition-opacity z-50 flex items-center justify-center pointer-events-auto",
-          selected ? "opacity-100" : "opacity-0 group-hover:opacity-100",
-        )}
-      >
-        <Handle
-          id="visual-connect"
-          type="source"
-          position={Position.Bottom}
-          className="!w-7 !h-7 !bg-forest !border-2 !border-white flex items-center justify-center cursor-crosshair !rounded-full shadow-lg z-50 !relative !transform-none !left-0 !top-0"
-        >
-          <Plus className="w-4 h-4 text-white pointer-events-none" />
-        </Handle>
+        {d.is_proband && <span className="text-xs text-bronze">Consultante</span>}
       </div>
     </div>
   );

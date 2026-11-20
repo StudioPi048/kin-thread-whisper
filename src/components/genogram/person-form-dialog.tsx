@@ -48,6 +48,8 @@ interface Props {
   editing?: PersonRow | null;
   defaultPosition?: { x: number; y: number };
   defaultRelationship?: string;
+  defaultGender?: string;
+  onCreated?: (id: string) => void;
   allPersons?: PersonRow[];
 }
 
@@ -90,6 +92,8 @@ export function PersonFormDialog({
   editing,
   defaultPosition,
   defaultRelationship,
+  defaultGender,
+  onCreated,
   allPersons = [],
 }: Props) {
   const qc = useQueryClient();
@@ -118,13 +122,17 @@ export function PersonFormDialog({
         relationship_to_proband: editing.relationship_to_proband ?? "",
       });
     } else {
-      setV({ ...empty, relationship_to_proband: defaultRelationship ?? "" });
+      setV({
+        ...empty,
+        gender: defaultGender ?? empty.gender,
+        relationship_to_proband: defaultRelationship ?? "",
+      });
     }
     setConditionInput("");
     setEventDate("");
     setEventType("");
     setEventDesc("");
-  }, [open, editing, defaultRelationship]);
+  }, [open, editing, defaultRelationship, defaultGender]);
 
   const mutation = useMutation({
     mutationFn: async (form: FormState) => {
@@ -150,21 +158,29 @@ export function PersonFormDialog({
         const { error } = await supabase
           .from("genogram_persons")
           .update(payload)
-          .eq("id", editing.id);
+          .eq("id", editing.id)
+          .eq("client_id", clientId);
         if (error) throw error;
+        return null;
       } else {
-        const { error } = await supabase.from("genogram_persons").insert({
-          ...payload,
-          position_x: defaultPosition?.x ?? 0,
-          position_y: defaultPosition?.y ?? 0,
-        });
+        const { data, error } = await supabase
+          .from("genogram_persons")
+          .insert({
+            ...payload,
+            position_x: defaultPosition?.x ?? 0,
+            position_y: defaultPosition?.y ?? 0,
+          })
+          .select("id")
+          .single();
         if (error) throw error;
+        return data.id;
       }
     },
-    onSuccess: () => {
-      invalidateCase(qc, clientId);
+    onSuccess: async (createdId) => {
+      await invalidateCase(qc, clientId);
       toast.success(editing ? "Dossiê salvo." : "Pessoa adicionada.");
       onOpenChange(false);
+      if (createdId) onCreated?.(createdId);
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
@@ -365,9 +381,10 @@ export function PersonFormDialog({
                 <label className="flex items-center gap-2 text-[14px] font-bold text-forest cursor-pointer">
                   <Checkbox
                     checked={v.is_proband}
+                    disabled={allPersons.some((person) => person.is_proband)}
                     onCheckedChange={(c) => set("is_proband", c === true)}
                   />
-                  É o paciente-índice
+                  É o consultante
                 </label>
               </div>
 

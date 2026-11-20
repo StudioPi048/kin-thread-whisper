@@ -1,5 +1,6 @@
-import { invalidateCase } from "@/lib/clinical-intel";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { parentLinePatterns } from "@/lib/family-relationships";
+import { clinicalIntelQuery, getMappablePersons, invalidateCase } from "@/lib/clinical-intel";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Background,
   BackgroundVariant,
@@ -7,14 +8,12 @@ import {
   Controls,
   ReactFlow,
   ReactFlowProvider,
-  addEdge,
   useEdgesState,
   useNodesState,
   useReactFlow,
   useStore,
   getNodesBounds,
   getViewportForBounds,
-  type Connection,
   type Edge,
   type EdgeProps,
   type EdgeMouseHandler,
@@ -22,10 +21,8 @@ import {
   type NodeMouseHandler,
   Handle,
   Position,
-  ConnectionMode,
   type NodeProps,
   type NodeChange,
-  Panel,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -33,10 +30,9 @@ import {
   UserPlus,
   Link2,
   Trash2,
-  Printer,
-  HelpCircle,
-  Users,
   TreePine,
+  Printer,
+  Users,
   Save,
   Lock,
   Unlock,
@@ -49,6 +45,9 @@ import {
   Maximize2,
   Minimize2,
   Crosshair,
+  Box,
+  GitBranch,
+  Search,
   PanelRightClose,
   PanelRightOpen,
 } from "lucide-react";
@@ -87,8 +86,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PersonNode, type PersonNodeData } from "./person-node";
 import { PersonFormDialog } from "./person-form-dialog";
 import { RelationshipFormDialog } from "./relationship-form-dialog";
-import { relationshipLabel } from "@/lib/genogram";
-import { smartNormalizeRelationship } from "@/lib/relationship-normalizer";
+import { relationshipLabel, relationshipQualifiers } from "@/lib/genogram";
 import { ensureProband } from "@/lib/ensure-proband";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -96,6 +94,20 @@ type PersonRow = Database["public"]["Tables"]["genogram_persons"]["Row"];
 type RelRow = Database["public"]["Tables"]["genogram_relationships"]["Row"];
 type NodePositionRow = Database["public"]["Tables"]["genogram_node_positions"]["Row"];
 type LayoutRow = Database["public"]["Tables"]["genogram_layouts"]["Row"];
+
+const SpatialView = lazy(() =>
+  import("./genogram-spatial-view").then((module) => ({ default: module.GenogramSpatialView })),
+);
+
+type QuickRelative = { personId: string; kind: "Pai" | "Mãe" | "Filho(a)" | "Irmã(o)" };
+type RelationshipSeed = {
+  from?: string;
+  to?: string;
+  type?: "parent" | "union";
+  qualifier?: string;
+};
+const personName = (person?: PersonRow) =>
+  person?.preferred_name || person?.full_name || "Pessoa sem nome";
 
 /**
  * UnionNode — cidadão de primeira classe do grafo.
@@ -324,66 +336,62 @@ function nodeUnionY(node: Node | undefined): number {
  * os filhos daquela união (fonte lógica). Nenhuma decisão vem de proximidade.
  */
 function PedigreeEdge({ style, markerEnd, markerStart, interactionWidth, data }: EdgeProps) {
-  const edgeData = data as { unionId?: string; childIds?: string[] } | undefined;
+  const edgeData = data as
+    | {
+        unionId?: string;
+        childIds?: string[];
+        childKinds?: Record<string, string>;
+        direction?: "up" | "down";
+      }
+    | undefined;
   const unionId = edgeData?.unionId;
   const childIds = edgeData?.childIds ?? [];
   const live = useStore((store) => {
     const children = childIds
       .map((id) => store.nodeLookup.get(id) as unknown as Node | undefined)
-      .filter((n): n is Node => Boolean(n));
+      .filter((node): node is Node => Boolean(node));
     const union = unionId
       ? (store.nodeLookup.get(unionId) as unknown as Node | undefined)
       : undefined;
     return { children, union };
   });
 
-  if (!live.union || live.children.length === 0) return null;
-
-  const unionX = live.union.position.x;
-  const unionY = live.union.position.y;
-  const childPoints = live.children.map((n) => ({ x: nodeCenterX(n), y: n.position.y, node: n }));
-
-  const xs = childPoints.map((p) => p.x);
-  const barLeft = Math.min(...xs, unionX);
-  const barRight = Math.max(...xs, unionX);
-
-  const minChildTop = Math.min(...childPoints.map((p) => p.y));
-  // Barra de irmãos posicionada de forma limpa abaixo dos cards dos filhos:
-  // minChildTop + shapeSize (76) + 12px (gap) + 72px (card) + 24px (gap to line)
-  const shapeSize = 76;
-  const cardHeight = 72;
-  const siblingBarY =
-    unionY < minChildTop ? minChildTop - 30 : minChildTop + shapeSize + 12 + cardHeight + 24;
-
-  let path = "";
-  path += `M ${barLeft} ${siblingBarY} L ${barRight} ${siblingBarY} `;
-  for (const p of childPoints) {
-    const childShapeSize = nodeShapeSize(p.node);
-    const safeGap = 20;
-
-    // Conecta na base/topo do símbolo do filho respeitando os 20px de respiro
-    const childConnY = p.y < siblingBarY ? p.y + childShapeSize + safeGap : p.y - safeGap;
-
-    path += `M ${p.x} ${childConnY} L ${p.x} ${siblingBarY} `;
+  if (!live.union || !live.children.length) return null;
+  const unionX = live.union.position.x + UNION_SIZE / 2;
+  const unionY = live.union.position.y + UNION_SIZE / 2;
+  const down = edgeData?.direction === "down";
+  const groups = new Map<string, { x: number; y: number }[]>();
+  for (const node of live.children) {
+    const kind = edgeData?.childKinds?.[node.id] ?? "biological";
+    const key = `${node.position.y}:${kind}`;
+    const points = groups.get(key) ?? [];
+    points.push({ x: nodeCenterX(node), y: down ? node.position.y - 5 : nodeBottomY(node) + 5 });
+    groups.set(key, points);
   }
+  return [...groups].map(([key, points], index) => {
+    const crossY = down
+      ? Math.min(...points.map((point) => point.y))
+      : Math.max(...points.map((point) => point.y));
+    const barY = (crossY + unionY) / 2 + (index % 3) * 5;
+    const left = Math.min(unionX, ...points.map((point) => point.x));
+    const right = Math.max(unionX, ...points.map((point) => point.x));
+    const path = [
+      `M ${left} ${barY} H ${right}`,
+      ...points.map(({ x, y }) => `M ${x} ${y} V ${barY}`),
+      `M ${unionX} ${barY} V ${unionY}`,
+    ].join(" ");
 
-  // Conecta na união parental respeitando os 20px de respiro do símbolo
-  const safeGap = 20;
-  const unionHalfSize = 6; // UNION_SIZE / 2
-  const unionConnY =
-    unionY < siblingBarY ? unionY + unionHalfSize + safeGap : unionY - unionHalfSize - safeGap;
-
-  path += `M ${unionX} ${siblingBarY} L ${unionX} ${unionConnY}`;
-
-  return (
-    <BaseEdge
-      path={path}
-      style={style}
-      markerEnd={markerEnd}
-      markerStart={markerStart}
-      interactionWidth={interactionWidth}
-    />
-  );
+    return (
+      <BaseEdge
+        key={key}
+        path={path}
+        style={{ ...style, strokeDasharray: parentLinePatterns[key.split(":")[1]] }}
+        markerEnd={markerEnd}
+        markerStart={markerStart}
+        interactionWidth={interactionWidth}
+      />
+    );
+  });
 }
 
 /**
@@ -404,15 +412,15 @@ function PartnerEdge({ style, interactionWidth, data }: EdgeProps) {
   if (!live.person || !live.union) return null;
   const px = nodeCenterX(live.person);
   const py = nodeUnionY(live.person);
-  const ux = live.union.position.x;
-  const uy = live.union.position.y;
+  const ux = live.union.position.x + UNION_SIZE / 2;
+  const uy = live.union.position.y + UNION_SIZE / 2;
 
   const shapeSize = nodeShapeSize(live.person);
   const R = shapeSize / 2;
-  const safeGap = 20;
+  const safeGap = 2;
 
   let path = "";
-  if (Math.abs(py - uy) < 1) {
+  if (Math.abs(py - uy) < 12) {
     const startX = px < ux ? px + R + safeGap : px - R - safeGap;
     path = `M ${startX} ${uy} L ${ux} ${uy}`;
   } else {
@@ -424,76 +432,6 @@ function PartnerEdge({ style, interactionWidth, data }: EdgeProps) {
 }
 
 const edgeTypes = { straightStep: StraightStepEdge, pedigree: PedigreeEdge, partner: PartnerEdge };
-
-function isUnionEdge(edge: Edge): boolean {
-  return (edge.data as { relationshipType?: string } | undefined)?.relationshipType === "union";
-}
-
-function isParentEdge(edge: Edge): boolean {
-  return (edge.data as { relationshipType?: string } | undefined)?.relationshipType === "parent";
-}
-
-function GenerationRuler() {
-  return (
-    <div className="w-[154px] overflow-hidden rounded-md border border-forest/25 bg-card/92 shadow-sm backdrop-blur">
-      {[
-        ["Paciente", "ponto de partida"],
-        ["Geração 1", "pais e tios"],
-        ["Geração 2", "avós e tios-avós"],
-        ["Geração 3", "bisavós"],
-      ].map(([label, subtitle]) => (
-        <div key={label} className="border-b border-border/60 px-2.5 py-2 last:border-b-0">
-          <p className="font-serif text-[14px] font-bold leading-tight text-forest">{label}</p>
-          <p className="mt-0.5 text-[9px] font-bold uppercase leading-snug tracking-[0.08em] text-muted-foreground">
-            {subtitle}
-          </p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function ShortcutsLegend() {
-  return (
-    <div className="w-[168px] overflow-hidden rounded-lg border border-forest/25 bg-popover/95 shadow-lg backdrop-blur-md ring-1 ring-black/5">
-      <div className="bg-forest/5 px-2.5 py-1.5 border-b border-forest/20">
-        <p className="font-serif text-[13px] font-bold leading-tight text-forest">Atalhos</p>
-      </div>
-      <div className="px-3 py-2.5 flex flex-col gap-2.5">
-        <div className="flex flex-col gap-0.5">
-          <div className="flex items-center gap-1">
-            <kbd className="px-1 py-0.5 text-[9px] font-mono font-medium rounded border border-border bg-muted text-muted-foreground">
-              Espaço
-            </kbd>
-            <span className="text-[14px] text-muted-foreground leading-none">+</span>
-            <span className="text-[14px] font-bold text-foreground leading-none">Arrastar</span>
-          </div>
-          <p className="text-[9px] leading-tight text-muted-foreground mt-0.5">
-            Navegar pelo quadro
-          </p>
-        </div>
-
-        <div className="flex flex-col gap-0.5">
-          <div className="flex items-center gap-1">
-            <span className="text-[14px] font-bold text-foreground leading-none">
-              Clique (Node)
-            </span>
-          </div>
-          <p className="text-[9px] leading-tight text-muted-foreground mt-0.5">
-            Selecionar e reposicionar
-          </p>
-        </div>
-
-        <div className="flex flex-col gap-0.5">
-          <div className="flex items-center gap-1">
-            <span className="text-[14px] font-bold text-foreground leading-none">Clique Duplo</span>
-          </div>
-          <p className="text-[9px] leading-tight text-muted-foreground mt-0.5">Editar pessoa</p>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 interface CanvasProps {
   clientId: string;
@@ -519,6 +457,7 @@ import {
   buildLogicalGraph,
   layoutGraph,
   validateGraph,
+  getResolvedParents,
   type GenogramWarning,
 } from "@/lib/geno/build";
 
@@ -544,7 +483,7 @@ function buildRenderGraph(
   const nodes: Node[] = [];
 
   // Bandas de geração (background)
-  for (let g = 0; g <= 3; g++) {
+  for (const g of new Set([...graph.persons.values()].map((person) => person.generation))) {
     nodes.push({
       id: `gen_bg_${g}`,
       type: "band",
@@ -576,6 +515,8 @@ function buildRenderGraph(
         relationship_to_proband: person.row.relationship_to_proband,
         notes: person.row.notes,
         generation: person.generation,
+        lane: person.lane,
+        branchId: person.branchId,
       },
     });
   }
@@ -588,7 +529,12 @@ function buildRenderGraph(
       id: uid,
       type: "union",
       position: pos,
-      data: { label: union.label, kind: union.kind },
+      data: {
+        label: union.label,
+        kind: union.kind,
+        generation: union.generation,
+        branchId: union.branchId,
+      },
       draggable: false,
       selectable: false,
       zIndex: 4,
@@ -598,6 +544,13 @@ function buildRenderGraph(
   // Edges: partner + child (nunca pessoa↔pessoa)
   const edges: Edge[] = [];
   const seenChildUnion = new Set<string>();
+  const childKindsByUnion = new Map<string, Record<string, string>>();
+  for (const edge of graph.edges) {
+    if (edge.kind !== "child") continue;
+    const children = childKindsByUnion.get(edge.unionId) ?? {};
+    children[edge.personId] = edge.childKind ?? "biological";
+    childKindsByUnion.set(edge.unionId, children);
+  }
   for (const e of graph.edges) {
     if (e.kind === "partner") {
       edges.push({
@@ -624,7 +577,12 @@ function buildRenderGraph(
       targetHandle: "top-target",
       type: "pedigree",
       style: { stroke: "var(--color-forest)", strokeWidth: 2 },
-      data: { unionId: uid, childIds: union.children },
+      data: {
+        unionId: uid,
+        childIds: union.children,
+        childKinds: childKindsByUnion.get(uid),
+        direction: union.direction,
+      },
       zIndex: 2,
     });
   }
@@ -641,69 +599,77 @@ function buildRenderGraph(
         ]
       : []),
   ];
-  return { nodes, edges, warnings: [...extra, ...graph.warnings] };
+  for (const rel of rels) {
+    if (rel.relationship_type !== "emotional" && rel.relationship_type !== "sibling") continue;
+    if (graph.persons.has(rel.from_person_id) && graph.persons.has(rel.to_person_id)) {
+      edges.push(relToEdge(rel));
+    }
+  }
+  return { graph, nodes, edges, warnings: [...extra, ...graph.warnings] };
 }
 
 function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
   const qc = useQueryClient();
 
-  const query = useQuery({
+  const familyQuery = useQuery(clinicalIntelQuery(clientId));
+  const layoutQuery = useQuery({
     queryKey: ["genogram", clientId],
     queryFn: async () => {
-      const [persons, rels, layoutsResp] = await Promise.all([
-        supabase.from("genogram_persons").select("*").eq("client_id", clientId),
-        supabase.from("genogram_relationships").select("*").eq("client_id", clientId),
-        supabase
-          .from("genogram_layouts")
-          .select("*")
-          .eq("client_id", clientId)
-          .order("updated_at", { ascending: false })
-          .limit(1),
-      ]);
-      if (persons.error) throw persons.error;
-      if (rels.error) throw rels.error;
-      if (layoutsResp.error) throw layoutsResp.error;
-
-      let positions: NodePositionRow[] = [];
-      let layout: LayoutRow | null = null;
-      if (layoutsResp.data && layoutsResp.data.length > 0) {
-        layout = layoutsResp.data[0] as LayoutRow;
-        const posResp = await supabase
-          .from("genogram_node_positions")
-          .select("*")
-          .eq("layout_id", layout.id);
-        if (!posResp.error) {
-          positions = (posResp.data ?? []) as NodePositionRow[];
-        }
-      }
-
-      return {
-        persons: (persons.data ?? []) as PersonRow[],
-        rels: (rels.data ?? []) as RelRow[],
-        layout,
-        positions,
-      };
+      const { data, error } = await supabase
+        .from("genogram_layouts")
+        .select("*")
+        .eq("client_id", clientId)
+        .order("updated_at", { ascending: false })
+        .limit(1);
+      if (error) throw error;
+      const layout: LayoutRow | null = data?.[0] ?? null;
+      if (!layout) return { layout, positions: [] as NodePositionRow[] };
+      const response = await supabase
+        .from("genogram_node_positions")
+        .select("*")
+        .eq("layout_id", layout.id);
+      if (response.error) throw response.error;
+      return { layout, positions: response.data ?? [] };
     },
   });
 
+  const data = useMemo(() => {
+    if (!familyQuery.data || !layoutQuery.data) return null;
+    return {
+      persons: familyQuery.data.persons,
+      rels: familyQuery.data.relationships,
+      ...layoutQuery.data,
+    };
+  }, [familyQuery.data, layoutQuery.data]);
+  const qualifiedPersons = useMemo(
+    () => getMappablePersons(data?.persons ?? [], data?.rels ?? []),
+    [data?.persons, data?.rels],
+  );
+  const probandId = qualifiedPersons.find((p) => p.is_proband)?.id;
+  const renderGraph = useMemo(
+    () => (data ? buildRenderGraph(qualifiedPersons, data.rels, probandId, data.positions) : null),
+    [data, qualifiedPersons, probandId],
+  );
+
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
-  const [warnings, setWarnings] = useState<GenogramWarning[]>([]);
+  const warnings = renderGraph?.warnings ?? [];
+  const [view, setView] = useState<"2d" | "3d">("2d");
+  const [focusRequest, setFocusRequest] = useState<{ personId: string }>();
+  const [showSocialLinks, setShowSocialLinks] = useState(false);
   const [creatingPerson, setCreatingPerson] = useState(false);
   const [focusedPersonId, setFocusedPersonId] = useState<string | null>(null);
   const [editingPerson, setEditingPerson] = useState<PersonRow | null>(null);
-  const [defaultRelationship, setDefaultRelationship] = useState<string>("");
+  const [quickRelative, setQuickRelative] = useState<QuickRelative | null>(null);
   const [relDialog, setRelDialog] = useState<{
     open: boolean;
-    seed?: { from?: string; to?: string; type?: "parent" | "union" };
+    seed?: RelationshipSeed;
     editing?: RelRow | null;
   }>({ open: false });
-  const [showGuide, setShowGuide] = useState(false);
   const [toolsExpanded, setToolsExpanded] = useState(false);
   const [layoutDirty, setLayoutDirty] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [isLayoutFixed, setIsLayoutFixed] = useState(false);
-  const [confirmRecalc, setConfirmRecalc] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [panelOpen, setPanelOpen] = useState(true);
   // Revisões do arranjo: um save só limpa o que existia quando começou
@@ -733,35 +699,59 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
   }, []);
 
   useEffect(() => {
-    if (query.data?.layout) {
-      setIsLayoutFixed(query.data.layout.is_fixed);
-    }
-  }, [query.data?.layout]);
+    setIsLayoutFixed(data?.layout?.is_fixed ?? false);
+  }, [data?.layout?.is_fixed]);
   const rfInstance = useReactFlow();
+  const openPerson = useCallback(
+    (id: string) => {
+      setFocusedPersonId(id);
+      setPanelOpen(true);
+      if (isMobile) setMobileSheetOpen(true);
+    },
+    [isMobile],
+  );
+
+  const locatePerson = useCallback(
+    (id: string) => {
+      setFocusedPersonId(id);
+      setPanelOpen(true);
+      setFocusRequest({ personId: id });
+      const reduced =
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
+        document.documentElement.dataset.reduceMotion === "true";
+      void rfInstance.fitView({
+        nodes: [{ id }],
+        duration: reduced ? 0 : 200,
+        maxZoom: 1.2,
+        padding: 0.6,
+      });
+    },
+    [rfInstance],
+  );
+
   const focusedOnceRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!focusPersonId || focusedOnceRef.current === focusPersonId) return;
-    if (!nodes.some((n) => n.id === focusPersonId)) return;
-    focusedOnceRef.current = focusPersonId;
-    setFocusedPersonId(focusPersonId);
-    setPanelOpen(true);
-    const t = window.setTimeout(
-      () =>
-        rfInstance.fitView({
-          nodes: [{ id: focusPersonId }],
-          duration: 300,
-          maxZoom: 1.2,
-          padding: 0.6,
-        }),
-      120,
-    );
-    return () => window.clearTimeout(t);
-  }, [focusPersonId, nodes, rfInstance]);
+    if (!focusPersonId) {
+      focusedOnceRef.current = null;
+      return;
+    }
+    if (
+      focusedOnceRef.current === focusPersonId ||
+      !nodes.some((node) => node.id === focusPersonId)
+    )
+      return;
+    const timer = window.setTimeout(() => {
+      focusedOnceRef.current = focusPersonId;
+      locatePerson(focusPersonId);
+    }, 160);
+    return () => window.clearTimeout(timer);
+  }, [focusPersonId, nodes, locatePerson]);
+
   const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   const exportPdf = useCallback(async () => {
-    const nodes = rfInstance.getNodes();
-    const viewportEl = document.querySelector(".react-flow__viewport") as HTMLElement | null;
+    const nodes = rfInstance.getNodes().filter((node) => node.type !== "band");
+    const viewportEl = rootRef.current?.querySelector<HTMLElement>(".react-flow__viewport");
     if (nodes.length === 0 || !viewportEl) {
       toast.error("Nada pra exportar ainda.");
       return;
@@ -780,6 +770,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
         height: imageHeight,
         pixelRatio: 2,
         style: {
+          visibility: "visible",
           width: `${imageWidth}px`,
           height: `${imageHeight}px`,
           transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
@@ -812,27 +803,10 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
     }
   }, [rfInstance, clientId]);
 
-  const handleQuickAdd = useCallback(
-    (personId: string, relativeType: string) => {
-      const person = query.data?.persons.find((p) => p.id === personId);
-      if (!person) return;
-
-      let newRel = relativeType;
-      if (!person.is_proband && person.relationship_to_proband) {
-        newRel = `${relativeType} do ${person.relationship_to_proband}`;
-        // Clean up string like "do mae" -> "da mae"
-        newRel = newRel
-          .replace(/do mãe/gi, "da mãe")
-          .replace(/do tia/gi, "da tia")
-          .replace(/do avó/gi, "da avó")
-          .replace(/do bisavó/gi, "da bisavó");
-      }
-
-      setDefaultRelationship(newRel);
-      setCreatingPerson(true);
-    },
-    [query.data?.persons],
-  );
+  const handleQuickAdd = useCallback((personId: string, kind: QuickRelative["kind"]) => {
+    setQuickRelative({ personId, kind });
+    setCreatingPerson(true);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -847,65 +821,47 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
     };
   }, [clientId, qc]);
 
+  const mapInitialized = useRef(false);
+  const withQuickAdd = useCallback(
+    (list: Node[]) =>
+      list.map((node) =>
+        node.type === "person"
+          ? {
+              ...node,
+              data: {
+                ...node.data,
+                onQuickAdd: (kind: QuickRelative["kind"]) => handleQuickAdd(node.id, kind),
+              },
+            }
+          : node,
+      ),
+    [handleQuickAdd],
+  );
+
   useEffect(() => {
-    if (!query.data) return;
-    let cancelled = false;
-
-    const qualifiedPersons = query.data.persons.filter((p) => {
-      if (p.is_proband) return true;
-      const hasName = !!p.full_name?.trim();
-      const hasRel = !!p.relationship_to_proband?.trim();
-      return hasName || hasRel;
+    if (!renderGraph) return;
+    const next = withQuickAdd(renderGraph.nodes);
+    // Atualizar a família não substitui um movimento que ainda está em rascunho.
+    setNodes((previous) => {
+      if (revRef.current.isClean()) return next;
+      const previousById = new Map(previous.map((node) => [node.id, node]));
+      return next.map((node) => {
+        const existing = previousById.get(node.id);
+        return existing && node.type !== "band" && node.position.y === existing.position.y
+          ? { ...node, position: { ...node.position, x: existing.position.x } }
+          : node;
+      });
     });
-
-    const proband = qualifiedPersons.find((p) => p.is_proband) || qualifiedPersons[0];
-    const probandId = proband?.id;
-
-    const {
-      nodes: layoutedNodes,
-      edges: layoutedEdges,
-      warnings: graphWarnings,
-    } = buildRenderGraph(qualifiedPersons, query.data.rels, probandId, query.data.positions);
-    setWarnings(graphWarnings);
-
-    // Injeta o callback de quick-add nos nós de pessoa (função depende de state
-    // do componente e por isso não vive dentro do engine puro).
-    const nodesWithHandlers: Node[] = layoutedNodes.map((n) => {
-      if (n.type !== "person") return n;
-      return {
-        ...n,
-        data: {
-          ...(n.data as PersonNodeData),
-          onQuickAdd: (relType: string) => handleQuickAdd(n.id, relType),
-        } satisfies PersonNodeData,
-      };
-    });
-
-    setNodes(nodesWithHandlers);
-    setEdges(layoutedEdges);
-    setLayoutDirty(false);
-    revRef.current.reset();
-    historyRef.current.reset();
-
-    const centerTimer = window.setTimeout(() => {
-      if (cancelled) return;
-      // Fit only people: generation bands span thousands of pixels and must not set the zoom.
-      const personNodes = layoutedNodes.filter((n) => n.type === "person");
-      if (personNodes.length)
-        rfInstance.fitView({
-          nodes: personNodes,
-          padding: 0.18,
-          duration: 0,
-          minZoom: 0.15,
-          maxZoom: 1.2,
-        });
-    }, 120);
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(centerTimer);
-    };
-  }, [query.data, setNodes, setEdges, rfInstance, handleQuickAdd]);
+    setEdges(renderGraph.edges);
+    if (mapInitialized.current) return;
+    const people = next.filter((node) => node.type === "person");
+    if (!people.length) return;
+    const timer = window.setTimeout(() => {
+      mapInitialized.current = true;
+      void rfInstance.fitView({ nodes: people, padding: 0.18, maxZoom: 1.2 });
+    }, 100);
+    return () => window.clearTimeout(timer);
+  }, [renderGraph, withQuickAdd, setNodes, setEdges, rfInstance]);
 
   // Lock dragging strictly to X axis
   const onNodesChangeCustom = useCallback(
@@ -934,51 +890,24 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
     [onNodesChange, rfInstance, markLayoutDirty],
   );
 
-  useEffect(() => {
-    const handleEdgeDelete = async (e: Event) => {
-      const customEvent = e as CustomEvent<string>;
-      const relId = customEvent.detail;
-      if (!relId) return;
-
-      const { error } = await supabase.from("genogram_relationships").delete().eq("id", relId);
-      if (!error) {
-        toast.success("Vínculo removido");
-        query.refetch();
-      }
-    };
-    window.addEventListener("delete-edge", handleEdgeDelete);
-    return () => window.removeEventListener("delete-edge", handleEdgeDelete);
-  }, [query]);
-
-  const onConnect = useCallback(
-    (conn: Connection) => {
-      setEdges((eds) => addEdge({ ...conn, style: { stroke: "var(--color-forest)" } }, eds));
-      setRelDialog({
-        open: true,
-        seed: { from: conn.source ?? undefined, to: conn.target ?? undefined },
-      });
-    },
-    [setEdges],
-  );
-
   const onNodeDoubleClick = useCallback<NodeMouseHandler>(
     (_, node) => {
-      const person = query.data?.persons.find((p) => p.id === node.id);
+      const person = data?.persons.find((p) => p.id === node.id);
       if (person) setEditingPerson(person);
     },
-    [query.data],
+    [data],
   );
 
   const onEdgeDoubleClick = useCallback<EdgeMouseHandler>(
     (_, edge) => {
-      const rel = query.data?.rels.find((r) => r.id === edge.id);
+      const rel = data?.rels.find((r) => r.id === edge.id);
       if (rel) setRelDialog({ open: true, editing: rel });
     },
-    [query.data],
+    [data],
   );
 
   const legendFlags = useMemo(() => {
-    const ps = query.data?.persons ?? [];
+    const ps = data?.persons ?? [];
     const sym = ps.map((p) => personSymbol(p));
     return {
       masculino: sym.includes("masculino"),
@@ -987,19 +916,32 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
       outro: sym.some((x) => x !== "masculino" && x !== "feminino" && x !== "aborto"),
       falecido: ps.some((p) => p.is_deceased || !!p.death_date),
     };
-  }, [query.data]);
+  }, [data]);
 
   const deleteSelected = useMutation({
     mutationFn: async () => {
-      const nodeIds = nodes.filter((n) => n.type === "person" && n.selected).map((n) => n.id);
-      const edgeIds = edges.filter((e) => e.selected).map((e) => e.id);
+      const nodeIds = nodes
+        .filter((n) => n.type === "person" && n.selected && n.id !== probandId)
+        .map((n) => n.id);
+      const edgeIds = edges
+        .filter((e) => e.selected && data?.rels.some((r) => r.id === e.id))
+        .map((e) => e.id);
       if (nodeIds.length === 0 && edgeIds.length === 0) return;
       if (edgeIds.length > 0) {
-        const { error } = await supabase.from("genogram_relationships").delete().in("id", edgeIds);
+        const { error } = await supabase
+          .from("genogram_relationships")
+          .delete()
+          .eq("client_id", clientId)
+          .in("id", edgeIds);
         if (error) throw error;
       }
       if (nodeIds.length > 0) {
-        const { error } = await supabase.from("genogram_persons").delete().in("id", nodeIds);
+        const { error } = await supabase
+          .from("genogram_persons")
+          .delete()
+          .eq("client_id", clientId)
+          .eq("is_proband", false)
+          .in("id", nodeIds);
         if (error) throw error;
       }
     },
@@ -1045,13 +987,11 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
   }, [layoutDirty, nodes, userId, clientId, snapshot]);
   // Oferece recuperar rascunho mais novo que o layout salvo
   useEffect(() => {
-    if (!userId || !query.data) return;
+    if (!userId || !data) return;
     const d = readDraft(userId, clientId);
-    const savedAt = query.data.layout?.updated_at
-      ? new Date(query.data.layout.updated_at).getTime()
-      : 0;
+    const savedAt = data.layout?.updated_at ? new Date(data.layout.updated_at).getTime() : 0;
     setPendingDraft(d && d.at > savedAt && Object.keys(d.positions).length ? d.positions : null);
-  }, [userId, clientId, query.data]);
+  }, [userId, clientId, data]);
 
   const saveLayout = useMutation({
     mutationFn: async () => {
@@ -1062,18 +1002,19 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
       const savedAt = new Date().toISOString();
 
       // Ensure layout exists or create one
-      let layoutId = query.data?.layout?.id;
+      let layoutId = data?.layout?.id;
       if (!layoutId) {
         const { data: newLayout, error: layoutErr } = await supabase
           .from("genogram_layouts")
           .insert({ client_id: clientId, name: "Layout Atual", is_fixed: false })
-          .select("id")
+          .select("*")
           .single();
         if (layoutErr) throw layoutErr;
         layoutId = newLayout.id;
-      } else {
-        // Update updated_at of the layout
-        await supabase.from("genogram_layouts").update({ updated_at: savedAt }).eq("id", layoutId);
+        qc.setQueryData(["genogram", clientId], {
+          layout: newLayout,
+          positions: [] as NodePositionRow[],
+        });
       }
 
       // Prepare positions to upsert
@@ -1103,6 +1044,11 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
 
       if (upsertErr) throw upsertErr;
 
+      const { error: stampError } = await supabase
+        .from("genogram_layouts")
+        .update({ updated_at: savedAt })
+        .eq("id", layoutId);
+      if (stampError) throw stampError;
       return { savedAt, rev };
     },
     onSuccess: ({ savedAt, rev }) => {
@@ -1117,8 +1063,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
       setLastSavedAt(
         new Date(savedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
       );
-      // Optional: quietly invalidate to keep data in sync, but avoid full remounts
-      invalidateCase(qc, clientId);
+      void qc.invalidateQueries({ queryKey: ["genogram", clientId] });
     },
     onError: (e) =>
       toast.error(
@@ -1149,18 +1094,18 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
   // Auto-Save Effect (Debounce 2s)
   useEffect(() => {
     if (!layoutDirty) return;
-    if (saveLayout.isPending) return;
+    if (saveLayout.isPending || saveLayout.isError) return;
     const t = setTimeout(() => {
       saveLayout.mutate();
     }, 2000);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layoutDirty, dirtyTick, saveLayout.isPending]);
+  }, [layoutDirty, dirtyTick, saveLayout.isPending, saveLayout.isError]);
 
   const toggleLayoutFixed = useMutation({
     mutationFn: async () => {
-      const layoutId = query.data?.layout?.id;
-      if (!layoutId) return false;
+      const layoutId = data?.layout?.id;
+      if (!layoutId) throw new Error("Salve um arranjo antes de fixar as posições.");
       const newValue = !isLayoutFixed;
       const { error } = await supabase
         .from("genogram_layouts")
@@ -1177,29 +1122,24 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
     onError: (e) => toast.error("Erro ao alterar fixação do layout"),
   });
 
-  // Posições ficam salvas por pessoa (arraste manual do clínico). Se uma
-  // correção no motor mudar a geração de alguém (ex.: parentesco que antes
-  // caía solto e agora ancora certo), a posição salva antiga FICA por cima
-  // do cálculo novo — a pessoa parece "presa" no lugar errado até alguém
-  // apagar as posições salvas e deixar recalcular do zero.
-  const recalcLayout = useMutation({
-    mutationFn: async () => {
-      const layoutId = query.data?.layout?.id;
-      if (!layoutId) return;
-      const { error } = await supabase
-        .from("genogram_node_positions")
-        .delete()
-        .eq("layout_id", layoutId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Posições recalculadas a partir das regras do genossociograma.");
-      invalidateCase(qc, clientId);
-    },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao recalcular"),
-  });
+  const organizeLayout = () => {
+    if (!data || isLayoutFixed) return;
+    historyRef.current.push(snapshot());
+    forceHistory((count) => count + 1);
+    const automatic = buildRenderGraph(qualifiedPersons, data.rels, probandId);
+    setNodes(withQuickAdd(automatic.nodes));
+    markLayoutDirty();
+    window.requestAnimationFrame(
+      () =>
+        void rfInstance.fitView({
+          nodes: automatic.nodes.filter((node) => node.type === "person"),
+          padding: 0.18,
+          maxZoom: 1.2,
+        }),
+    );
+  };
 
-  const persons = query.data?.persons ?? [];
+  const persons = data?.persons ?? [];
   const focusedPerson =
     persons.find((p) => p.id === focusedPersonId) ??
     persons.find((p) => p.is_proband) ??
@@ -1207,27 +1147,258 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
   const qualifiedCount = nodes.filter((node) => node.type === "person").length;
   const totalCount = persons.length;
   const incompleteCount = totalCount - qualifiedCount;
-  const relCount = query.data?.rels.length ?? 0;
-  const selectedPersonCount = nodes.filter((n) => n.type === "person" && n.selected).length;
-  const selectedEdgeCount = edges.filter((e) => e.selected).length;
+  const relCount = data?.rels.length ?? 0;
+  const selectedPersonCount = nodes.filter(
+    (n) => n.type === "person" && n.selected && n.id !== probandId,
+  ).length;
+  const selectedEdgeCount = edges.filter(
+    (edge) => edge.selected && data?.rels.some((rel) => rel.id === edge.id),
+  ).length;
+  const visibleEdges = showSocialLinks
+    ? edges
+    : edges.filter((edge) => !edge.data?.relationshipType);
+  const directParents =
+    focusedPerson && renderGraph ? getResolvedParents(renderGraph.graph, focusedPerson.id) : [];
+  const remainingLinks = (data?.rels ?? []).filter(
+    (rel) =>
+      (rel.from_person_id === focusedPerson?.id || rel.to_person_id === focusedPerson?.id) &&
+      !directParents.some((parent) => parent.relationshipId === rel.id),
+  );
+  const quickTarget = persons.find((person) => person.id === quickRelative?.personId);
+  const quickTag =
+    quickTarget?.is_proband && quickRelative?.kind !== "Irmã(o)" ? quickRelative?.kind : undefined;
+  const onCreated = (id: string) => {
+    setFocusedPersonId(id);
+    setPanelOpen(true);
+    if (!quickRelative) return;
+    const relativeIsParent = quickRelative.kind === "Pai" || quickRelative.kind === "Mãe";
+    const from = relativeIsParent
+      ? id
+      : quickRelative.kind === "Filho(a)"
+        ? quickRelative.personId
+        : undefined;
+    setRelDialog({
+      open: true,
+      seed: {
+        from,
+        to: relativeIsParent ? quickRelative.personId : id,
+        type: "parent",
+      },
+    });
+  };
+
+  const mappedIds = new Set(nodes.filter((node) => node.type === "person").map((node) => node.id));
+  const personPanel = focusedPerson ? (
+    <>
+      <header className="mb-4">
+        <h2>{personName(focusedPerson)}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {focusedPerson.is_proband
+            ? "Consultante"
+            : focusedPerson.relationship_to_proband || "Parentesco não informado"}
+        </p>
+      </header>
+      <section className="border-y border-border py-4" aria-label="Filiação da pessoa selecionada">
+        <h3 className="text-sm font-semibold text-foreground">Filiação</h3>
+        {directParents.length ? (
+          <ul className="mt-2 divide-y divide-border">
+            {directParents.map((parent) => {
+              const person = persons.find((row) => row.id === parent.personId);
+              const entry = data?.rels.find((row) => row.id === parent.relationshipId);
+              const kind = relationshipQualifiers.parent.find(
+                (item) => item.value === parent.kind,
+              )?.label;
+              return (
+                <li key={parent.personId} className="py-2">
+                  <button
+                    type="button"
+                    className="block min-h-9 text-left text-sm font-semibold text-forest hover:underline"
+                    onClick={() => {
+                      locatePerson(parent.personId);
+                      if (isMobile) setMobileSheetOpen(false);
+                    }}
+                  >
+                    {personName(person)}
+                  </button>
+                  <p className="text-sm text-muted-foreground">
+                    {parent.source === "explicit"
+                      ? kind || "Natureza por confirmar"
+                      : "Sugerido pelo parentesco"}
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="mt-2 min-h-11"
+                    onClick={() => {
+                      setMobileSheetOpen(false);
+                      setRelDialog({
+                        open: true,
+                        editing: entry,
+                        seed: { from: parent.personId, to: focusedPerson.id, type: "parent" },
+                      });
+                    }}
+                  >
+                    {entry ? "Revisar vínculo" : "Confirmar filiação"}
+                  </Button>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="my-2 text-sm text-muted-foreground">
+            Nenhum pai ou mãe identificado no mapa.
+          </p>
+        )}
+        {directParents.filter((parent) => parent.source === "explicit").length < 2 && (
+          <Button
+            size="sm"
+            variant="forest"
+            className="mt-2 min-h-11"
+            onClick={() => {
+              setMobileSheetOpen(false);
+              setRelDialog({ open: true, seed: { to: focusedPerson.id, type: "parent" } });
+            }}
+          >
+            <Link2 className="size-4" /> Definir filiação
+          </Button>
+        )}
+      </section>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          className="min-h-11"
+          onClick={() => {
+            setMobileSheetOpen(false);
+            setEditingPerson(focusedPerson);
+          }}
+        >
+          Editar pessoa
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="min-h-11"
+          onClick={() => {
+            setMobileSheetOpen(false);
+            setRelDialog({ open: true, seed: { from: focusedPerson.id } });
+          }}
+        >
+          Novo vínculo
+        </Button>
+      </div>
+      {remainingLinks.length > 0 && (
+        <details className="mt-4 border-t border-border pt-3">
+          <summary className="cursor-pointer text-sm font-semibold">
+            Outros vínculos ({remainingLinks.length})
+          </summary>
+          <ul className="divide-y divide-border">
+            {remainingLinks.map((rel) => {
+              const isSource = rel.from_person_id === focusedPerson.id;
+              const other = persons.find(
+                (person) => person.id === (isSource ? rel.to_person_id : rel.from_person_id),
+              );
+              return (
+                <li key={rel.id} className="py-2">
+                  <button
+                    type="button"
+                    className="min-h-11 text-left text-sm hover:underline"
+                    onClick={() => {
+                      setMobileSheetOpen(false);
+                      setRelDialog({ open: true, editing: rel });
+                    }}
+                  >
+                    <span className="block font-semibold text-forest">{personName(other)}</span>
+                    {rel.relationship_type === "parent" && isSource
+                      ? "Filho ou filha"
+                      : relationshipLabel(rel.relationship_type, rel.qualifier)}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </details>
+      )}
+      <dl>
+        {focusedPerson.preferred_name &&
+          focusedPerson.preferred_name !== focusedPerson.full_name && (
+            <div>
+              <dt>Nome completo</dt>
+              <dd>{focusedPerson.full_name}</dd>
+            </div>
+          )}
+        <div>
+          <dt>Nascimento</dt>
+          <dd>
+            {focusedPerson.birth_date
+              ? new Date(focusedPerson.birth_date + "T12:00:00").toLocaleDateString("pt-BR")
+              : "Não informado"}
+          </dd>
+        </div>
+        {(focusedPerson.is_deceased || focusedPerson.death_date) && (
+          <div>
+            <dt>Falecimento</dt>
+            <dd>
+              {focusedPerson.death_date
+                ? new Date(focusedPerson.death_date + "T12:00:00").toLocaleDateString("pt-BR")
+                : "Data não informada"}
+            </dd>
+          </div>
+        )}
+        {focusedPerson.notes && (
+          <div>
+            <dt>Observações</dt>
+            <dd>{focusedPerson.notes}</dd>
+          </div>
+        )}
+      </dl>
+    </>
+  ) : (
+    <>
+      <h2>Pessoas e relações</h2>
+      <p className="mt-3 text-sm text-muted-foreground">
+        Selecione uma pessoa no mapa para consultar sua filiação.
+      </p>
+    </>
+  );
 
   return (
     <div
       ref={rootRef}
       className={`atlas-genogram bg-background ${panelOpen ? "" : "gv-panel-collapsed"}`}
     >
-      <div className="atlas-map-workspace">
+      <div className="atlas-map-workspace [min-height:0]">
         {/* ── CONTÊINER SUPERIOR (BARRA DE AÇÕES + LEGENDA) ── */}
         <Collapsible
           className="atlas-map-toolbar"
           open={!isMobile || toolsExpanded}
           onOpenChange={setToolsExpanded}
         >
-          {/* BARRA DE AÇÕES — agrupada: Identidade | Editar | Layout | Status | Extras */}
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-2 pr-2 border-r border-border">
-              <TreePine className="size-4 text-gold" />
-              <span className="text-xs font-medium text-foreground">Genossociograma</span>
+            <div
+              className="inline-flex rounded-md border border-border bg-background p-0.5"
+              role="group"
+              aria-label="Modo de visualização"
+            >
+              <Button
+                type="button"
+                size="sm"
+                variant={view === "2d" ? "forest" : "ghost"}
+                aria-pressed={view === "2d"}
+                onClick={() => setView("2d")}
+              >
+                2D
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={view === "3d" ? "forest" : "ghost"}
+                aria-label="3D"
+                aria-pressed={view === "3d"}
+                onClick={() => setView("3d")}
+              >
+                <Box className="size-4" /> 3D
+              </Button>
             </div>
 
             {/* Grupo: Editar */}
@@ -1236,7 +1407,10 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                 size="sm"
                 variant="gold"
                 aria-label="Adicionar pessoa"
-                onClick={() => setCreatingPerson(true)}
+                onClick={() => {
+                  setQuickRelative(null);
+                  setCreatingPerson(true);
+                }}
                 className="gv-add-person h-9 gap-2"
               >
                 <UserPlus className="size-4" />
@@ -1281,12 +1455,10 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                   size="sm"
                   variant="outline"
                   onClick={() => toggleLayoutFixed.mutate()}
-                  disabled={!query.data?.layout?.id || toggleLayoutFixed.isPending}
+                  disabled={!data?.layout?.id || toggleLayoutFixed.isPending}
                   className={`h-11 gap-2 border-border normal-case tracking-normal font-semibold text-[13px] ${isLayoutFixed ? "bg-forest text-primary-foreground" : "bg-transparent text-foreground hover:bg-muted hover:text-foreground"}`}
                   title={
-                    !query.data?.layout?.id
-                      ? "Salve o layout pelo menos uma vez para poder fixá-lo"
-                      : ""
+                    !data?.layout?.id ? "Salve o layout pelo menos uma vez para poder fixá-lo" : ""
                   }
                 >
                   {isLayoutFixed ? (
@@ -1300,33 +1472,35 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => setConfirmRecalc(true)}
-                  disabled={!query.data?.layout?.id || recalcLayout.isPending}
-                  title="Recalcula as posições do zero — use se alguém aparecer preso no lugar errado"
+                  onClick={organizeLayout}
+                  disabled={
+                    !qualifiedCount || isLayoutFixed || view === "3d" || saveLayout.isPending
+                  }
+                  title="Organiza por geração a partir da filiação. Pode desfazer."
                   className="h-9 gap-2 border-border bg-transparent text-foreground hover:bg-muted hover:text-foreground normal-case tracking-normal font-semibold text-[13px] disabled:opacity-45"
                 >
                   <RotateCcw className="size-4" />
-                  {recalcLayout.isPending ? "Recalculando" : "Recalcular"}
+                  Organizar
                 </Button>
               </div>
 
               <div className="ml-auto flex items-center gap-1">
                 <Button
                   size="sm"
-                  variant="outline"
-                  aria-label="Guia do genossociograma"
-                  onClick={() => setShowGuide(!showGuide)}
-                  className="min-h-11 gap-1.5 border-transparent bg-transparent text-foreground hover:bg-muted hover:text-foreground normal-case tracking-normal font-semibold text-[13px] shadow-none"
+                  variant={showSocialLinks ? "forest" : "outline"}
+                  aria-pressed={showSocialLinks}
+                  onClick={() => setShowSocialLinks((current) => !current)}
+                  className="min-h-11 gap-2"
                 >
-                  <HelpCircle className="size-4" />
-                  <span className="hidden sm:inline">Guia</span>
+                  <GitBranch className="size-4" /> Vínculos sociais
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={exportPdf}
                   disabled={isExportingPdf}
-                  title="Exportar PDF (A3) pra imprimir com o cliente"
+                  title="Exportar mapa 2D em PDF A3"
+                  aria-label="Exportar mapa 2D em PDF A3"
                   className="min-h-11 gap-1.5 border-transparent bg-transparent text-foreground hover:bg-muted hover:text-foreground normal-case tracking-normal font-semibold text-[13px] shadow-none"
                 >
                   {isExportingPdf ? (
@@ -1342,6 +1516,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                   aria-label="Remover seleção"
                   onClick={() => setConfirmDelete(true)}
                   disabled={
+                    view === "3d" ||
                     deleteSelected.isPending ||
                     (selectedPersonCount === 0 && selectedEdgeCount === 0)
                   }
@@ -1360,7 +1535,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                 <strong className="text-foreground">{qualifiedCount}</strong>
                 <span>no mapa</span>
                 {incompleteCount > 0 && (
-                  <span className="ml-1 rounded-full bg-gold/20 px-1.5 py-0.5 text-[14px] font-bold text-gold">
+                  <span className="ml-1 rounded-full bg-gold/20 px-1.5 py-0.5 text-[14px] font-bold text-bronze">
                     {incompleteCount} incompletos
                   </span>
                 )}
@@ -1372,19 +1547,35 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
               {warnings.length > 0 && (
                 <Popover>
                   <PopoverTrigger asChild>
-                    <button className="flex items-center gap-1.5 rounded-full bg-gold/20 px-2.5 py-1 text-[14px] font-bold text-foreground hover:bg-gold/30 transition-colors animate-[pulse-gold_2.2s_ease-in-out_infinite]">
+                    <button className="flex items-center gap-1.5 rounded-full bg-gold/20 px-2.5 py-1 text-[14px] font-bold text-foreground hover:bg-gold/30 transition-colors">
                       <AlertTriangle className="size-3.5" />
                       {warnings.length} para revisar
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-96 max-h-96 overflow-y-auto" align="start">
+                  <PopoverContent
+                    className="w-[min(24rem,calc(100vw-2rem))] max-h-96 overflow-y-auto"
+                    align="start"
+                  >
                     <p className="mb-2 text-[13px] font-bold uppercase tracking-wide text-muted-foreground">
                       Para revisar no mapa
                     </p>
                     <ul className="space-y-2.5">
-                      {warnings.map((w) => (
-                        <li key={w.personId} className="text-[14px] leading-snug">
-                          {w.message}
+                      {warnings.map((warning) => (
+                        <li
+                          key={warning.personId + warning.message}
+                          className="text-sm leading-snug"
+                        >
+                          {mappedIds.has(warning.personId) ? (
+                            <button
+                              type="button"
+                              className="min-h-11 text-left hover:underline"
+                              onClick={() => locatePerson(warning.personId)}
+                            >
+                              {warning.message}
+                            </button>
+                          ) : (
+                            warning.message
+                          )}
                         </li>
                       ))}
                     </ul>
@@ -1447,17 +1638,18 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                     {legendFlags.falecido && (
                       <span className="flex items-center gap-2">
                         <span className="relative inline-block size-3.5 border-2 border-transparent bg-white">
-                          <span className="absolute inset-[-2px] w-[140%] h-[2px] bg-foreground rotate-[45deg] origin-top-left" />
+                          <span className="absolute inset-x-0 top-0.5 h-0.5 bg-foreground" />
                         </span>
                         Falecido
                       </span>
                     )}
                     <span className="flex items-center gap-2">
                       <span className="inline-block size-3.5 border-2 border-forest bg-forest/20" />
-                      Paciente-índice
+                      Consultante
                     </span>
                     <span className="text-[13px] text-muted-foreground">
-                      Mostra só os símbolos presentes neste mapa.
+                      Linha contínua: filiação biológica. Linha tracejada: confira a natureza do
+                      vínculo na ficha.
                     </span>
                   </div>
                 </PopoverContent>
@@ -1466,220 +1658,198 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
           </div>
         </Collapsible>
 
-        {showGuide && (
-          <div className="border-b border-border bg-forest-soft px-4 py-3">
-            <div className="flex flex-wrap gap-6 text-[13px] text-foreground/70">
-              {[
-                ["Espaço + Arrastar", "Navegar pela tela"],
-                ["Arrastar Pessoa", "Reposicionar horizontalmente"],
-                ["Duplo Clique", "Ver informações completas"],
-                ["Selecionar + Remover", "Excluir o selecionado"],
-                ["Scroll", "Zoom in/out"],
-              ].map(([key, desc]) => (
-                <span key={key} className="flex items-center gap-2">
-                  <kbd className="rounded border border-border bg-card px-1.5 py-0.5 text-[14px] font-mono font-semibold">
-                    {key}
-                  </kbd>
-                  {desc}
-                </span>
+        <div className="flex flex-wrap items-center gap-1 border-b border-border bg-card px-2 py-1">
+          <label htmlFor="geno-locate" className="sr-only">
+            Localizar familiar
+          </label>
+          <Search className="ml-1 size-4 shrink-0 text-muted-foreground" aria-hidden />
+          <select
+            id="geno-locate"
+            className="h-11 min-w-0 max-w-[calc(100%_-_3rem)] rounded-md border border-input bg-background px-2 text-sm"
+            value=""
+            onChange={(event) => event.target.value && locatePerson(event.target.value)}
+          >
+            <option value="">Localizar familiar…</option>
+            {persons
+              .filter((person) => mappedIds.has(person.id))
+              .map((person) => (
+                <option key={person.id} value={person.id}>
+                  {personName(person)}
+                  {person.relationship_to_proband ? " · " + person.relationship_to_proband : ""}
+                </option>
               ))}
-            </div>
-          </div>
-        )}
-
-        {/* Legenda movida para o painel lateral "Copiloto Clínico" */}
+          </select>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="size-11"
+            aria-label="Localizar consultante"
+            disabled={!probandId}
+            onClick={() => probandId && locatePerson(probandId)}
+          >
+            <Crosshair className="size-4" />
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="size-11"
+            aria-label="Desfazer posição"
+            disabled={view === "3d" || !historyRef.current.canUndo || isLayoutFixed}
+            onClick={undoLayout}
+          >
+            <Undo2 className="size-4" />
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="size-11"
+            aria-label="Refazer posição"
+            disabled={view === "3d" || !historyRef.current.canRedo || isLayoutFixed}
+            onClick={redoLayout}
+          >
+            <Redo2 className="size-4" />
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="ml-auto size-11"
+            aria-label={isFullscreen ? "Sair da tela ampla" : "Tela ampla"}
+            onClick={() => {
+              const action = document.fullscreenElement
+                ? document.exitFullscreen()
+                : rootRef.current?.requestFullscreen?.();
+              if (!action) toast.error("Seu navegador não oferece tela ampla aqui.");
+              else void action.catch(() => toast.error("Não foi possível mudar a tela ampla."));
+            }}
+          >
+            {isFullscreen ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="size-11"
+            aria-label={isMobile ? "Abrir ficha" : panelOpen ? "Recolher ficha" : "Mostrar ficha"}
+            aria-expanded={isMobile ? mobileSheetOpen : panelOpen}
+            onClick={() =>
+              isMobile ? setMobileSheetOpen(true) : setPanelOpen((current) => !current)
+            }
+          >
+            {panelOpen && !isMobile ? (
+              <PanelRightClose className="size-4" />
+            ) : (
+              <PanelRightOpen className="size-4" />
+            )}
+          </Button>
+        </div>
 
         {/* ── CANVAS ──────── */}
         <div className="atlas-map-stage">
-          {query.isError ? (
+          {familyQuery.isError || layoutQuery.isError ? (
             <section
               className="flex h-full flex-col items-center justify-center gap-3 p-6"
               role="alert"
             >
               <h3 className="font-semibold">Não foi possível carregar o genossociograma.</h3>
               <p>Seus dados não foram alterados. Tente carregar novamente.</p>
-              <Button variant="outline" onClick={() => query.refetch()}>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  void familyQuery.refetch();
+                  void layoutQuery.refetch();
+                }}
+              >
                 Tentar novamente
               </Button>
             </section>
-          ) : query.isLoading ? (
+          ) : familyQuery.isLoading || layoutQuery.isLoading ? (
             <div className="flex h-full flex-col items-center justify-center gap-3">
               <div className="h-11 w-11 animate-spin rounded-full border-2 border-forest border-t-transparent" />
               <p className="text-[14px] text-muted-foreground">Carregando a árvore...</p>
             </div>
-          ) : persons.length === 0 ? (
+          ) : qualifiedPersons.length === 0 ? (
             <EmptyCanvas onCreate={() => setCreatingPerson(true)} />
           ) : (
-            <ReactFlow
-              connectionMode={ConnectionMode.Loose}
-              nodes={nodes}
-              edges={edges}
-              nodeTypes={nodeTypes}
-              edgeTypes={edgeTypes}
-              onNodesChange={onNodesChangeCustom}
-              onEdgesChange={onEdgesChange}
-              onConnect={onConnect}
-              onNodeDoubleClick={onNodeDoubleClick}
-              onNodeDragStart={() => {
-                historyRef.current.push(snapshot());
-                forceHistory((x) => x + 1);
-              }}
-              onNodeClick={(_, node) => {
-                if (node.type === "person") {
-                  setFocusedPersonId(node.id);
-                  if (isMobile) setMobileSheetOpen(true);
-                }
-              }}
-              onEdgeDoubleClick={onEdgeDoubleClick}
-              nodesDraggable={!isLayoutFixed}
-              nodesConnectable={false}
-              panOnDrag={isMobile}
-              panActivationKeyCode="Space"
-              minZoom={0.15}
-              maxZoom={2.5}
-              proOptions={{ hideAttribution: true }}
-              defaultEdgeOptions={{
-                type: "step",
-                style: { strokeWidth: 2, stroke: "var(--color-forest)" },
-              }}
-              ariaLabelConfig={{
-                "controls.zoomIn.ariaLabel": "Aproximar mapa",
-                "controls.zoomOut.ariaLabel": "Afastar mapa",
-                "controls.fitView.ariaLabel": "Enquadrar mapa",
-              }}
-              fitView
-              fitViewOptions={{ padding: 0.18, nodes: nodes.filter((n) => n.type === "person") }}
-            >
-              <Background
-                color="var(--color-border)"
-                variant={BackgroundVariant.Dots}
-                gap={24}
-                size={1}
-                style={{ opacity: 0.25 }}
-              />
-              <Panel
-                position="top-right"
-                className="flex max-w-[calc(100%_-_20px)] flex-wrap items-center gap-1 rounded-md border border-border bg-card p-1 shadow-sm"
+            <>
+              <div
+                className={cn("absolute inset-0", view === "3d" && "invisible")}
+                aria-hidden={view === "3d"}
+                inert={view === "3d"}
               >
-                <label className="sr-only" htmlFor="geno-locate">
-                  Localizar familiar
-                </label>
-                <select
-                  id="geno-locate"
-                  className="h-11 max-w-[180px] rounded-md border border-input bg-background px-2 text-[14px]"
-                  value=""
-                  onChange={(e) => {
-                    const id = e.target.value;
-                    if (!id) return;
-                    setFocusedPersonId(id);
-                    setPanelOpen(true);
-                    rfInstance.fitView({
-                      nodes: [{ id }],
-                      duration: 300,
-                      maxZoom: 1.2,
-                      padding: 0.6,
-                    });
+                <ReactFlow
+                  nodes={nodes}
+                  edges={visibleEdges}
+                  nodeTypes={nodeTypes}
+                  edgeTypes={edgeTypes}
+                  onNodesChange={onNodesChangeCustom}
+                  onEdgesChange={onEdgesChange}
+                  onNodeDoubleClick={onNodeDoubleClick}
+                  onNodeDragStart={() => {
+                    historyRef.current.push(snapshot());
+                    forceHistory((x) => x + 1);
+                  }}
+                  onNodeClick={(_, node) => node.type === "person" && openPerson(node.id)}
+                  onEdgeDoubleClick={onEdgeDoubleClick}
+                  nodesDraggable={!isLayoutFixed}
+                  nodesConnectable={false}
+                  deleteKeyCode={null}
+                  panOnDrag={isMobile}
+                  panActivationKeyCode="Space"
+                  minZoom={0.15}
+                  maxZoom={2.5}
+                  proOptions={{ hideAttribution: true }}
+                  defaultEdgeOptions={{
+                    type: "step",
+                    style: { strokeWidth: 2, stroke: "var(--color-forest)" },
+                  }}
+                  ariaLabelConfig={{
+                    "controls.zoomIn.ariaLabel": "Aproximar mapa",
+                    "controls.zoomOut.ariaLabel": "Afastar mapa",
+                    "controls.fitView.ariaLabel": "Enquadrar mapa",
+                  }}
+                  fitView
+                  fitViewOptions={{
+                    padding: 0.18,
+                    nodes: nodes.filter((n) => n.type === "person"),
                   }}
                 >
-                  <option value="">Localizar familiar…</option>
-                  {persons
-                    .filter((p) => nodes.some((n) => n.id === p.id))
-                    .map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.preferred_name || p.full_name}
-                      </option>
-                    ))}
-                </select>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className={cn("min-h-11 min-w-11", isMobile && !toolsExpanded && "hidden")}
-                  aria-label="Localizar o cliente"
-                  onClick={() => {
-                    const pb = persons.find((p) => p.is_proband);
-                    if (pb)
-                      rfInstance.fitView({
-                        nodes: [{ id: pb.id }],
-                        duration: 300,
-                        maxZoom: 1.2,
-                        padding: 0.6,
-                      });
-                  }}
-                >
-                  <Crosshair className="size-4" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="min-h-11 min-w-11"
-                  aria-label="Ajustar mapa à tela"
-                  onClick={() =>
-                    rfInstance.fitView({
+                  <Background
+                    color="var(--color-border)"
+                    variant={BackgroundVariant.Dots}
+                    gap={24}
+                    size={1}
+                    style={{ opacity: 0.25 }}
+                  />
+                  <Controls
+                    className="overflow-hidden rounded-md"
+                    showInteractive={false}
+                    fitViewOptions={{
                       nodes: nodes.filter((n) => n.type === "person"),
                       padding: 0.18,
-                      duration: 300,
-                    })
+                    }}
+                  />
+                </ReactFlow>
+              </div>
+              {view === "3d" && (
+                <Suspense
+                  fallback={
+                    <div className="p-4 text-sm" role="status">
+                      Carregando visualização 3D…
+                    </div>
                   }
                 >
-                  <Layers className="size-4" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className={cn("min-h-11 min-w-11", isMobile && !toolsExpanded && "hidden")}
-                  aria-label="Desfazer posição"
-                  disabled={!historyRef.current.canUndo || isLayoutFixed}
-                  onClick={undoLayout}
-                >
-                  <Undo2 className="size-4" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className={cn("min-h-11 min-w-11", isMobile && !toolsExpanded && "hidden")}
-                  aria-label="Refazer posição"
-                  disabled={!historyRef.current.canRedo || isLayoutFixed}
-                  onClick={redoLayout}
-                >
-                  <Redo2 className="size-4" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className={cn("min-h-11 min-w-11", isMobile && !toolsExpanded && "hidden")}
-                  aria-label={isFullscreen ? "Sair da tela ampla" : "Tela ampla"}
-                  onClick={() => {
-                    if (document.fullscreenElement) void document.exitFullscreen();
-                    else void rootRef.current?.requestFullscreen?.();
-                  }}
-                >
-                  {isFullscreen ? (
-                    <Minimize2 className="size-4" />
-                  ) : (
-                    <Maximize2 className="size-4" />
-                  )}
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="min-h-11 min-w-11"
-                  aria-label={
-                    isMobile ? "Abrir ficha" : panelOpen ? "Recolher ficha" : "Mostrar ficha"
-                  }
-                  aria-expanded={isMobile ? mobileSheetOpen : panelOpen}
-                  onClick={() => (isMobile ? setMobileSheetOpen(true) : setPanelOpen((v) => !v))}
-                >
-                  {panelOpen ? (
-                    <PanelRightClose className="size-4" />
-                  ) : (
-                    <PanelRightOpen className="size-4" />
-                  )}
-                </Button>
-              </Panel>
+                  <SpatialView
+                    key={clientId}
+                    nodes={nodes}
+                    edges={visibleEdges}
+                    onSelectPerson={openPerson}
+                    selectedPersonId={focusedPerson?.id}
+                    focusRequest={focusRequest}
+                  />
+                </Suspense>
+              )}
               {(pendingDraft || saveLayout.isError) && (
-                <Panel
-                  position="bottom-center"
-                  className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-card p-2 text-[14px] shadow-sm"
+                <div
+                  className="absolute inset-x-2 bottom-2 z-20 mx-auto flex w-fit max-w-[calc(100%-1rem)] flex-wrap items-center gap-2 rounded-md border border-border bg-card p-2 text-sm"
                   role="status"
                 >
                   {saveLayout.isError ? (
@@ -1720,14 +1890,9 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                       </Button>
                     </>
                   )}
-                </Panel>
+                </div>
               )}
-              <Controls
-                className="overflow-hidden rounded-md"
-                showInteractive={false}
-                fitViewOptions={{ nodes: nodes.filter((n) => n.type === "person"), padding: 0.18 }}
-              />
-            </ReactFlow>
+            </>
           )}
         </div>
       </div>
@@ -1737,89 +1902,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
             <SheetHeader className="sr-only">
               <SheetTitle>Ficha da pessoa selecionada</SheetTitle>
             </SheetHeader>
-            <div className="atlas-person-panel atlas-person-panel--sheet">
-              {focusedPerson ? (
-                <>
-                  <h2>{focusedPerson.preferred_name || focusedPerson.full_name}</h2>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    {focusedPerson.is_proband
-                      ? "Pessoa de referência"
-                      : focusedPerson.relationship_to_proband || "Vínculo não informado"}
-                  </p>
-                  <dl>
-                    <div>
-                      <dt>Nome completo</dt>
-                      <dd>{focusedPerson.full_name || "Não informado"}</dd>
-                    </div>
-                    <div>
-                      <dt>Nascimento</dt>
-                      <dd>
-                        {focusedPerson.birth_date
-                          ? new Date(focusedPerson.birth_date + "T12:00:00").toLocaleDateString(
-                              "pt-BR",
-                            )
-                          : "Não informado"}
-                      </dd>
-                    </div>
-                    {focusedPerson.is_deceased && (
-                      <div>
-                        <dt>Falecimento</dt>
-                        <dd>
-                          {focusedPerson.death_date
-                            ? new Date(focusedPerson.death_date + "T12:00:00").toLocaleDateString(
-                                "pt-BR",
-                              )
-                            : "Data não informada"}
-                        </dd>
-                      </div>
-                    )}
-                    <div>
-                      <dt>Gênero registrado</dt>
-                      <dd>{focusedPerson.gender || "Não informado"}</dd>
-                    </div>
-                    <div>
-                      <dt>Observações</dt>
-                      <dd>{focusedPerson.notes || "Nenhuma observação registrada."}</dd>
-                    </div>
-                  </dl>
-                  <div className="atlas-panel-actions">
-                    <Button variant="outline" onClick={() => setEditingPerson(focusedPerson)}>
-                      Editar pessoa
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setRelDialog({ open: true, seed: { from: focusedPerson.id } })}
-                    >
-                      Criar vínculo
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() =>
-                        setRelDialog({ open: true, seed: { to: focusedPerson.id, type: "parent" } })
-                      }
-                    >
-                      Definir pai ou mãe
-                    </Button>
-                  </div>
-                  <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
-                    Pai/mãe definidos aqui têm precedência sobre o parentesco da planilha — use para
-                    meios-irmãos ou familiares soltos.
-                  </p>
-                  <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
-                    Selecione uma pessoa no mapa para consultar sua ficha. Dê dois cliques para
-                    editar.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <h2>Pessoas e relações</h2>
-                  <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-                    Adicione a primeira pessoa para começar o genossociograma. Os dados de cada
-                    pessoa aparecem aqui.
-                  </p>
-                </>
-              )}
-            </div>
+            <div className="atlas-person-panel atlas-person-panel--sheet">{personPanel}</div>
           </SheetContent>
         </Sheet>
       ) : (
@@ -1828,84 +1911,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
           aria-label="Ficha da pessoa selecionada"
           hidden={!panelOpen}
         >
-          {focusedPerson ? (
-            <>
-              <h2>{focusedPerson.preferred_name || focusedPerson.full_name}</h2>
-              <p className="mt-2 text-xs text-muted-foreground">
-                {focusedPerson.is_proband
-                  ? "Pessoa de referência"
-                  : focusedPerson.relationship_to_proband || "Vínculo não informado"}
-              </p>
-              <dl>
-                <div>
-                  <dt>Nome completo</dt>
-                  <dd>{focusedPerson.full_name || "Não informado"}</dd>
-                </div>
-                <div>
-                  <dt>Nascimento</dt>
-                  <dd>
-                    {focusedPerson.birth_date
-                      ? new Date(focusedPerson.birth_date + "T12:00:00").toLocaleDateString("pt-BR")
-                      : "Não informado"}
-                  </dd>
-                </div>
-                {focusedPerson.is_deceased && (
-                  <div>
-                    <dt>Falecimento</dt>
-                    <dd>
-                      {focusedPerson.death_date
-                        ? new Date(focusedPerson.death_date + "T12:00:00").toLocaleDateString(
-                            "pt-BR",
-                          )
-                        : "Data não informada"}
-                    </dd>
-                  </div>
-                )}
-                <div>
-                  <dt>Gênero registrado</dt>
-                  <dd>{focusedPerson.gender || "Não informado"}</dd>
-                </div>
-                <div>
-                  <dt>Observações</dt>
-                  <dd>{focusedPerson.notes || "Nenhuma observação registrada."}</dd>
-                </div>
-              </dl>
-              <div className="atlas-panel-actions">
-                <Button variant="outline" onClick={() => setEditingPerson(focusedPerson)}>
-                  Editar pessoa
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setRelDialog({ open: true, seed: { from: focusedPerson.id } })}
-                >
-                  Criar vínculo
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() =>
-                    setRelDialog({ open: true, seed: { to: focusedPerson.id, type: "parent" } })
-                  }
-                >
-                  Definir pai ou mãe
-                </Button>
-              </div>
-              <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
-                Pai/mãe definidos aqui têm precedência sobre o parentesco da planilha — use para
-                meios-irmãos ou familiares soltos.
-              </p>
-              <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
-                Selecione uma pessoa no mapa para consultar sua ficha. Dê dois cliques para editar.
-              </p>
-            </>
-          ) : (
-            <>
-              <h2>Pessoas e relações</h2>
-              <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-                Adicione a primeira pessoa para começar o genossociograma. Os dados de cada pessoa
-                aparecem aqui.
-              </p>
-            </>
-          )}
+          {personPanel}
         </aside>
       )}
 
@@ -1913,10 +1919,19 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
         open={creatingPerson}
         onOpenChange={(open) => {
           setCreatingPerson(open);
-          if (!open) setDefaultRelationship("");
+          if (!open) setQuickRelative(null);
         }}
         clientId={clientId}
-        defaultPosition={{ x: 120 + persons.length * 200, y: 120 }}
+        defaultRelationship={quickTag}
+        defaultGender={
+          quickRelative?.kind === "Pai"
+            ? "masculino"
+            : quickRelative?.kind === "Mãe"
+              ? "feminino"
+              : undefined
+        }
+        allPersons={persons}
+        onCreated={onCreated}
       />
       <PersonFormDialog
         open={Boolean(editingPerson)}
@@ -1939,25 +1954,6 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
         seed={relDialog.seed}
         editing={relDialog.editing}
       />
-
-      <AlertDialog open={confirmRecalc} onOpenChange={setConfirmRecalc}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="font-serif text-ink">
-              Recalcular posições do zero?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Isso apaga o arranjo manual salvo desta árvore e recalcula a posição de todo mundo a
-              partir das regras atuais do genossociograma. Use se alguém aparecer preso no lugar
-              errado.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => recalcLayout.mutate()}>Recalcular</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogContent>
@@ -2010,7 +2006,11 @@ function unionLabel(r: RelRow): string {
 function relToEdge(r: RelRow): Edge {
   const stroke = colorFor(r);
   const dashed =
-    r.qualifier === "divorce" || r.qualifier === "separation" || r.qualifier === "rupture";
+    r.relationship_type === "sibling"
+      ? "4 5"
+      : r.qualifier === "close" || r.qualifier === "fusion"
+        ? "12 3 2 3"
+        : "7 5";
   const thick = r.qualifier === "fusion";
   const isUnion = r.relationship_type === "union";
   const order = (r as RelRow & { marriage_order?: number | null }).marriage_order ?? null;
@@ -2032,12 +2032,11 @@ function relToEdge(r: RelRow): Edge {
     },
     labelBgStyle: { fill: "var(--color-card)", fillOpacity: 0.98, rx: 3, ry: 3 },
     labelBgPadding: [4, 6] as [number, number],
-    animated: r.qualifier === "conflict",
     data: { relationshipType: r.relationship_type, qualifier: r.qualifier, marriageOrder: order },
     style: {
       stroke,
       strokeWidth: (thick ? 3 : 2) + unionExtra,
-      strokeDasharray: dashed ? "8 5" : undefined,
+      strokeDasharray: dashed,
     },
   };
 }

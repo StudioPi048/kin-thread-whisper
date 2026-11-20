@@ -721,7 +721,11 @@ function ClientDossierPage() {
 
               <TabsContent value="genogram">
                 <TabSuspense>
-                  <GenogramCanvas clientId={client.id} focusPersonId={focusPerson} />
+                  <GenogramCanvas
+                    key={client.id}
+                    clientId={client.id}
+                    focusPersonId={focusPerson}
+                  />
                 </TabSuspense>
               </TabsContent>
 

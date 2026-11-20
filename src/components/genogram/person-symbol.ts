@@ -4,32 +4,29 @@ export function personSymbol(person: {
   full_name?: string | null;
   preferred_name?: string | null;
 }) {
-  const rawGender = (person.gender || "").toLowerCase().trim();
-  const rel = (person.relationship_to_proband || "").toLowerCase();
+  const normalize = (value?: string | null) =>
+    (value ?? "")
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+  const gender = normalize(person.gender);
+  if (gender.includes("aborto")) return "aborto";
+  if (["masculino", "m", "homem", "male"].includes(gender)) return "masculino";
+  if (["feminino", "f", "mulher", "female"].includes(gender)) return "feminino";
+  if (gender && gender !== "desconhecido" && gender !== "unknown") return "desconhecido";
 
-  const rawName = (person.full_name || "").toLowerCase().trim();
-  const rawPref = (person.preferred_name || "").toLowerCase().trim();
-
-  let gender = "desconhecido";
-  if (
-    rawGender.includes("masculino") ||
-    rawGender === "m" ||
-    rawGender === "homem" ||
-    rel.match(/pai|tio|avô|bisavô|filho|irmão|irmao/)
-  ) {
-    gender = "masculino";
-  } else if (
-    rawGender.includes("feminino") ||
-    rawGender === "f" ||
-    rawGender === "mulher" ||
-    rel.match(/mãe|mae|tia|avó|avo|bisavó|filha|irmã|irma/)
-  ) {
-    gender = "feminino";
+  // A referência em "irmã do avô", por exemplo, não descreve o gênero da irmã.
+  const role = (person.relationship_to_proband ?? "")
+    .toLowerCase()
+    .trim()
+    .split(/[\s-]+/)[0];
+  if (role === "aborto" || /^aborto\b/i.test(person.full_name?.trim() ?? "")) return "aborto";
+  if (["pai", "tio", "avô", "bisavô", "trisavô", "filho", "irmão", "irmao"].includes(role)) {
+    return "masculino";
   }
-
-  if (rawGender.includes("aborto") || rawName.includes("aborto") || rawPref.includes("aborto")) {
-    gender = "aborto";
+  if (["mãe", "mae", "tia", "avó", "bisavó", "trisavó", "filha", "irmã", "irma"].includes(role)) {
+    return "feminino";
   }
-
-  return gender;
+  return "desconhecido";
 }

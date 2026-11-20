@@ -26,6 +26,8 @@ export const clients = ["Helena Duarte", "Marina Costa", "Rafael Almeida", "Luca
     avatar_url: null,
   }),
 );
+export const personId = (index: number) =>
+  `10000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`;
 export const persons = [
   ["Antônio Duarte", "masculino", "1932-05-10", "Avô paterno", -300, 0],
   ["Cecília Duarte", "feminino", "1936-07-22", "Avó paterna", -90, 0],
@@ -35,8 +37,16 @@ export const persons = [
   ["Mariana Silva", "feminino", "1965-11-02", "Mãe", 470, 220],
   ["Helena Duarte", "feminino", "1990-03-12", "Consulente", 100, 450],
   ["Pedro Duarte", "masculino", "1992-09-14", "Irmão", 310, 450],
+  ["Miguel Duarte", "masculino", "1937-01-19", "Irmão do avô paterno", 0, 0],
+  ["Joaquim Duarte", "masculino", "1908-07-21", "Bisavô paterno (pai do avô)", 0, 0],
+  ["Olívia Mendes", "feminino", "1912-05-16", "Bisavó paterna (mãe do avô)", 0, 0],
+  ["Tomás Duarte", "masculino", "1911-04-25", "Irmão do bisavô", 0, 0],
+  ["Mateus Duarte", "masculino", "1882-03-10", "Trisavô", 0, 0],
+  ["Benedita Santos", "feminino", "1886-02-17", "Trisavó", 0, 0],
+  ["Miguel Duarte", "masculino", "1943-12-21", "Irmão do avô", 0, 0],
+  ["Cíntia Duarte", "feminino", "1994-01-09", "Irmã adotiva", 0, 0],
 ].map(([full_name, gender, birth_date, relationship_to_proband, x, y], i) => ({
-  id: `person-${i}`,
+  id: personId(i),
   client_id: cid,
   full_name,
   preferred_name: String(full_name).split(" ")[0],
@@ -44,8 +54,8 @@ export const persons = [
   birth_date,
   relationship_to_proband,
   is_proband: i === 6,
-  is_deceased: false,
-  death_date: null,
+  is_deceased: i === 0,
+  death_date: i === 0 ? "2012-08-06" : null,
   notes: "Registro fictício para revisão visual.",
   birth_place: "Florianópolis",
   life_events: [],
@@ -66,13 +76,24 @@ export const rels = [
   [5, 6, "parent"],
   [4, 7, "parent"],
   [5, 7, "parent"],
-].map(([a, b, t], i) => ({
+  [9, 0, "parent"],
+  [10, 0, "parent"],
+  [9, 8, "parent"],
+  [10, 8, "parent"],
+  [12, 9, "parent"],
+  [13, 9, "parent"],
+  [12, 11, "parent"],
+  [13, 11, "parent"],
+  [4, 15, "parent", "adoptive"],
+  [5, 15, "parent", "adoptive"],
+  [8, 11, "emotional", "close"],
+].map(([a, b, t, q], i) => ({
   id: `rel-${i}`,
   client_id: cid,
-  from_person_id: `person-${a}`,
-  to_person_id: `person-${b}`,
+  from_person_id: personId(Number(a)),
+  to_person_id: personId(Number(b)),
   relationship_type: t,
-  qualifier: t === "union" ? "marriage" : "biological",
+  qualifier: q ?? (t === "union" ? "marriage" : "biological"),
   notes: null,
 }));
 export const sessions = [9, 11, 14].map((h, i) => {
@@ -211,7 +232,11 @@ class Query {
   then(resolve: any, reject: any) {
     try {
       let rows = this.rows.filter((r) => this.filters.every((f) => f(r)));
-      if (this.mutation === "update") rows.forEach((r) => Object.assign(r, this.payload));
+      if (this.mutation === "update") {
+        const updated = new Map(rows.map((row) => [row, { ...row, ...this.payload }]));
+        db[this.table] = this.rows.map((row) => updated.get(row) ?? row);
+        rows = [...updated.values()];
+      }
       if (this.mutation === "delete") db[this.table] = this.rows.filter((r) => !rows.includes(r));
       if (this.mutation === "insert" || this.mutation === "upsert") {
         rows = (Array.isArray(this.payload) ? this.payload : [this.payload]).map((v: any) => ({
@@ -219,7 +244,17 @@ class Query {
           created_at: stamp,
           ...v,
         }));
-        db[this.table] = [...this.rows, ...rows];
+        const remaining =
+          this.mutation === "upsert" && this.table === "genogram_node_positions"
+            ? this.rows.filter(
+                (existing) =>
+                  !rows.some(
+                    (row) =>
+                      row.layout_id === existing.layout_id && row.node_id === existing.node_id,
+                  ),
+              )
+            : this.rows;
+        db[this.table] = [...remaining, ...rows];
       }
       if (this.ordering) {
         const { k, asc } = this.ordering;

@@ -35,9 +35,7 @@ export const BRANCH_GAP = 16; // folga entre subárvores ancestrais irmãs
 export const BRANCH_SEPARATION = 160; // folga extra paterno vs materno
 
 export function getSiblingStep(siblingsCount: number): number {
-  if (siblingsCount <= 1) return 110;
-  if (siblingsCount <= 3) return 125;
-  return 140;
+  return NODE_W + SIBLING_GAP + (siblingsCount > 3 ? 16 : 0);
 }
 
 // ── Tipos ──────────────────────────────────────────────────────
@@ -52,11 +50,14 @@ export type UnionKind =
 
 export type BranchId = "proband" | "paternal" | "maternal" | "other" | string;
 
+export type PersonLane = "ancestral" | "social" | "descendant" | "pending";
+
 export interface PersonEntity {
   id: string;
   row: PersonRow;
   generation: number;
   branchId: BranchId;
+  lane: PersonLane;
 }
 
 export interface UnionEntity {
@@ -67,13 +68,14 @@ export interface UnionEntity {
   label: string;
   generation: number; // = geração do casal (pais)
   branchId: BranchId;
+  direction: "up" | "down";
 }
 
 export interface LogicalEdge {
   kind: "partner" | "child";
   personId: string;
   unionId: string;
-  childKind?: "biological" | "adoptive" | "foster";
+  childKind?: ParentKind;
 }
 
 export interface GenogramWarning {
@@ -91,67 +93,91 @@ export interface LogicalGraph {
   /** Pessoas visíveis mas sem âncora genealógica real — o que fazer pra corrigir cada uma. */
   warnings: GenogramWarning[];
   positions: Map<string, NodePositionRow>;
+  topRowIds: Set<string>;
+  pendingPersonIds: Set<string>;
+  parentsByChild: Map<string, ResolvedParent[]>;
 }
 
-// ── Normalização de tags de parentesco ────────────────────────
-function clean(s: string | null | undefined): string {
-  if (!s) return "";
-  return s
-    .toLowerCase()
+// Compatibilidade com planilhas antigas. Cada par declara os pais da pessoa
+// indicada pelo caminho completo. Os rótulos não substituem vínculos por ID.
+const ANCESTOR_FAMILIES = [
+  { child: "Consulente", parents: ["Pai", "Mãe"], generation: 1, id: "root" },
+  { child: "Pai", parents: ["Avô paterno", "Avó paterna"], generation: 2, id: "gp_pat" },
+  { child: "Mãe", parents: ["Avô materno", "Avó materna"], generation: 2, id: "gp_mat" },
+  {
+    child: "Avô paterno",
+    parents: ["Bisavô paterno (pai do avô)", "Bisavó paterna (mãe do avô)"],
+    generation: 3,
+    id: "ggp_pat_avo",
+  },
+  {
+    child: "Avó paterna",
+    parents: ["Bisavô paterno (pai da avó)", "Bisavó paterna (mãe da avó)"],
+    generation: 3,
+    id: "ggp_pat_ava",
+  },
+  {
+    child: "Avô materno",
+    parents: ["Bisavô materno (pai do avô)", "Bisavó materna (mãe do avô)"],
+    generation: 3,
+    id: "ggp_mat_avo",
+  },
+  {
+    child: "Avó materna",
+    parents: ["Bisavô materno (pai da avó)", "Bisavó materna (mãe da avó)"],
+    generation: 3,
+    id: "ggp_mat_ava",
+  },
+] as const;
+
+type Side = "paternal" | "maternal";
+type AncestorSlot = { genderRole: Side; generation: number; branchId: Side };
+const ancestorSlots = new Map<string, AncestorSlot>();
+for (const family of ANCESTOR_FAMILIES) {
+  family.parents.forEach((role, i) => {
+    const genderRole: Side = i === 0 ? "paternal" : "maternal";
+    const branchId =
+      family.generation === 1 ? genderRole : /pat[ea]rn/.test(role) ? "paternal" : "maternal";
+    ancestorSlots.set(role, { generation: family.generation, genderRole, branchId });
+  });
+}
+const collateralAnchors = new Map<string, string>();
+for (const role of ancestorSlots.keys()) {
+  collateralAnchors.set(smartNormalizeRelationship(`Irmã(o) do ${role}`), role);
+  collateralAnchors.set(smartNormalizeRelationship(`Irmã(o) da ${role}`), role);
+}
+
+export type ParentKind = "biological" | "adoptive" | "foster" | "stepparent" | "unknown";
+
+export interface ResolvedParent {
+  personId: string;
+  kind: ParentKind;
+  source: "explicit" | "legacy";
+  relationshipId?: string;
+}
+
+export function getResolvedParents(
+  graph: LogicalGraph,
+  personId: string,
+): readonly ResolvedParent[] {
+  return graph.parentsByChild.get(personId) ?? [];
+}
+
+function parentKind(qualifier: string | null): ParentKind {
+  const value = qualifier
+    ?.toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\([oa]\)/g, "")
-    .replace(/[()]/g, " ")
-    .replace(/\s+/g, " ")
     .trim();
+  if (!value || /^biolog/.test(value)) return "biological";
+  if (/adot|adopt/.test(value)) return "adoptive";
+  if (/acolh|criac|foster|guarda/.test(value)) return "foster";
+  if (/stepparent|padrasto|madrasta/.test(value)) return "stepparent";
+  return "unknown";
 }
 
-const SYSTEM_KEYS = new Set(
-  [
-    "Consulente",
-    "Paciente",
-    "Irmã(o)",
-    "Pai",
-    "Mãe",
-    "Irmã(o) do Pai",
-    "Irmã(o) da Mãe",
-    "Avô paterno",
-    "Avó paterna",
-    "Avô materno",
-    "Avó materna",
-    "Bisavô paterno (pai do avô)",
-    "Bisavó paterna (mãe do avô)",
-    "Bisavô paterno (pai da avó)",
-    "Bisavó paterna (mãe da avó)",
-    "Bisavô materno (pai do avô)",
-    "Bisavó materna (mãe do avô)",
-    "Bisavô materno (pai da avó)",
-    "Bisavó materna (mãe da avó)",
-    "Irmã(o) do avô paterno",
-    "Irmã(o) da avó paterna",
-    "Irmã(o) do avô materno",
-    "Irmã(o) da avó materna",
-    "Irmã(o) do Bisavô paterno (pai do avô)",
-    "Irmã(o) da Bisavó paterna (mãe do avô)",
-    "Irmã(o) do Bisavô paterno (pai da avó)",
-    "Irmã(o) da Bisavó paterna (mãe da avó)",
-    "Irmã(o) do Bisavô materno (pai do avô)",
-    "Irmã(o) da Bisavó materna (mãe do avô)",
-    "Irmã(o) do Bisavô materno (pai da avó)",
-    "Irmã(o) da Bisavó materna (mãe da avó)",
-    "Cônjuge",
-    "Filho(a)",
-    "Aborto",
-  ].map(clean),
-);
+const pairKey = (ids: readonly string[]) => [...ids].sort().join("|");
 
-function canonicalKey(rel: string | null | undefined): string {
-  const raw = clean(rel);
-  if (SYSTEM_KEYS.has(raw)) return raw;
-  return clean(smartNormalizeRelationship(rel)) || raw;
-}
-
-// ── Rótulo humano do tipo de união ────────────────────────────
 export function unionKindLabel(kind: UnionKind, order?: number | null): string {
   const map: Record<UnionKind, string> = {
     casamento: "Casamento",
@@ -162,26 +188,95 @@ export function unionKindLabel(kind: UnionKind, order?: number | null): string {
     namoro: "Namoro",
     desconhecido: "União",
   };
-  const base = map[kind] ?? "União";
   if (kind === "casamento" && order && order > 1) return `${order}º casamento`;
-  return base;
+  return map[kind];
 }
 
 function deriveUnionKind(rel: RelRow | undefined): UnionKind {
   if (!rel) return "desconhecido";
-  if (rel.qualifier === "divorce" || rel.qualifier === "rupture") return "divorcio";
-  if (rel.qualifier === "separation") return "divorcio";
-  const t = (rel.relationship_type || "").toLowerCase();
-  if (t === "union") return "casamento";
-  return "desconhecido";
+  switch (rel.qualifier) {
+    case "divorce":
+    case "rupture":
+    case "separation":
+      return "divorcio";
+    case "cohabitation":
+      return "uniao_estavel";
+    case "engagement":
+      return "namoro";
+    default:
+      return "casamento";
+  }
 }
 
-// ── Construção do grafo lógico ────────────────────────────────
 interface BuildOptions {
   persons: PersonRow[];
   rels: RelRow[];
   probandId?: string;
   positions?: NodePositionRow[];
+}
+
+/** Geração nominal para as etiquetas legadas, inclusive em listagens sem vínculos. */
+export function recognizedGeneration(rel: string | null | undefined): number {
+  const role = smartNormalizeRelationship(rel);
+  const slot = ancestorSlots.get(collateralAnchors.get(role) ?? role);
+  if (slot) return slot.generation;
+  const text = role
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  if (/\b(bisav|great-grand)/.test(text)) return 3;
+  if (/\b(av[oah]|grand)/.test(text)) return 2;
+  if (/\b(ti[oa]|uncle|aunt)\b/.test(text)) return 1;
+  return 0;
+}
+
+function reach<T>(seeds: Iterable<T>, neighbors: (node: T) => Iterable<T>): Set<T> {
+  const queue = [...seeds];
+  const seen = new Set(queue);
+  for (let i = 0; i < queue.length; i++) {
+    for (const next of neighbors(queue[i])) {
+      if (seen.has(next)) continue;
+      seen.add(next);
+      queue.push(next);
+    }
+  }
+  return seen;
+}
+
+function indexedSets() {
+  const map = new Map<string, Set<string>>();
+  return {
+    add(key: string, id: string) {
+      const ids = map.get(key) ?? new Set<string>();
+      ids.add(id);
+      map.set(key, ids);
+    },
+    get(key: string): Iterable<string> {
+      return map.get(key) ?? [];
+    },
+  };
+}
+
+const biologicalParents = (parents: readonly ResolvedParent[]) =>
+  parents.filter((p) => p.kind === "biological");
+
+function comparePersons(a: PersonRow, b: PersonRow): number {
+  return (
+    (a.birth_order ?? Number.MAX_SAFE_INTEGER) - (b.birth_order ?? Number.MAX_SAFE_INTEGER) ||
+    (a.birth_date ?? "9999").localeCompare(b.birth_date ?? "9999") ||
+    a.full_name.localeCompare(b.full_name, "pt-BR") ||
+    a.id.localeCompare(b.id)
+  );
+}
+
+function parentSide(person: PersonEntity): Side | undefined {
+  const role = smartNormalizeRelationship(person.row.relationship_to_proband);
+  const slot = ancestorSlots.get(role);
+  if (slot) return slot.genderRole;
+  const gender = person.row.gender?.toLowerCase();
+  if (gender === "m" || gender === "masculino") return "paternal";
+  if (gender === "f" || gender === "feminino") return "maternal";
+  return undefined;
 }
 
 export function buildLogicalGraph({
@@ -197,607 +292,426 @@ export function buildLogicalGraph({
     edges: [],
     errors: [],
     warnings: [],
-    positions: new Map(),
+    positions: new Map(positions?.map((p) => [p.node_id, p])),
+    topRowIds: new Set(),
+    pendingPersonIds: new Set(),
+    parentsByChild: new Map(),
   };
+  if (!persons.length) return g;
 
-  if (positions) {
-    for (const pos of positions) {
-      g.positions.set(pos.node_id, pos);
-    }
-  }
-
-  const byKey = new Map<string, PersonRow[]>();
+  const byId = new Map(persons.map((p) => [p.id, p]));
+  const byRole = new Map<string, PersonRow[]>();
   for (const p of persons) {
-    const key = canonicalKey(p.relationship_to_proband) || (p.is_proband ? "consulente" : "");
-    if (!key) continue;
-    if (!byKey.has(key)) byKey.set(key, []);
-    byKey.get(key)!.push(p);
+    const role = smartNormalizeRelationship(p.relationship_to_proband);
+    const group = byRole.get(role) ?? [];
+    group.push(p);
+    byRole.set(role, group);
   }
-  const get = (tag: string): PersonRow[] => byKey.get(clean(tag)) ?? [];
-  const first = (tag: string): PersonRow | undefined => get(tag)[0];
-
+  const flagged = persons.filter((p) => p.is_proband);
+  const tagged = byRole.get("Consulente") ?? [];
   const proband =
-    (probandId && persons.find((p) => p.id === probandId)) ||
-    first("Consulente") ||
-    first("Paciente") ||
-    persons.find((p) => p.is_proband) ||
-    persons[0];
-  if (!proband) return g;
+    (probandId ? byId.get(probandId) : undefined) ??
+    flagged.sort(comparePersons)[0] ??
+    tagged.sort(comparePersons)[0] ??
+    [...persons].sort(comparePersons)[0];
   g.probandId = proband.id;
+  g.topRowIds.add(proband.id);
+  if (!probandId && (flagged.length > 1 || (flagged.length === 0 && tagged.length !== 1))) {
+    g.errors.push("Identifique um único consulente na planilha para confirmar o foco da árvore.");
+  }
 
-  // Índice de uniões manuais (para achar kind/qualifier/marriage_order do casal)
+  const warn = (personId: string, detail: string) => {
+    const name = byId.get(personId)?.full_name?.trim() || "Pessoa sem nome";
+    g.pendingPersonIds.add(personId);
+    g.warnings.push({ personId, personName: name, message: `${name}: ${detail}` });
+  };
+  for (const p of [...persons].sort(comparePersons)) {
+    const role = smartNormalizeRelationship(p.relationship_to_proband);
+    const slot = ancestorSlots.get(collateralAnchors.get(role) ?? role);
+    g.persons.set(p.id, {
+      id: p.id,
+      row: p,
+      generation: recognizedGeneration(role),
+      branchId: p.id === proband.id ? "proband" : (slot?.branchId ?? "other"),
+      lane: "pending",
+    });
+  }
+
+  const declaredChildren = new Set<string>();
+  const invalidChildren = new Set<string>();
   const unionRels = new Map<string, RelRow>();
-  for (const r of rels) {
-    if (r.relationship_type === "union" && r.from_person_id && r.to_person_id) {
-      const key = [r.from_person_id, r.to_person_id].sort().join("|");
-      unionRels.set(key, r);
+  const siblings = new Map<string, Set<string>>();
+  for (const r of [...rels].sort((a, b) => a.id.localeCompare(b.id))) {
+    const from = byId.get(r.from_person_id);
+    const to = byId.get(r.to_person_id);
+    if (r.relationship_type === "parent" && to) {
+      declaredChildren.add(to.id);
+      if (!from || from.client_id !== to.client_id || r.client_id !== to.client_id) {
+        warn(to.id, "um dos pais informados não consta neste dossiê. Revise a filiação.");
+        continue;
+      }
+      if (from.id === to.id) {
+        g.errors.push(`${to.full_name} foi vinculada como genitor(a) de si mesma.`);
+        invalidChildren.add(to.id);
+        continue;
+      }
+      const parents = g.parentsByChild.get(to.id) ?? [];
+      const conflicting = parents.find((p) => p.personId === from.id);
+      const kind = parentKind(r.qualifier);
+      if (conflicting && conflicting.kind !== kind) {
+        invalidChildren.add(to.id);
+        warn(to.id, "o mesmo genitor tem tipos de filiação incompatíveis. Revise os vínculos.");
+      } else if (!conflicting) {
+        parents.push({ personId: from.id, kind, source: "explicit", relationshipId: r.id });
+      }
+      g.parentsByChild.set(to.id, parents);
+      continue;
+    }
+    if (
+      !from ||
+      !to ||
+      from.id === to.id ||
+      from.client_id !== to.client_id ||
+      r.client_id !== from.client_id
+    )
+      continue;
+    if (r.relationship_type === "union") {
+      unionRels.set(pairKey([from.id, to.id]), r);
+    } else if (r.relationship_type === "sibling") {
+      const id = from.id === proband.id ? to.id : to.id === proband.id ? from.id : null;
+      if (!id) continue;
+      const qualifiers = siblings.get(id) ?? new Set<string>();
+      qualifiers.add(r.qualifier ?? "");
+      siblings.set(id, qualifiers);
     }
   }
-  const findUnionRel = (a?: PersonRow, b?: PersonRow) => {
-    if (!a || !b) return undefined;
-    return unionRels.get([a.id, b.id].sort().join("|"));
+  for (const [child, parents] of g.parentsByChild) {
+    if (parents.length <= 2) continue;
+    g.errors.push(
+      `${byId.get(child)?.full_name} tem ${parents.length} genitores declarados (máximo 2). Revise os vínculos.`,
+    );
+    invalidChildren.add(child);
+  }
+  for (const child of invalidChildren) g.parentsByChild.delete(child);
+
+  const legacyUnionIds = new Map<string, string>();
+  const chosenRoles = new Map<string, PersonRow>([["Consulente", proband]]);
+  const pickRole = (role: string, child: PersonRow) => {
+    const candidates = (byRole.get(role) ?? []).filter((p) => p.client_id === child.client_id);
+    const explicit = g.parentsByChild.get(child.id) ?? [];
+    const linked = candidates.filter((p) => explicit.some((link) => link.personId === p.id));
+    if (declaredChildren.has(child.id)) return linked.length === 1 ? linked[0] : undefined;
+    if (candidates.length > 1) {
+      for (const p of candidates) {
+        warn(p.id, `mais de uma pessoa ocupa "${role}". Confirme quem é o genitor na planilha.`);
+      }
+      return undefined;
+    }
+    return candidates[0];
   };
 
-  const addPerson = (row: PersonRow, generation: number, branchId: BranchId) => {
-    if (g.persons.has(row.id)) return;
-    g.persons.set(row.id, { id: row.id, row, generation, branchId });
-  };
+  const inferred = (p: PersonRow): ResolvedParent => ({
+    personId: p.id,
+    kind: "biological",
+    source: "legacy",
+  });
+  for (const { child: childRole, parents: roles, id } of ANCESTOR_FAMILIES) {
+    const child = chosenRoles.get(childRole);
+    if (!child) continue;
+    const slots = roles.map((role) => pickRole(role, child));
+    const hints = slots.filter((p): p is PersonRow => p !== undefined);
+    slots.forEach((p, i) => {
+      if (p) chosenRoles.set(roles[i], p);
+    });
+    if (hints.length === 0) continue;
+    legacyUnionIds.set(
+      pairKey(hints.map((p) => p.id)),
+      `u_${id === "root" ? `root_${proband.id}` : id}`,
+    );
+    if (!declaredChildren.has(child.id)) g.parentsByChild.set(child.id, hints.map(inferred));
+  }
 
-  const addUnion = (params: {
-    id: string;
-    partners: PersonRow[];
-    children: PersonRow[];
-    generation: number;
-    branchId: BranchId;
-    rel?: RelRow;
-  }) => {
-    const { id, partners, children, generation, branchId, rel } = params;
-    if (partners.length === 0 && children.length === 0) return null;
-    const kind = deriveUnionKind(rel);
-    const order =
-      (rel as (RelRow & { marriage_order?: number | null }) | undefined)?.marriage_order ?? null;
-    const label = unionKindLabel(kind, order);
-    const union: UnionEntity = {
+  // Um rótulo de colateral só localiza a faixa e o ramo. Mesmo sabendo
+  // qual avô é o irmão, ele pode compartilhar apenas um dos genitores.
+  for (const p of persons) {
+    if (p.id === proband.id || declaredChildren.has(p.id)) continue;
+    const role = smartNormalizeRelationship(p.relationship_to_proband);
+    if (p.client_id !== proband.client_id) continue;
+    if (role === "Filho(a)") {
+      g.parentsByChild.set(p.id, [inferred(proband)]);
+      continue;
+    }
+    const text = role
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+    const halfSibling = text.match(/^mei[oa][ -]irmao? (patern[oa]|matern[oa]|de pai|de mae)$/);
+    if (halfSibling) {
+      const side: Side = /^(patern|de pai)/.test(halfSibling[1]) ? "paternal" : "maternal";
+      const parents = biologicalParents(getResolvedParents(g, proband.id)).filter(
+        (link) => parentSide(g.persons.get(link.personId)!) === side,
+      );
+      if (parents.length === 1) {
+        g.parentsByChild.set(p.id, [inferred(g.persons.get(parents[0].personId)!.row)]);
+      }
+      continue;
+    }
+    if (role !== "Irmã(o)" || siblings.has(p.id)) continue;
+    const parents = getResolvedParents(g, proband.id);
+    if (parents.length > 0 && parents.every((parent) => parent.kind === "biological")) {
+      g.parentsByChild.set(
+        p.id,
+        parents.map((parent) => ({
+          personId: parent.personId,
+          kind: "biological",
+          source: "legacy",
+        })),
+      );
+    }
+  }
+
+  const parentsOf = (id: string) => getResolvedParents(g, id).map((p) => p.personId);
+  const cyclic = new Set<string>();
+  for (const [child, parents] of g.parentsByChild) {
+    const ancestors = reach(
+      parents.map((p) => p.personId),
+      parentsOf,
+    );
+    if (ancestors.has(child)) cyclic.add(child);
+  }
+  for (const child of cyclic) {
+    g.parentsByChild.delete(child);
+    g.errors.push(
+      `Vínculos contraditórios envolvendo ${byId.get(child)?.full_name}: existe um ciclo de filiação.`,
+    );
+    warn(child, "revise a filiação que forma um ciclo.");
+  }
+
+  const probandParents = new Set(
+    biologicalParents(getResolvedParents(g, proband.id)).map((p) => p.personId),
+  );
+  const indexAncestors = reach(parentsOf(proband.id), parentsOf);
+  const children = indexedSets();
+  for (const [child, parents] of g.parentsByChild) {
+    for (const parent of parents) children.add(parent.personId, child);
+  }
+  const indexDescendants = reach(children.get(proband.id), children.get);
+
+  for (const [id, p] of g.persons) {
+    if (id === proband.id || indexAncestors.has(id) || indexDescendants.has(id)) continue;
+    const qualifiers = siblings.get(id);
+    const shared = biologicalParents(getResolvedParents(g, id)).some((parent) =>
+      probandParents.has(parent.personId),
+    );
+    const bloodTag = p.row.relationship_to_proband
+      ?.normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim()
+      .toLowerCase();
+    const declaredBlood =
+      /^irmao? (?:biologic[oa]|de sangue)(?: (?:do consulente|do paciente))?$/.test(
+        bloodTag ?? "",
+      ) || [...(qualifiers ?? [])].some((q) => q === "biological" || q === "twin" || q === "half");
+    if (declaredBlood && qualifiers?.has("adoptive")) {
+      warn(id, "a irmandade está registrada como biológica e adotiva. Confira os vínculos.");
+      if (!shared) continue;
+    }
+    const parents = getResolvedParents(g, id);
+    if (shared || (declaredBlood && parents.length === 0 && !declaredChildren.has(id))) {
+      g.topRowIds.add(id);
+      if (parents.length === 0)
+        warn(id, "irmandade declarada. Informe os pais conhecidos para conectar a filiação.");
+    } else if (declaredBlood && probandParents.size > 0 && parents.length > 0) {
+      warn(
+        id,
+        "a irmandade declarada não coincide com a filiação biológica disponível. Confirme os pais.",
+      );
+    }
+  }
+
+  // A reprodução de uma segunda união pode ligar um ascendente a mais de um
+  // ramo. Canonizamos a geração uma vez por pessoa, a partir das filiações.
+  resolveGenerations(g, unionRels, siblings);
+
+  for (const [id, person] of g.persons) {
+    if (person.lane !== "pending" || g.pendingPersonIds.has(id)) continue;
+    warn(
       id,
-      partners: partners.map((p) => p.id),
-      children: children.map((c) => c.id),
-      kind,
-      label,
-      generation,
-      branchId,
-    };
-    g.unions.set(id, union);
-    for (const p of partners) {
-      g.edges.push({ kind: "partner", personId: p.id, unionId: id });
-    }
-    for (const c of children) {
-      g.edges.push({ kind: "child", personId: c.id, unionId: id, childKind: "biological" });
-    }
-    return union;
-  };
-
-  // ── Registrar pessoas por geração/ramo ───────────────────────
-  addPerson(proband, 0, "proband");
-
-  const pai = first("Pai");
-  const mae = first("Mãe");
-  const irmaos = get("Irmã(o)");
-  irmaos.forEach((s) => addPerson(s, 0, "proband"));
-
-  const tiosPat = get("Irmã(o) do Pai");
-  const tiosMat = get("Irmã(o) da Mãe");
-  if (pai) addPerson(pai, 1, "paternal");
-  if (mae) addPerson(mae, 1, "maternal");
-  tiosPat.forEach((t) => addPerson(t, 1, "paternal"));
-  tiosMat.forEach((t) => addPerson(t, 1, "maternal"));
-
-  // Um ancestral direto (avô/avó/bisavô/bisavó) é UMA pessoa só — mas na
-  // prática o clínico às vezes reusa o mesmo texto de ancestral pra um grupo
-  // inteiro de irmãos (em vez de usar a tag "irmã(o) do/da X" pra cada um).
-  // `first()` sozinho pegaria só o primeiro cadastro e derrubaria o resto
-  // pro fallback "todos aparecem" (satélite solto do paciente). Em vez disso,
-  // o primeiro cadastro (ordem de criação) vira a âncora e os excedentes
-  // entram como irmãos dela — reaproveitando addSiblingGroup, que já existe.
-  const avoPatAll = get("Avô paterno");
-  const avoPatFAll = get("Avó paterna");
-  const avoMatAll = get("Avô materno");
-  const avoMatFAll = get("Avó materna");
-  const avoPat = avoPatAll[0];
-  const avoPatF = avoPatFAll[0];
-  const avoMat = avoMatAll[0];
-  const avoMatF = avoMatFAll[0];
-  if (avoPat) addPerson(avoPat, 2, "paternal");
-  if (avoPatF) addPerson(avoPatF, 2, "paternal");
-  if (avoMat) addPerson(avoMat, 2, "maternal");
-  if (avoMatF) addPerson(avoMatF, 2, "maternal");
-
-  const tioAvoPatAvo = [...get("Irmã(o) do avô paterno"), ...avoPatAll.slice(1)];
-  const tioAvoPatAva = [...get("Irmã(o) da avó paterna"), ...avoPatFAll.slice(1)];
-  const tioAvoMatAvo = [...get("Irmã(o) do avô materno"), ...avoMatAll.slice(1)];
-  const tioAvoMatAva = [...get("Irmã(o) da avó materna"), ...avoMatFAll.slice(1)];
-  tioAvoPatAvo.forEach((p) => addPerson(p, 2, "paternal"));
-  tioAvoPatAva.forEach((p) => addPerson(p, 2, "paternal"));
-  tioAvoMatAvo.forEach((p) => addPerson(p, 2, "maternal"));
-  tioAvoMatAva.forEach((p) => addPerson(p, 2, "maternal"));
-
-  const bp1All = get("Bisavô paterno (pai do avô)");
-  const bp2All = get("Bisavó paterna (mãe do avô)");
-  const bp3All = get("Bisavô paterno (pai da avó)");
-  const bp4All = get("Bisavó paterna (mãe da avó)");
-  const bm1All = get("Bisavô materno (pai do avô)");
-  const bm2All = get("Bisavó materna (mãe do avô)");
-  const bm3All = get("Bisavô materno (pai da avó)");
-  const bm4All = get("Bisavó materna (mãe da avó)");
-  const bp1 = bp1All[0];
-  const bp2 = bp2All[0];
-  const bp3 = bp3All[0];
-  const bp4 = bp4All[0];
-  const bm1 = bm1All[0];
-  const bm2 = bm2All[0];
-  const bm3 = bm3All[0];
-  const bm4 = bm4All[0];
-  [bp1, bp2, bp3, bp4].forEach((p) => p && addPerson(p, 3, "paternal"));
-  [bm1, bm2, bm3, bm4].forEach((p) => p && addPerson(p, 3, "maternal"));
-
-  // ── Irmãos dos bisavós (tios-bisavós) ───────────────────────
-  // Um tag por bisavô/bisavó real (mesma desambiguação "pai do avô" / "mãe
-  // do avô" / "pai da avó" / "mãe da avó" já usada nos bisavós), então cada
-  // grupo de irmãos ancora exatamente na pessoa certa — sem chute.
-  // Sem trisavós no sistema, a união-satélite nasce sem parceiros (addUnion
-  // já aceita isso — só bloqueia quando partners E children estão vazios).
-  // Pessoas extras com a MESMA tag de bisavô não viram irmãos por dedução:
-  // ficam visíveis como pendência (fallback), sem filiação inventada.
-  const addSiblingGroup = (
-    id: string,
-    anchor: PersonRow | undefined,
-    siblings: PersonRow[],
-    generation: number,
-    branchId: BranchId,
-  ) => {
-    // Sem âncora, não registra aqui — melhor deixar cair no fallback "todos
-    // aparecem" (satélite do paciente) do que marcar como "já processado"
-    // sem nunca ganhar união/posição, o que os deixaria invisíveis de vez.
-    if (!anchor || siblings.length === 0) return;
-    siblings.forEach((p) => addPerson(p, generation, branchId));
-    addUnion({ id, partners: [], children: [anchor, ...siblings], generation, branchId });
-  };
-  addSiblingGroup(
-    "u_sib_bp1",
-    bp1,
-    [...get("Irmã(o) do Bisavô paterno (pai do avô)")],
-    3,
-    "paternal",
-  );
-  addSiblingGroup(
-    "u_sib_bp2",
-    bp2,
-    [...get("Irmã(o) da Bisavó paterna (mãe do avô)")],
-    3,
-    "paternal",
-  );
-  addSiblingGroup(
-    "u_sib_bp3",
-    bp3,
-    [...get("Irmã(o) do Bisavô paterno (pai da avó)")],
-    3,
-    "paternal",
-  );
-  addSiblingGroup(
-    "u_sib_bp4",
-    bp4,
-    [...get("Irmã(o) da Bisavó paterna (mãe da avó)")],
-    3,
-    "paternal",
-  );
-  addSiblingGroup(
-    "u_sib_bm1",
-    bm1,
-    [...get("Irmã(o) do Bisavô materno (pai do avô)")],
-    3,
-    "maternal",
-  );
-  addSiblingGroup(
-    "u_sib_bm2",
-    bm2,
-    [...get("Irmã(o) da Bisavó materna (mãe do avô)")],
-    3,
-    "maternal",
-  );
-  addSiblingGroup(
-    "u_sib_bm3",
-    bm3,
-    [...get("Irmã(o) do Bisavô materno (pai da avó)")],
-    3,
-    "maternal",
-  );
-  addSiblingGroup(
-    "u_sib_bm4",
-    bm4,
-    [...get("Irmã(o) da Bisavó materna (mãe da avó)")],
-    3,
-    "maternal",
-  );
-
-  // ── União dos avós paternos → pai + tios paternos ───────────
-  const patGpPartners = [avoPat, avoPatF].filter(Boolean) as PersonRow[];
-  const patGpKids = [pai, ...tiosPat].filter(Boolean) as PersonRow[];
-  if (patGpPartners.length > 0 && patGpKids.length > 0) {
-    addUnion({
-      id: `u_gp_pat`,
-      partners: patGpPartners,
-      children: patGpKids,
-      generation: 2,
-      branchId: "paternal",
-      rel: findUnionRel(avoPat, avoPatF),
-    });
-  } else {
-    // Sem nenhum avô/avó paterno cadastrado: tios paternos ainda precisam
-    // ancorar no pai (nível dele), senão caem no fallback "todos aparecem"
-    // e ficam lado a lado com o paciente — parecendo irmãos dele.
-    addSiblingGroup("u_sib_pai", pai, tiosPat, 1, "paternal");
+      "sem ligação confirmada com a árvore do consulente. Informe a filiação por pessoa na planilha.",
+    );
   }
 
-  // ── União dos avós maternos → mãe + tios maternos ───────────
-  const matGpPartners = [avoMat, avoMatF].filter(Boolean) as PersonRow[];
-  const matGpKids = [mae, ...tiosMat].filter(Boolean) as PersonRow[];
-  if (matGpPartners.length > 0 && matGpKids.length > 0) {
-    addUnion({
-      id: `u_gp_mat`,
-      partners: matGpPartners,
-      children: matGpKids,
-      generation: 2,
-      branchId: "maternal",
-      rel: findUnionRel(avoMat, avoMatF),
-    });
-  } else {
-    addSiblingGroup("u_sib_mae", mae, tiosMat, 1, "maternal");
+  for (const [child, parents] of g.parentsByChild) {
+    if (!parents.length) continue;
+    const person = g.persons.get(child)!;
+    const parentIds = parents.map((p) => p.personId);
+    const key = pairKey(parentIds);
+    const direction = person.lane === "descendant" ? "down" : "up";
+    const id =
+      (legacyUnionIds.get(key) ?? `u_exp_${key.replace(/\|/g, "_")}`) +
+      (direction === "down" ? "_desc" : "");
+    const kids = g.unions.get(id)?.children ?? [];
+    if (!g.unions.has(id)) {
+      const relation = unionRels.get(key);
+      const kind = deriveUnionKind(relation);
+      g.unions.set(id, {
+        id,
+        partners: parentIds,
+        children: kids,
+        kind,
+        label: unionKindLabel(kind, relation?.marriage_order),
+        generation: Math.max(...parentIds.map((p) => g.persons.get(p)!.generation)),
+        branchId: person.branchId,
+        direction,
+      });
+      for (const pid of parentIds) g.edges.push({ kind: "partner", personId: pid, unionId: id });
+    }
+    kids.push(child);
+    const edgeKind = parents.find((p) => p.kind !== "biological")?.kind ?? "biological";
+    g.edges.push({ kind: "child", personId: child, unionId: id, childKind: edgeKind });
   }
-
-  // ── União dos bisavós → avô/avó + tios-avós correspondentes ─
-  const addGgpUnion = (
-    id: string,
-    p1: PersonRow | undefined,
-    p2: PersonRow | undefined,
-    child: PersonRow | undefined,
-    siblings: PersonRow[],
-    branchId: BranchId,
-  ) => {
-    const partners = [p1, p2].filter(Boolean) as PersonRow[];
-    const kids = [child, ...siblings].filter(Boolean) as PersonRow[];
-    if (partners.length === 0 || kids.length === 0) return;
-    addUnion({
+  // Alguns casais não têm filhos registrados. Preservamos uniões explicitadas
+  // sem convertê-las em filiação, inclusive cônjuge do consulente.
+  for (const [key, rel] of unionRels) {
+    if ([...g.unions.values()].some((u) => pairKey(u.partners) === key)) continue;
+    const id = `u_exp_${key.replace(/\|/g, "_")}`;
+    const partners = [rel.from_person_id, rel.to_person_id];
+    const kind = deriveUnionKind(rel);
+    g.unions.set(id, {
       id,
       partners,
-      children: kids,
-      generation: 3,
-      branchId,
-      rel: findUnionRel(p1, p2),
+      children: [],
+      kind,
+      label: unionKindLabel(kind, rel.marriage_order),
+      generation: Math.max(...partners.map((p) => g.persons.get(p)!.generation)),
+      branchId: "other",
+      direction: "up",
     });
-  };
-  addGgpUnion("u_ggp_pat_avo", bp1, bp2, avoPat, tioAvoPatAvo, "paternal");
-  addGgpUnion("u_ggp_pat_ava", bp3, bp4, avoPatF, tioAvoPatAva, "paternal");
-  addGgpUnion("u_ggp_mat_avo", bm1, bm2, avoMat, tioAvoMatAvo, "maternal");
-  addGgpUnion("u_ggp_mat_ava", bm3, bm4, avoMatF, tioAvoMatAva, "maternal");
-  // Mesmo problema um nível acima: sem nenhum bisavô cadastrado, os tios-avós
-  // ancoram no avô/avó correspondente em vez de virar satélite do paciente.
-  if (!bp1 && !bp2) addSiblingGroup("u_sib_avoPat", avoPat, tioAvoPatAvo, 2, "paternal");
-  if (!bp3 && !bp4) addSiblingGroup("u_sib_avoPatF", avoPatF, tioAvoPatAva, 2, "paternal");
-  if (!bm1 && !bm2) addSiblingGroup("u_sib_avoMat", avoMat, tioAvoMatAvo, 2, "maternal");
-  if (!bm3 && !bm4) addSiblingGroup("u_sib_avoMatF", avoMatF, tioAvoMatAva, 2, "maternal");
+    for (const personId of partners) g.edges.push({ kind: "partner", personId, unionId: id });
+  }
 
-  // ── Garantia "todos aparecem": ninguém cadastrado some do desenho ──
-  // tiosPat/tiosMat/tios-avós/bisavós-satélite foram adicionados a g.persons
-  // mais cedo mesmo quando a âncora (avós/bisavós) não existe — nesse caso
-  // eles nunca ganham união e ficariam presos sem posição (nem "reconhecido"
-  // nem "satélite"). Em vez de caçar cada caso hardcoded, caminha a partir
-  // de pai/mãe pelas uniões já construídas: quem não é alcançável dali —
-  // seja por nunca ter batido em nenhum parentesco, seja por ter ficado
-  // "registrado" sem união de verdade — vira satélite do paciente. O canvas
-  // só desenha quem tem posição no layout, então visível-mas-solto é sempre
-  // melhor que invisível.
-  const adjacency = new Map<string, Set<string>>();
   for (const u of g.unions.values()) {
-    const members = [...u.partners, ...u.children];
-    for (const a of members) {
-      let set = adjacency.get(a);
-      if (!set) {
-        set = new Set();
-        adjacency.set(a, set);
-      }
-      for (const b of members) if (a !== b) set.add(b);
-    }
+    u.children.sort((a, b) => comparePersons(g.persons.get(a)!.row, g.persons.get(b)!.row));
   }
-  const reachableFromParents = new Set<string>();
-  if (pai) reachableFromParents.add(pai.id);
-  if (mae) reachableFromParents.add(mae.id);
-  const queue = [...reachableFromParents];
-  while (queue.length > 0) {
-    const cur = queue.shift()!;
-    for (const next of adjacency.get(cur) ?? []) {
-      if (!reachableFromParents.has(next)) {
-        reachableFromParents.add(next);
-        queue.push(next);
-      }
-    }
-  }
-  const irmaoIds = new Set(irmaos.map((s) => s.id));
-  const orphans = persons.filter(
-    (p) =>
-      p.id !== proband.id &&
-      p.id !== pai?.id &&
-      p.id !== mae?.id &&
-      !irmaoIds.has(p.id) &&
-      !reachableFromParents.has(p.id),
-  );
-  orphans.forEach((p) => addPerson(p, recognizedGeneration(p.relationship_to_proband), "other"));
-
-  // Cada órfão vira satélite visível (bom), mas o motivo fica escondido do
-  // clínico — sem isso, "por que essa pessoa está solta do lado do
-  // paciente?" só se descobre lendo código. Um aviso por pessoa, com o que
-  // fazer: falta ancestral cadastrado (parentesco reconhecido) ou falta
-  // escolher a opção certa do menu (texto livre não reconhecido).
-  for (const p of orphans) {
-    const name = p.full_name?.trim() || "(sem nome)";
-    const rawRel = p.relationship_to_proband?.trim();
-    let message: string;
-    if (!rawRel) {
-      message = `${name}: linha sem parentesco definido — preencha ou apague essa linha na planilha.`;
-    } else if (SYSTEM_KEYS.has(canonicalKey(p.relationship_to_proband))) {
-      message = `${name}: parentesco "${rawRel}" reconhecido, mas falta cadastrar o ancestral correspondente para conectá-la(o) no lugar certo da árvore.`;
-    } else {
-      message = `${name}: parentesco "${rawRel}" não foi reconhecido — escolha uma opção específica da lista de parentesco em vez de texto livre.`;
-    }
-    g.warnings.push({ personId: p.id, personName: name, message });
-  }
-
-  // ── União central: Pai ⟷ Mãe (sintetizada mesmo sem RelRow) ─
-  const rootPartners = [pai, mae].filter(Boolean) as PersonRow[];
-  // Órfãos NÃO viram filhos do casal central: sem filiação conhecida não se
-  // inferem pais. Ficam visíveis (layout de fallback) com aviso.
-  const probandChildren = [proband, ...irmaos];
-  if (rootPartners.length > 0 || probandChildren.length > 1) {
-    addUnion({
-      id: `u_root_${proband.id}`,
-      partners: rootPartners,
-      children: probandChildren,
-      generation: 1,
-      branchId: "proband",
-      rel: findUnionRel(pai, mae),
-    });
-  }
-
-  applyExplicitFiliation(g, persons, rels, findUnionRel);
-
   return g;
 }
 
-/** Geração a partir da tag de parentesco (0 = cliente/irmãos, topo). */
-export function recognizedGeneration(rel: string | null | undefined): number {
-  const k = canonicalKey(rel);
-  if (!k) return 0;
-  if (k.includes("bisav")) return 3;
-  if (k.includes("avo") || k.includes("ava")) return 2;
-  if (k === "pai" || k === "mae" || k.includes("do pai") || k.includes("da mae")) return 1;
-  return 0;
-}
-
-/**
- * Filiação explícita (genogram_relationships.relationship_type = "parent",
- * from = genitor, to = filho) tem precedência sobre tags. Cada filho fica em
- * UMA união cujo conjunto de parceiros é exatamente o conjunto de genitores
- * declarados — assim meios-irmãos (pai compartilhado + outro genitor) caem em
- * uniões distintas. Nunca cria pessoas nem infere genitor ausente.
- */
-function applyExplicitFiliation(
+function resolveGenerations(
   g: LogicalGraph,
-  persons: PersonRow[],
-  rels: RelRow[],
-  findUnionRel: (a?: PersonRow, b?: PersonRow) => RelRow | undefined,
+  unionRels: Map<string, RelRow>,
+  siblings: Map<string, Set<string>>,
 ) {
-  const byId = new Map(persons.map((p) => [p.id, p]));
-  const parentsOf = new Map<string, string[]>();
-  const kindOf = new Map<string, LogicalEdge["childKind"]>();
-  for (const r of rels) {
-    if (r.relationship_type !== "parent" || !r.from_person_id || !r.to_person_id) continue;
-    if (!byId.has(r.from_person_id) || !byId.has(r.to_person_id)) continue;
-    if (r.from_person_id === r.to_person_id) {
-      g.errors.push(
-        `${byId.get(r.to_person_id)?.full_name ?? "Pessoa"} está como genitor(a) de si mesma.`,
-      );
-      continue;
-    }
-    const list = parentsOf.get(r.to_person_id) ?? [];
-    if (!list.includes(r.from_person_id)) list.push(r.from_person_id);
-    parentsOf.set(r.to_person_id, list);
-    const q = clean(r.qualifier);
-    if (/adot|adoptiv/.test(q)) kindOf.set(r.to_person_id, "adoptive");
-    else if (/acolh|criac|foster|guarda/.test(q)) kindOf.set(r.to_person_id, "foster");
-  }
-  if (parentsOf.size === 0) return;
-  // Modelo representa no máximo 2 genitores por filho: excesso vira erro visível, nada é descartado em silêncio
-  for (const [childId, list] of [...parentsOf]) {
-    if (list.length > 2) {
-      g.errors.push(
-        `${byId.get(childId)?.full_name ?? "Pessoa"} tem ${list.length} genitores declarados (máximo 2). Revise os vínculos: a filiação explícita dessa pessoa não foi aplicada.`,
-      );
-      parentsOf.delete(childId);
-    }
-  }
-
-  const pairKey = (ids: string[]) => [...ids].sort().join("|");
-  const connected = new Set<string>();
-
-  for (const [childId, parentIds] of parentsOf) {
-    const child = g.persons.get(childId);
-    const branch = child?.branchId ?? g.persons.get(parentIds[0])?.branchId ?? "other";
-    if (!child)
-      g.persons.set(childId, {
-        id: childId,
-        row: byId.get(childId)!,
-        generation: 0,
-        branchId: branch,
-      });
-    for (const pid of parentIds) {
-      if (!g.persons.has(pid))
-        g.persons.set(pid, { id: pid, row: byId.get(pid)!, generation: 1, branchId: branch });
-    }
-
-    // Remove filiação por tag anterior
-    const prev = g.edges.findIndex((e) => e.kind === "child" && e.personId === childId);
-    if (prev >= 0) {
-      const u = g.unions.get(g.edges[prev].unionId);
-      if (u) u.children = u.children.filter((c) => c !== childId);
-      g.edges.splice(prev, 1);
-    }
-
-    const key = pairKey(parentIds);
-    let union = [...g.unions.values()].find((u) => pairKey(u.partners) === key);
-    if (!union) {
-      const id = `u_exp_${key.replace(/\|/g, "_")}`;
-      const rel =
-        parentIds.length === 2
-          ? findUnionRel(byId.get(parentIds[0]), byId.get(parentIds[1]))
-          : undefined;
-      const kind = deriveUnionKind(rel);
-      const order =
-        (rel as (RelRow & { marriage_order?: number | null }) | undefined)?.marriage_order ?? null;
-      union = {
-        id,
-        partners: [...parentIds],
-        children: [],
-        kind,
-        label: unionKindLabel(kind, order),
-        generation: g.persons.get(parentIds[0])!.generation,
-        branchId: g.persons.get(parentIds[0])!.branchId,
-      };
-      g.unions.set(id, union);
-      for (const pid of parentIds) g.edges.push({ kind: "partner", personId: pid, unionId: id });
-    }
-    union.children.push(childId);
-    g.edges.push({
-      kind: "child",
-      personId: childId,
-      unionId: union.id,
-      childKind: kindOf.get(childId) ?? "biological",
-    });
-    connected.add(childId);
-    parentIds.forEach((p) => connected.add(p));
-  }
-
-  // Remove uniões que ficaram vazias de filhos e sem casal real (ex.: só um genitor sintetizado sem filhos)
-  for (const [uid, u] of g.unions) {
-    if (u.children.length === 0 && u.partners.length < 2) {
-      g.unions.delete(uid);
-      g.edges = g.edges.filter((e) => e.unionId !== uid);
-    }
-  }
-  // Quem ganhou filiação explícita deixa de ter aviso de "solto"
-  g.warnings = g.warnings.filter((w) => !connected.has(w.personId));
-  resolveGenerations(g);
-}
-
-/**
- * Resolve gerações por restrições (iterativo, sem recursão): cliente = 0,
- * parceiros de uma união = geração da união, filhos = união − 1. Parte do
- * cliente; componentes desconexos mantêm a geração já reconhecida de um nó
- * semente. Contradições (ciclos, genitor abaixo do filho) viram erro
- * explícito e o primeiro valor consistente é mantido.
- */
-export function resolveGenerations(g: LogicalGraph) {
-  type N = string; // "p:<id>" | "u:<id>"
-  const adj = new Map<N, { to: N; d: number }[]>();
-  const link = (a: N, b: N, d: number) => {
-    (adj.get(a) ?? adj.set(a, []).get(a)!).push({ to: b, d });
-    (adj.get(b) ?? adj.set(b, []).get(b)!).push({ to: a, d: -d });
-  };
-  for (const e of g.edges) {
-    if (!g.unions.has(e.unionId) || !g.persons.has(e.personId)) continue;
-    link(`u:${e.unionId}`, `p:${e.personId}`, e.kind === "partner" ? 0 : -1);
-  }
-  const gen = new Map<N, number>();
-  const conflicts = new Set<string>();
-  const badLinks: [N, N][] = [];
-  const run = (seed: N, value: number) => {
-    gen.set(seed, value);
-    const queue: N[] = [seed];
-    for (let i = 0; i < queue.length; i++) {
-      const cur = queue[i];
-      const v = gen.get(cur)!;
-      for (const { to, d } of adj.get(cur) ?? []) {
-        const want = v + d;
-        const have = gen.get(to);
-        if (have === undefined) {
-          gen.set(to, want);
-          queue.push(to);
-        } else if (have !== want) {
-          const pNode = to.startsWith("p:") ? to : cur;
-          conflicts.add(pNode.slice(2));
-          if (d !== 0) badLinks.push([cur, to]);
-        }
-      }
-    }
-  };
-  if (g.probandId && g.persons.has(g.probandId)) run(`p:${g.probandId}`, 0);
-  const rest = [...g.persons.values()].sort((a, b) => b.generation - a.generation);
-  for (const p of rest) if (!gen.has(`p:${p.id}`)) run(`p:${p.id}`, p.generation);
-  for (const [uid, u] of g.unions)
-    if (!gen.has(`u:${uid}`)) run(`u:${uid}`, Math.max(1, u.generation));
-
-  // Corta a ligação filho↔união contraditória (quebra ciclos; layout nunca recursa infinitamente)
-  for (const [a, b] of badLinks) {
-    const pn = a.startsWith("p:") ? a : b;
-    const un = a.startsWith("u:") ? a : b;
-    const pid = pn.slice(2);
-    const uid = un.slice(2);
-    const before = g.edges.length;
-    g.edges = g.edges.filter(
-      (e) => !(e.kind === "child" && e.personId === pid && e.unionId === uid),
+  const parentsOf = (id: string) => getResolvedParents(g, id).map((p) => p.personId);
+  const ascending = reach(g.topRowIds, parentsOf);
+  const root = g.probandId!;
+  const rootParentIds = parentsOf(root);
+  const branches = new Map<string, Set<Side>>();
+  for (const id of rootParentIds) {
+    const parent = g.persons.get(id)!;
+    const side = parentSide(parent);
+    const equallyLabeled = rootParentIds.some(
+      (p) => p !== id && parentSide(g.persons.get(p)!) === side,
     );
-    if (g.edges.length !== before) {
-      const u = g.unions.get(uid);
-      if (u) u.children = u.children.filter((c) => c !== pid);
+    if (!side || equallyLabeled) continue;
+    for (const ancestor of reach([id], parentsOf)) {
+      const set = branches.get(ancestor) ?? new Set<Side>();
+      set.add(side);
+      branches.set(ancestor, set);
     }
   }
 
-  // Ninguém acima do cliente: componente com geração negativa é deslocado inteiro para baixo
-  const shiftOf = new Map<N, number>();
-  // (componentes desconexos: desloca pelo mínimo do componente)
-  const seen = new Set<N>();
-  for (const start of gen.keys()) {
-    if (seen.has(start)) continue;
-    const comp: N[] = [start];
-    seen.add(start);
-    for (let i = 0; i < comp.length; i++)
-      for (const { to } of adj.get(comp[i]) ?? [])
-        if (!seen.has(to)) {
-          seen.add(to);
-          comp.push(to);
-        }
-    const min = Math.min(...comp.filter((n) => n.startsWith("p:")).map((n) => gen.get(n)!));
-    const hasProband = g.probandId ? comp.includes(`p:${g.probandId}`) : false;
-    if (min < 0) {
-      if (hasProband)
-        g.errors.push(
-          "Há descendentes do cliente nos vínculos. O mapa representa o cliente e irmãos no topo; descendentes não são desenhados acima dele.",
-        );
-      for (const n of comp) shiftOf.set(n, -min);
+  // A ordem topológica garante que um mesmo ancestral em dois ramos
+  // mantém uma posição só. Uma geração intermediária pode ser saltada
+  // quando as fontes descrevem um ancestral comum a níveis distintos.
+  const children = indexedSets();
+  const remaining = new Map<string, number>();
+  for (const [child, parents] of g.parentsByChild) {
+    for (const p of parents) children.add(p.personId, child);
+    remaining.set(child, parents.length);
+  }
+  const descending = reach(g.topRowIds, children.get);
+  const social = new Set<string>(siblings.keys());
+  for (const rel of unionRels.values()) {
+    if (g.topRowIds.has(rel.from_person_id)) social.add(rel.to_person_id);
+    if (g.topRowIds.has(rel.to_person_id)) social.add(rel.from_person_id);
+  }
+
+  const generation = new Map<string, number>();
+  const upQueue = [...g.topRowIds];
+  for (const id of upQueue) generation.set(id, 0);
+  for (let i = 0; i < upQueue.length; i++) {
+    const child = upQueue[i];
+    const next = generation.get(child)! + 1;
+    for (const parent of parentsOf(child)) {
+      if ((generation.get(parent) ?? -1) >= next) continue;
+      generation.set(parent, next);
+      upQueue.push(parent);
     }
   }
-  for (const [n, v] of gen) {
-    const value = v + (shiftOf.get(n) ?? 0);
-    if (n.startsWith("p:")) {
-      const p = g.persons.get(n.slice(2));
-      if (p) p.generation = value;
+  const lastAncestor = Math.max(0, ...generation.values());
+
+  for (const id of ascending) {
+    const person = g.persons.get(id)!;
+    person.lane = "ancestral";
+    person.generation = generation.get(id)!;
+    const sides = branches.get(id);
+    if (sides?.size === 1) person.branchId = [...sides][0];
+    if (sides?.size === 2) person.branchId = "other";
+  }
+  for (const [id, p] of g.persons) {
+    if (ascending.has(id)) continue;
+    const sharedParents = parentsOf(id).filter((parent) => ascending.has(parent));
+    if (descending.has(id)) {
+      p.lane = "descendant";
+      p.generation = lastAncestor + 1;
+    } else if (
+      social.has(id) ||
+      (sharedParents.length > 0 && sharedParents.every((parent) => generation.get(parent) === 1)) ||
+      smartNormalizeRelationship(p.row.relationship_to_proband) === "Cônjuge" ||
+      /^irm[ãa](?:o|\(o\))? (?:adotiv[oa]|de criaç[aã]o|socioafetiv[oa]|por afinidade)$/i.test(
+        p.row.relationship_to_proband?.trim() ?? "",
+      )
+    ) {
+      p.lane = "social";
+      p.generation = 0.5;
+    } else if (sharedParents.length > 0) {
+      p.lane = "ancestral";
+      p.generation = Math.max(
+        1,
+        Math.min(...sharedParents.map((parent) => generation.get(parent)!)) - 1,
+      );
+      const sides = new Set(sharedParents.map((parent) => g.persons.get(parent)!.branchId));
+      if (sides.size === 1) p.branchId = [...sides][0];
     } else {
-      const u = g.unions.get(n.slice(2));
-      if (u) u.generation = Math.max(1, value);
+      p.generation = Math.max(1, p.generation);
     }
   }
-  for (const id of conflicts) {
-    const name = g.persons.get(id)?.row.full_name ?? id;
-    g.errors.push(
-      `Vínculos contraditórios envolvendo ${name} (ciclo ou genitor em geração incompatível). Revise pai/mãe declarados.`,
-    );
+
+  const ordered = [...g.persons.keys()].filter((id) => !remaining.has(id));
+  for (let i = 0; i < ordered.length; i++) {
+    for (const child of children.get(ordered[i])) {
+      const count = remaining.get(child)! - 1;
+      remaining.set(child, count);
+      if (count === 0) ordered.push(child);
+    }
+  }
+  for (const id of ordered) {
+    const person = g.persons.get(id)!;
+    if (person.lane !== "descendant") continue;
+    const deepestParent = Math.max(...parentsOf(id).map((p) => g.persons.get(p)!.generation));
+    person.generation = Math.max(person.generation, deepestParent + 1);
+  }
+  // Genitores de parentes desligados do tronco ainda precisam aparecer no
+  // lugar certo em relação ao próprio filho. A cadeia ancestral conhecida
+  // do consultante não é movida por essas ocorrências.
+  for (const id of ordered.reverse()) {
+    const person = g.persons.get(id)!;
+    if (person.lane === "descendant") continue;
+    for (const parent of parentsOf(id)) {
+      if (ascending.has(parent)) continue;
+      const p = g.persons.get(parent)!;
+      p.generation = Math.max(p.generation, Math.ceil(person.generation + 0.5));
+    }
   }
 }
 
@@ -858,420 +772,167 @@ export interface Placement {
 export const genY = (gen: number) => gen * GEN_GAP;
 export const unionY = (gen: number) => gen * GEN_GAP + PERSON_SHAPE / 2;
 
-/**
- * Recursivamente coloca uma união e sua ascendência.
- * Retorna a caixa envolvente {minX, maxX} e o center absoluto do CASAL.
- */
-interface SubtreeBox {
-  minX: number;
-  maxX: number;
-  coupleCenter: number;
-}
+type Extent = { left: number; right: number };
+const cardExtent = { left: NODE_W / 2, right: NODE_W / 2 };
 
 export function layoutGraph(g: LogicalGraph): Placement {
   const personPos = new Map<string, { x: number; y: number }>();
   const unionPos = new Map<string, { x: number; y: number }>();
+  if (!g.probandId || !g.persons.has(g.probandId)) return { personPos, unionPos };
 
-  if (!g.probandId) return { personPos, unionPos };
-  const proband = g.persons.get(g.probandId);
-  if (!proband) return { personPos, unionPos };
-
-  const parentUnionOfPerson = new Map<string, string>();
-  for (const e of g.edges) {
-    if (e.kind === "child") parentUnionOfPerson.set(e.personId, e.unionId);
-  }
-
-  const y = (gen: number) => gen * GEN_GAP;
-
-  const placePerson = (id: string, cx: number, gen: number) => {
-    personPos.set(id, { x: cx - NODE_W / 2, y: y(gen) });
-  };
-
-  interface Extent {
-    left: number;
-    right: number;
-  }
-  const personExtents = new Map<string, Extent>();
-  const unionD = new Map<string, number>();
-
-  // PASSO 1: Bottom-up compute width (extents)
-  const inProgress = new Set<string>();
-  const computeExtent = (personId: string, side: "root" | "paternal" | "maternal"): Extent => {
-    if (personExtents.has(personId)) return personExtents.get(personId)!;
-    if (inProgress.has(personId)) return { left: -NODE_W / 2, right: NODE_W / 2 }; // guarda contra ciclo
-    inProgress.add(personId);
-
-    let left = -NODE_W / 2;
-    let right = NODE_W / 2;
-
-    const person = g.persons.get(personId);
-    if (!person) return { left, right };
-
-    const parentUnionId = parentUnionOfPerson.get(personId);
-    if (parentUnionId) {
-      const pu = g.unions.get(parentUnionId);
-      if (pu) {
-        const partners = pu.partners
-          .map((pid) => g.persons.get(pid))
-          .filter(Boolean) as PersonEntity[];
-
-        // Sort: paternal (pai) à esquerda, maternal (mãe) à direita
-        partners.sort((a, b) => {
-          const relA = (a.row.relationship_to_proband || "").toLowerCase();
-          const relB = (b.row.relationship_to_proband || "").toLowerCase();
-          const isMale = (r: string) =>
-            r.includes("pai") || r.includes("avô") || r.includes("bisavô");
-          const isFemale = (r: string) =>
-            r.includes("mãe") || r.includes("mae") || r.includes("avó") || r.includes("bisavó");
-          if (isMale(relA) && !isMale(relB)) return -1;
-          if (isFemale(relA) && !isFemale(relB)) return 1;
-          if (!isMale(relA) && isMale(relB)) return 1;
-          if (!isFemale(relA) && isFemale(relB)) return -1;
-          const gA = (a.row.gender || "").toLowerCase().startsWith("m") ? -1 : 1;
-          const gB = (b.row.gender || "").toLowerCase().startsWith("m") ? -1 : 1;
-          return gA - gB;
-        });
-
-        if (partners.length === 2) {
-          const pExt = computeExtent(partners[0].id, "paternal");
-          const mExt = computeExtent(partners[1].id, "maternal");
-
-          let D = (COUPLE_GAP + pExt.right - mExt.left) / 2;
-          if (D < COUPLE_GAP / 2) D = COUPLE_GAP / 2;
-
-          unionD.set(parentUnionId, D);
-
-          const parentsLeft = -D + pExt.left;
-          const parentsRight = D + mExt.right;
-
-          left = Math.min(left, parentsLeft);
-          right = Math.max(right, parentsRight);
-        } else if (partners.length === 1) {
-          const gender = partners[0].row.gender?.toLowerCase() || "";
-          const pSide = gender.startsWith("m") ? "paternal" : "maternal";
-          const ext = computeExtent(partners[0].id, pSide);
-          unionD.set(parentUnionId, 0); // Fica no centro se for 1 só
-          left = Math.min(left, ext.left);
-          right = Math.max(right, ext.right);
-        }
-
-        // Satélites (irmãos) da pessoa
-        const siblings = pu.children.filter((cid) => cid !== personId);
-        if (siblings.length > 0) {
-          let direction = 1;
-          if (side === "paternal") direction = -1;
-
-          const step = getSiblingStep(siblings.length);
-          const siblingsWidth = siblings.length * step;
-          if (side !== "root") {
-            if (direction === -1) {
-              left = left - siblingsWidth - BRANCH_GAP;
-            } else {
-              right = right + siblingsWidth + BRANCH_GAP;
-            }
-          } else {
-            // Irmãos do root se alternam
-            const sibCount = siblings.length;
-            const leftCount = Math.ceil(sibCount / 2);
-            const rightCount = Math.floor(sibCount / 2);
-            left = left - leftCount * step - BRANCH_GAP;
-            right = right + rightCount * step + BRANCH_GAP;
-          }
-        }
-      }
+  const root = g.probandId;
+  const parentUnion = new Map<string, UnionEntity>();
+  const participants = new Map<string, UnionEntity[]>();
+  for (const union of g.unions.values()) {
+    for (const child of union.children) {
+      if (union.direction === "up") parentUnion.set(child, union);
     }
+    for (const id of [...union.partners, ...union.children]) {
+      const list = participants.get(id) ?? [];
+      list.push(union);
+      participants.set(id, list);
+    }
+  }
 
-    const ext = { left, right };
-    personExtents.set(personId, ext);
-    return ext;
-  };
-
-  // PASSO 2: Top-down assign positions
-  const assignPosition = (
-    personId: string,
-    cx: number,
-    gen: number,
-    side: "root" | "paternal" | "maternal",
-  ) => {
-    placePerson(personId, cx, gen);
-
-    const parentUnionId = parentUnionOfPerson.get(personId);
-    if (!parentUnionId) return;
-
-    const pu = g.unions.get(parentUnionId);
-    if (!pu) return;
-
-    const parentGen = gen + 1;
-    // A união do casal parental fica exatamente sobre a pessoa, verticalmente centralizada na geração deles
-    unionPos.set(parentUnionId, { x: cx, y: y(parentGen) + PERSON_SHAPE / 2 });
-
-    const partners = pu.partners.map((pid) => g.persons.get(pid)).filter(Boolean) as PersonEntity[];
-    partners.sort((a, b) => {
-      const relA = (a.row.relationship_to_proband || "").toLowerCase();
-      const relB = (b.row.relationship_to_proband || "").toLowerCase();
-      const isMale = (r: string) => r.includes("pai") || r.includes("avô") || r.includes("bisavô");
-      const isFemale = (r: string) =>
-        r.includes("mãe") || r.includes("mae") || r.includes("avó") || r.includes("bisavó");
-      if (isMale(relA) && !isMale(relB)) return -1;
-      if (isFemale(relA) && !isFemale(relB)) return 1;
-      if (!isMale(relA) && isMale(relB)) return 1;
-      if (!isFemale(relA) && isFemale(relB)) return -1;
-      const gA = (a.row.gender || "").toLowerCase().startsWith("m") ? -1 : 1;
-      const gB = (b.row.gender || "").toLowerCase().startsWith("m") ? -1 : 1;
-      return gA - gB;
+  const sortedPartners = (union: UnionEntity) =>
+    [...union.partners].sort((a, b) => {
+      const order = (id: string) => {
+        const side = parentSide(g.persons.get(id)!);
+        return side === "paternal" ? 0 : side === "maternal" ? 2 : 1;
+      };
+      return order(a) - order(b) || comparePersons(g.persons.get(a)!.row, g.persons.get(b)!.row);
     });
-
-    if (partners.length === 2) {
-      const D = unionD.get(parentUnionId) ?? COUPLE_GAP / 2;
-      assignPosition(partners[0].id, cx - D, parentGen, "paternal");
-      assignPosition(partners[1].id, cx + D, parentGen, "maternal");
-    } else if (partners.length === 1) {
-      const gender = partners[0].row.gender?.toLowerCase() || "";
-      const pSide = gender.startsWith("m") ? "paternal" : "maternal";
-      assignPosition(partners[0].id, cx, parentGen, pSide);
+  const partnerOffsets = new Map<string, number[]>();
+  const extents = new Map<string, Extent>();
+  const ascendingOrder = [...g.persons.values()].sort((a, b) => b.generation - a.generation);
+  for (const person of ascendingOrder) {
+    const origin = parentUnion.get(person.id);
+    if (!origin) {
+      extents.set(person.id, cardExtent);
+      continue;
     }
-
-    // Satélites (irmãos) pendurados do lado correto, fora da bounding box dos pais
-    const siblings = pu.children.filter((cid) => cid !== personId);
-
-    // Organiza os irmãos do mais velho para o mais novo
-    siblings.sort((a, b) => {
-      const pA = g.persons.get(a)?.row.birth_date;
-      const pB = g.persons.get(b)?.row.birth_date;
-      if (!pA && !pB) return 0;
-      if (!pA) return 1;
-      if (!pB) return -1;
-      return new Date(pA).getTime() - new Date(pB).getTime();
+    const [a, b] = sortedPartners(origin);
+    const left = extents.get(a) ?? cardExtent;
+    if (!b) {
+      extents.set(person.id, left);
+      partnerOffsets.set(origin.id, [0]);
+      continue;
+    }
+    const right = extents.get(b) ?? cardExtent;
+    const spacing = (left.right + right.left + BRANCH_GAP) / 2;
+    partnerOffsets.set(origin.id, [-spacing, spacing]);
+    extents.set(person.id, {
+      left: Math.max(cardExtent.left, spacing + left.left),
+      right: Math.max(cardExtent.right, spacing + right.right),
     });
-
-    if (siblings.length > 0) {
-      let parentsLeft = -NODE_W / 2;
-      let parentsRight = NODE_W / 2;
-
-      if (partners.length === 2) {
-        const pExt = personExtents.get(partners[0].id) || { left: -NODE_W / 2, right: NODE_W / 2 };
-        const mExt = personExtents.get(partners[1].id) || { left: -NODE_W / 2, right: NODE_W / 2 };
-        const D = unionD.get(parentUnionId) ?? COUPLE_GAP / 2;
-        parentsLeft = -D + pExt.left;
-        parentsRight = D + mExt.right;
-      } else if (partners.length === 1) {
-        const gender = partners[0].row.gender?.toLowerCase() || "";
-        const pSide = gender.startsWith("m") ? "paternal" : "maternal";
-        const ext = personExtents.get(partners[0].id) || { left: -NODE_W / 2, right: NODE_W / 2 };
-        if (pSide === "paternal") {
-          parentsLeft = ext.left;
-        } else {
-          parentsRight = ext.right;
-        }
-      }
-
-      const step = getSiblingStep(siblings.length);
-      if (side === "root") {
-        let leftIdx = 0;
-        let rightIdx = 0;
-        siblings.forEach((sibId, i) => {
-          if (i % 2 === 0) {
-            placePerson(sibId, cx + parentsLeft - BRANCH_GAP - NODE_W / 2 - leftIdx * step, gen);
-            leftIdx++;
-          } else {
-            placePerson(sibId, cx + parentsRight + BRANCH_GAP + NODE_W / 2 + rightIdx * step, gen);
-            rightIdx++;
-          }
-        });
-      } else {
-        if (side === "maternal") {
-          siblings.forEach((sibId, i) => {
-            placePerson(sibId, cx + parentsRight + BRANCH_GAP + NODE_W / 2 + i * step, gen);
-          });
-        } else {
-          siblings.forEach((sibId, i) => {
-            placePerson(sibId, cx + parentsLeft - BRANCH_GAP - NODE_W / 2 - i * step, gen);
-          });
-        }
-      }
-    }
-  };
-
-  // Inicializa a árvore calculando larguras
-  computeExtent(proband.id, "root");
-
-  // Atribui as posições definitivas travando o eixo primário
-  assignPosition(proband.id, 0, 0, "root");
-
-  // ── Fallback: pessoas/uniões fora da cadeia ancestral do cliente ──
-  // (meios-irmãos por filiação explícita, segundas uniões, órfãos).
-  // Mantém a regra: geração 0 no topo; Y = geração × GEN_GAP. Sem inferir laços.
-  {
-    const occupied = (cx: number, gen: number) =>
-      [...personPos.values()].some(
-        (p) => Math.abs(p.y - y(gen)) < 1 && Math.abs(p.x + NODE_W / 2 - cx) < NODE_W + SIBLING_GAP,
-      );
-    const freeX = (cx: number, gen: number, dir: 1 | -1) => {
-      let x = cx;
-      let guard = 0;
-      while (occupied(x, gen) && guard++ < 500) x += dir * (NODE_W + SIBLING_GAP);
-      return x;
-    };
-    const centerOf = (id: string) => {
-      const p = personPos.get(id);
-      return p ? p.x + NODE_W / 2 : null;
-    };
-    let progress = true;
-    while (progress) {
-      progress = false;
-      for (const [uid, u] of g.unions) {
-        const placedPartner = u.partners.find((pid) => personPos.has(pid));
-        const anyPlacedChild = u.children.find((c) => personPos.has(c));
-        if (!placedPartner && !anyPlacedChild) continue;
-        if (
-          u.partners.every((p) => personPos.has(p)) &&
-          u.children.every((c) => personPos.has(c)) &&
-          unionPos.has(uid)
-        )
-          continue;
-        const gen = u.generation;
-        // parceiros
-        if (placedPartner) {
-          const base = centerOf(placedPartner)!;
-          const dir: 1 | -1 = base <= 0 ? -1 : 1;
-          for (const pid of u.partners) {
-            if (personPos.has(pid)) continue;
-            placePerson(pid, freeX(base + dir * (NODE_W + COUPLE_GAP), gen, dir), gen);
-            progress = true;
-          }
-        } else {
-          const base = centerOf(anyPlacedChild!)!;
-          const dir: 1 | -1 = base <= 0 ? -1 : 1;
-          for (const pid of u.partners) {
-            if (personPos.has(pid)) continue;
-            placePerson(pid, freeX(base, gen, dir), gen);
-            progress = true;
-          }
-        }
-        const xs = u.partners.map(centerOf).filter((v): v is number => v !== null);
-        const ux = xs.length
-          ? xs.reduce((a, b) => a + b, 0) / xs.length
-          : centerOf(anyPlacedChild!)!;
-        if (!unionPos.has(uid)) {
-          unionPos.set(uid, { x: ux, y: y(gen) + PERSON_SHAPE / 2 });
-          progress = true;
-        }
-        const childGen = Math.max(0, gen - 1);
-        const dir: 1 | -1 = ux <= 0 ? -1 : 1;
-        for (const cid of u.children) {
-          if (personPos.has(cid)) continue;
-          placePerson(cid, freeX(ux, childGen, dir), childGen);
-          progress = true;
-        }
-      }
-    }
-    // Órfãos sem nenhum laço: fila à direita, na geração reconhecida, sem pais falsos
-    let maxRight = Math.max(0, ...[...personPos.values()].map((p) => p.x + NODE_W));
-    for (const [pid, pe] of g.persons) {
-      if (personPos.has(pid)) continue;
-      maxRight += BRANCH_SEPARATION;
-      placePerson(pid, freeX(maxRight + NODE_W / 2, pe.generation, 1), pe.generation);
-      maxRight = Math.max(maxRight, personPos.get(pid)!.x + NODE_W);
-    }
   }
 
-  // ── Integração do Modelo Stateful Híbrido Incremental ──
-  const finalPersonPos = new Map<string, { x: number; y: number }>();
-  const finalUnionPos = new Map<string, { x: number; y: number }>();
+  const centers = new Map<string, number>([[root, 0]]);
+  const row = [...g.topRowIds].sort((a, b) =>
+    comparePersons(g.persons.get(a)!.row, g.persons.get(b)!.row),
+  );
+  const rootIndex = row.indexOf(root);
+  row.forEach((id, index) => centers.set(id, (index - rootIndex) * getSiblingStep(row.length - 1)));
 
-  // 1. Aplica todas as posições salvas (Ancoragem Absoluta)
-  for (const [id, pos] of g.positions) {
-    if (pos.node_type === "person") finalPersonPos.set(id, { x: pos.x, y: pos.y });
-    if (pos.node_type === "union") finalUnionPos.set(id, { x: pos.x, y: pos.y });
+  // A posição de um ancestral compartilhado é atribuída uma única vez.
+  const ancestralQueue = [root, ...row.filter((id) => id !== root)];
+  const placedOrigins = new Set<string>();
+  for (let i = 0; i < ancestralQueue.length; i++) {
+    const id = ancestralQueue[i];
+    const origin = parentUnion.get(id);
+    if (!origin || placedOrigins.has(origin.id)) continue;
+    placedOrigins.add(origin.id);
+    const center = centers.get(id)!;
+    const partners = sortedPartners(origin);
+    partners.forEach((parent, index) => {
+      if (centers.has(parent)) return;
+      const dx = partnerOffsets.get(origin.id)?.[index] ?? 0;
+      centers.set(parent, center + dx);
+      ancestralQueue.push(parent);
+    });
+    origin.children.forEach((child, index) => {
+      if (centers.has(child)) return;
+      const person = g.persons.get(child)!;
+      const direction = person.branchId === "paternal" ? -1 : 1;
+      const offset = direction * (index + 1) * getSiblingStep(origin.children.length - 1);
+      centers.set(child, center + offset);
+      ancestralQueue.push(child);
+    });
   }
 
-  // 2. Função de Shift Dinâmico: encontra a âncora mais próxima
-  const getShift = (pid: string): { dx: number; dy: number } => {
-    const parentUnionId = parentUnionOfPerson.get(pid);
-    if (parentUnionId) {
-      if (finalUnionPos.has(parentUnionId)) {
-        const ideal = unionPos.get(parentUnionId);
-        const final = finalUnionPos.get(parentUnionId);
-        if (ideal && final) return { dx: final.x - ideal.x, dy: final.y - ideal.y };
-      }
-      const pu = g.unions.get(parentUnionId);
-      if (pu) {
-        for (const partnerId of pu.partners) {
-          if (finalPersonPos.has(partnerId)) {
-            const ideal = personPos.get(partnerId);
-            const final = finalPersonPos.get(partnerId);
-            if (ideal && final) return { dx: final.x - ideal.x, dy: final.y - ideal.y };
-          }
-        }
-      }
+  // Uniões adicionais, parentes com conexão indireta e famílias desconectadas
+  // ganham posições sem um novo vínculo com o tronco do consulente.
+  const pendingQueue = [...centers.keys(), ...g.persons.keys()];
+  let detachedX = Math.max(0, ...centers.values()) + NODE_W + BRANCH_SEPARATION;
+  const visited = new Set<string>();
+  for (let i = 0; i < pendingQueue.length; i++) {
+    const id = pendingQueue[i];
+    if (visited.has(id)) continue;
+    visited.add(id);
+    if (!centers.has(id)) {
+      const person = g.persons.get(id)!;
+      centers.set(id, person.branchId === "paternal" ? -detachedX : detachedX);
+      detachedX += NODE_W + BRANCH_GAP;
     }
-    if (finalPersonPos.has(proband.id)) {
-      const ideal = personPos.get(proband.id);
-      const final = finalPersonPos.get(proband.id);
-      if (ideal && final) return { dx: final.x - ideal.x, dy: final.y - ideal.y };
-    }
-    return { dx: 0, dy: 0 };
-  };
-
-  // 3. Aplica o shift aos nós não-salvos (Posicionamento Relativo)
-  for (const [pid, idealPos] of personPos) {
-    if (!finalPersonPos.has(pid)) {
-      const shift = getShift(pid);
-      finalPersonPos.set(pid, { x: idealPos.x + shift.dx, y: idealPos.y + shift.dy });
-    }
-  }
-
-  for (const [uid, idealPos] of unionPos) {
-    if (!finalUnionPos.has(uid)) {
-      const union = g.unions.get(uid);
-      if (union) {
-        let shift = { dx: 0, dy: 0 };
-        const partnerAnchors = union.partners.filter((p) => g.positions.has(p));
-        if (partnerAnchors.length > 0) {
-          const pId = partnerAnchors[0];
-          const pIdeal = personPos.get(pId);
-          const pFinal = finalPersonPos.get(pId);
-          if (pIdeal && pFinal) shift = { dx: pFinal.x - pIdeal.x, dy: pFinal.y - pIdeal.y };
-        } else if (finalPersonPos.has(proband.id)) {
-          const ideal = personPos.get(proband.id);
-          const final = finalPersonPos.get(proband.id);
-          if (ideal && final) shift = { dx: final.x - ideal.x, dy: final.y - ideal.y };
-        }
-        finalUnionPos.set(uid, { x: idealPos.x + shift.dx, y: idealPos.y + shift.dy });
-      } else {
-        finalUnionPos.set(uid, { x: idealPos.x, y: idealPos.y });
+    for (const union of participants.get(id) ?? []) {
+      const placed = union.partners.filter((p) => centers.has(p));
+      const center = placed.length
+        ? placed.reduce((total, p) => total + centers.get(p)!, 0) / placed.length
+        : centers.get(id)!;
+      for (const member of [...union.partners, ...union.children]) {
+        if (centers.has(member)) continue;
+        const person = g.persons.get(member)!;
+        const dir = person.branchId === "paternal" ? -1 : 1;
+        centers.set(member, center + dir * (NODE_W + SIBLING_GAP));
+        pendingQueue.push(member);
       }
     }
   }
 
-  // Faixa Y fixa por geração: posições salvas/rascunhos antigos só preservam X
   let normalizedY = 0;
-  for (const [pid, pos] of finalPersonPos) {
-    const pe = g.persons.get(pid);
-    if (!pe) continue;
-    const want = genY(pe.generation);
-    if (Math.abs(pos.y - want) > 0.5) {
-      if (g.positions.has(pid)) normalizedY++;
-      pos.y = want;
-    }
+  // Posições manuais continuam válidas no eixo horizontal. A cada atualização,
+  // as uniões são recentralizadas sobre os pais que já estão posicionados.
+  for (const [id, person] of g.persons) {
+    const saved = g.positions.get(id);
+    if (!saved || saved.node_type !== "person" || !Number.isFinite(saved.x)) continue;
+    const y = genY(person.generation);
+    if (Math.abs(saved.y - y) > 0.5) normalizedY++;
+    personPos.set(id, { x: saved.x, y });
   }
-  for (const [uid, pos] of finalUnionPos) {
-    const u = g.unions.get(uid);
-    if (!u) continue;
-    const want = unionY(u.generation);
-    if (Math.abs(pos.y - want) > 0.5) {
-      if (g.positions.has(uid)) normalizedY++;
-      pos.y = want;
-    }
+  const rootCenter = personPos.has(root) ? personPos.get(root)!.x + NODE_W / 2 : 0;
+  for (const [id, preferredCenter] of centers) {
+    if (personPos.has(id)) continue;
+    const p = g.persons.get(id)!;
+    const y = genY(p.generation);
+    const direction =
+      p.branchId === "paternal" ? -1 : p.branchId === "maternal" ? 1 : preferredCenter < 0 ? -1 : 1;
+    let center = rootCenter + preferredCenter;
+    if (p.branchId === "paternal") center = Math.min(center, rootCenter - NODE_W / 2);
+    if (p.branchId === "maternal") center = Math.max(center, rootCenter + NODE_W / 2);
+    const occupied = (x: number) =>
+      [...personPos.values()].some(
+        (pos) => Math.abs(pos.y - y) < NODE_H && Math.abs(pos.x - x) < NODE_W + SIBLING_GAP,
+      );
+    let x = center - NODE_W / 2;
+    while (occupied(x)) x += direction * (NODE_W + SIBLING_GAP);
+    personPos.set(id, { x, y });
   }
 
-  const placement: Placement = { personPos: finalPersonPos, unionPos: finalUnionPos, normalizedY };
+  for (const [id, union] of g.unions) {
+    const parents = union.partners.map((p) => personPos.get(p)!);
+    const x = parents.reduce((total, p) => total + p.x + NODE_W / 2, 0) / parents.length;
+    const y = unionY(union.generation);
+    const saved = g.positions.get(id);
+    if (saved?.node_type === "union" && Math.abs(saved.y - y) > 0.5) normalizedY++;
+    unionPos.set(id, { x, y });
+  }
+
+  const placement: Placement = { personPos, unionPos, normalizedY };
   if (import.meta.env.DEV) {
     const violations = checkLayoutInvariants(g, placement);
     if (violations.length > 0) {
       console.warn(`Genogram layout: ${violations.length} violação(ões)`, violations);
     }
   }
-
   return placement;
 }

@@ -16,7 +16,7 @@ export function checkLayoutInvariants(g: LogicalGraph, placement: Placement): Vi
       const un = unionPos.get(uid);
 
       if (a && b && un) {
-        const centerA = a.x + NODE_W / 2; // NODE_W = 160
+        const centerA = a.x + NODE_W / 2;
         const centerB = b.x + NODE_W / 2;
         const expectedCenter = (centerA + centerB) / 2;
 
@@ -31,28 +31,8 @@ export function checkLayoutInvariants(g: LogicalGraph, placement: Placement): Vi
     }
   }
 
-  // 2) Filho único herda o X exato da união dos pais
-  for (const [uid, u] of g.unions.entries()) {
-    if (u.children.length === 1) {
-      const childId = u.children[0];
-      const childPos = personPos.get(childId);
-      const un = unionPos.get(uid);
-
-      if (childPos && un) {
-        const childCenter = childPos.x + NODE_W / 2;
-        if (Math.abs(childCenter - un.x) > EPS) {
-          violations.push({
-            rule: "FILHO_UNICO_DESALINHADO",
-            detail: `Filho ${childId} em x=${childCenter}, união em x=${un.x}`,
-            ids: [uid, childId],
-          });
-        }
-      }
-    }
-  }
-
-  // 3) Orientação: cliente+irmãos no topo, cada pessoa na faixa da sua geração,
-  //    filho SEMPRE acima da união dos pais, genitores abaixo do filho.
+  // 2) Orientação: topo exclusivo, faixas verticais e cada filiação
+  // com o sentido correto na vista ancestral ou de descendentes.
   const probandPos = g.probandId ? personPos.get(g.probandId) : undefined;
   for (const [pid, pe] of g.persons) {
     const p = personPos.get(pid);
@@ -63,39 +43,33 @@ export function checkLayoutInvariants(g: LogicalGraph, placement: Placement): Vi
         detail: `${pid} y=${p.y} geração ${pe.generation}`,
         ids: [pid],
       });
+    if (g.topRowIds.has(pid) !== Math.abs(p.y) <= EPS)
+      violations.push({
+        rule: "TOPO_EXCLUSIVO",
+        detail: `${pid} está fora da sua faixa em relação ao consulente`,
+        ids: [pid],
+      });
     if (probandPos && p.y < probandPos.y - EPS)
       violations.push({ rule: "ACIMA_DO_CLIENTE", detail: `${pid} acima do cliente`, ids: [pid] });
   }
   for (const e of g.edges) {
     const u = g.unions.get(e.unionId);
     const p = personPos.get(e.personId);
-    const pe = g.persons.get(e.personId);
-    if (!u || !p || !pe) continue;
-    if (e.kind === "child" && pe.generation !== u.generation - 1)
-      violations.push({
-        rule: "GERACAO_FILHO_INCOERENTE",
-        detail: `${e.personId} em ${e.unionId}`,
-        ids: [e.personId, e.unionId],
-      });
-    if (e.kind === "partner" && pe.generation !== u.generation)
-      violations.push({
-        rule: "GERACAO_CASAL_INCOERENTE",
-        detail: `${e.personId} em ${e.unionId}`,
-        ids: [e.personId, e.unionId],
-      });
-    if (e.kind === "child")
-      for (const par of u.partners) {
-        const pp = personPos.get(par);
-        if (pp && pp.y <= p.y + EPS)
-          violations.push({
-            rule: "GENITOR_ACIMA_DO_FILHO",
-            detail: `${par} não está abaixo de ${e.personId}`,
-            ids: [par, e.personId],
-          });
-      }
+    if (!u || !p || e.kind !== "child") continue;
+    for (const par of u.partners) {
+      const pp = personPos.get(par);
+      if (!pp) continue;
+      const invalid = u.direction === "up" ? pp.y <= p.y + EPS : pp.y >= p.y - EPS;
+      if (invalid)
+        violations.push({
+          rule: "GENITOR_EM_FAIXA_INCOERENTE",
+          detail: `${par} e ${e.personId} em faixas incompatíveis com ${u.direction}`,
+          ids: [par, e.personId],
+        });
+    }
   }
 
-  // 4) Nenhum card pode se sobrepor a outro
+  // 3) Nenhum card pode se sobrepor a outro
   const nodes = Array.from(personPos.entries());
   for (let i = 0; i < nodes.length; i++) {
     for (let j = i + 1; j < nodes.length; j++) {

@@ -1,7 +1,7 @@
 /**
  * Normalizador inteligente de parentesco.
- * Reconhece qualquer texto escrito em português (formal, informal, abreviado)
- * e mapeia para a tag canônica do sistema.
+ * Reconhece rótulos canônicos e sinônimos inequívocos. Preserva textos que
+ * não identificam com segurança o ramo, a geração ou o tipo do vínculo.
  */
 
 /** Remove acentos e normaliza para lowercase */
@@ -25,69 +25,30 @@ function clean(s: string): string {
 
 type TagRule = { tag: string; keywords: string[] };
 
-/**
- * Regras de matching em ordem de especificidade (mais específico primeiro).
- * O primeiro match ganha.
- */
+// Sinônimos que identificam precisamente os mesmos rótulos do seletor.
 const RULES: TagRule[] = [
   // ── CONSULENTE ──────────────────────────────────────────────
   { tag: "Consulente", keywords: ["consulente", "paciente", "proband", "cliente", "eu", "self"] },
 
   // ── IRMÃOS ──────────────────────────────────────────────────
-  // MUST NOT MATCH "irmao do pai", so it should be exactly siblings
   {
     tag: "Irmã(o)",
     keywords: [
-      "irmao",
-      "irma",
-      "irmao mais velho",
-      "irmao mais novo",
-      "irmao biologico",
-      "irma biologica",
-      "sibling",
-      "brother",
-      "sister",
-      "half-brother",
-      "half-sister",
-      "meio irmao",
-      "meio irma",
+      "irma do consulente",
+      "irmao do consulente",
+      "irma do paciente",
+      "irmao do paciente",
     ],
   },
 
   // ── PAI / MÃE ───────────────────────────────────────────────
   {
     tag: "Pai",
-    keywords: [
-      "pai",
-      "papa",
-      "papai",
-      "padrasto",
-      "pai biologico",
-      "pai adotivo",
-      "pai de criacao",
-      "genitor",
-      "father",
-      "dad",
-      "stepfather",
-      "stepdad",
-    ],
+    keywords: ["pai", "papa", "papai", "pai biologico", "genitor", "father", "dad"],
   },
   {
     tag: "Mãe",
-    keywords: [
-      "mae",
-      "mama",
-      "mamai",
-      "madrasta",
-      "mae biologica",
-      "mae adotiva",
-      "mae de criacao",
-      "genitora",
-      "mother",
-      "mom",
-      "stepmother",
-      "stepmom",
-    ],
+    keywords: ["mae", "mama", "mamai", "mae biologica", "genitora", "mother", "mom"],
   },
 
   // ── IRMÃOS DO PAI (antigos "tios paternos") ─────────────────
@@ -129,16 +90,12 @@ const RULES: TagRule[] = [
     ],
   },
 
-  // ── TIOS (GENÉRICO sem lado, texto legado) ──────────────────
-  { tag: "Irmã(o) do Pai", keywords: ["tio", "tia", "uncle", "aunt"] }, // fallback → lado paterno
-
   // ── AVÔS PATERNOS ───────────────────────────────────────────
   {
     tag: "Avô paterno",
     keywords: [
       "avo paterno",
       "avoh paterno",
-      "avo do pai",
       "pai do pai",
       "grandfather father",
       "paternal grandfather",
@@ -155,7 +112,6 @@ const RULES: TagRule[] = [
       "grandmother father",
       "paternal grandmother",
       "vovo paterna",
-      "vovo do pai",
     ],
   },
 
@@ -165,7 +121,6 @@ const RULES: TagRule[] = [
     keywords: [
       "avo materno",
       "avoh materno",
-      "avo da mae",
       "pai da mae",
       "grandfather mother",
       "maternal grandfather",
@@ -182,20 +137,14 @@ const RULES: TagRule[] = [
       "grandmother mother",
       "maternal grandmother",
       "vovo materna",
-      "vovo da mae",
     ],
   },
-
-  // ── AVÔS (GENÉRICO) ─────────────────────────────────────────
-  { tag: "Avô paterno", keywords: ["avoh", "avo", "grandfather", "grandpa", "vovoh", "vovo"] }, // fallback masculino
-  { tag: "Avó paterna", keywords: ["avoa", "grandmother", "grandma", "vovoa"] }, // fallback feminino
 
   // ── BISAVÔS PATERNOS (avô) ──────────────────────────────────
   {
     tag: "Bisavô paterno (pai do avô)",
     keywords: [
       "bisavo paterno pai do avo",
-      "bisavo paterno masculino",
       "bisavo do pai avo",
       "pai do avo paterno",
       "great-grandfather paternal grandfather",
@@ -205,7 +154,6 @@ const RULES: TagRule[] = [
     tag: "Bisavó paterna (mãe do avô)",
     keywords: [
       "bisavo paterna mae do avo",
-      "bisavo paterna feminina",
       "bisava do pai avo",
       "mae do avo paterno",
       "great-grandmother paternal grandfather",
@@ -242,7 +190,6 @@ const RULES: TagRule[] = [
     tag: "Bisavô materno (pai do avô)",
     keywords: [
       "bisavo materno pai do avo",
-      "bisavo materno masculino",
       "bisavo pai avo materno",
       "pai do avo materno",
       "great-grandfather maternal grandfather",
@@ -277,61 +224,6 @@ const RULES: TagRule[] = [
       "mae da avo materna",
       "great-grandmother maternal grandmother",
     ],
-  },
-
-  // ── BISAVÔS (GENÉRICO) ──────────────────────────────────────
-  {
-    tag: "Bisavô paterno (pai do avô)",
-    keywords: ["bisavo", "bisavoh", "bisabobo", "great-grandfather", "great-grandpa"],
-  },
-  {
-    tag: "Bisavó paterna (mãe do avô)",
-    keywords: ["bisavoa", "bisaba", "great-grandmother", "great-grandma"],
-  },
-
-  // ── IRMÃOS DOS AVÔS (tios-avós) ────────────────────────────
-  // Frases como "irmão do avô paterno" / "irmã da bisavó materna (pai da
-  // avó)" são resolvidas dinamicamente por resolveSiblingOfAncestor (abaixo),
-  // reaproveitando as tags de ancestral — sem duplicar cada combinação aqui.
-  // Só o idioma "tio-avô/tia-avó" fica explícito, porque o resolvedor só
-  // reconhece o prefixo "irmã(o)", não "tio".
-  { tag: "Irmã(o) do avô paterno", keywords: ["tio avo paterno", "grand-uncle paternal"] },
-  { tag: "Irmã(o) da avó paterna", keywords: ["tia avo paterna", "grand-aunt paternal"] },
-  { tag: "Irmã(o) do avô materno", keywords: ["tio avo materno", "grand-uncle maternal"] },
-  { tag: "Irmã(o) da avó materna", keywords: ["tia avo materna", "grand-aunt maternal"] },
-
-  // ── CÔNJUGE / PARCEIRO(A) ───────────────────────────────────
-  {
-    tag: "Cônjuge",
-    keywords: [
-      "conjuge",
-      "esposo",
-      "esposa",
-      "marido",
-      "mulher",
-      "parceiro",
-      "parceira",
-      "namorado",
-      "namorada",
-      "companheiro",
-      "companheira",
-      "husband",
-      "wife",
-      "partner",
-      "spouse",
-    ],
-  },
-
-  // ── FILHOS ──────────────────────────────────────────────────
-  {
-    tag: "Filho(a)",
-    keywords: ["filho", "filha", "child", "son", "daughter", "enteado", "enteada"],
-  },
-
-  // ── ABORTO ──────────────────────────────────────────────────
-  {
-    tag: "Aborto",
-    keywords: ["aborto", "aborto espontaneo", "aborto provocado", "miscarriage", "abortion"],
   },
 ];
 
@@ -377,161 +269,73 @@ const SIBLING_TAG_OF: Record<string, string> = {
   "Bisavó materna (mãe da avó)": "Irmã(o) da Bisavó materna (mãe da avó)",
 };
 
-/**
- * "avó"/"bisavó" e "avô"/"bisavô" colapsam no mesmo texto depois do clean()
- * (o acento que distingue ô de ó é removido). Sem outro qualificador
- * ("paterno"/"materna" já resolvem por si, sem precisar disto), a ÚNICA forma
- * de saber se o texto queria dizer avô ou avó é olhar o acento no ORIGINAL,
- * antes do clean() apagar — usado só como desempate dos fallbacks genéricos.
- */
-function detectAncestorGender(raw: string): "m" | "f" | null {
-  const low = raw.toLowerCase();
-  if (low.includes("avó") || low.includes("vovó")) return "f";
-  if (low.includes("avô") || low.includes("vovô")) return "m";
-  return null;
-}
-
-/**
- * "bisavô/bisavó (pai/mãe) do avô/avó paterno/materno" — frase completa que
- * nomeia o próprio bisavô/bisavó E de qual avô/avó ele é pai/mãe E de que
- * lado. Mesmo colapso de acento do detectAncestorGender acima, mas aqui o
- * texto tem MAIS de uma palavra com av[oôó] (o "bisav[oôó]" inicial e o
- * "av[oôó]" do meio) — sem separar os dois, matchByInclusion() pega a
- * keyword "avo paterno"/"avo materno" (mais longa) como substring e
- * classifica a pessoa como avô/avó comum, um nível GENEALÓGICO inteiro
- * errado. Só entra em jogo quando pai/mãe + lado aparecem por extenso (ou
- * abreviados "pat"/"mat") E o acento do av[oôó] do MEIO (não o do
- * "bisav[oôó]" inicial) diz claramente avô ou avó — do contrário, devolve
- * null e deixa o restante do pipeline (matchByInclusion etc.) resolver.
- */
+// Aceita também a ordem "bisavô, pai do avô materno". O texto
+// precisa fornecer a geração, o membro da dupla e o ramo.
 function resolveGreatGrandparentPhrase(raw: string): string | null {
-  const low = raw.toLowerCase();
-  if (!/^\s*bisav[oôó]/.test(low)) return null;
-
-  const isPai = /\bpai\b/.test(low);
-  const isMae = /\bm[aã]e\b/.test(low);
-  if (isPai === isMae) return null; // nenhum ou os dois — não arrisca
-
-  // Ignora o acento do "bisav[oôó]" inicial (é só o rótulo da própria
-  // pessoa) e olha só o av[oôó] que vem DEPOIS, que é o que diz de quem
-  // ela é pai/mãe.
-  const afterSelf = low.replace(/^\s*bisav[oôó]\S*/, "");
-  const isAvoM = /avô|vovô/.test(afterSelf);
-  const isAvoF = /avó|vovó/.test(afterSelf);
-  if (isAvoM === isAvoF) return null;
-
-  const isPaterno = /\bpat/.test(low);
-  const isMaterno = /\bmat/.test(low);
-  if (isPaterno === isMaterno) return null;
-
-  const key = [
-    isPai ? "pai" : "mae",
-    isAvoM ? "avo" : "ava",
-    isPaterno ? "paterno" : "materno",
-  ].join("-");
-  const MAP: Record<string, string> = {
-    "pai-avo-paterno": "Bisavô paterno (pai do avô)",
-    "mae-avo-paterno": "Bisavó paterna (mãe do avô)",
-    "pai-ava-paterno": "Bisavô paterno (pai da avó)",
-    "mae-ava-paterno": "Bisavó paterna (mãe da avó)",
-    "pai-avo-materno": "Bisavô materno (pai do avô)",
-    "mae-avo-materno": "Bisavó materna (mãe do avô)",
-    "pai-ava-materno": "Bisavô materno (pai da avó)",
-    "mae-ava-materno": "Bisavó materna (mãe da avó)",
-  };
-  return MAP[key] ?? null;
+  const match = raw
+    .toLowerCase()
+    .match(
+      /^bisav([oôó])(?:\s+(pat(?:erno|erna)?|mat(?:erno|erna)?))?[ ,]+\(?\s*(pai|m[aã]e)\s+d([oa])\s+(?:av|vov)([oôó])(?:\s+(pat(?:erno|erna)?|mat(?:erno|erna)?))?\s*\)?$/,
+    );
+  if (!match) return null;
+  const [, self, firstSide, parentRole, article, grandparent, secondSide] = match;
+  const side = (firstSide ?? secondSide)?.slice(0, 3);
+  if (!side || (firstSide && secondSide && firstSide.slice(0, 3) !== secondSide.slice(0, 3))) {
+    return null;
+  }
+  const father = parentRole === "pai";
+  if ((self === "ô" && !father) || (self === "ó" && father)) return null;
+  if ((grandparent === "ô" && article === "a") || (grandparent === "ó" && article === "o")) {
+    return null;
+  }
+  const branch = side === "pat" ? "patern" : "matern";
+  return `Bisav${father ? "ô" : "ó"} ${branch}${father ? "o" : "a"} (${father ? "pai" : "mãe"} ${article === "o" ? "do avô" : "da avó"})`;
 }
 
-function matchByInclusion(normalized: string, rules: TagRule[]): TagRule | null {
-  let best: TagRule | null = null;
-  let bestLen = 0;
-  for (const rule of rules) {
-    for (const kw of rule.keywords) {
-      // normalized mais curto que kw = texto truncado (corta no FIM, nunca no
-      // meio) — por isso startsWith aqui, não includes: senão um pedaço curto
-      // como "avo pa" bate no meio de uma keyword bem mais longa e diferente
-      // (ex.: "...avo paterno" dentro de uma keyword de bisavô).
-      if (normalized.includes(kw) || kw.startsWith(normalized)) {
-        if (kw.length > bestLen) {
-          bestLen = kw.length;
-          best = rule;
-        }
-      }
-    }
-  }
-  return best;
-}
+const TAGS = new Map(
+  RULES.flatMap(
+    ({ tag, keywords }) =>
+      [[clean(tag), tag], ...keywords.map((keyword) => [keyword, tag])] as [string, string][],
+  ),
+);
 
-/** "irmao do avo materno" / "irmao avo materno" (sem preposição) / "irmao bisavo" -> tag do irmão certo. */
-function resolveSiblingOfAncestor(normalized: string, rawInput: string): string | null {
-  const m = normalized.match(/^irmao?\s*(?:do|da|de)?\s*(.+)$/);
-  if (!m) return null;
-  const remainder = m[1].trim();
-  if (!remainder) return null; // só "irmão" sozinho — não é caso deste resolvedor
+function exactAncestor(raw: string): string | undefined {
+  const tag = TAGS.get(clean(raw)) ?? resolveGreatGrandparentPhrase(raw);
+  if (tag && ANCESTOR_TAGS.has(tag)) return tag;
 
-  // "irmão do avô"/"irmã da avó" (bare, sem lado): "avo"/"bisavo" sozinho é
-  // ambíguo pós-clean(), mas o acento original ainda diz o gênero certo.
-  if (remainder === "avo" || remainder === "bisavo") {
-    const gender = detectAncestorGender(rawInput);
-    if (remainder === "avo") {
-      return SIBLING_TAG_OF[gender === "f" ? "Avó paterna" : "Avô paterno"];
-    }
-    return SIBLING_TAG_OF[
-      gender === "f" ? "Bisavó paterna (mãe do avô)" : "Bisavô paterno (pai do avô)"
-    ];
-  }
-
-  const ancestorRules = RULES.filter((r) => ANCESTOR_TAGS.has(r.tag));
-  for (const rule of ancestorRules) {
-    if (rule.keywords.some((kw) => remainder === kw)) return SIBLING_TAG_OF[rule.tag];
-  }
-  const best = matchByInclusion(remainder, ancestorRules);
-  return best ? SIBLING_TAG_OF[best.tag] : null;
+  // Sem acento no nome do avô/avó e sem indicador de gênero, o ramo
+  // inteiro pode apontar para duas pessoas. A preposição identifica o lado.
+  const grandparent = raw
+    .trim()
+    .toLowerCase()
+    .match(/^(av[ôó]|vov[ôó]) d[oa] (pai|m[aã]e)$/);
+  if (!grandparent) return undefined;
+  const female = grandparent[1].endsWith("ó");
+  if (grandparent[2] === "pai") return female ? "Avó paterna" : "Avô paterno";
+  return female ? "Avó materna" : "Avô materno";
 }
 
 /**
- * Tenta mapear o texto livre de parentesco para a tag canônica do sistema.
- * Retorna o texto original se não conseguir fazer o match com alta confiança.
+ * Retorna a tag canônica para descrições que identificam o vínculo.
+ * Rótulos que omitem referência (por exemplo "irmão do bisavô") ou que
+ * qualificam o vínculo (por exemplo "meio-irmão") permanecem registrados.
  */
 export function smartNormalizeRelationship(input: string | null | undefined): string {
-  if (!input?.trim()) return input ?? "";
+  const raw = input?.trim();
+  if (!raw) return "";
 
-  const normalized = clean(input);
+  const key = clean(raw);
+  if (key === "irma" && !/\(o\)/i.test(raw)) return raw;
+  const exact = TAGS.get(key);
+  if (exact) return exact;
 
-  // "avô"/"avó" e "bisavô"/"bisavó" (bare, sem "paterno/materna" etc.) viram
-  // o mesmo texto pós-clean() — sem isto, cairia sempre no masculino por
-  // acaso da ordem das regras, mesmo quando o original dizia claramente "avó".
-  if (normalized === "avo" || normalized === "bisavo") {
-    const gender = detectAncestorGender(input);
-    if (normalized === "avo") return gender === "f" ? "Avó paterna" : "Avô paterno";
-    return gender === "f" ? "Bisavó paterna (mãe do avô)" : "Bisavô paterno (pai do avô)";
-  }
+  const ancestor = exactAncestor(raw);
+  if (ancestor) return ancestor;
 
-  // Frase completa "bisavô/bisavó (pai/mãe) do avô/avó paterno/materno" —
-  // antes do match exato/inclusão, senão a keyword "avo paterno"/"avo
-  // materno" sequestra a frase pro nível avô/avó (errado) por ser mais longa.
-  const ggpTag = resolveGreatGrandparentPhrase(input);
-  if (ggpTag) return ggpTag;
-
-  // Busca primeiro match exato
-  for (const rule of RULES) {
-    for (const kw of rule.keywords) {
-      if (normalized === kw) return rule.tag;
-    }
-  }
-
-  // "irmã(o) [do/da] <ancestral>" — antes da busca genérica por inclusão,
-  // senão um "bisavo" (6 letras) bate antes de qualquer coisa mais específica.
-  const siblingTag = resolveSiblingOfAncestor(normalized, input);
-  if (siblingTag) return siblingTag;
-
-  // Busca por inclusão (o texto normalizado CONTÉM a keyword)
-  // Prioriza o keyword mais LONGO para evitar que "irmao" dê match em "irmao da bisavo"
-  const bestMatch = matchByInclusion(normalized, RULES);
-  if (bestMatch) return bestMatch.tag;
-
-  // Sem match: retorna o original (o sistema vai ignorar na árvore mas preserva o dado)
-  return input.trim();
+  const sibling = raw.match(/^irm[ãa](?:o|\(o\))?s?\s+(?:d[oaes]\s+)?(.+)$/i);
+  if (!sibling) return raw;
+  const anchor = exactAncestor(sibling[1]);
+  return anchor ? SIBLING_TAG_OF[anchor] : raw;
 }
 
 /**

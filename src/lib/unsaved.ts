@@ -97,6 +97,8 @@ export function isGuardedNavigation(
 export class KeyedDebounce<P extends Record<string, unknown>> {
   private pending = new Map<string, P>();
   private timers = new Map<string, ReturnType<typeof setTimeout>>();
+  private inFlight = new Map<string, Promise<void>>();
+  private discardVersion = 0;
   constructor(
     private send: (key: string, patch: P) => Promise<void>,
     private delay = 900,
@@ -114,26 +116,37 @@ export class KeyedDebounce<P extends Record<string, unknown>> {
     );
   }
   hasPending() {
-    return this.pending.size > 0;
+    return this.pending.size > 0 || this.inFlight.size > 0;
   }
   private async flushKey(key: string) {
     const t = this.timers.get(key);
     if (t) clearTimeout(t);
     this.timers.delete(key);
+    const version = this.discardVersion;
+    let sent = this.inFlight.get(key);
+    while (sent) {
+      await sent;
+      if (version !== this.discardVersion) return;
+      sent = this.inFlight.get(key);
+    }
     const patch = this.pending.get(key);
     if (!patch) return;
     this.pending.delete(key);
-    try {
-      await this.send(key, patch);
-    } catch (e) {
-      // devolve sem sobrescrever edições feitas durante o envio
-      this.pending.set(key, { ...patch, ...(this.pending.get(key) ?? ({} as P)) });
-      throw e;
-    }
+    const request = Promise.resolve()
+      .then(() => this.send(key, patch))
+      .catch((error) => {
+        if (version === this.discardVersion) {
+          this.pending.set(key, { ...patch, ...(this.pending.get(key) ?? {}) });
+        }
+        throw error;
+      })
+      .finally(() => this.inFlight.delete(key));
+    this.inFlight.set(key, request);
+    await request;
   }
   async flush() {
     const errors: unknown[] = [];
-    for (const key of [...this.pending.keys()]) {
+    for (const key of new Set([...this.pending.keys(), ...this.inFlight.keys()])) {
       try {
         await this.flushKey(key);
       } catch (e) {
@@ -143,6 +156,7 @@ export class KeyedDebounce<P extends Record<string, unknown>> {
     if (errors.length) throw errors[0];
   }
   discard() {
+    this.discardVersion++;
     for (const t of this.timers.values()) clearTimeout(t);
     this.timers.clear();
     this.pending.clear();

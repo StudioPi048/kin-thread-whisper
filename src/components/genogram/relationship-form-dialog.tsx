@@ -2,7 +2,6 @@ import { invalidateCase } from "@/lib/clinical-intel";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Link2 } from "lucide-react";
 
 import {
   Sheet,
@@ -23,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { validateParentLink } from "@/lib/family-relationships";
 import { supabase } from "@/integrations/supabase/client";
 import { relationshipQualifiers, relationshipTypes, type RelationshipType } from "@/lib/genogram";
 import type { Database } from "@/integrations/supabase/types";
@@ -36,7 +36,7 @@ interface Props {
   clientId: string;
   persons: PersonRow[];
   editing?: RelRow | null;
-  seed?: { from?: string; to?: string; type?: RelationshipType };
+  seed?: { from?: string; to?: string; type?: RelationshipType; qualifier?: string };
 }
 
 interface FormState {
@@ -67,9 +67,11 @@ export function RelationshipFormDialog({
 }: Props) {
   const qc = useQueryClient();
   const [v, setV] = useState<FormState>(empty);
+  const [confirmRemoval, setConfirmRemoval] = useState(false);
 
   useEffect(() => {
     if (!open) return;
+    setConfirmRemoval(false);
     if (editing) {
       const rec = editing as RelRow & { marriage_order?: number | null };
       setV({
@@ -86,6 +88,7 @@ export function RelationshipFormDialog({
         from_person_id: seed?.from ?? "",
         to_person_id: seed?.to ?? "",
         relationship_type: seed?.type ?? empty.relationship_type,
+        qualifier: seed?.qualifier ?? "",
       });
     }
   }, [open, editing, seed]);
@@ -99,6 +102,15 @@ export function RelationshipFormDialog({
     mutationFn: async (form: FormState) => {
       if (!form.from_person_id || !form.to_person_id) throw new Error("Escolha as duas pessoas");
       if (form.from_person_id === form.to_person_id) throw new Error("Escolha pessoas diferentes");
+      if (
+        !persons.some((person) => person.id === form.from_person_id) ||
+        !persons.some((person) => person.id === form.to_person_id)
+      ) {
+        throw new Error("Escolha duas pessoas cadastradas neste caso.");
+      }
+      if (form.relationship_type === "parent" && !form.qualifier) {
+        throw new Error("Informe a natureza da filiação.");
+      }
       const marriageOrder =
         form.relationship_type === "union" && form.marriage_order
           ? Number(form.marriage_order)
@@ -128,7 +140,7 @@ export function RelationshipFormDialog({
         }
       }
 
-      // Filiação: no máximo 2 genitores por filho, sem duplicar e sem ciclo direto
+      // O vínculo deve preservar a direção da filiação em toda a árvore.
       if (form.relationship_type === "parent") {
         const { data: existing, error: checkErr } = await supabase
           .from("genogram_relationships")
@@ -136,24 +148,13 @@ export function RelationshipFormDialog({
           .eq("client_id", clientId)
           .eq("relationship_type", "parent");
         if (checkErr) throw checkErr;
-        const others = (existing ?? []).filter((r) => !editing || r.id !== editing.id);
-        const parents = new Set(
-          others.filter((r) => r.to_person_id === form.to_person_id).map((r) => r.from_person_id),
+        const reason = validateParentLink(
+          form.from_person_id,
+          form.to_person_id,
+          existing ?? [],
+          editing?.id,
         );
-        if (parents.has(form.from_person_id))
-          throw new Error("Essa pessoa já está registrada como genitor(a) desse filho(a).");
-        if (parents.size >= 2)
-          throw new Error(
-            "Esse filho(a) já tem 2 genitores registrados. Remova um antes de adicionar outro (adoção: use o qualificador no vínculo existente).",
-          );
-        if (
-          others.some(
-            (r) => r.from_person_id === form.to_person_id && r.to_person_id === form.from_person_id,
-          )
-        )
-          throw new Error(
-            "Vínculo invertido: o filho(a) já está registrado como genitor(a) dessa pessoa.",
-          );
+        if (reason) throw new Error(reason);
       }
 
       const payload = {
@@ -169,7 +170,8 @@ export function RelationshipFormDialog({
         const { error } = await supabase
           .from("genogram_relationships")
           .update(payload)
-          .eq("id", editing.id);
+          .eq("id", editing.id)
+          .eq("client_id", clientId);
         if (error) throw error;
       } else {
         const { error } = await supabase.from("genogram_relationships").insert(payload);
@@ -177,8 +179,8 @@ export function RelationshipFormDialog({
       }
     },
 
-    onSuccess: () => {
-      invalidateCase(qc, clientId);
+    onSuccess: async () => {
+      await invalidateCase(qc, clientId);
       toast.success(editing ? "Vínculo salvo." : "Vínculo criado na árvore.");
       onOpenChange(false);
     },
@@ -193,40 +195,52 @@ export function RelationshipFormDialog({
     },
   });
 
-  const fromHint = v.relationship_type === "parent" ? "Pai/mãe" : "Pessoa A";
-  const toHint = v.relationship_type === "parent" ? "Filho(a)" : "Pessoa B";
+  const removal = useMutation({
+    mutationFn: async () => {
+      if (!editing) return;
+      const { error } = await supabase
+        .from("genogram_relationships")
+        .delete()
+        .eq("client_id", clientId)
+        .eq("id", editing.id);
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      await invalidateCase(qc, clientId);
+      toast.success("Vínculo removido.");
+      onOpenChange(false);
+    },
+    onError: () => toast.error("Não foi possível remover o vínculo. Tente novamente."),
+  });
 
+  const isParentLink = v.relationship_type === "parent";
+  const fromHint = isParentLink ? "Pai, mãe ou responsável" : "Primeira pessoa";
+  const toHint = isParentLink ? "Filho ou filha" : "Segunda pessoa";
+  const pending = mutation.isPending || removal.isPending;
+
+  const personLabel = (person: PersonRow) =>
+    [
+      person.full_name || person.preferred_name || "Pessoa sem nome",
+      person.relationship_to_proband,
+      person.birth_date?.slice(0, 4),
+    ]
+      .filter(Boolean)
+      .join(" · ");
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="flex flex-col gap-0 p-0 sm:max-w-lg w-full border-l-[5px] border-l-gold"
-      >
-        {/* Header Magazine Style */}
-        <div className="bg-forest px-8 py-10 relative overflow-hidden shrink-0">
-          <span className="section-number absolute right-4 top-4 opacity-10 text-white">∞</span>
-          <SheetHeader className="relative z-10">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="flex h-16 w-16 items-center justify-center rounded-md bg-gold text-2xl font-bold text-forest shadow-md">
-                <Link2 className="size-8" />
-              </div>
-              <div>
-                <p className="text-[14px] font-bold uppercase tracking-[0.3em] text-gold">
-                  Conexão
-                </p>
-                <SheetTitle className="font-serif text-3xl font-bold text-white mt-1">
-                  {editing ? "Editar vínculo" : "Novo vínculo"}
-                </SheetTitle>
-              </div>
-            </div>
-            <SheetDescription className="text-white text-[14px]">
-              Vínculos entrelaçam os dados. Registre parentalidade, uniões, rupturas ou
-              aproximações.
-            </SheetDescription>
-          </SheetHeader>
-        </div>
+      <SheetContent side="right" className="flex flex-col gap-0 p-0 sm:max-w-lg w-full">
+        <SheetHeader className="shrink-0 border-b border-border px-5 py-5 pr-14 sm:px-7 sm:pr-14">
+          <SheetTitle className="text-xl">
+            {editing ? "Editar vínculo" : isParentLink ? "Definir filiação" : "Novo vínculo"}
+          </SheetTitle>
+          <SheetDescription>
+            {isParentLink
+              ? "Confirme as duas pessoas e o tipo de filiação. O mapa usa esta ligação em todas as vistas."
+              : "Escolha se deseja registrar uma filiação, união, irmandade ou vínculo afetivo."}
+          </SheetDescription>
+        </SheetHeader>
 
-        <ScrollArea className="flex-1 bg-background px-8 py-6">
+        <ScrollArea className="flex-1 min-h-0 bg-background px-5 py-5 sm:px-7">
           <form
             id="rel-form"
             className="space-y-6 pb-8"
@@ -236,14 +250,14 @@ export function RelationshipFormDialog({
             }}
           >
             <div className="space-y-2">
-              <Label className="text-[16px] font-bold text-foreground">Natureza da relação</Label>
+              <Label htmlFor="geno-rel-type">Tipo de vínculo</Label>
               <Select
                 value={v.relationship_type}
                 onValueChange={(x) =>
                   setV((p) => ({ ...p, relationship_type: x as RelationshipType, qualifier: "" }))
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger id="geno-rel-type">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -256,41 +270,39 @@ export function RelationshipFormDialog({
               </Select>
             </div>
 
-            <div className="grid gap-5 border-l-2 border-dashed border-border pl-4 ml-2">
-              <div className="space-y-2 relative">
-                <div className="absolute -left-[23px] top-4 size-2.5 rounded-full bg-border" />
-                <Label className="text-[16px] font-bold text-foreground">{fromHint}</Label>
+            <div className="grid gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="geno-rel-from">{fromHint}</Label>
                 <Select
                   value={v.from_person_id}
                   onValueChange={(x) => setV((p) => ({ ...p, from_person_id: x }))}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecionar..." />
+                  <SelectTrigger id="geno-rel-from">
+                    <SelectValue placeholder="Selecionar…" />
                   </SelectTrigger>
                   <SelectContent>
                     {persons.map((p) => (
                       <SelectItem key={p.id} value={p.id}>
-                        {p.preferred_name || p.full_name}
+                        {personLabel(p)}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="space-y-2 relative">
-                <div className="absolute -left-[23px] top-4 size-2.5 rounded-full bg-border" />
-                <Label className="text-[16px] font-bold text-foreground">{toHint}</Label>
+              <div className="space-y-2">
+                <Label htmlFor="geno-rel-to">{toHint}</Label>
                 <Select
                   value={v.to_person_id}
                   onValueChange={(x) => setV((p) => ({ ...p, to_person_id: x }))}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecionar..." />
+                  <SelectTrigger id="geno-rel-to">
+                    <SelectValue placeholder="Selecionar…" />
                   </SelectTrigger>
                   <SelectContent>
                     {persons.map((p) => (
                       <SelectItem key={p.id} value={p.id}>
-                        {p.preferred_name || p.full_name}
+                        {personLabel(p)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -300,15 +312,15 @@ export function RelationshipFormDialog({
 
             {qualifierOptions.length > 0 && (
               <div className="space-y-2 pt-2">
-                <Label className="text-[16px] font-bold text-foreground">
-                  Intensidade / Qualificador
+                <Label htmlFor="geno-rel-qualifier">
+                  {isParentLink ? "Natureza da filiação" : "Detalhe do vínculo"}
                 </Label>
                 <Select
                   value={v.qualifier || undefined}
                   onValueChange={(x) => setV((p) => ({ ...p, qualifier: x }))}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Opcional" />
+                  <SelectTrigger id="geno-rel-qualifier">
+                    <SelectValue placeholder={isParentLink ? "Selecionar…" : "Opcional"} />
                   </SelectTrigger>
                   <SelectContent>
                     {qualifierOptions.map((q) => (
@@ -323,14 +335,14 @@ export function RelationshipFormDialog({
 
             {v.relationship_type === "union" && (
               <div className="space-y-2 pt-2">
-                <Label className="text-[16px] font-bold text-foreground">Ordem desta união</Label>
+                <Label htmlFor="geno-rel-order">Ordem desta união</Label>
                 <Select
                   value={v.marriage_order || "none"}
                   onValueChange={(x) =>
                     setV((p) => ({ ...p, marriage_order: x === "none" ? "" : x }))
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="geno-rel-order">
                     <SelectValue placeholder="União única" />
                   </SelectTrigger>
                   <SelectContent>
@@ -350,32 +362,64 @@ export function RelationshipFormDialog({
             )}
 
             <div className="space-y-2 pt-2">
-              <Label className="text-[16px] font-bold text-foreground">Anotações sistêmicas</Label>
+              <Label htmlFor="geno-rel-notes">Origem e observações</Label>
               <Textarea
-                rows={4}
+                id="geno-rel-notes"
+                rows={3}
                 value={v.notes}
                 onChange={(e) => setV((p) => ({ ...p, notes: e.target.value }))}
-                placeholder="Contexto clínico deste vínculo, datas de início/fim, observações de tensão ou alienação..."
+                placeholder="Ex.: relato da família, documento ou data da confirmação"
                 className="resize-none"
               />
             </div>
           </form>
         </ScrollArea>
 
-        {/* Footer */}
-        <div className="border-t border-border bg-card px-8 py-5 shrink-0 flex justify-end gap-3">
+        {confirmRemoval && (
+          <div className="border-t border-border px-5 py-3 text-sm text-foreground" role="alert">
+            Remover este vínculo registrado? As pessoas continuam cadastradas. Confira também o
+            parentesco da planilha, que pode sugerir novamente uma ligação.
+          </div>
+        )}
+        <SheetFooter className="border-t border-border bg-card px-5 py-4 sm:px-7">
+          {editing && (
+            <Button
+              type="button"
+              variant={confirmRemoval ? "destructive" : "ghost"}
+              className="mr-auto"
+              disabled={pending}
+              onClick={() => (confirmRemoval ? removal.mutate() : setConfirmRemoval(true))}
+            >
+              {removal.isPending
+                ? "Removendo…"
+                : confirmRemoval
+                  ? "Confirmar remoção"
+                  : "Remover vínculo"}
+            </Button>
+          )}
           <Button
             type="button"
-            variant="ghost"
-            onClick={() => onOpenChange(false)}
-            disabled={mutation.isPending}
+            variant="outline"
+            disabled={pending}
+            onClick={() => (confirmRemoval ? setConfirmRemoval(false) : onOpenChange(false))}
           >
             Cancelar
           </Button>
-          <Button type="submit" form="rel-form" disabled={mutation.isPending} variant="gold">
-            {mutation.isPending ? "Salvando..." : editing ? "Salvar vínculo" : "Criar conexão"}
+          <Button
+            type="submit"
+            form="rel-form"
+            variant="forest"
+            disabled={
+              pending ||
+              confirmRemoval ||
+              !v.from_person_id ||
+              !v.to_person_id ||
+              (isParentLink && !v.qualifier)
+            }
+          >
+            {mutation.isPending ? "Salvando…" : "Salvar vínculo"}
           </Button>
-        </div>
+        </SheetFooter>
       </SheetContent>
     </Sheet>
   );

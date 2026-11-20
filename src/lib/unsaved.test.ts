@@ -143,4 +143,41 @@ describe("KeyedDebounce da planilha", () => {
     expect(send).not.toHaveBeenCalled();
     vi.useRealTimers();
   });
+  it("espera o envio em voo antes de gravar edição posterior na mesma linha", async () => {
+    vi.useFakeTimers();
+    try {
+      const firstRequest = deferred();
+      const send = vi.fn().mockReturnValueOnce(firstRequest.promise).mockResolvedValue(undefined);
+      const queue = new KeyedDebounce<{ full_name: string }>(send);
+
+      queue.push("p1", { full_name: "Ana" });
+      await vi.advanceTimersByTimeAsync(900);
+      expect(queue.hasPending()).toBe(true);
+
+      queue.push("p1", { full_name: "Ana Silva" });
+      const saving = queue.flush();
+      await vi.advanceTimersByTimeAsync(900);
+      expect(send.mock.calls).toEqual([["p1", { full_name: "Ana" }]]);
+
+      firstRequest.resolve();
+      await saving;
+      expect(send.mock.calls).toEqual([
+        ["p1", { full_name: "Ana" }],
+        ["p1", { full_name: "Ana Silva" }],
+      ]);
+      expect(queue.hasPending()).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+  it("não devolve à fila o patch descartado se o último envio falhar", async () => {
+    const firstRequest = deferred();
+    const queue = new KeyedDebounce(() => firstRequest.promise);
+    queue.push("p1", { full_name: "A" });
+    const saving = queue.flush();
+    queue.discard();
+    firstRequest.reject(new Error("offline"));
+    await expect(saving).rejects.toThrow("offline");
+    expect(queue.hasPending()).toBe(false);
+  });
 });

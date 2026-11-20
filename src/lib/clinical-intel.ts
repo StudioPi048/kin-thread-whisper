@@ -8,6 +8,39 @@ export interface ClinicalIntelData {
   relationships: RelationshipRow[];
 }
 
+/** Etiquetas e gênero de um modelo vazio não representam uma pessoa cadastrada. */
+export function hasFamilyRecordData(person: PersonRow) {
+  return Boolean(
+    person.is_proband ||
+    person.full_name.trim() ||
+    person.preferred_name?.trim() ||
+    person.birth_date ||
+    person.death_date ||
+    person.is_deceased ||
+    person.cause_of_death?.trim() ||
+    person.gestational_weeks?.trim() ||
+    person.health_conditions?.length ||
+    person.occupation?.trim() ||
+    person.vices?.trim() ||
+    person.temperament?.trim() ||
+    person.birth_order != null ||
+    person.notes?.trim() ||
+    person.tags?.length ||
+    (Array.isArray(person.life_events) && person.life_events.length > 0),
+  );
+}
+
+/** Fichas com vínculos explícitos continuam no mapa mesmo sem nome ou data. */
+export function getMappablePersons(persons: PersonRow[], relationships: RelationshipRow[]) {
+  const linkedIds = new Set(
+    relationships.flatMap((relationship) => [
+      relationship.from_person_id,
+      relationship.to_person_id,
+    ]),
+  );
+  return persons.filter((person) => linkedIds.has(person.id) || hasFamilyRecordData(person));
+}
+
 /** Única queryFn/queryKey para evidências de um caso — mesmo formato em todas as telas. */
 export const clinicalIntelQuery = (clientId: string) =>
   queryOptions({
@@ -36,13 +69,14 @@ export const clinicalIntelQuery = (clientId: string) =>
 
 /** Após qualquer mutação de familiares/vínculos: todas as telas que leem evidências se atualizam. */
 export function invalidateCase(qc: QueryClient, clientId: string) {
-  for (const key of [
-    "genogram",
-    "clinical-intel",
-    "case-dashboard",
-    "client-genogram",
-    "genogram-count",
-  ]) {
-    qc.invalidateQueries({ queryKey: [key, clientId] });
-  }
+  return Promise.all(
+    [
+      "genogram",
+      "clinical-intel",
+      "case-dashboard",
+      "client-genogram",
+      "genogram-count",
+      "client-genogram-count",
+    ].map((key) => qc.invalidateQueries({ queryKey: [key, clientId] })),
+  );
 }

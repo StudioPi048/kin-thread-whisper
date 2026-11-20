@@ -42,7 +42,7 @@ Código GitHub StudioPi048/kin-thread-whisper, Lovable projeto 0bbf5716-9319-44e
 Cliente/paciente-índice sempre no topo. Gerações anteriores descem: pais, avós e assim por diante. Cada filho liga-se à união dos respectivos pais; o eixo do cliente e dos ancestrais diretos fica centralizado na união parental. Preservar o motor existente; mudanças estéticas e dados de demonstração não podem impor orientação contrária.
 
 ## Regra absoluta do genossociograma
-Cliente e irmãos sempre no topo; pais abaixo; avós abaixo dos pais. Nunca inverter. Ligações de filiação sempre pela união correta dos pais.
+O consultante e seus irmãos de sangue ocupam o topo. Abaixo vêm pais, avós e demais gerações ancestrais. Cada ligação usa os respectivos pais. A etiqueta de um irmão de avô ou bisavô orienta a faixa visual e exige confirmação de quais pais são compartilhados. A planilha distingue ligação registrada, sugerida e pendente. O mapa alterna entre 2D e 3D com a mesma filiação e ficha. A orientação e o traço de falecimento seguem o Manual da Psicogenealogia, pp. 163–164.
 
 ## Hipóteses clínicas
 Só a partir de evidências registradas, sempre com fontes, limites e perguntas. Sem dados, sem hipótese.

@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { buildLogicalGraph, layoutGraph, type LogicalGraph } from "./build";
+import {
+  buildLogicalGraph,
+  genY,
+  getResolvedParents,
+  layoutGraph,
+  type LogicalGraph,
+} from "./build";
 import type { PersonRow } from "@/lib/patterns";
 
 let n = 0;
@@ -240,5 +246,193 @@ describe("sem sobreposição de cartões", () => {
     });
     const v = checkLayoutInvariants(g, layoutGraph(g)).filter((x) => x.rule.includes("SOBREP"));
     expect(v).toEqual([]);
+  });
+});
+
+describe("filiações confiáveis no mapa ampliado", () => {
+  it("liga tios-avós e tios-bisavós à linha certa mesmo com nomes iguais", () => {
+    const cli = p("Consulente");
+    const pai = p("Pai");
+    const mae = p("Mãe");
+    const avo = p("Avô paterno", "Miguel");
+    const avoMat = p("Avô materno", "Miguel");
+    const tioAvo = p("Irmã(o) do avô paterno", "Miguel");
+    const tioAvoMat = p("Irmã(o) do avô materno", "Miguel");
+    const biso = p("Bisavô paterno (pai do avô)", "Miguel");
+    const bisoMat = p("Bisavô materno (pai do avô)", "Miguel");
+    const tioBiso = p("Irmã(o) do Bisavô paterno (pai do avô)", "Miguel");
+    const tri = p("", "Genitor cadastrado do bisavô paterno");
+    const duplication = p("Bisavô paterno (pai do avô)", "Miguel");
+    const indefinido = p("Irmã(o) da Bisavó materna (mãe do avô)", "Miguel");
+
+    const persons = [
+      duplication,
+      tioBiso,
+      bisoMat,
+      biso,
+      tioAvoMat,
+      avo,
+      cli,
+      pai,
+      mae,
+      avoMat,
+      tioAvo,
+      tri,
+      indefinido,
+    ];
+    const rels = [
+      rel(biso.id, avo.id, "parent"),
+      rel(tri.id, biso.id, "parent"),
+      rel(biso.id, tioAvo.id, "parent"),
+      rel(bisoMat.id, tioAvoMat.id, "parent"),
+      rel(tri.id, tioBiso.id, "parent"),
+    ];
+    const graph = buildLogicalGraph({ persons, rels: rels as never });
+    expect(getResolvedParents(graph, tioAvo.id)).toMatchObject([
+      { personId: biso.id, kind: "biological", source: "explicit" },
+    ]);
+    expect(getResolvedParents(graph, tioAvoMat.id).map((x) => x.personId)).toEqual([bisoMat.id]);
+    expect(getResolvedParents(graph, tioBiso.id).map((x) => x.personId)).toEqual([tri.id]);
+    expect(getResolvedParents(graph, duplication.id)).toEqual([]);
+    expect(graph.pendingPersonIds.has(duplication.id)).toBe(true);
+    expect(getResolvedParents(graph, indefinido.id)).toEqual([]);
+    expect(graph.pendingPersonIds.has(indefinido.id)).toBe(true);
+
+    const layout = layoutGraph(graph);
+    const rootX = layout.personPos.get(cli.id)!.x;
+    expect(layout.personPos.get(tioAvo.id)!.x).toBeLessThan(rootX);
+    expect(layout.personPos.get(tioAvoMat.id)!.x).toBeGreaterThan(rootX);
+    expect(layout.personPos.get(tioBiso.id)!.y).toBe(genY(3));
+    expect(layout.personPos.get(tri.id)!.y).toBe(genY(4));
+    expect(checkLayoutInvariants(graph, layout)).toEqual([]);
+  });
+
+  it("deixa candidatos ambíguos sem conexão até confirmação por ID", () => {
+    const cli = p("Consulente");
+    const pai = p("Pai");
+    const avoA = p("Avô paterno", "Carlos");
+    const avoB = p("Avô paterno", "Carlos");
+    const biso = p("Bisavô paterno (pai do avô)");
+    const tioAvo = p("Irmã(o) do avô paterno");
+    const indefinido = p("Irmão do avô");
+    const persons = [cli, pai, avoA, avoB, biso, tioAvo, indefinido];
+
+    for (const list of [persons, [...persons].reverse()]) {
+      const graph = buildLogicalGraph({ persons: list, rels: [] });
+      for (const person of [pai, avoA, avoB, tioAvo, indefinido]) {
+        expect(getResolvedParents(graph, person.id), person.full_name).toEqual([]);
+      }
+      expect(graph.pendingPersonIds.has(tioAvo.id)).toBe(true);
+      expect(graph.pendingPersonIds.has(indefinido.id)).toBe(true);
+    }
+  });
+
+  it("uma etiqueta de colateral não copia os pais do ancestral conhecido", () => {
+    const cli = p("Consulente");
+    const pai = p("Pai");
+    const avo = p("Avô paterno");
+    const biso = p("Bisavô paterno (pai do avô)");
+    const tioAvo = p("Irmã(o) do avô paterno");
+    const graph = buildLogicalGraph({ persons: [cli, pai, avo, biso, tioAvo], rels: [] });
+    expect(getResolvedParents(graph, avo.id).map((link) => link.personId)).toEqual([biso.id]);
+    expect(getResolvedParents(graph, tioAvo.id)).toEqual([]);
+    expect(graph.pendingPersonIds.has(tioAvo.id)).toBe(true);
+    expect(graph.persons.get(tioAvo.id)!.generation).toBe(2);
+  });
+
+  it("só coloca irmão sem pais no topo quando o parentesco biológico foi declarado", () => {
+    const cli = p("Consulente");
+    const irmaoSemDados = p("Irmã(o)");
+    const irmaoDeclarado = p("Irmão de sangue");
+    const graph = buildLogicalGraph({ persons: [cli, irmaoSemDados, irmaoDeclarado], rels: [] });
+    expect(graph.topRowIds).toEqual(new Set([cli.id, irmaoDeclarado.id]));
+    expect(graph.pendingPersonIds.has(irmaoSemDados.id)).toBe(true);
+    expect(getResolvedParents(graph, irmaoDeclarado.id)).toEqual([]);
+  });
+
+  it("mantém irmãos adotivos, cônjuge e descendentes literais abaixo do topo", () => {
+    const cli = p("Consulente");
+    const pai = p("Pai");
+    const mae = p("Mãe");
+    const avo = p("Avô paterno");
+    const sangue = p("Irmã(o)");
+    const meio = p("Meio-irmã");
+    const adocao = p("Irmã(o)", "Irmã adotiva");
+    const outraMae = p("");
+    const conjuge = p("Cônjuge");
+    const filha = p("Filho(a)");
+    const neta = p("Neta");
+    const rels = [
+      rel(pai.id, meio.id, "parent"),
+      rel(outraMae.id, meio.id, "parent"),
+      rel(pai.id, adocao.id, "parent", { qualifier: "adoptive" }),
+      rel(cli.id, conjuge.id, "union"),
+      rel(cli.id, filha.id, "parent"),
+      rel(conjuge.id, filha.id, "parent"),
+      rel(filha.id, neta.id, "parent"),
+    ];
+    const graph = buildLogicalGraph({
+      persons: [cli, pai, mae, avo, sangue, meio, adocao, outraMae, conjuge, filha, neta],
+      rels: rels as never,
+    });
+    expect(graph.topRowIds).toEqual(new Set([cli.id, sangue.id, meio.id]));
+    expect(graph.persons.get(adocao.id)!.lane).toBe("social");
+    expect(graph.persons.get(conjuge.id)!.lane).toBe("social");
+    expect(graph.persons.get(avo.id)!.generation).toBe(2);
+    expect(getResolvedParents(graph, adocao.id)).toMatchObject([
+      { personId: pai.id, kind: "adoptive", source: "explicit" },
+    ]);
+    expect(
+      getResolvedParents(graph, filha.id)
+        .map((link) => link.personId)
+        .sort(),
+    ).toEqual([cli.id, conjuge.id].sort());
+    expect(graph.persons.get(filha.id)!.lane).toBe("descendant");
+    expect(graph.persons.get(filha.id)!.generation).toBeGreaterThan(2);
+    expect(graph.unions.get(parentUnion(graph, filha.id)!)!.direction).toBe("down");
+    expect(graph.persons.get(neta.id)!.generation).toBeGreaterThan(
+      graph.persons.get(filha.id)!.generation,
+    );
+    expect(checkLayoutInvariants(graph, layoutGraph(graph))).toEqual([]);
+  });
+
+  it("um meio-irmão paterno legado recebe só o pai conhecido e filho do consulente desce em faixa própria", () => {
+    const cli = p("Consulente");
+    const pai = p("Pai");
+    const mae = p("Mãe");
+    const meiaIrma = p("Meia-irmã paterna");
+    const filho = p("Filho(a)");
+    const social = p("Irmão de criação");
+    const graph = buildLogicalGraph({
+      persons: [cli, pai, mae, meiaIrma, filho, social],
+      rels: [],
+    });
+    expect(graph.topRowIds).toEqual(new Set([cli.id, meiaIrma.id]));
+    expect(getResolvedParents(graph, meiaIrma.id)).toMatchObject([
+      { personId: pai.id, source: "legacy" },
+    ]);
+    expect(getResolvedParents(graph, filho.id)).toMatchObject([
+      { personId: cli.id, source: "legacy" },
+    ]);
+    expect(getResolvedParents(graph, social.id)).toEqual([]);
+    expect(graph.persons.get(social.id)!.lane).toBe("social");
+    expect(graph.persons.get(filho.id)!.lane).toBe("descendant");
+    expect(checkLayoutInvariants(graph, layoutGraph(graph))).toEqual([]);
+  });
+
+  it("não substitui um conflito explícito por uma filiação presumida", () => {
+    const cli = p("Consulente");
+    const pai = p("Pai");
+    const mae = p("Mãe");
+    const hr = p("Irmã(o)");
+    const xs = [p(""), p(""), p("")];
+    const graph = buildLogicalGraph({
+      persons: [cli, pai, mae, hr, ...xs],
+      rels: xs.map((x) => rel(x.id, hr.id, "parent")) as never,
+    });
+    expect(graph.errors.join(" ")).toMatch(/3 genitores/);
+    expect(getResolvedParents(graph, hr.id)).toEqual([]);
+    expect(graph.topRowIds.has(hr.id)).toBe(false);
+    expect(graph.pendingPersonIds.has(hr.id)).toBe(true);
   });
 });
