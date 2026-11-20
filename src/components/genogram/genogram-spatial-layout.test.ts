@@ -7,6 +7,7 @@ import {
   SPATIAL_CARD_HEIGHT,
   SPATIAL_CARD_WIDTH,
   SPATIAL_MAX_YAW,
+  SPATIAL_ROW_GAP,
 } from "./genogram-spatial-layout";
 
 function person(id: string, x: number, generation: number): Node {
@@ -45,7 +46,7 @@ describe("spatial genossociograma", () => {
     const left = projectSpatialLayout(layout, -SPATIAL_MAX_YAW);
     const right = projectSpatialLayout(layout, SPATIAL_MAX_YAW);
 
-    const expected = [0, 0, GEN_GAP, GEN_GAP * 2, GEN_GAP * 3];
+    const expected = [0, 0, SPATIAL_ROW_GAP, SPATIAL_ROW_GAP * 2, SPATIAL_ROW_GAP * 3];
     expect(left.people.map(({ y }) => y)).toEqual(expected);
     expect(right.people.map(({ y }) => y)).toEqual(expected);
     expect(left.people.at(-1)?.x).not.toBe(right.people.at(-1)?.x);
@@ -71,7 +72,7 @@ describe("spatial genossociograma", () => {
     const [paternal, maternal] = result.routes;
     const personById = new Map(result.people.map((entry) => [entry.id, entry]));
     const endsAt = (id: string) =>
-      `L ${personById.get(id)!.x} ${GEN_GAP * 2 + SPATIAL_CARD_HEIGHT}`;
+      `L ${personById.get(id)!.x} ${SPATIAL_ROW_GAP * 2 + SPATIAL_CARD_HEIGHT}`;
     expect(paternal.path).toContain(endsAt("irmão do avô"));
     expect(paternal.path).not.toContain(endsAt("irmã da avó"));
     expect(maternal.path).toContain(endsAt("irmã da avó"));
@@ -98,5 +99,18 @@ describe("spatial genossociograma", () => {
     expect(adopted.parentKind).toBe("adoptive");
     const endOfBarY = (path: string) => Number(path.split(" M ")[1].split(" ").at(-1));
     expect(endOfBarY(biological.path)).not.toBe(endOfBarY(adopted.path));
+  });
+  it("keeps tentative sibling links visually separate from a recorded union", () => {
+    const nodes = [
+      person("confirmed", -200, 1),
+      person("tentative", 200, 1),
+      union("parents", 70, 2),
+    ];
+    const edge = pedigree("parents", ["confirmed", "tentative"]);
+    edge.data = { ...edge.data, suggestedChildIds: ["tentative"] };
+    const { routes } = projectSpatialLayout(buildSpatialLayout(nodes, [edge]), SPATIAL_MAX_YAW);
+    const [confirmed, tentative] = routes;
+    expect([confirmed.suggested, tentative.suggested]).toEqual([false, true]);
+    expect(confirmed.path).not.toBe(tentative.path);
   });
 });

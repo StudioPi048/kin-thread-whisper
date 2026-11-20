@@ -49,4 +49,7 @@ Essas razões verificam os pares definidos, não certificam todas as combinaçõ
 - Mobile 390px funcional: navegação inferior; painéis laterais viram drawer sem ocultar ações.
 
 ## Genossociograma (inviolável)
-O consultante e os irmãos consanguíneos ocupam o topo. Pais, avós e antepassados descem em faixas. Cada parentesco usa o grafo comum. Cartões opacos protegem nomes e datas das linhas. A vista 3D mantém os cartões voltados para leitura e o eixo vertical fixo. A câmera gira e aproxima sem modificar posições salvas. O traço horizontal superior marca falecimento, segundo o Manual da Psicogenealogia, p. 164. A ficha escreve a natureza da filiação ao lado do vínculo.
+O consultante e os irmãos consanguíneos ocupam o topo. Pais, avós e antepassados descem em faixas. Cada parentesco usa o grafo comum. Cartões opacos protegem nomes e datas das linhas. A vista 3D usa símbolos volumétricos em campo verde, com nomes frontais, guias de geração e controles sobre o mapa. A câmera gira e aproxima mantendo o eixo vertical e as posições salvas. No 2D, o eixo de cada fratria coincide com o centro de seu casal no arranjo automático. As sugestões de filiação têm traço pontilhado em bronze e exigem confirmação na ficha. O traço horizontal superior marca falecimento, segundo o Manual da Psicogenealogia, p. 164. A ficha escreve a natureza da filiação ao lado do vínculo.
+
+## Linha do tempo do dossiê
+Em telas largas, lista cronológica compacta à esquerda e gráfico temporal à direita, com trilhos por tipo de evento. A seleção sincroniza os dois lados. Registros sem data ficam na lista; datas parciais ocupam uma faixa. No celular, o gráfico precede a lista.

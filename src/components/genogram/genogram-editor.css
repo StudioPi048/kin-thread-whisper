@@ -1,0 +1,208 @@
+.geno-editor-toolbar {
+  position: relative;
+  z-index: 12;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 8px 10px;
+  color: var(--foreground);
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+
+.geno-editor-toolbar button {
+  min-height: 40px;
+  min-width: 40px;
+}
+
+.geno-editor-modes,
+.geno-editor-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.geno-editor-modes {
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--archive);
+}
+
+.geno-editor-tools {
+  margin-left: auto;
+}
+
+.geno-editor-find {
+  display: flex;
+  flex: 1 1 140px;
+  align-items: center;
+  max-width: 320px;
+  min-width: 130px;
+  gap: 6px;
+  padding-left: 7px;
+  color: var(--muted-foreground);
+}
+
+.geno-editor-find select {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 8px;
+  border: 1px solid var(--input);
+  border-radius: 6px;
+  background: var(--card);
+  color: var(--foreground);
+  font-size: 0.875rem;
+  text-overflow: ellipsis;
+}
+
+.geno-editor-menu {
+  display: flex;
+  flex-direction: column;
+}
+
+.geno-editor-menu button {
+  justify-content: flex-start;
+  min-height: 44px;
+  padding-inline: 8px;
+}
+
+.geno-editor-connect-bar {
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding-inline: 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--forest-mist);
+  color: var(--forest);
+  font-size: 0.875rem;
+}
+
+.geno-editor-connect-bar button {
+  margin-inline-start: auto;
+  min-height: 44px;
+}
+
+.geno-editor-status {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  max-width: calc(100% - 20px);
+  pointer-events: none;
+}
+
+.geno-editor-status > * {
+  pointer-events: auto;
+}
+
+.geno-editor-review {
+  background: var(--archive-doc);
+  color: var(--bronze);
+}
+
+.geno-editor-save-status {
+  padding: 6px 8px;
+  border-radius: 4px;
+  background: var(--archive-doc);
+  color: var(--ink-soft);
+  font-size: 0.75rem;
+}
+
+.geno-linking .react-flow__node-person {
+  cursor: crosshair;
+}
+
+.geno-linking .react-flow__handle.geno-link-handle {
+  z-index: 20;
+  width: 25px;
+  height: 25px;
+  border: 2px solid var(--archive-doc);
+  background: var(--color-foreground);
+  cursor: crosshair;
+}
+
+.geno-link-handle::after {
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  background: var(--archive-doc);
+  content: "";
+  pointer-events: none;
+}
+
+.geno-linking .react-flow__node-person:has([data-connect-source="true"]) .atlas-person-info {
+  outline: 2px solid var(--color-foreground);
+  outline-offset: 3px;
+}
+
+.atlas-genogram.geno-editor-expanded {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  width: 100%;
+  height: 100dvh;
+  min-height: 0;
+  border-radius: 0;
+}
+
+.atlas-genogram.geno-editor-expanded .atlas-map-workspace {
+  height: 100%;
+  min-height: 0;
+}
+
+.atlas-genogram.geno-editor-expanded .atlas-map-stage {
+  min-height: 0;
+}
+
+.atlas-genogram:not(.geno-editor-expanded) .atlas-map-stage {
+  min-height: clamp(450px, 58dvh, 780px);
+}
+
+@media (max-width: 767px) {
+  .atlas-genogram:not(.geno-editor-expanded),
+  .atlas-genogram:not(.geno-editor-expanded) .atlas-map-workspace {
+    min-height: 0;
+  }
+
+  .geno-editor-toolbar {
+    padding: 7px;
+  }
+
+  .geno-editor-toolbar button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .geno-editor-tools {
+    margin-left: 0;
+  }
+
+  .geno-editor-tools > button:first-child {
+    display: none;
+  }
+
+  .geno-editor-find {
+    order: 2;
+    flex: 1 0 100%;
+    max-width: none;
+    padding: 0;
+  }
+
+  .geno-editor-find select {
+    min-height: 44px;
+  }
+
+  .atlas-genogram:not(.geno-editor-expanded) .atlas-map-stage {
+    min-height: 420px;
+  }
+}

@@ -76,6 +76,7 @@ export interface LogicalEdge {
   personId: string;
   unionId: string;
   childKind?: ParentKind;
+  suggested?: boolean;
 }
 
 export interface GenogramWarning {
@@ -96,6 +97,7 @@ export interface LogicalGraph {
   topRowIds: Set<string>;
   pendingPersonIds: Set<string>;
   parentsByChild: Map<string, ResolvedParent[]>;
+  suggestedParentsByChild: Map<string, ResolvedParent[]>;
 }
 
 // Compatibilidade com planilhas antigas. Cada par declara os pais da pessoa
@@ -152,7 +154,7 @@ export type ParentKind = "biological" | "adoptive" | "foster" | "stepparent" | "
 export interface ResolvedParent {
   personId: string;
   kind: ParentKind;
-  source: "explicit" | "legacy";
+  source: "explicit" | "legacy" | "suggested";
   relationshipId?: string;
 }
 
@@ -161,6 +163,14 @@ export function getResolvedParents(
   personId: string,
 ): readonly ResolvedParent[] {
   return graph.parentsByChild.get(personId) ?? [];
+}
+
+/** Candidatos que só existem no desenho até aprovação explícita. */
+export function getSuggestedParents(
+  graph: LogicalGraph,
+  personId: string,
+): readonly ResolvedParent[] {
+  return graph.suggestedParentsByChild.get(personId) ?? [];
 }
 
 function parentKind(qualifier: string | null): ParentKind {
@@ -296,6 +306,7 @@ export function buildLogicalGraph({
     topRowIds: new Set(),
     pendingPersonIds: new Set(),
     parentsByChild: new Map(),
+    suggestedParentsByChild: new Map(),
   };
   if (!persons.length) return g;
 
@@ -341,6 +352,7 @@ export function buildLogicalGraph({
   const invalidChildren = new Set<string>();
   const unionRels = new Map<string, RelRow>();
   const siblings = new Map<string, Set<string>>();
+  const ambiguousSiblingPairs = new Set<string>();
   for (const r of [...rels].sort((a, b) => a.id.localeCompare(b.id))) {
     const from = byId.get(r.from_person_id);
     const to = byId.get(r.to_person_id);
@@ -378,6 +390,9 @@ export function buildLogicalGraph({
     if (r.relationship_type === "union") {
       unionRels.set(pairKey([from.id, to.id]), r);
     } else if (r.relationship_type === "sibling") {
+      if (r.qualifier !== "biological" && r.qualifier !== "twin") {
+        ambiguousSiblingPairs.add(pairKey([from.id, to.id]));
+      }
       const id = from.id === proband.id ? to.id : to.id === proband.id ? from.id : null;
       if (!id) continue;
       const qualifiers = siblings.get(id) ?? new Set<string>();
@@ -533,6 +548,72 @@ export function buildLogicalGraph({
   // ramo. Canonizamos a geração uma vez por pessoa, a partir das filiações.
   resolveGenerations(g, unionRels, siblings);
 
+  // "Irmã(o) do Pai/Mãe" é um papel inequívoco na planilha, mas não
+  // confirma que a irmandade é plena. A árvore apresenta o par candidato
+  // visualmente, sem incorporá-lo aos vínculos resolvidos do dossiê.
+  for (const family of ANCESTOR_FAMILIES.filter((item) => item.generation === 2)) {
+    const anchor = chosenRoles.get(family.child);
+    if (!anchor || invalidChildren.has(anchor.id) || cyclic.has(anchor.id)) continue;
+    const resolved = getResolvedParents(g, anchor.id);
+    if (!resolved.length || resolved.some((parent) => parent.kind !== "biological")) continue;
+    let candidatePair = [...resolved];
+
+    if (resolved.length === 1 && resolved[0].source === "explicit") {
+      const [recorded] = resolved;
+      const role = smartNormalizeRelationship(byId.get(recorded.personId)?.relationship_to_proband);
+      const matched = family.parents.findIndex((slot) => slot === role);
+      if (matched < 0) continue;
+      const missingRole = family.parents[1 - matched];
+      const candidates = (byRole.get(missingRole) ?? []).filter(
+        (person) => person.client_id === anchor.client_id,
+      );
+      if (candidates.length !== 1) continue;
+      const [candidate] = candidates;
+      if (
+        reach([candidate.id], parentsOf).has(anchor.id) ||
+        g.persons.get(candidate.id)!.generation <= g.persons.get(anchor.id)!.generation
+      )
+        continue;
+      const suggestion: ResolvedParent = {
+        personId: candidate.id,
+        kind: "biological",
+        source: "suggested",
+      };
+      g.suggestedParentsByChild.set(anchor.id, [suggestion]);
+      warn(anchor.id, "segundo genitor sugerido pelo ramo. Confira antes de confirmar.");
+      candidatePair = [...resolved, suggestion];
+    }
+
+    if (candidatePair.length !== 2) continue;
+    const familyId = `u_${family.id}`;
+    const resolvedKey = pairKey(resolved.map((parent) => parent.personId));
+    if (resolved.length === 1 && legacyUnionIds.get(resolvedKey) === familyId) {
+      legacyUnionIds.delete(resolvedKey);
+    }
+    legacyUnionIds.set(pairKey(candidatePair.map((parent) => parent.personId)), familyId);
+    const siblingRole = family.child === "Pai" ? "Irmã(o) do Pai" : "Irmã(o) da Mãe";
+    for (const person of byRole.get(siblingRole) ?? []) {
+      if (
+        person.client_id !== anchor.client_id ||
+        person.id === proband.id ||
+        declaredChildren.has(person.id) ||
+        ambiguousSiblingPairs.has(pairKey([person.id, anchor.id])) ||
+        unionRels.has(pairKey([person.id, anchor.id])) ||
+        candidatePair.some(
+          (parent) =>
+            g.persons.get(parent.personId)!.generation <= g.persons.get(person.id)!.generation ||
+            reach([parent.personId], parentsOf).has(person.id),
+        )
+      )
+        continue;
+      g.suggestedParentsByChild.set(
+        person.id,
+        candidatePair.map(({ personId, kind }) => ({ personId, kind, source: "suggested" })),
+      );
+      warn(person.id, "filiação sugerida pelo ramo. Confira quais pais são compartilhados.");
+    }
+  }
+
   for (const [id, person] of g.persons) {
     if (person.lane !== "pending" || g.pendingPersonIds.has(id)) continue;
     warn(
@@ -541,7 +622,13 @@ export function buildLogicalGraph({
     );
   }
 
-  for (const [child, parents] of g.parentsByChild) {
+  const displayChildren = new Set([
+    ...g.parentsByChild.keys(),
+    ...g.suggestedParentsByChild.keys(),
+  ]);
+  for (const child of displayChildren) {
+    const suggested = getSuggestedParents(g, child);
+    const parents = [...getResolvedParents(g, child), ...suggested];
     if (!parents.length) continue;
     const person = g.persons.get(child)!;
     const parentIds = parents.map((p) => p.personId);
@@ -559,7 +646,7 @@ export function buildLogicalGraph({
         partners: parentIds,
         children: kids,
         kind,
-        label: unionKindLabel(kind, relation?.marriage_order),
+        label: relation ? unionKindLabel(kind, relation.marriage_order) : "",
         generation: Math.max(...parentIds.map((p) => g.persons.get(p)!.generation)),
         branchId: person.branchId,
         direction,
@@ -568,7 +655,13 @@ export function buildLogicalGraph({
     }
     kids.push(child);
     const edgeKind = parents.find((p) => p.kind !== "biological")?.kind ?? "biological";
-    g.edges.push({ kind: "child", personId: child, unionId: id, childKind: edgeKind });
+    g.edges.push({
+      kind: "child",
+      personId: child,
+      unionId: id,
+      childKind: edgeKind,
+      ...(suggested.length > 0 ? { suggested: true } : {}),
+    });
   }
   // Alguns casais não têm filhos registrados. Preservamos uniões explicitadas
   // sem convertê-las em filiação, inclusive cônjuge do consulente.
@@ -766,14 +859,54 @@ export interface Placement {
   unionPos: Map<string, { x: number; y: number }>;
   /** Quantas posições salvas tiveram Y corrigido para a faixa da geração (x preservado). */
   normalizedY?: number;
+  /** Posições guardadas sobrepostas, substituídas por posição legível. */
+  adjustedX?: number;
 }
 
 /** Y canônico por geração — cliente+irmãos (0) no topo, ancestrais abaixo. */
 export const genY = (gen: number) => gen * GEN_GAP;
 export const unionY = (gen: number) => gen * GEN_GAP + PERSON_SHAPE / 2;
 
+type Point = { x: number; y: number };
+
+/** Centro do encaixe; a vista subtrai metade do tamanho do nó para renderizá-lo. */
+export function placeUnionHub(
+  union: Pick<UnionEntity, "partners" | "direction">,
+  positions: ReadonlyMap<string, Point>,
+): Point | null {
+  const partners = union.partners.flatMap((id) => {
+    const position = positions.get(id);
+    return position ? [position] : [];
+  });
+  if (partners.length !== union.partners.length || !partners.length) return null;
+  const x = partners.reduce((total, p) => total + p.x + NODE_W / 2, 0) / partners.length;
+  const y = partners.reduce((total, p) => total + p.y + PERSON_SHAPE / 2, 0) / partners.length;
+  const blocked = [...positions].some(
+    ([id, position]) =>
+      !union.partners.includes(id) &&
+      Math.abs(position.x + NODE_W / 2 - x) < NODE_W / 2 + 8 &&
+      y >= position.y &&
+      y <= position.y + NODE_H,
+  );
+  if (partners.length === 1 || blocked) {
+    return {
+      x,
+      y:
+        union.direction === "up"
+          ? Math.min(...partners.map((partner) => partner.y)) - 12
+          : Math.max(...partners.map((partner) => partner.y)) + NODE_H + 12,
+    };
+  }
+  return { x, y };
+}
+
 type Extent = { left: number; right: number };
 const cardExtent = { left: NODE_W / 2, right: NODE_W / 2 };
+const NODE_STEP = NODE_W + SIBLING_GAP;
+
+function centerOfSpan(xs: readonly number[]): number {
+  return (Math.min(...xs) + Math.max(...xs)) / 2;
+}
 
 export function layoutGraph(g: LogicalGraph): Placement {
   const personPos = new Map<string, { x: number; y: number }>();
@@ -819,7 +952,7 @@ export function layoutGraph(g: LogicalGraph): Placement {
       continue;
     }
     const right = extents.get(b) ?? cardExtent;
-    const spacing = (left.right + right.left + BRANCH_GAP) / 2;
+    const spacing = Math.max(NODE_STEP, left.right + right.left + BRANCH_GAP) / 2;
     partnerOffsets.set(origin.id, [-spacing, spacing]);
     extents.set(person.id, {
       left: Math.max(cardExtent.left, spacing + left.left),
@@ -842,21 +975,44 @@ export function layoutGraph(g: LogicalGraph): Placement {
     const origin = parentUnion.get(id);
     if (!origin || placedOrigins.has(origin.id)) continue;
     placedOrigins.add(origin.id);
-    const center = centers.get(id)!;
+    const anchor = centers.get(id)!;
+    const focusGeneration = g.persons.get(id)!.generation;
+    const childCenters = new Map<number, number[]>();
+    for (const child of origin.children) {
+      if (centers.has(child)) continue;
+      const person = g.persons.get(child)!;
+      const direction = person.branchId === "paternal" ? -1 : 1;
+      const others = origin.children
+        .filter(
+          (sibling) =>
+            centers.has(sibling) && g.persons.get(sibling)!.generation === person.generation,
+        )
+        .map((sibling) => centers.get(sibling)!);
+      const extremum = direction === -1 ? Math.min(anchor, ...others) : Math.max(anchor, ...others);
+      centers.set(child, extremum + direction * getSiblingStep(origin.children.length - 1));
+      ancestralQueue.push(child);
+    }
+    for (const child of origin.children) {
+      const generation = g.persons.get(child)!.generation;
+      const siblings = childCenters.get(generation) ?? [];
+      siblings.push(centers.get(child)!);
+      childCenters.set(generation, siblings);
+    }
+    const center = centerOfSpan(childCenters.get(focusGeneration) ?? [anchor]);
     const partners = sortedPartners(origin);
     partners.forEach((parent, index) => {
       if (centers.has(parent)) return;
-      const dx = partnerOffsets.get(origin.id)?.[index] ?? 0;
+      let dx = partnerOffsets.get(origin.id)?.[index] ?? 0;
+      if (
+        partners.length === 2 &&
+        g.persons.get(partners[0])!.branchId === "paternal" &&
+        g.persons.get(partners[1])!.branchId === "maternal"
+      ) {
+        const separation = Math.max(Math.abs(dx), Math.abs(center) + NODE_W / 2);
+        dx = index === 0 ? -separation : separation;
+      }
       centers.set(parent, center + dx);
       ancestralQueue.push(parent);
-    });
-    origin.children.forEach((child, index) => {
-      if (centers.has(child)) return;
-      const person = g.persons.get(child)!;
-      const direction = person.branchId === "paternal" ? -1 : 1;
-      const offset = direction * (index + 1) * getSiblingStep(origin.children.length - 1);
-      centers.set(child, center + offset);
-      ancestralQueue.push(child);
     });
   }
 
@@ -890,18 +1046,96 @@ export function layoutGraph(g: LogicalGraph): Placement {
   }
 
   let normalizedY = 0;
+  let adjustedX = 0;
+  const keptPositions = new Set<string>();
   // Posições manuais continuam válidas no eixo horizontal. A cada atualização,
   // as uniões são recentralizadas sobre os pais que já estão posicionados.
-  for (const [id, person] of g.persons) {
+  const savedOrder = [root, ...[...g.persons.keys()].filter((id) => id !== root)];
+  for (const id of savedOrder) {
+    const person = g.persons.get(id)!;
     const saved = g.positions.get(id);
     if (!saved || saved.node_type !== "person" || !Number.isFinite(saved.x)) continue;
     const y = genY(person.generation);
     if (Math.abs(saved.y - y) > 0.5) normalizedY++;
+    if (
+      [...personPos.values()].some(
+        (position) => Math.abs(position.y - y) < NODE_H && Math.abs(position.x - saved.x) < NODE_W,
+      )
+    ) {
+      adjustedX++;
+      continue;
+    }
     personPos.set(id, { x: saved.x, y });
+    keptPositions.add(id);
   }
   const rootCenter = personPos.has(root) ? personPos.get(root)!.x + NODE_W / 2 : 0;
+  const uniqueCouples = new Map<string, UnionEntity>();
+  for (const [, union] of g.unions) {
+    if (union.direction !== "up" || union.partners.length !== 2 || !union.children.length) continue;
+    const unique = union.partners.every(
+      (id) =>
+        !keptPositions.has(id) &&
+        participants.get(id)?.filter((item) => item.partners.includes(id)).length === 1,
+    );
+    if (unique) for (const id of union.partners) uniqueCouples.set(id, union);
+  }
+
+  function placeSymmetricCouple(union: UnionEntity): boolean {
+    const partners = sortedPartners(union);
+    if (partners.some((id) => personPos.has(id))) return false;
+    const firstGeneration = Math.min(...union.children.map((id) => g.persons.get(id)!.generation));
+    const children = union.children.filter(
+      (id) => g.persons.get(id)!.generation === firstGeneration,
+    );
+    if (children.some((id) => !personPos.has(id))) return false;
+    const axis = centerOfSpan(children.map((id) => personPos.get(id)!.x + NODE_W / 2));
+    let minHalfWidth = Math.max(
+      NODE_STEP / 2,
+      ((centers.get(partners[1]) ?? 0) - (centers.get(partners[0]) ?? 0)) / 2,
+    );
+    let maxHalfWidth = Infinity;
+    const obstacles: { from: number; to: number }[] = [];
+    for (let index = 0; index < partners.length; index++) {
+      const person = g.persons.get(partners[index])!;
+      const sign = index === 0 ? -1 : 1;
+      const limit = rootCenter + (person.branchId === "paternal" ? -NODE_W / 2 : NODE_W / 2);
+      if (person.branchId === "paternal" || person.branchId === "maternal") {
+        const boundary = (limit - axis) * sign;
+        if (
+          (person.branchId === "paternal" && sign < 0) ||
+          (person.branchId === "maternal" && sign > 0)
+        ) {
+          minHalfWidth = Math.max(minHalfWidth, boundary);
+        } else {
+          maxHalfWidth = Math.min(maxHalfWidth, boundary);
+        }
+      }
+      const y = genY(person.generation);
+      for (const other of personPos.values()) {
+        if (Math.abs(other.y - y) >= NODE_H) continue;
+        const distance = (other.x + NODE_W / 2 - axis) * sign;
+        obstacles.push({ from: distance - NODE_STEP, to: distance + NODE_STEP });
+      }
+    }
+    // Aumenta a abertura do casal sem deslocar o eixo dos filhos. Laterais
+    // ainda não posicionados são acomodados depois, fora do núcleo.
+    for (const { from, to } of obstacles.sort((a, b) => a.from - b.from)) {
+      if (minHalfWidth > from + 0.001 && minHalfWidth < to - 0.001) minHalfWidth = to;
+    }
+    if (minHalfWidth > maxHalfWidth + 0.001) return false;
+    partners.forEach((id, index) => {
+      personPos.set(id, {
+        x: axis + (index === 0 ? -minHalfWidth : minHalfWidth) - NODE_W / 2,
+        y: genY(g.persons.get(id)!.generation),
+      });
+    });
+    return true;
+  }
+
   for (const [id, preferredCenter] of centers) {
     if (personPos.has(id)) continue;
+    const couple = uniqueCouples.get(id);
+    if (couple && placeSymmetricCouple(couple)) continue;
     const p = g.persons.get(id)!;
     const y = genY(p.generation);
     const direction =
@@ -909,25 +1143,64 @@ export function layoutGraph(g: LogicalGraph): Placement {
     let center = rootCenter + preferredCenter;
     if (p.branchId === "paternal") center = Math.min(center, rootCenter - NODE_W / 2);
     if (p.branchId === "maternal") center = Math.max(center, rootCenter + NODE_W / 2);
-    const occupied = (x: number) =>
-      [...personPos.values()].some(
-        (pos) => Math.abs(pos.y - y) < NODE_H && Math.abs(pos.x - x) < NODE_W + SIBLING_GAP,
-      );
     let x = center - NODE_W / 2;
-    while (occupied(x)) x += direction * (NODE_W + SIBLING_GAP);
+    for (;;) {
+      const overlapping = [...personPos.values()].filter(
+        (pos) => Math.abs(pos.y - y) < NODE_H && Math.abs(pos.x - x) < NODE_STEP - 0.001,
+      );
+      if (!overlapping.length) break;
+      x =
+        direction < 0
+          ? Math.min(...overlapping.map((position) => position.x)) - NODE_STEP
+          : Math.max(...overlapping.map((position) => position.x)) + NODE_STEP;
+    }
     personPos.set(id, { x, y });
   }
 
-  for (const [id, union] of g.unions) {
-    const parents = union.partners.map((p) => personPos.get(p)!);
-    const x = parents.reduce((total, p) => total + p.x + NODE_W / 2, 0) / parents.length;
-    const y = unionY(union.generation);
-    const saved = g.positions.get(id);
-    if (saved?.node_type === "union" && Math.abs(saved.y - y) > 0.5) normalizedY++;
-    unionPos.set(id, { x, y });
+  // Quando há espaço, finalize o alinhamento dos grupos depois de acomodar
+  // posições guardadas, parentes laterais e colisões. Um genitor compartilhado
+  // continua uma pessoa única e não é deslocado para satisfazer outra união.
+  const ancestry = [...g.unions.values()]
+    .filter((union) => union.direction === "up" && union.children.length)
+    .sort((a, b) => a.generation - b.generation);
+  for (const union of ancestry) {
+    const movable = union.partners.every(
+      (id) =>
+        !keptPositions.has(id) &&
+        participants.get(id)?.filter((item) => item.partners.includes(id)).length === 1,
+    );
+    if (!movable) continue;
+    const hub = placeUnionHub(union, personPos)!;
+    const childRow = Math.min(...union.children.map((id) => personPos.get(id)!.y));
+    const children = union.children.map((id) => personPos.get(id)!).filter((p) => p.y === childRow);
+    const delta = centerOfSpan(children.map((child) => child.x + NODE_W / 2)) - hub.x;
+    if (Math.abs(delta) < 0.001) continue;
+    const available = union.partners.every((id) => {
+      const position = personPos.get(id)!;
+      const x = position.x + delta;
+      const side = g.persons.get(id)!.branchId;
+      if (side === "paternal" && x + NODE_W > rootCenter) return false;
+      if (side === "maternal" && x < rootCenter) return false;
+      return [...personPos].every(
+        ([otherId, other]) =>
+          union.partners.includes(otherId) ||
+          Math.abs(other.y - position.y) >= NODE_H ||
+          Math.abs(other.x - x) >= NODE_STEP - 0.001,
+      );
+    });
+    if (!available) continue;
+    for (const id of union.partners) {
+      const point = personPos.get(id)!;
+      personPos.set(id, { ...point, x: point.x + delta });
+    }
   }
 
-  const placement: Placement = { personPos, unionPos, normalizedY };
+  for (const [id, union] of g.unions) {
+    const position = placeUnionHub(union, personPos);
+    if (position) unionPos.set(id, position);
+  }
+
+  const placement: Placement = { personPos, unionPos, normalizedY, adjustedX };
   if (import.meta.env.DEV) {
     const violations = checkLayoutInvariants(g, placement);
     if (violations.length > 0) {

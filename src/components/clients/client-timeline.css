@@ -1,0 +1,434 @@
+.case-timeline {
+  padding-block: 0.5rem 1.5rem;
+  color: var(--ink);
+}
+
+.case-timeline-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.65rem 0.75rem;
+  padding-bottom: 1rem;
+}
+
+.case-timeline-filters > div {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 0;
+  max-width: min(16rem, 100%);
+}
+
+.case-timeline-filters label,
+.case-timeline-count {
+  color: var(--ink-soft);
+  font-size: 0.875rem;
+}
+
+.case-timeline-filters label {
+  font-weight: 600;
+}
+
+.case-timeline-count {
+  margin-inline-start: auto;
+  align-self: end;
+  padding-block-end: 0.6rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.case-timeline-layout {
+  display: grid;
+  grid-template-columns: minmax(17rem, 0.84fr) minmax(20rem, 1.16fr);
+  align-items: start;
+  gap: clamp(1rem, 3vw, 2.5rem);
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.case-timeline-list h3,
+.case-timeline-overview h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 1.1rem;
+  font-weight: 650;
+}
+
+.case-timeline-list h3 {
+  margin-block: 0.25rem 0.75rem;
+}
+
+.case-timeline-entries {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--border);
+}
+
+.case-timeline-entries > li {
+  border-bottom: 1px solid var(--border);
+}
+
+.case-timeline-row {
+  display: grid;
+  grid-template-columns: 6.15rem minmax(0, 1fr);
+  align-items: start;
+  gap: 0.55rem;
+  width: 100%;
+  min-height: 3.25rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid transparent;
+  text-align: left;
+}
+
+.case-timeline-row:hover {
+  background: var(--archive-doc);
+}
+
+.case-timeline-row[aria-pressed="true"] {
+  border-color: var(--input);
+  border-radius: 5px;
+  background: var(--forest-mist);
+}
+
+.case-timeline-row:focus-visible,
+.case-timeline-pin:focus-visible {
+  outline: 2px solid var(--forest);
+  outline-offset: 2px;
+  z-index: 4;
+}
+
+.case-timeline-row-date {
+  padding-top: 0.05rem;
+  color: var(--ink-soft);
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.case-timeline-row-entry {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 0.75rem minmax(0, 1fr);
+  align-items: start;
+  gap: 0.55rem;
+}
+
+.case-timeline-row-entry strong,
+.case-timeline-row-person {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.case-timeline-row-person {
+  margin-top: 0.11rem;
+  color: var(--ink-soft);
+}
+
+.case-timeline-row-entry > .case-timeline-mark {
+  margin-top: 0.26rem;
+}
+
+.case-timeline-undated {
+  margin-top: 1.4rem;
+}
+
+.case-timeline-undated h4,
+.case-timeline-lane h4 {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-block: 0 0.5rem;
+  color: var(--ink);
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+.case-timeline-undated h4 > span {
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.case-timeline-overview {
+  position: sticky;
+  top: 1rem;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--archive-doc);
+}
+
+.case-timeline-overview-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  column-gap: 1rem;
+  padding: 1rem 1.2rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.case-timeline-range {
+  color: var(--forest);
+  font-size: 1.125rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.case-timeline-figure {
+  margin: 0;
+  padding: 0.9rem 1.2rem 0.8rem;
+  background: var(--archive);
+}
+
+.case-timeline-figure figcaption,
+.case-timeline-graph-empty {
+  padding: 0.6rem 0;
+  color: var(--ink-soft);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.case-timeline-graph-empty {
+  padding-inline: 1.2rem;
+}
+
+.case-timeline-ruler {
+  position: relative;
+  height: 1.65rem;
+  margin-inline: 1.3rem;
+  border-bottom: 1px solid var(--input);
+}
+
+.case-timeline-ruler span {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  color: var(--ink-soft);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.case-timeline-plot {
+  position: relative;
+  margin-inline: 1.3rem;
+  padding-top: 0.55rem;
+}
+
+.case-timeline-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.case-timeline-grid span {
+  position: absolute;
+  inset-block: 0;
+  border-left: 1px solid var(--border);
+}
+
+.case-timeline-grid span.case-timeline-guide {
+  border-left: 1px dashed var(--bronze);
+}
+
+.case-timeline-lane {
+  position: relative;
+  padding-top: 0.3rem;
+}
+
+.case-timeline-lane h4 {
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 0 0 -0.2rem;
+  padding: 0.18rem 0.22rem;
+  background: var(--archive);
+}
+
+.case-timeline-track {
+  position: relative;
+  isolation: isolate;
+  height: 2.9rem;
+}
+
+.case-timeline-track::before {
+  position: absolute;
+  inset: 50% 0 auto;
+  border-top: 1px solid var(--input);
+  content: "";
+}
+
+.case-timeline-pin {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.26rem;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.case-timeline-pin:hover {
+  background: var(--forest-mist);
+}
+
+.case-timeline-pin[aria-pressed="true"] {
+  z-index: 2;
+  background: var(--archive-doc);
+  border-color: var(--bronze);
+}
+
+.case-timeline-cluster {
+  color: var(--ink);
+  font-size: 0.875rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.case-timeline-mark {
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.75rem;
+  flex: 0 0 auto;
+  color: var(--forest);
+  background: currentColor;
+}
+
+.case-timeline-mark[data-kind="birth"] {
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  background: var(--archive-doc);
+}
+
+.case-timeline-mark[data-kind="death"] {
+  color: var(--clinical-critical);
+  clip-path: polygon(
+    37% 0%,
+    63% 0%,
+    63% 37%,
+    100% 37%,
+    100% 63%,
+    63% 63%,
+    63% 100%,
+    37% 100%,
+    37% 63%,
+    0% 63%,
+    0% 37%,
+    37% 37%
+  );
+}
+
+.case-timeline-mark[data-kind="event"] {
+  width: 0.62rem;
+  height: 0.62rem;
+  color: var(--bronze);
+  transform: rotate(45deg);
+}
+
+.case-timeline-interval {
+  position: absolute;
+  top: calc(50% + 0.85rem);
+  transform: translateY(-50%);
+  min-width: 2px;
+  height: 0.5rem;
+  border: 1px solid var(--forest-soft);
+  border-radius: 2px;
+  background: var(--forest-mist);
+  pointer-events: none;
+}
+
+.case-timeline-interval[data-kind="death"] {
+  border-color: var(--clinical-critical);
+}
+
+.case-timeline-interval[data-kind="event"] {
+  border-color: var(--bronze);
+  background: var(--gold-muted);
+}
+
+.case-timeline-overview-detail {
+  padding: 1rem 1.2rem 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.case-timeline-detail-title {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.case-timeline-detail-title > div,
+.case-timeline-detail footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+}
+
+.case-timeline-detail-title strong {
+  color: var(--ink);
+  font-size: 0.95rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.case-timeline-detail-title span,
+.case-timeline-detail footer {
+  color: var(--ink-soft);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.case-timeline-detail-meta {
+  margin-top: 0.5rem;
+  overflow-wrap: anywhere;
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.case-timeline-detail footer {
+  align-items: center;
+  margin-top: 0.2rem;
+}
+
+.case-timeline-row-detail {
+  display: none;
+}
+
+@media (max-width: 63.99rem) {
+  .case-timeline-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .case-timeline-overview {
+    position: static;
+    grid-row: 1;
+  }
+
+  .case-timeline-row-detail {
+    display: block;
+    padding-inline: 0.65rem;
+  }
+
+  .case-timeline-overview-detail .case-timeline-detail footer,
+  .case-timeline-overview-detail .case-timeline-detail-meta {
+    display: none;
+  }
+}
+
+@media (max-width: 31.99rem) {
+  .case-timeline-filters > div {
+    flex: 1 1 min(8rem, 100%);
+    max-width: 100%;
+  }
+
+  .case-timeline-figure,
+  .case-timeline-overview-header,
+  .case-timeline-overview-detail {
+    padding-inline: 0.7rem;
+  }
+}

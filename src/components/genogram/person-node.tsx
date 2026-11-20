@@ -1,6 +1,6 @@
 import { personSymbol } from "./person-symbol";
-import { memo } from "react";
-import { Handle, Position, type NodeProps } from "@xyflow/react";
+import { memo, useEffect } from "react";
+import { Handle, Position, useUpdateNodeInternals, useStore, type NodeProps } from "@xyflow/react";
 import { Plus } from "lucide-react";
 import {
   DropdownMenu,
@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 export interface PersonNodeData {
   full_name: string;
   preferred_name?: string | null;
+  display_full_name?: boolean;
   gender?: string | null;
   birth_date?: string | null;
   death_date?: string | null;
@@ -22,6 +23,9 @@ export interface PersonNodeData {
   is_proband: boolean;
   notes?: string | null;
   relationship_to_proband?: string | null;
+  connecting?: boolean;
+  connectionOrigin?: boolean;
+  onChooseConnection?: () => void;
   onQuickAdd?: (relativeType: string) => void;
   [key: string]: unknown;
 }
@@ -38,8 +42,12 @@ export interface PersonNodeData {
  * sólido; o símbolo é a moldura, nunca cobre o texto. Cliente destacado
  * por moldura ameixa e badge — sem escala exagerada.
  */
-function PersonNodeComponent({ data, selected }: NodeProps) {
+function PersonNodeComponent({ id, data, selected }: NodeProps) {
   const d = data as unknown as PersonNodeData;
+  const zoom = useStore((store) => store.transform[2]);
+  const overview = zoom < 0.72;
+  const updateHandles = useUpdateNodeInternals();
+  useEffect(() => updateHandles(id), [d.connecting, id, updateHandles]);
   const gender = personSymbol(d);
   const isMale = gender === "masculino";
   const isFemale = gender === "feminino";
@@ -50,13 +58,14 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
 
   const borderColor = isMale ? "border-forest" : isFemale ? "border-forest" : "border-gold";
 
-  const displayName = d.preferred_name || d.full_name || "—";
+  const displayName = (!d.display_full_name && d.preferred_name) || d.full_name || "—";
   // Nome em duas linhas se necessário, sem cortar — o container é largo.
   const dates = personDatesLabel(d.birth_date, d.death_date);
 
   return (
     <div
       className={cn("relative flex flex-col items-center group", d.is_proband && "z-20")}
+      data-connect-source={d.connectionOrigin || undefined}
       style={{ userSelect: "none", width: 140 }}
     >
       {/* ── SHAPE ─────────────────────────────────────────── */}
@@ -92,7 +101,7 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
         )}
 
         {/* Adicionar parente rápido — visível ao selecionar (touch) ou passar o mouse (hover) */}
-        {d.onQuickAdd && (
+        {d.onQuickAdd && !d.connecting && (
           <div
             className={cn(
               "absolute -top-2 -right-2 z-40 transition-opacity",
@@ -147,6 +156,24 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
               strokeLinecap="round"
             />
           </svg>
+        )}
+        {d.connecting && (
+          <>
+            <Handle
+              id="link-out"
+              type="source"
+              position={Position.Right}
+              className="geno-link-handle"
+              title="Arraste para conectar"
+            />
+            <Handle
+              id="link-in"
+              type="target"
+              position={Position.Left}
+              className="geno-link-handle"
+              title="Solte a conexão aqui"
+            />
+          </>
         )}
         {/* Handles fixados NA FORMA com 6px de respiro (stub) */}
         <Handle
@@ -214,10 +241,36 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
         />
       </div>
 
-      <div className="atlas-person-info">
-        <p className="text-sm font-semibold leading-tight break-words">{displayName}</p>
-        {dates && <p className="atlas-person-dates tabular-nums">{dates}</p>}
-        {d.is_proband && <span className="text-xs text-bronze">Consultante</span>}
+      <div
+        className="atlas-person-info"
+        style={overview ? { minHeight: 42, paddingInline: 5 } : undefined}
+      >
+        {d.connecting && (
+          <button
+            type="button"
+            className="nodrag nopan absolute inset-0 rounded-[inherit] focus-visible:ring-2 focus-visible:ring-forest"
+            aria-label={`Escolher ${displayName} para vínculo`}
+            aria-pressed={d.connectionOrigin}
+            onClick={(event) => {
+              event.stopPropagation();
+              d.onChooseConnection?.();
+            }}
+          />
+        )}
+        <p
+          className={cn(
+            "font-semibold leading-tight",
+            overview ? "w-full truncate" : "break-words",
+          )}
+          style={{ fontSize: overview ? Math.min(44, 14 / Math.max(zoom, 0.15)) : 16 }}
+          title={[d.full_name || displayName, d.relationship_to_proband, dates]
+            .filter(Boolean)
+            .join(" · ")}
+        >
+          {displayName}
+        </p>
+        {!overview && dates && <p className="atlas-person-dates tabular-nums">{dates}</p>}
+        {!overview && d.is_proband && <span className="text-xs text-bronze">Consultante</span>}
       </div>
     </div>
   );

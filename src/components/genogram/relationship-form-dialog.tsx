@@ -2,6 +2,7 @@ import { invalidateCase } from "@/lib/clinical-intel";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { ArrowDownUp } from "lucide-react";
 
 import {
   Sheet,
@@ -309,6 +310,25 @@ export function RelationshipFormDialog({
                 </Select>
               </div>
             </div>
+
+            {isParentLink && v.from_person_id && v.to_person_id && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="min-h-11"
+                disabled={pending}
+                onClick={() =>
+                  setV((state) => ({
+                    ...state,
+                    from_person_id: state.to_person_id,
+                    to_person_id: state.from_person_id,
+                  }))
+                }
+              >
+                <ArrowDownUp className="size-4" /> Inverter direção da filiação
+              </Button>
+            )}
 
             {qualifierOptions.length > 0 && (
               <div className="space-y-2 pt-2">

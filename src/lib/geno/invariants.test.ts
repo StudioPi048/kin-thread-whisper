@@ -3,7 +3,10 @@ import {
   buildLogicalGraph,
   genY,
   getResolvedParents,
+  getSuggestedParents,
   layoutGraph,
+  NODE_W,
+  placeUnionHub,
   type LogicalGraph,
 } from "./build";
 import type { PersonRow } from "@/lib/patterns";
@@ -434,5 +437,149 @@ describe("filiações confiáveis no mapa ampliado", () => {
     expect(getResolvedParents(graph, hr.id)).toEqual([]);
     expect(graph.topRowIds.has(hr.id)).toBe(false);
     expect(graph.pendingPersonIds.has(hr.id)).toBe(true);
+  });
+});
+
+function unclesFromLegacySheet() {
+  const { persons } = family();
+  const [client, sibling1, sibling2, father, mother, pg, pm, mg, mm] = persons;
+  const uncle = p("Tio(a) paterno(a)", "Raul");
+  const aunt = p("Tia materna", "Vera");
+  const uncle2 = p("Irmã(o) do Pai", "Ivo");
+  const unknown = p("Tio", "Jorge");
+  return {
+    persons: [...persons, uncle, uncle2, aunt, unknown],
+    client,
+    sibling1,
+    sibling2,
+    father,
+    mother,
+    pg,
+    pm,
+    mg,
+    mm,
+    uncle,
+    uncle2,
+    aunt,
+    unknown,
+  };
+}
+
+describe("ramos colaterais legados e alinhamento", () => {
+  it("desenha tios no ramo dos seus próprios avós em revisão e centraliza cada fratria", () => {
+    const f = unclesFromLegacySheet();
+    const graph = buildLogicalGraph({ persons: f.persons, rels: [] });
+    const layout = layoutGraph(graph);
+    const centerX = (id: string) => layout.personPos.get(id)!.x + NODE_W / 2;
+    const groupX = (children: readonly PersonRow[]) => {
+      const xs = children.map((child) => centerX(child.id));
+      return (Math.min(...xs) + Math.max(...xs)) / 2;
+    };
+    for (const [anchor, children, parents] of [
+      [f.father, [f.father, f.uncle, f.uncle2], [f.pg, f.pm]],
+      [f.mother, [f.mother, f.aunt], [f.mg, f.mm]],
+    ] as const) {
+      const unionId = parentUnion(graph, anchor.id)!;
+      const match = expect.arrayContaining(parents.map(({ id }) => id));
+      expect(graph.unions.get(unionId)?.partners).toEqual(match);
+      expect(layout.unionPos.get(unionId)?.x).toBeCloseTo(groupX(children), 5);
+      for (const relative of children.slice(1)) {
+        expect(getResolvedParents(graph, relative.id)).toEqual([]);
+        expect(getSuggestedParents(graph, relative.id).map(({ personId }) => personId)).toEqual(
+          match,
+        );
+        expect(graph.pendingPersonIds.has(relative.id)).toBe(true);
+        expect(
+          graph.edges.find((edge) => edge.kind === "child" && edge.personId === relative.id),
+        ).toMatchObject({ unionId, suggested: true });
+      }
+    }
+    expect(getSuggestedParents(graph, f.unknown.id)).toEqual([]);
+    expect(parentUnion(graph, f.unknown.id)).toBeUndefined();
+    expect(layout.unionPos.get(parentUnion(graph, f.client.id)!)?.x).toBeCloseTo(
+      groupX([f.client, f.sibling1, f.sibling2]),
+      5,
+    );
+    expect(centerX(f.uncle.id)).toBeLessThan(centerX(f.client.id));
+    expect(centerX(f.aunt.id)).toBeGreaterThan(centerX(f.client.id));
+    expect(checkLayoutInvariants(graph, layout)).toEqual([]);
+  });
+
+  it("preserva um único pai registrado e oferece só o segundo identificado pelo papel", () => {
+    const f = unclesFromLegacySheet();
+    const graph = buildLogicalGraph({
+      persons: f.persons,
+      rels: [
+        rel(f.mg.id, f.mother.id, "parent"),
+        rel(f.mg.id, f.aunt.id, "parent"),
+        rel(f.mg.id, f.mm.id, "union"),
+      ],
+    });
+    expect(getResolvedParents(graph, f.mother.id)).toMatchObject([{ personId: f.mg.id }]);
+    expect(getSuggestedParents(graph, f.mother.id)).toMatchObject([
+      { personId: f.mm.id, source: "suggested" },
+    ]);
+    expect(getSuggestedParents(graph, f.aunt.id)).toEqual([]);
+    const motherUnion = graph.unions.get(parentUnion(graph, f.mother.id)!)!;
+    const auntOrigin = graph.unions.get(parentUnion(graph, f.aunt.id)!)!;
+    expect(motherUnion.id).not.toBe(auntOrigin.id);
+    expect(motherUnion.partners).toHaveLength(2);
+    expect(auntOrigin.partners).toEqual([f.mg.id]);
+    expect(auntOrigin.label).toBe("");
+    const layout = layoutGraph(graph);
+    expect(layout.unionPos.get(auntOrigin.id)!.y).toBeLessThan(layout.personPos.get(f.mg.id)!.y);
+
+    const moved = new Map(layout.personPos);
+    const first = moved.get(f.mg.id)!;
+    moved.set(f.mg.id, { x: first.x - 30, y: first.y });
+    expect(placeUnionHub(motherUnion, moved)!.x).toBeCloseTo(
+      layout.unionPos.get(motherUnion.id)!.x - 15,
+      5,
+    );
+  });
+
+  it("abre o casal simetricamente quando uma faixa intermediária bloqueia um dos pais", () => {
+    const f = unclesFromLegacySheet();
+    const adoptive = p("Irmã adotiva", "Beatriz");
+    const aunt2 = p("Tio(a) materno(a)", "Iolanda");
+    const graph = buildLogicalGraph({
+      persons: [
+        ...f.persons.filter(({ id }) => id !== f.sibling2.id && id !== f.uncle2.id),
+        adoptive,
+        aunt2,
+      ],
+      rels: [
+        rel(f.father.id, adoptive.id, "parent", { qualifier: "adotiva" }),
+        rel(f.mother.id, adoptive.id, "parent", { qualifier: "adotiva" }),
+        rel(f.mg.id, f.mother.id, "parent"),
+      ],
+    });
+    const layout = layoutGraph(graph);
+    const x = (person: PersonRow) => layout.personPos.get(person.id)!.x + NODE_W / 2;
+    const midpoint = (children: readonly PersonRow[]) => {
+      const centers = children.map(x);
+      return (Math.min(...centers) + Math.max(...centers)) / 2;
+    };
+    expect(graph.persons.get(adoptive.id)?.generation).toBe(0.5);
+    for (const [child, siblings] of [
+      [f.client, [f.client, f.sibling1]],
+      [f.father, [f.father, f.uncle]],
+      [f.mother, [f.mother, f.aunt, aunt2]],
+    ] as const) {
+      const hub = layout.unionPos.get(parentUnion(graph, child.id)!);
+      expect(hub?.x).toBeCloseTo(midpoint(siblings), 5);
+    }
+    expect(checkLayoutInvariants(graph, layout)).toEqual([]);
+  });
+
+  it("não propõe a família quando há rótulos duplicados para o genitor em falta", () => {
+    const f = unclesFromLegacySheet();
+    const graph = buildLogicalGraph({
+      persons: [...f.persons, p("Avó materna", "Candidata homônima")],
+      rels: [rel(f.mg.id, f.mother.id, "parent")],
+    });
+    expect(getSuggestedParents(graph, f.mother.id)).toEqual([]);
+    expect(getSuggestedParents(graph, f.aunt.id)).toEqual([]);
+    expect(parentUnion(graph, f.aunt.id)).toBeUndefined();
   });
 });

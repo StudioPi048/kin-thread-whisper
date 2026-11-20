@@ -41,7 +41,12 @@ import type { Tables, TablesUpdate } from "@/integrations/supabase/types";
 import { genealogicalOrder } from "@/lib/relationship-normalizer";
 import { ensureProband } from "@/lib/ensure-proband";
 import { RelationshipCombobox } from "./relationship-combobox";
-import { buildLogicalGraph, getResolvedParents, type LogicalGraph } from "@/lib/geno/build";
+import {
+  buildLogicalGraph,
+  getResolvedParents,
+  getSuggestedParents,
+  type LogicalGraph,
+} from "@/lib/geno/build";
 import {
   inferGenderFromRelationship,
   readClanFile,
@@ -123,7 +128,7 @@ function previewPerson(clientId: string, line: number, record: ImportRecord): Pe
 }
 
 function parentSummary(graph: LogicalGraph, personId: string) {
-  const parents = getResolvedParents(graph, personId);
+  const parents = [...getResolvedParents(graph, personId), ...getSuggestedParents(graph, personId)];
   const names = parents.map(
     (parent) => graph.persons.get(parent.personId)?.row.full_name.trim() || "Pessoa sem nome",
   );
@@ -788,7 +793,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
                   const { parents, names } = parentSummary(graph, r.id);
                   const warning = warningByPersonId.get(r.id);
                   const pending = graph.pendingPersonIds.has(r.id);
-                  const relationLabel = parents.some((parent) => parent.source === "legacy")
+                  const relationLabel = parents.some((parent) => parent.source !== "explicit")
                     ? "Sugerida pelo parentesco"
                     : "Registrada";
                   const hasSecondaryData = !!(

@@ -53,6 +53,8 @@ export function GenogramThumbnail({
                 return p ? (
                   <path
                     key={pid}
+                    stroke={graph.suggestedParentsByChild.has(pid) ? "var(--bronze)" : undefined}
+                    strokeDasharray={graph.suggestedParentsByChild.has(pid) ? "4 5" : undefined}
                     d={`M${p.x + NODE_W / 2} ${p.y + (u.direction === "down" ? 10 : 66)}V${(p.y + pos.y) / 2}H${pos.x}V${pos.y}`}
                   />
                 ) : null;

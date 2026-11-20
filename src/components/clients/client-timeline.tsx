@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Baby, CalendarClock, Cross, MapPin, RefreshCw, Sparkles } from "lucide-react";
+import { CalendarClock, MapPin, RefreshCw } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,8 @@ import {
   type TimelineFilter,
   type TimelineKind,
 } from "@/lib/timeline";
+import { buildTimelineScale, groupTimelineMarkers } from "@/lib/timeline-scale";
+import "./client-timeline.css";
 
 interface Props {
   clientId: string;
@@ -31,6 +33,7 @@ const KIND_LABEL: Record<TimelineKind, string> = {
   death: "Falecimentos",
   event: "Eventos de vida",
 };
+const KINDS: TimelineKind[] = ["birth", "death", "event"];
 
 export function ClientTimeline({ clientId }: Props) {
   const q = useQuery({
@@ -46,12 +49,40 @@ export function ClientTimeline({ clientId }: Props) {
   });
 
   const [filter, setFilter] = useState<TimelineFilter>({});
-  const all = useMemo(() => buildCaseTimeline(q.data ?? []), [q.data]);
+  const [selection, setSelection] = useState<string | null>(null);
+  const all = useMemo(() => {
+    const persons = q.data ?? [];
+    const byId = new Map(persons.map((person) => [person.id, person]));
+    const counts = new Map<string, number>();
+    for (const person of persons) {
+      const name = person.preferred_name || person.full_name;
+      counts.set(name, (counts.get(name) ?? 0) + 1);
+    }
+    return buildCaseTimeline(persons).map((item) => {
+      const person = byId.get(item.personId);
+      if (!person || (counts.get(item.personName) ?? 0) < 2) return item;
+      return {
+        ...item,
+        personName: [person.full_name || item.personName, person.relationship_to_proband]
+          .filter(Boolean)
+          .join(" · "),
+      };
+    });
+  }, [q.data]);
   const items = useMemo(() => filterTimeline(all, filter), [all, filter]);
+  const scale = useMemo(() => buildTimelineScale(items), [items]);
+  const [dated, undated] = useMemo(() => {
+    const plotted = new Set(scale?.events.map(({ item }) => item.key) ?? []);
+    return [
+      items.filter((item) => plotted.has(item.key)),
+      items.filter((item) => !plotted.has(item.key)),
+    ];
+  }, [items, scale]);
+  const selected = items.find((item) => item.key === selection) ?? dated[0] ?? undated[0];
   const people = useMemo(
     () =>
       [...new Map(all.map((i) => [i.personId, i.personName])).entries()].sort((a, b) =>
-        a[1].localeCompare(b[1]),
+        a[1].localeCompare(b[1], "pt-BR"),
       ),
     [all],
   );
@@ -87,14 +118,13 @@ export function ClientTimeline({ clientId }: Props) {
 
   if (all.length === 0)
     return (
-      <div className="rounded-sm border border-dashed border-border bg-forest-soft/40 p-12 text-center">
-        <CalendarClock className="mx-auto size-10 text-forest opacity-60" aria-hidden />
-        <p className="mt-4 font-serif text-2xl font-bold text-primary">
-          Ainda não há datas registradas
+      <div className="rounded-md border border-dashed border-border bg-card p-8 text-center">
+        <CalendarClock className="mx-auto size-8 text-forest" aria-hidden />
+        <p className="mt-3 text-lg font-semibold text-primary">
+          Ainda não há registros na linha do tempo
         </p>
-        <p className="mx-auto mt-2 max-w-md text-[15px] leading-relaxed text-muted-foreground">
-          Nascimentos, falecimentos e eventos de vida aparecem aqui quando forem preenchidos na
-          ficha de cada familiar.
+        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
+          Abra a planilha para preencher datas ou a ficha de um familiar para registrar um evento.
         </p>
         <Button asChild variant="outline" className="mt-4 min-h-11">
           <Link to="/app/clientes/$clientId" params={{ clientId }} search={{ tab: "clan" }}>
@@ -104,24 +134,18 @@ export function ClientTimeline({ clientId }: Props) {
       </div>
     );
 
-  const dated = items.filter((i) => i.precision !== "unknown");
-  const undated = items.filter((i) => i.precision === "unknown");
-  const sel = "h-11 rounded-md border border-input bg-background px-2 text-[14px]";
+  const selectClass =
+    "h-11 min-w-0 rounded-md border border-input bg-card px-3 text-sm text-foreground";
+  const hasFilter = !!(filter.personId || filter.generation !== undefined || filter.kind);
 
   return (
-    <div className="space-y-6 pt-2">
-      <div
-        className="flex flex-wrap items-end gap-3"
-        role="group"
-        aria-label="Filtros da linha do tempo"
-      >
-        <div className="flex flex-col gap-1">
-          <label htmlFor="tl-person" className="text-[13px] font-semibold text-muted-foreground">
-            Familiar
-          </label>
+    <div className="case-timeline">
+      <div className="case-timeline-filters" role="group" aria-label="Filtros da linha do tempo">
+        <div>
+          <label htmlFor="tl-person">Familiar</label>
           <select
             id="tl-person"
-            className={sel}
+            className={selectClass}
             value={filter.personId ?? ""}
             onChange={(e) => setFilter({ ...filter, personId: e.target.value || undefined })}
           >
@@ -133,13 +157,11 @@ export function ClientTimeline({ clientId }: Props) {
             ))}
           </select>
         </div>
-        <div className="flex flex-col gap-1">
-          <label htmlFor="tl-gen" className="text-[13px] font-semibold text-muted-foreground">
-            Geração
-          </label>
+        <div>
+          <label htmlFor="tl-gen">Geração</label>
           <select
             id="tl-gen"
-            className={sel}
+            className={selectClass}
             value={filter.generation === undefined ? "" : String(filter.generation)}
             onChange={(e) => {
               const v = e.target.value;
@@ -158,13 +180,11 @@ export function ClientTimeline({ clientId }: Props) {
             {hasNoGen && <option value="none">Vínculo não informado</option>}
           </select>
         </div>
-        <div className="flex flex-col gap-1">
-          <label htmlFor="tl-kind" className="text-[13px] font-semibold text-muted-foreground">
-            Tipo
-          </label>
+        <div>
+          <label htmlFor="tl-kind">Tipo</label>
           <select
             id="tl-kind"
-            className={sel}
+            className={selectClass}
             value={filter.kind ?? ""}
             onChange={(e) =>
               setFilter({
@@ -174,84 +194,277 @@ export function ClientTimeline({ clientId }: Props) {
             }
           >
             <option value="">Todos</option>
-            {(Object.keys(KIND_LABEL) as TimelineKind[]).map((k) => (
-              <option key={k} value={k}>
-                {KIND_LABEL[k]}
+            {KINDS.map((kind) => (
+              <option key={kind} value={kind}>
+                {KIND_LABEL[kind]}
               </option>
             ))}
           </select>
         </div>
-        {(filter.personId || filter.generation !== undefined || filter.kind) && (
+        {hasFilter && (
           <Button variant="ghost" className="min-h-11" onClick={() => setFilter({})}>
             Limpar filtros
           </Button>
         )}
-        <p className="ml-auto text-[14px] text-muted-foreground" role="status">
+        <p className="case-timeline-count" role="status">
           {items.length} de {all.length} registros
         </p>
       </div>
 
-      {items.length === 0 ? (
-        <p className="rounded-md border border-border bg-background p-6 text-[15px] text-muted-foreground">
+      {!selected ? (
+        <p className="rounded-md border border-border bg-card p-6 text-sm text-muted-foreground">
           Nenhum registro com esses filtros.
         </p>
       ) : (
-        <>
-          {dated.length > 0 && (
-            <ol
-              className="space-y-3 border-l-2 border-forest/30 pl-5"
-              aria-label="Registros com data"
-            >
-              {dated.map((it) => (
-                <TimelineCard key={it.key} item={it} clientId={clientId} />
-              ))}
-            </ol>
-          )}
-          {undated.length > 0 && (
-            <section aria-labelledby="tl-undated" className="space-y-3">
-              <h3 id="tl-undated" className="text-[15px] font-semibold text-primary">
-                Sem data utilizável ({undated.length}) — não posicionados na cronologia
-              </h3>
-              <ol className="space-y-3">
-                {undated.map((it) => (
-                  <TimelineCard key={it.key} item={it} clientId={clientId} />
-                ))}
-              </ol>
-            </section>
-          )}
-        </>
+        <div className="case-timeline-layout">
+          <section className="case-timeline-list" aria-labelledby="case-timeline-list-title">
+            <h3 id="case-timeline-list-title">Cronologia</h3>
+            {dated.length > 0 && (
+              <TimelineList
+                items={dated}
+                selected={selected}
+                clientId={clientId}
+                onSelect={setSelection}
+                label="Registros com data"
+              />
+            )}
+            {undated.length > 0 && (
+              <div className="case-timeline-undated">
+                <h4>
+                  Sem data utilizável <span>{undated.length}</span>
+                </h4>
+                <TimelineList
+                  items={undated}
+                  selected={selected}
+                  clientId={clientId}
+                  onSelect={setSelection}
+                  label="Registros sem data utilizável"
+                  undated
+                />
+              </div>
+            )}
+          </section>
+
+          <TimelineOverview
+            scale={scale}
+            selected={selected}
+            clientId={clientId}
+            onSelect={setSelection}
+          />
+        </div>
       )}
     </div>
   );
 }
 
-function TimelineCard({ item, clientId }: { item: CaseTimelineItem; clientId: string }) {
-  const Icon = item.kind === "birth" ? Baby : item.kind === "death" ? Cross : Sparkles;
+function TimelineMark({ kind }: { kind: TimelineKind }) {
+  return <span className="case-timeline-mark" data-kind={kind} aria-hidden="true" />;
+}
+
+function TimelineList({
+  items,
+  selected,
+  clientId,
+  onSelect,
+  label,
+  undated = false,
+}: {
+  items: CaseTimelineItem[];
+  selected: CaseTimelineItem;
+  clientId: string;
+  onSelect: (key: string) => void;
+  label: string;
+  undated?: boolean;
+}) {
   return (
-    <li className="rounded-md border border-border bg-surface-document px-4 py-3">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <Icon className="size-4 text-forest" aria-hidden />
-        <span className="font-mono text-[15px] font-bold tabular-nums text-primary">
-          {formatByPrecision(item.rawDate, item.precision)}
-        </span>
-        <span className="text-[15px] font-semibold">{item.label}</span>
-        <span className="text-[15px]">· {item.personName}</span>
-        {item.relationship && (
-          <span className="text-[14px] text-muted-foreground">({item.relationship})</span>
+    <ol className="case-timeline-entries" aria-label={label}>
+      {items.map((item) => (
+        <li key={item.key}>
+          <button
+            type="button"
+            className="case-timeline-row"
+            aria-pressed={selected.key === item.key}
+            onClick={() => onSelect(item.key)}
+          >
+            <span className="case-timeline-row-date">
+              {undated ? "Sem data" : formatByPrecision(item.rawDate, item.precision)}
+            </span>
+            <span className="case-timeline-row-entry">
+              <TimelineMark kind={item.kind} />
+              <span>
+                <strong>{item.personName}</strong>
+                <span className="case-timeline-row-person">{item.label}</span>
+              </span>
+            </span>
+          </button>
+          {selected.key === item.key && (
+            <div className="case-timeline-row-detail">
+              <TimelineEventDetail item={item} clientId={clientId} inline />
+            </div>
+          )}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+type Scale = ReturnType<typeof buildTimelineScale>;
+
+function TimelineOverview({
+  scale,
+  selected,
+  clientId,
+  onSelect,
+}: {
+  scale: Scale;
+  selected: CaseTimelineItem;
+  clientId: string;
+  onSelect: (key: string) => void;
+}) {
+  const active = scale?.events.find(({ item }) => item.key === selected.key);
+  const partial = scale?.events.some(({ from, to }) => to !== from);
+  const lanes = useMemo(
+    () =>
+      KINDS.flatMap((kind) => {
+        const events = scale?.events.filter(({ item }) => item.kind === kind) ?? [];
+        return events.length ? [{ kind, groups: groupTimelineMarkers(events) }] : [];
+      }),
+    [scale],
+  );
+
+  return (
+    <section className="case-timeline-overview" aria-labelledby="case-timeline-overview-title">
+      <header className="case-timeline-overview-header">
+        <h3 id="case-timeline-overview-title">Panorama cronológico</h3>
+        {scale && (
+          <p className="case-timeline-range">
+            {scale.fromYear === scale.toYear
+              ? scale.fromYear
+              : `${scale.fromYear} – ${scale.toYear}`}
+          </p>
         )}
+      </header>
+      {scale ? (
+        <figure className="case-timeline-figure">
+          <div className="case-timeline-ruler" aria-hidden="true">
+            {scale.ticks.map(({ label, at }) => (
+              <span key={label} style={{ left: `${at}%` }}>
+                {label}
+              </span>
+            ))}
+          </div>
+          <div className="case-timeline-plot">
+            <div className="case-timeline-grid" aria-hidden="true">
+              {scale.ticks.map(({ label, at }) => (
+                <span key={label} style={{ left: `${at}%` }} />
+              ))}
+              {active && <span className="case-timeline-guide" style={{ left: `${active.at}%` }} />}
+            </div>
+            {lanes.map(({ kind, groups }) => (
+              <div
+                className="case-timeline-lane"
+                key={kind}
+                role="group"
+                aria-label={KIND_LABEL[kind]}
+              >
+                <h4>
+                  <TimelineMark kind={kind} />
+                  {KIND_LABEL[kind]}
+                </h4>
+                <div className="case-timeline-track">
+                  {groups.map((group) => {
+                    const index = group.members.findIndex(({ item }) => item.key === selected.key);
+                    const next = group.members[(index + 1) % group.members.length].item;
+                    const title =
+                      group.members.length === 1
+                        ? `${next.label} de ${next.personName} · ${formatByPrecision(next.rawDate, next.precision)}`
+                        : `${group.members.length} registros próximos. Selecionar ${next.label} de ${next.personName}`;
+                    return (
+                      <div key={group.members[0].item.key}>
+                        {group.members
+                          .filter(({ from, to }) => to > from)
+                          .map(({ item, from, to }) => (
+                            <span
+                              key={item.key}
+                              className="case-timeline-interval"
+                              data-kind={kind}
+                              style={{ left: `${from}%`, width: `${to - from}%` }}
+                              aria-hidden="true"
+                            />
+                          ))}
+                        <button
+                          type="button"
+                          className="case-timeline-pin"
+                          aria-label={title}
+                          title={title}
+                          aria-pressed={index >= 0}
+                          style={{ left: `${group.at}%` }}
+                          onClick={() => onSelect(next.key)}
+                        >
+                          <TimelineMark kind={kind} />
+                          {group.members.length > 1 && (
+                            <span className="case-timeline-cluster" aria-hidden="true">
+                              {group.members.length}
+                            </span>
+                          )}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+          {partial && (
+            <figcaption>As faixas indicam registros com mês ou ano, sem dia exato.</figcaption>
+          )}
+        </figure>
+      ) : (
+        <p className="case-timeline-graph-empty">Os registros sem data ficam na lista.</p>
+      )}
+      <div className="case-timeline-overview-detail">
+        <TimelineEventDetail item={selected} clientId={clientId} located={!!active} />
       </div>
-      {item.meta && <p className="mt-1 text-[15px] leading-relaxed">{item.meta}</p>}
-      <div className="mt-2 flex flex-wrap items-center gap-3 text-[13px] text-muted-foreground">
-        <span>Fonte: {item.source}</span>
+    </section>
+  );
+}
+
+function TimelineEventDetail({
+  item,
+  clientId,
+  inline = false,
+  located = true,
+}: {
+  item: CaseTimelineItem;
+  clientId: string;
+  inline?: boolean;
+  located?: boolean;
+}) {
+  return (
+    <div className="case-timeline-detail">
+      {!inline && (
+        <div className="case-timeline-detail-title" aria-live="polite">
+          <div>
+            <strong>
+              {item.label} · {item.personName}
+            </strong>
+            <span>{formatByPrecision(item.rawDate, located ? item.precision : "unknown")}</span>
+          </div>
+          {item.relationship && <span>{item.relationship}</span>}
+        </div>
+      )}
+      {item.meta && <p className="case-timeline-detail-meta">{item.meta}</p>}
+      <footer>
+        <p>{item.source}</p>
         <Link
           to="/app/clientes/$clientId"
           params={{ clientId }}
           search={{ tab: "genogram", person: item.personId }}
-          className="inline-flex min-h-11 items-center gap-1 font-semibold text-forest hover:underline"
+          className="inline-flex min-h-11 items-center gap-1.5 font-semibold text-forest hover:underline"
         >
-          <MapPin className="size-3.5" aria-hidden /> Ver no mapa
+          <MapPin className="size-4" aria-hidden /> Ver no mapa
         </Link>
-      </div>
-    </li>
+      </footer>
+    </div>
   );
 }

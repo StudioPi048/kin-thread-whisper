@@ -2,24 +2,25 @@ import type { Edge, Node } from "@xyflow/react";
 import { GEN_GAP, NODE_W, PERSON_SHAPE, type ParentKind } from "@/lib/geno/build";
 import type { PersonNodeData } from "./person-node";
 
-export const SPATIAL_CARD_WIDTH = 158;
-export const SPATIAL_CARD_HEIGHT = 114;
-export const SPATIAL_MAX_YAW = (44 * Math.PI) / 180;
-export const SPATIAL_DEFAULT_YAW = (30 * Math.PI) / 180;
+export const SPATIAL_CARD_WIDTH = 144;
+export const SPATIAL_CARD_HEIGHT = 102;
+export const SPATIAL_MAX_YAW = (42 * Math.PI) / 180;
+export const SPATIAL_DEFAULT_YAW = (24 * Math.PI) / 180;
 
-const DEPTH_PER_ROW = 124;
-const PLANE_DEPTH = 112;
+export const SPATIAL_ROW_GAP = 172;
+export const SPATIAL_SYMBOL_CENTER = 31;
+const DEPTH_PER_ROW = 92;
 const MIN_PERSON_SPACING = (SPATIAL_CARD_WIDTH + 20) / Math.cos(SPATIAL_MAX_YAW);
 const CARD_HALF = SPATIAL_CARD_WIDTH / 2;
-const CARD_MID_Y = SPATIAL_CARD_HEIGHT / 2;
+const SYMBOL_HALF = 33;
 
 type Point = { x: number; y: number };
 type SpatialPoint = Point & { z: number };
 type SpatialPerson = SpatialPoint & { id: string; data: PersonNodeData };
-type SpatialUnion = SpatialPoint & { id: string; label?: string; kind?: string };
+type SpatialUnion = SpatialPoint & { id: string; label?: string; kind?: string; single: boolean };
 type Span = { left: number; right: number };
 
-export const spatialDepth = (rowY: number) => (-rowY / GEN_GAP) * DEPTH_PER_ROW;
+export const spatialDepth = (rowY: number) => (-rowY / SPATIAL_ROW_GAP) * DEPTH_PER_ROW;
 
 export function projectSpatialPoint(point: SpatialPoint, yaw: number): Point {
   // Orthographic yaw around the vertical axis. Card Y is independent of camera angle.
@@ -31,8 +32,8 @@ export function buildSpatialLayout(nodes: Node[], edges: Edge[]) {
   const originalX = new Map<string, number>();
   for (const node of nodes) {
     if (node.hidden || node.type !== "person") continue;
-    const { x, y } = node.position;
-    const centerX = x + NODE_W / 2;
+    const y = (node.position.y / GEN_GAP) * SPATIAL_ROW_GAP;
+    const centerX = (node.position.x + NODE_W / 2) * 0.84;
     const person = {
       id: node.id,
       x: centerX,
@@ -75,7 +76,10 @@ export function buildSpatialLayout(nodes: Node[], edges: Edge[]) {
   const unions: SpatialUnion[] = [];
   for (const node of nodes) {
     if (node.hidden || node.type !== "union") continue;
-    const rowY = node.position.y - PERSON_SHAPE / 2;
+    const rowY =
+      typeof node.data.generation === "number"
+        ? node.data.generation * SPATIAL_ROW_GAP
+        : ((node.position.y - PERSON_SHAPE / 2) / GEN_GAP) * SPATIAL_ROW_GAP;
     const partners = (partnersByUnion.get(node.id) ?? []).flatMap((id) => {
       const partner = peopleById.get(id);
       return partner?.y === rowY ? [partner] : [];
@@ -86,11 +90,15 @@ export function buildSpatialLayout(nodes: Node[], edges: Edge[]) {
     );
     unions.push({
       id: node.id,
-      x: node.position.x + shift / Math.max(1, partners.length),
-      y: rowY + CARD_MID_Y,
+      x:
+        partners.length === 2
+          ? (partners[0].x + partners[1].x) / 2
+          : (partners[0]?.x ?? node.position.x * 0.84 + shift / Math.max(1, partners.length)),
+      y: rowY + SPATIAL_SYMBOL_CENTER,
       z: spatialDepth(rowY),
       label: typeof node.data.label === "string" ? node.data.label : undefined,
       kind: typeof node.data.kind === "string" ? node.data.kind : undefined,
+      single: node.data.isSingle === true || partnersByUnion.get(node.id)?.length === 1,
     });
   }
   return { people, rows: orderedRows, unions, edges: visibleEdges };
@@ -161,11 +169,12 @@ export function projectSpatialLayout(
   const unionsByRow = new Map<number, SpatialUnion[]>();
   const unions = layout.unions.map((union) => {
     const projected = { ...union, ...projectSpatialPoint(union, yaw) };
-    const rowY = union.y - CARD_MID_Y;
+    if (projected.single) return projected;
+    const rowY = union.y - SPATIAL_SYMBOL_CENTER;
     const row = peopleByRow.get(rowY) ?? [];
     const prior = unionsByRow.get(rowY) ?? [];
     projected.x = nearestFreeX(projected.x, [
-      ...row.map(({ x }) => ({ left: x - CARD_HALF - 12, right: x + CARD_HALF + 12 })),
+      ...row.map(({ x }) => ({ left: x - SYMBOL_HALF - 13, right: x + SYMBOL_HALF + 13 })),
       ...prior.map(({ x }) => ({ left: x - 17, right: x + 17 })),
     ]);
     prior.push(projected);
@@ -174,20 +183,6 @@ export function projectSpatialLayout(
   });
   const unionsById = new Map(unions.map((union) => [union.id, union]));
 
-  const plates = layout.rows.map(([y, row]) => {
-    const depth = spatialDepth(y);
-    const left = row[0].x - CARD_HALF - 35;
-    const right = row[row.length - 1].x + CARD_HALF + 35;
-    const base = y + SPATIAL_CARD_HEIGHT + 15;
-    const corners = [
-      { x: left, y: base + 11, z: depth + PLANE_DEPTH / 2 },
-      { x: right, y: base + 11, z: depth + PLANE_DEPTH / 2 },
-      { x: right, y: base - 11, z: depth - PLANE_DEPTH / 2 },
-      { x: left, y: base - 11, z: depth - PLANE_DEPTH / 2 },
-    ].map((p) => projectSpatialPoint(p, yaw));
-    return { y, surface: pathThrough(corners) + " Z", rim: pathThrough(corners.slice(0, 2)) };
-  });
-
   const rails = new Map<string, Span[][]>();
   const routes: {
     id: string;
@@ -195,31 +190,54 @@ export function projectSpatialLayout(
     highlighted: boolean;
     edge: Edge;
     parentKind?: ParentKind;
+    suggested?: boolean;
   }[] = [];
   for (const edge of layout.edges) {
     if (edge.type === "pedigree") {
       const union = unionsById.get(String(edge.data?.unionId ?? edge.source));
       const childIds = edge.data?.childIds;
       const childKinds = edge.data?.childKinds as Record<string, ParentKind> | undefined;
+      const suggestedIds = new Set(
+        Array.isArray(edge.data?.suggestedChildIds) ? edge.data.suggestedChildIds : [],
+      );
       if (!union || !Array.isArray(childIds)) continue;
       const childGroups = new Map<
         string,
-        { rowY: number; parentKind: ParentKind; children: SpatialPerson[] }
+        { rowY: number; parentKind: ParentKind; suggested: boolean; children: SpatialPerson[] }
       >();
       for (const childId of new Set(childIds)) {
         const child = peopleById.get(childId);
         if (!child) continue;
         const parentKind = childKinds?.[child.id] ?? "unknown";
-        const key = `${child.y}:${parentKind}`;
-        const group = childGroups.get(key) ?? { rowY: child.y, parentKind, children: [] };
+        const suggested = suggestedIds.has(child.id);
+        const key = `${child.y}:${parentKind}:${suggested}`;
+        const group = childGroups.get(key) ?? {
+          rowY: child.y,
+          parentKind,
+          suggested,
+          children: [],
+        };
         group.children.push(child);
         childGroups.set(key, group);
       }
-      for (const [key, { rowY, parentKind, children }] of childGroups) {
+      for (const [key, { rowY, parentKind, suggested, children }] of childGroups) {
         const childIsLower = rowY > union.y;
         const cardAnchorY = childIsLower ? rowY : rowY + SPATIAL_CARD_HEIGHT;
-        const firstRailY = cardAnchorY + (childIsLower ? -36 : 45);
-        const obstructing = people.filter(({ y }) => between(y + CARD_MID_Y, union.y, firstRailY));
+        const portY =
+          union.y +
+          (union.single
+            ? childIsLower
+              ? SPATIAL_CARD_HEIGHT - SPATIAL_SYMBOL_CENTER
+              : -SPATIAL_SYMBOL_CENTER
+            : childIsLower
+              ? 7
+              : -7);
+        const firstRailY = childIsLower
+          ? Math.max(portY + 6, cardAnchorY - 18)
+          : Math.min(portY - 6, cardAnchorY + 20);
+        const obstructing = people.filter(({ y }) =>
+          between(y + SPATIAL_SYMBOL_CENTER, union.y, firstRailY),
+        );
         const column = nearestFreeX(
           union.x,
           obstructing.map(({ x }) => ({
@@ -231,10 +249,12 @@ export function projectSpatialLayout(
         const span = { left: Math.min(column, ...xs), right: Math.max(column, ...xs) };
         const lane = reserveRail(rails, `${rowY}:${childIsLower}`, span);
         // Offset overlapping sibling bars, so separate unions never share a drawn line.
-        const laneOffset = 110 * (1 - Math.exp(-0.15 * lane));
-        const barY = firstRailY + (childIsLower ? -laneOffset : laneOffset);
-        const unionPort = { x: union.x, y: union.y + (barY > union.y ? 7 : -7) };
-        const departureY = barY > union.y ? union.y + CARD_MID_Y + 29 : union.y - CARD_MID_Y - 29;
+        const laneOffset = 28 * (1 - Math.exp(-0.25 * lane));
+        const barY = childIsLower
+          ? Math.max(portY + 6, firstRailY - laneOffset)
+          : Math.min(portY - 6, firstRailY + laneOffset);
+        const unionPort = { x: union.x, y: portY };
+        const departureY = portY + (barY > portY ? 12 : -12);
         const trunk =
           column === union.x
             ? pathThrough([unionPort, { x: column, y: barY }])
@@ -260,6 +280,7 @@ export function projectSpatialLayout(
           highlighted: children.some((child) => child.id === selectedId),
           edge,
           parentKind,
+          suggested,
         });
       }
       continue;
@@ -267,9 +288,9 @@ export function projectSpatialLayout(
     if (edge.type === "partner") {
       const person = peopleById.get(String(edge.data?.personId ?? edge.source));
       const union = unionsById.get(String(edge.data?.unionId ?? edge.target));
-      if (!person || !union) continue;
-      const startY = person.y + CARD_MID_Y;
-      const startX = person.x + Math.sign(union.x - person.x || 1) * CARD_HALF;
+      if (!person || !union || union.single) continue;
+      const startY = person.y + SPATIAL_SYMBOL_CENTER;
+      const startX = person.x + Math.sign(union.x - person.x || 1) * SYMBOL_HALF;
       const row = peopleByRow.get(person.y) ?? [];
       const crossesCard = row.some(
         (other) => other.id !== person.id && between(other.x, person.x, union.x),
@@ -282,7 +303,13 @@ export function projectSpatialLayout(
             union,
           ])
         : pathThrough([{ x: startX, y: startY }, { x: union.x, y: startY }, union]);
-      routes.push({ id: edge.id, path, highlighted: person.id === selectedId, edge });
+      routes.push({
+        id: edge.id,
+        path,
+        highlighted: person.id === selectedId,
+        edge,
+        suggested: edge.data?.suggested === true,
+      });
       continue;
     }
 
@@ -297,5 +324,5 @@ export function projectSpatialLayout(
       edge,
     });
   }
-  return { people, unions, plates, routes };
+  return { people, unions, rows: peopleByRow, routes };
 }

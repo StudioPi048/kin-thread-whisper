@@ -45,6 +45,9 @@ export const persons = [
   ["Benedita Santos", "feminino", "1886-02-17", "Trisavó", 0, 0],
   ["Miguel Duarte", "masculino", "1943-12-21", "Irmão do avô", 0, 0],
   ["Cíntia Duarte", "feminino", "1994-01-09", "Irmã adotiva", 0, 0],
+  ["Flávio Duarte", "masculino", "1956-09-04", "Tio(a) paterno(a)", 0, 0],
+  ["Teresa Silva", "feminino", "1963-08-07", "Tio(a) materno(a)", 0, 0],
+  ["Rui Silva", "masculino", "1969-02-21", "Tio(a) materno(a)", 0, 0],
 ].map(([full_name, gender, birth_date, relationship_to_proband, x, y], i) => ({
   id: personId(i),
   client_id: cid,
@@ -58,7 +61,22 @@ export const persons = [
   death_date: i === 0 ? "2012-08-06" : null,
   notes: "Registro fictício para revisão visual.",
   birth_place: "Florianópolis",
-  life_events: [],
+  life_events:
+    i === 4
+      ? [
+          { date: "1984", type: "Mudança", description: "Passou a morar na capital." },
+          { date: "1988-06", type: "Formação", description: "Concluiu a formação técnica." },
+        ]
+      : i === 6
+        ? [
+            {
+              date: "2015-06-10",
+              type: "Mudança",
+              description: "Mudança de cidade para trabalhar.",
+            },
+            { type: "Trabalho", description: "Início da carreira, data a confirmar." },
+          ]
+        : [],
   health_conditions: [],
   occupation: null,
   _x: x,
@@ -71,7 +89,6 @@ export const rels = [
   [0, 4, "parent"],
   [1, 4, "parent"],
   [2, 5, "parent"],
-  [3, 5, "parent"],
   [4, 6, "parent"],
   [5, 6, "parent"],
   [4, 7, "parent"],
