@@ -1,21 +1,19 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import {
-  ArrowRight,
-  CalendarClock,
-  ClipboardCheck,
-  Check,
-  X,
-  RefreshCw,
-  Network,
-} from "lucide-react";
+import { ArrowRight, CalendarDays, BookOpen, Check, X, RefreshCw } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { getPendingRecordCount } from "@/lib/agenda.functions";
 import { activeAudioConsent, readAudioConsents } from "@/lib/audio-consent";
 import { profileQuery } from "@/lib/profile";
-import { appointmentDurationMin, formatDurationMinutes } from "@/lib/scheduling";
+import {
+  appointmentDurationMin,
+  browserTz,
+  dateKeyInTz,
+  formatDurationMinutes,
+  timeInTz,
+} from "@/lib/scheduling";
 import {
   readVisits,
   readPref,
@@ -23,6 +21,7 @@ import {
   onboardingSteps,
   type Visit,
 } from "@/lib/recent-activity";
+import "@/components/archive/work-desk.css";
 
 export const Route = createFileRoute("/_authenticated/app/")({
   head: () => ({
@@ -60,7 +59,7 @@ function greetingByHour(): string {
 
 function ErrorRow({ msg, onRetry }: { msg: string; onRetry: () => void }) {
   return (
-    <div role="alert" className="flex flex-wrap items-center gap-3 text-[15px] text-destructive">
+    <div role="alert" className="work-desk-error">
       {msg}
       <Button variant="outline" size="sm" className="min-h-11" onClick={onRetry}>
         <RefreshCw className="size-4" aria-hidden /> Tentar de novo
@@ -68,9 +67,6 @@ function ErrorRow({ msg, onRetry }: { msg: string; onRetry: () => void }) {
     </div>
   );
 }
-
-const card = "rounded-xl border border-border bg-card p-4 sm:p-5";
-const h2 = "text-[17px] font-semibold text-foreground";
 
 function AppHome() {
   const { user } = Route.useRouteContext();
@@ -168,7 +164,13 @@ function AppHome() {
   };
   const firstName = profileQ.data?.full_name?.split(" ")[0] ?? user.email?.split("@")[0] ?? "";
   const pendingGeneral = clients.filter((c) => !c.consent_given_at);
-  const resumable = visits.filter((v) => clients.some((c) => c.id === v.clientId)).slice(0, 4);
+  const resumable = visits
+    .filter(
+      (visit) =>
+        Number.isFinite(new Date(visit.at).getTime()) &&
+        clients.some((client) => client.id === visit.clientId),
+    )
+    .slice(0, 4);
   const next = upcomingQ.data?.[0];
   const nextDuration = next ? appointmentDurationMin(next) : null;
   const consentQ = useQuery({
@@ -191,293 +193,264 @@ function AppHome() {
       minute: "2-digit",
     });
 
+  const today = new Date();
+  const tz = browserTz();
+  const nextDate = next ? new Date(next.session_date) : null;
+
   return (
-    <div className="container-liz space-y-5 py-5">
-      <header className="flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="font-serif text-[30px] font-semibold leading-tight text-foreground">
-          {greetingByHour()}
-          {firstName ? `, ${firstName}` : ""}
-        </h1>
-        <span className="text-[15px] text-muted-foreground">
-          {new Date().toLocaleDateString("pt-BR", {
-            weekday: "long",
-            day: "numeric",
-            month: "long",
-          })}
-        </span>
+    <div className="container-liz work-desk">
+      <header className="work-desk-heading">
+        <div>
+          <h1>Mesa de trabalho</h1>
+          <p>
+            {greetingByHour()}
+            {firstName ? `, ${firstName}.` : "."}
+          </p>
+        </div>
+        <div className="work-desk-heading-tools">
+          <time dateTime={dateKeyInTz(today, tz)}>
+            {today.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}
+          </time>
+          <Button asChild variant={next ? "outline" : "forest"}>
+            <Link to="/app/agenda">
+              <CalendarDays aria-hidden /> Abrir agenda
+            </Link>
+          </Button>
+        </div>
       </header>
 
-      {showOnb && (
-        <section aria-labelledby="onb-h" className={`${card} space-y-3`}>
-          <div className="flex items-start justify-between gap-3">
-            <h2 id="onb-h" className={h2}>
-              Primeiros passos · {onb.done} de {onb.total}
-            </h2>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="min-h-11 min-w-11"
-              aria-label="Dispensar primeiros passos"
-              onClick={() => {
-                writePref(user.id, "onboarding", { hidden: true });
-                setOnbHidden(true);
-              }}
-            >
-              <X className="size-4" />
-            </Button>
-          </div>
-          <div
-            className="h-2 overflow-hidden rounded-full bg-muted"
-            role="progressbar"
-            aria-valuenow={onb.done}
-            aria-valuemin={0}
-            aria-valuemax={onb.total}
-            aria-label="Progresso dos primeiros passos"
-          >
-            <div
-              className="h-full bg-primary"
-              style={{ width: `${(onb.done / onb.total) * 100}%` }}
-            />
-          </div>
-          <ol className="grid gap-2 sm:grid-cols-4">
-            {onb.steps.map((s, i) => (
-              <li key={s.id} className="flex items-center gap-2 text-[15px]">
-                <span
-                  className={`flex size-6 shrink-0 items-center justify-center rounded-full border text-[13px] ${s.done ? "border-primary bg-primary text-primary-foreground" : "border-input"}`}
-                  aria-hidden
-                >
-                  {s.done ? <Check className="size-3.5" /> : i + 1}
-                </span>
-                <span className={s.done ? "text-muted-foreground line-through" : "text-foreground"}>
-                  {s.label}
-                  <span className="sr-only">{s.done ? " (concluído)" : " (pendente)"}</span>
-                </span>
-              </li>
-            ))}
-          </ol>
-          <Link
-            to="/"
-            hash="caso-ficticio"
-            className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-primary hover:underline"
-          >
-            Praticar no Consultante fictício <ArrowRight className="size-4" aria-hidden />
-          </Link>
-        </section>
-      )}
-
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
-        <section
-          aria-labelledby="next-h"
-          className="space-y-3 rounded-xl border border-input bg-forest-mist p-4 sm:p-5"
-        >
-          <h2 id="next-h" className={`${h2} flex items-center gap-2`}>
-            <CalendarClock className="size-5 text-primary" aria-hidden /> Próximo atendimento
-          </h2>
-          {upcomingQ.isLoading ? (
-            <p role="status" className="text-[15px] text-muted-foreground">
-              Carregando agenda…
-            </p>
-          ) : upcomingQ.isError ? (
-            <ErrorRow
-              msg="Não foi possível carregar a agenda."
-              onRetry={() => upcomingQ.refetch()}
-            />
-          ) : next ? (
-            <>
-              <Link
-                to="/app/clientes/$clientId"
-                params={{ clientId: next.client_id }}
-                search={{ tab: "sessions", session: next.id }}
-                className="block rounded-md bg-forest p-4 text-primary-foreground hover:bg-forest-mid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-              >
-                <span className="block text-xl font-semibold tabular-nums">
-                  {fmtTime(next.session_date)}
-                </span>
-                <span className="block text-[15px] font-medium">
-                  {next.clients?.preferred_name ||
-                    next.clients?.full_name ||
-                    nameOf(next.client_id)}
-                </span>
-                <span className="block text-sm text-forest-mist">
-                  {nextDuration !== null && `${formatDurationMinutes(nextDuration)} · `}
-                  {next.title || "Atendimento"}
-                </span>
-                <span className="mt-3 flex items-center gap-1.5 text-sm font-semibold">
-                  Abrir atendimento <ArrowRight className="size-4" aria-hidden />
-                </span>
-              </Link>
-              {(upcomingQ.data ?? [])
-                .filter((s) => s.id !== next.id)
-                .slice(0, 3)
-                .map((s) => (
+      <div className="work-desk-columns">
+        <section aria-labelledby="next-h" className="work-desk-agenda">
+          <div className="work-next" data-empty={(!upcomingQ.isLoading && !next) || undefined}>
+            <h2 id="next-h">Próximo atendimento</h2>
+            {upcomingQ.isLoading ? (
+              <div role="status" className="work-next-loading">
+                <p>Carregando agenda…</p>
+                <div className="work-skeleton" aria-hidden />
+              </div>
+            ) : upcomingQ.isError ? (
+              <ErrorRow
+                msg="Não foi possível carregar a agenda."
+                onRetry={() => upcomingQ.refetch()}
+              />
+            ) : next && nextDate ? (
+              <div className="work-next-details">
+                <time dateTime={next.session_date}>
+                  <strong>{timeInTz(nextDate, tz)}</strong>
+                  <span>
+                    {nextDate.toLocaleDateString("pt-BR", {
+                      weekday: "long",
+                      day: "numeric",
+                      month: "short",
+                    })}
+                  </span>
+                </time>
+                <div className="work-next-client">
+                  <p className="work-next-name">
+                    {next.clients?.preferred_name ||
+                      next.clients?.full_name ||
+                      nameOf(next.client_id)}
+                  </p>
+                  <p>
+                    {next.title || "Atendimento"}
+                    {nextDuration !== null && ` · ${formatDurationMinutes(nextDuration)}`}
+                  </p>
                   <Link
-                    key={s.id}
-                    className="flex min-h-11 items-center text-sm text-forest hover:underline"
                     to="/app/clientes/$clientId"
-                    params={{ clientId: s.client_id }}
-                    search={{ tab: "sessions", session: s.id }}
+                    params={{ clientId: next.client_id }}
+                    search={{ tab: "sessions", session: next.id }}
+                    className="work-next-link"
                   >
-                    {fmtTime(s.session_date)} ·{" "}
-                    {s.clients?.preferred_name || s.clients?.full_name || nameOf(s.client_id)}
+                    Abrir atendimento <ArrowRight size={17} aria-hidden />
                   </Link>
+                </div>
+              </div>
+            ) : (
+              <p className="work-next-empty">Nenhum atendimento futuro agendado.</p>
+            )}
+          </div>
+
+          {(upcomingQ.data?.length ?? 0) > 1 && (
+            <div className="work-upcoming">
+              <h3>Em seguida</h3>
+              <ul className="work-desk-ledger">
+                {upcomingQ.data?.slice(1, 4).map((session) => (
+                  <li key={session.id}>
+                    <Link
+                      to="/app/clientes/$clientId"
+                      params={{ clientId: session.client_id }}
+                      search={{ tab: "sessions", session: session.id }}
+                      className="work-desk-row work-desk-appointment"
+                    >
+                      <time dateTime={session.session_date}>{fmtTime(session.session_date)}</time>
+                      <span>
+                        {session.clients?.preferred_name ||
+                          session.clients?.full_name ||
+                          nameOf(session.client_id)}
+                      </span>
+                      <ArrowRight size={17} aria-hidden />
+                    </Link>
+                  </li>
                 ))}
-            </>
-          ) : (
-            <p className="text-[15px] text-muted-foreground">Nenhum atendimento futuro agendado.</p>
+              </ul>
+            </div>
           )}
-          <Link
-            to="/app/agenda"
-            className="inline-flex min-h-11 items-center gap-1 text-[15px] font-medium text-primary underline-offset-4 hover:underline"
-          >
-            Abrir agenda <ArrowRight className="size-4" aria-hidden />
-          </Link>
         </section>
 
-        <section aria-labelledby="resume-h" className={`${card} space-y-3`}>
-          <h2 id="resume-h" className={`${h2} flex items-center gap-2`}>
-            <Network className="size-5 text-primary" aria-hidden /> Retomar caso
-          </h2>
-          {clientsQ.isLoading ? (
-            <p role="status" className="text-[15px] text-muted-foreground">
-              Carregando…
-            </p>
-          ) : clientsQ.isError ? (
-            <ErrorRow
-              msg="Não foi possível carregar os casos."
-              onRetry={() => clientsQ.refetch()}
-            />
-          ) : resumable.length === 0 ? (
-            <p className="text-[15px] text-muted-foreground">
-              Os casos que você abrir aparecem aqui, na aba em que parou.
-            </p>
-          ) : (
-            <ul className="space-y-1">
-              {resumable.map((v) => (
-                <li key={v.clientId}>
-                  <Link
-                    to="/app/clientes/$clientId"
-                    params={{ clientId: v.clientId }}
-                    search={{ tab: (TAB_LABEL[v.tab] ? v.tab : "overview") as "overview" }}
-                    className="flex min-h-11 items-center justify-between gap-2 rounded-md px-2 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <span className="truncate text-[15px] font-medium">{nameOf(v.clientId)}</span>
-                    <span className="shrink-0 text-[14px] text-muted-foreground">
-                      {TAB_LABEL[v.tab] ?? "Visão geral"} ·{" "}
-                      {new Date(v.at).toLocaleDateString("pt-BR")}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-          <Link
-            to="/app/clientes"
-            className="inline-flex min-h-11 items-center gap-1 text-[15px] font-medium text-primary underline-offset-4 hover:underline"
-          >
-            Todos os clientes <ArrowRight className="size-4" aria-hidden />
+        <aside className="work-desk-secondary" aria-labelledby="resume-h">
+          <section className="work-desk-section">
+            <h2 id="resume-h">Retomar dossiê</h2>
+            {clientsQ.isLoading ? (
+              <div role="status" className="work-desk-muted">
+                <span>Carregando casos…</span>
+                <div className="work-skeleton" aria-hidden />
+              </div>
+            ) : clientsQ.isError ? (
+              <ErrorRow
+                msg="Não foi possível carregar os casos."
+                onRetry={() => clientsQ.refetch()}
+              />
+            ) : resumable.length > 0 ? (
+              <ul className="work-desk-ledger">
+                {resumable.map((visit) => (
+                  <li key={visit.clientId}>
+                    <Link
+                      to="/app/clientes/$clientId"
+                      params={{ clientId: visit.clientId }}
+                      search={{
+                        tab: (TAB_LABEL[visit.tab] ? visit.tab : "overview") as "overview",
+                      }}
+                      className="work-desk-row work-desk-resume"
+                    >
+                      <span>
+                        <strong>{nameOf(visit.clientId)}</strong>
+                        <span>{TAB_LABEL[visit.tab] ?? "Visão geral"}</span>
+                      </span>
+                      <time dateTime={dateKeyInTz(new Date(visit.at), tz)}>
+                        {new Date(visit.at).toLocaleDateString("pt-BR")}
+                      </time>
+                      <ArrowRight size={17} aria-hidden />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="work-desk-muted">
+                {clients.length > 0
+                  ? "Os dossiês que você abrir ficam aqui, na aba em que parou."
+                  : "Nenhum caso cadastrado."}
+              </p>
+            )}
+            <Link to="/app/clientes" className="work-desk-text-link">
+              {!clientsQ.isLoading && !clientsQ.isError && clients.length === 0
+                ? "Cadastrar caso"
+                : "Todos os clientes"}
+              <ArrowRight size={17} aria-hidden />
+            </Link>
+          </section>
+          <Link to="/app/biblioteca" className="work-desk-reference">
+            <BookOpen size={19} aria-hidden />
+            <span>Consultar biblioteca</span>
+            <ArrowRight size={17} aria-hidden />
           </Link>
-        </section>
-        <section aria-labelledby="pend-h" className={`${card} space-y-4 lg:col-span-2`}>
-          <h2 id="pend-h" className={`${h2} flex items-center gap-2`}>
-            <ClipboardCheck className="size-5 text-primary" aria-hidden /> Pendências
-          </h2>
-          <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
-            <div>
-              <h3 className="text-sm font-semibold">Registros de sessão</h3>
+        </aside>
+        <section aria-labelledby="pend-h" className="work-desk-section work-desk-review">
+          <h2 id="pend-h">Pendências</h2>
+          <div className="work-desk-pending">
+            <section aria-labelledby="pending-records">
+              <h3 id="pending-records">Registros de sessão</h3>
               {pendingRecordsQ.isError ? (
                 <ErrorRow
                   msg="Não foi possível carregar os registros."
                   onRetry={() => pendingRecordsQ.refetch()}
                 />
               ) : pendingRecordsQ.isLoading ? (
-                <p className="text-sm text-muted-foreground" role="status">
+                <p className="work-desk-muted" role="status">
                   Carregando registros…
                 </p>
               ) : pendingRecordsQ.data?.records.length ? (
-                <ul className="divide-y divide-border">
+                <ul className="work-desk-ledger">
                   {pendingRecordsQ.data.records.map((record) => (
                     <li key={record.id}>
                       <Link
                         to="/app/clientes/$clientId"
                         params={{ clientId: record.client_id }}
                         search={{ tab: "sessions", session: record.id }}
-                        className="flex min-h-11 items-center justify-between gap-2 py-2 text-sm hover:underline"
+                        className="work-desk-row"
                       >
                         <span>
-                          {nameOf(record.client_id)} · {fmtTime(record.session_date)}
+                          <strong>{nameOf(record.client_id)}</strong>
+                          <time dateTime={record.session_date}>{fmtTime(record.session_date)}</time>
                         </span>
-                        <ArrowRight className="size-4 shrink-0 text-primary" aria-hidden />
+                        <ArrowRight size={17} aria-hidden />
                       </Link>
                     </li>
                   ))}
                   {pendingRecordsQ.data.count > pendingRecordsQ.data.records.length && (
                     <li>
-                      <Link
-                        to="/app/agenda"
-                        className="inline-flex min-h-11 items-center text-sm text-primary hover:underline"
-                      >
-                        Ver todos os {pendingRecordsQ.data.count} registros
+                      <Link to="/app/agenda" className="work-desk-text-link">
+                        Ver todos os {pendingRecordsQ.data.count} registros{" "}
+                        <ArrowRight size={17} aria-hidden />
                       </Link>
                     </li>
                   )}
                 </ul>
               ) : (
-                <p className="text-sm text-muted-foreground">Nenhum registro de sessão pendente.</p>
+                <p className="work-desk-muted">Nenhum registro de sessão pendente.</p>
               )}
-            </div>
-            <div className="border-t border-border pt-3">
-              <h3 className="text-sm font-semibold">Consentimentos gerais</h3>
+            </section>
+            <section aria-labelledby="pending-consents">
+              <h3 id="pending-consents">Consentimentos gerais</h3>
               {clientsQ.isError ? (
                 <ErrorRow
                   msg="Não foi possível conferir os consentimentos."
                   onRetry={() => clientsQ.refetch()}
                 />
               ) : clientsQ.isLoading ? (
-                <p className="text-sm text-muted-foreground" role="status">
+                <p className="work-desk-muted" role="status">
                   Conferindo casos…
                 </p>
               ) : pendingGeneral.length ? (
-                <ul className="divide-y divide-border">
+                <ul className="work-desk-ledger">
                   {pendingGeneral.slice(0, 3).map((client) => (
                     <li key={client.id}>
                       <Link
                         to="/app/clientes/$clientId"
                         params={{ clientId: client.id }}
                         search={{ tab: "overview" }}
-                        className="flex min-h-11 items-center justify-between gap-2 py-2 text-sm hover:underline"
+                        className="work-desk-row"
                       >
                         <span>{nameOf(client.id)}</span>
-                        <ArrowRight className="size-4 shrink-0 text-primary" aria-hidden />
+                        <ArrowRight size={17} aria-hidden />
                       </Link>
                     </li>
                   ))}
                   {pendingGeneral.length > 3 && (
                     <li>
-                      <Link
-                        to="/app/clientes"
-                        className="inline-flex min-h-11 items-center text-sm text-primary hover:underline"
-                      >
-                        Conferir outros casos
+                      <Link to="/app/clientes" className="work-desk-text-link">
+                        Conferir outros casos <ArrowRight size={17} aria-hidden />
                       </Link>
                     </li>
                   )}
                 </ul>
               ) : (
-                <p className="text-sm text-muted-foreground">
-                  Consentimentos gerais registrados nos casos ativos.
+                <p className="work-desk-muted">
+                  {clients.length > 0
+                    ? "Registrados nos casos ativos."
+                    : "Nenhum caso ativo para conferir."}
                 </p>
               )}
-            </div>
+            </section>
             {next && (
-              <div className="border-t border-border pt-3">
-                <h3 className="text-sm font-semibold">Áudio do próximo atendimento</h3>
+              <section aria-labelledby="pending-audio">
+                <h3 id="pending-audio">Áudio do próximo atendimento</h3>
                 {consentQ.isError ? (
                   <ErrorRow
                     msg="Autorizações de áudio indisponíveis."
                     onRetry={() => consentQ.refetch()}
                   />
                 ) : consentQ.isLoading ? (
-                  <p className="text-sm text-muted-foreground" role="status">
+                  <p className="work-desk-muted" role="status">
                     Conferindo autorizações…
                   </p>
                 ) : (
@@ -485,36 +458,62 @@ function AppHome() {
                     to="/app/clientes/$clientId"
                     params={{ clientId: next.client_id }}
                     search={{ tab: "sessions", session: next.id, focus: "audio-consent" }}
-                    className="flex min-h-11 items-center justify-between gap-2 py-2 text-sm hover:underline"
+                    className="work-desk-row"
                   >
                     <span>
-                      Gravação {nextRecording ? "autorizada" : "sem autorização vigente"} ·
-                      Processamento {nextProcessing ? "autorizado" : "sem autorização vigente"}
+                      <span>
+                        Gravação {nextRecording ? "autorizada" : "sem autorização vigente"}
+                      </span>
+                      <span>
+                        Processamento {nextProcessing ? "autorizado" : "sem autorização vigente"}
+                      </span>
                     </span>
-                    <ArrowRight className="size-4 shrink-0 text-primary" aria-hidden />
+                    <ArrowRight size={17} aria-hidden />
                   </Link>
                 )}
-              </div>
+              </section>
             )}
           </div>
         </section>
       </div>
 
-      {!clientsQ.isLoading && !clientsQ.isError && clients.length === 0 && (
-        <section className={`${card} flex flex-wrap items-center justify-between gap-3`}>
-          <p className="text-[15px]">Nenhum caso cadastrado ainda.</p>
-          <Button asChild className="min-h-11">
-            <Link to="/app/clientes">Cadastrar caso</Link>
-          </Button>
+      {showOnb && (
+        <section aria-labelledby="onb-h" className="work-desk-onboarding">
+          <div className="work-desk-onboarding-head">
+            <h2 id="onb-h">Primeiros passos</h2>
+            <span>
+              {onb.done} de {onb.total} concluídos
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Dispensar primeiros passos"
+              onClick={() => {
+                writePref(user.id, "onboarding", { hidden: true });
+                setOnbHidden(true);
+              }}
+            >
+              <X aria-hidden />
+            </Button>
+          </div>
+          <ol>
+            {onb.steps.map((step, index) => (
+              <li key={step.id}>
+                <span className="work-desk-step" data-done={step.done || undefined} aria-hidden>
+                  {step.done ? <Check size={16} /> : index + 1}
+                </span>
+                <span>
+                  {step.label}
+                  <span className="sr-only">{step.done ? " (concluído)" : " (pendente)"}</span>
+                </span>
+              </li>
+            ))}
+          </ol>
+          <Link to="/" hash="caso-ficticio" className="work-desk-text-link">
+            Praticar no Consultante fictício <ArrowRight size={17} aria-hidden />
+          </Link>
         </section>
       )}
-
-      <Link
-        to="/app/biblioteca"
-        className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-forest hover:underline"
-      >
-        Consultar a Biblioteca <ArrowRight className="size-4" aria-hidden />
-      </Link>
     </div>
   );
 }

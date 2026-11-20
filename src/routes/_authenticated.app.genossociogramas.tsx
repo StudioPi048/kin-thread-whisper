@@ -1,7 +1,7 @@
 import { GenogramThumbnail } from "@/components/genogram/genogram-thumbnail";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, ArrowRight, GitBranch, Network, Search } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -66,8 +66,9 @@ async function readPreview(clientId: string) {
   };
 }
 
-function MapCard({ client, userId }: { client: CardClient; userId: string }) {
+function MapRecord({ client, userId }: { client: CardClient; userId: string }) {
   const [requested, setRequested] = useState(false);
+  const previewId = useId();
   const [lastPerson, setLastPerson] = useState<string>();
   useEffect(() => {
     setLastPerson(readPref<{ personId?: string }>(userId, `map-focus:${client.id}`, {}).personId);
@@ -79,72 +80,70 @@ function MapCard({ client, userId }: { client: CardClient; userId: string }) {
   });
   const label = client.preferred_name || client.full_name;
   return (
-    <article className="gv-map-card">
-      <div className="gv-map-card-preview grid place-items-center">
-        {preview.data ? (
-          <GenogramThumbnail persons={preview.data.persons} rels={preview.data.rels} />
-        ) : (
-          <div className="flex flex-col items-center gap-3 p-4 text-center text-forest">
-            <Network size={28} strokeWidth={1.3} aria-hidden />
-            {preview.isFetching ? (
-              <p role="status" className="text-sm">
-                Carregando prévia…
+    <article className="archive-map-record">
+      <div className="archive-map-record-row">
+        <Network size={22} strokeWidth={1.55} aria-hidden />
+        <div className="min-w-0">
+          <h2 className="break-words text-base font-semibold text-ink">{label}</h2>
+          {client.preferred_name && client.preferred_name !== client.full_name && (
+            <p className="break-words text-sm text-ink-soft">{client.full_name}</p>
+          )}
+          {preview.data && (
+            <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-soft">
+              <GitBranch size={16} aria-hidden />
+              {preview.data.persons.length}{" "}
+              {preview.data.persons.length === 1 ? "pessoa" : "pessoas"}
+              {" · "}
+              {preview.data.generations} {preview.data.generations === 1 ? "geração" : "gerações"}
+              {preview.data.pending > 0
+                ? ` · ${preview.data.pending} para revisar`
+                : !preview.data.consistent
+                  ? " · Há vínculos a conferir"
+                  : ""}
+            </p>
+          )}
+        </div>
+        <div className="archive-map-actions">
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-11"
+            aria-expanded={requested}
+            aria-controls={previewId}
+            aria-label={`${requested ? "Fechar" : "Carregar"} prévia de ${label}`}
+            onClick={() => setRequested(!requested)}
+          >
+            {requested ? "Fechar prévia" : "Ver prévia"}
+          </Button>
+          <Link
+            to="/app/clientes/$clientId"
+            params={{ clientId: client.id }}
+            search={{ tab: "genogram", ...(lastPerson ? { person: lastPerson } : {}) }}
+            aria-label={`${lastPerson ? "Retomar familiar no mapa" : "Ver árvore"} de ${label}`}
+            className="archive-text-action"
+          >
+            {lastPerson ? "Retomar familiar" : "Abrir árvore"} <ArrowRight size={16} aria-hidden />
+          </Link>
+        </div>
+      </div>
+      <div id={previewId} hidden={!requested} className="archive-map-preview">
+        {requested &&
+          (preview.data ? (
+            <GenogramThumbnail persons={preview.data.persons} rels={preview.data.rels} />
+          ) : preview.isError ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <p role="alert" className="text-sm text-destructive">
+                Prévia indisponível.
               </p>
-            ) : preview.isError ? (
-              <>
-                <p role="alert" className="text-sm text-destructive">
-                  Prévia indisponível.
-                </p>
-                <Button
-                  variant="outline"
-                  className="min-h-11"
-                  onClick={() => void preview.refetch()}
-                >
-                  Tentar novamente
-                </Button>
-              </>
-            ) : (
-              <Button
-                variant="outline"
-                className="min-h-11"
-                onClick={() => setRequested(true)}
-                aria-label={`Carregar prévia de ${label}`}
-              >
-                Carregar prévia
+              <Button variant="outline" className="min-h-11" onClick={() => void preview.refetch()}>
+                Tentar novamente
               </Button>
-            )}
-          </div>
-        )}
-      </div>
-      <div className="gv-map-card-body space-y-2">
-        <h2 className="break-words font-sans text-lg font-semibold text-ink">{label}</h2>
-        {client.preferred_name && client.preferred_name !== client.full_name && (
-          <p className="text-sm text-ink-soft">{client.full_name}</p>
-        )}
-        {preview.data && (
-          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-soft">
-            <GitBranch size={16} aria-hidden />
-            {preview.data.persons.length} {preview.data.persons.length === 1 ? "pessoa" : "pessoas"}
-            {" · "}
-            {preview.data.generations} {preview.data.generations === 1 ? "geração" : "gerações"}
-            {preview.data.pending > 0
-              ? ` · ${preview.data.pending} para revisar`
-              : !preview.data.consistent
-                ? " · Há vínculos a conferir"
-                : ""}
-          </p>
-        )}
-      </div>
-      <div className="gv-map-card-footer">
-        <Link
-          to="/app/clientes/$clientId"
-          params={{ clientId: client.id }}
-          search={{ tab: "genogram", ...(lastPerson ? { person: lastPerson } : {}) }}
-          aria-label={`${lastPerson ? "Retomar familiar no mapa" : "Ver árvore"} de ${label}`}
-          className="inline-flex min-h-11 items-center gap-2 font-semibold text-forest"
-        >
-          {lastPerson ? "Retomar familiar" : "Ver árvore"} <ArrowRight size={16} aria-hidden />
-        </Link>
+            </div>
+          ) : (
+            <p role="status" className="text-sm text-ink-soft">
+              Carregando prévia…
+            </p>
+          ))}
       </div>
     </article>
   );
@@ -231,11 +230,13 @@ function GenogramsPage() {
             }
           />
         ) : (
-          <div className="gv-map-gallery">
+          <ul className="archive-register" aria-label="Árvores por cliente">
             {clients.map((client) => (
-              <MapCard key={client.id} client={client} userId={user.id} />
+              <li key={client.id}>
+                <MapRecord client={client} userId={user.id} />
+              </li>
             ))}
-          </div>
+          </ul>
         )}
         {!waiting && !gallery.isError && (page > 0 || gallery.data?.hasMore) && (
           <nav

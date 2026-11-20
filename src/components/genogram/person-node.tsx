@@ -50,12 +50,15 @@ function PersonNodeComponent({ id, data, selected }: NodeProps) {
     .split(/\s+/)
     .reduce((length, word) => Math.max(length, word.length), 1);
   // Aperte a fonte de palavras longas antes de recorrer à quebra de sobrenomes.
-  const nameSize = Math.max(16, Math.min(28, 236 / longestWord, 12 / Math.max(zoom, 0.15)));
+  const nameSize = Math.max(16, Math.min(28, 211 / longestWord, 12 / Math.max(zoom, 0.15)));
   const dates = personDatesLabel(d.birth_date, d.death_date);
 
   return (
     <div
-      className={cn("relative flex flex-col items-center group", d.is_proband && "z-20")}
+      className={cn(
+        "relative flex flex-col items-center group",
+        d.is_proband && "geno-node-reference z-20",
+      )}
       data-connect-source={d.connectionOrigin || undefined}
       style={{ userSelect: "none", width: 140 }}
     >

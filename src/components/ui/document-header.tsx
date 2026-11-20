@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
+import "./document-header.css";
 export interface DocumentHeaderProps {
-  breadcrumb: ReactNode;
+  breadcrumb?: ReactNode;
   title: ReactNode;
   subtitle?: ReactNode;
   actions?: ReactNode;
@@ -14,11 +15,13 @@ export function DocumentHeader({
   children,
 }: DocumentHeaderProps) {
   return (
-    <header className="atlas-page-header">
+    <header className="archive-document-header atlas-page-header">
       <div className="container-liz">
-        <nav aria-label="Localização" className="atlas-breadcrumb">
-          {breadcrumb}
-        </nav>
+        {breadcrumb != null && breadcrumb !== title && (
+          <nav aria-label="Localização" className="atlas-breadcrumb">
+            {breadcrumb}
+          </nav>
+        )}
         <div className="atlas-page-heading">
           <div className="min-w-0">
             <div role="heading" aria-level={1} className="atlas-title">

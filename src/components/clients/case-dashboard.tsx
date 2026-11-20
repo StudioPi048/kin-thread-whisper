@@ -26,8 +26,6 @@ export function CaseDashboard({ clientId }: { clientId: string }) {
   ];
   const stats = intel.data
     ? [
-        { label: "Pessoas no mapa", value: persons.length },
-        { label: "Vínculos", value: intel.data.relationships.length },
         {
           label: "Padrões detectados",
           value: detectPatterns(persons, intel.data.relationships).length,
@@ -46,8 +44,10 @@ export function CaseDashboard({ clientId }: { clientId: string }) {
     : [];
 
   return (
-    <section className="rounded-xl border border-border bg-card p-5">
-      <h3 className="text-[15px] font-semibold text-ink">Composição do mapa</h3>
+    <section className="dossier-section">
+      <header className="dossier-section-heading">
+        <h2>Composição do mapa</h2>
+      </header>
       {intel.isError ? (
         <div className="mt-3 text-sm text-destructive">
           <p role="alert">Não foi possível atualizar a composição.</p>
@@ -69,7 +69,17 @@ export function CaseDashboard({ clientId }: { clientId: string }) {
       )}
       {intel.data && (
         <>
-          <dl className="mt-3 divide-y divide-border">
+          <dl className="dossier-map-counts">
+            <div>
+              <dt>Pessoas no mapa</dt>
+              <dd>{persons.length}</dd>
+            </div>
+            <div>
+              <dt>Vínculos</dt>
+              <dd>{intel.data.relationships.length}</dd>
+            </div>
+          </dl>
+          <dl className="divide-y divide-border">
             {stats.map(({ label, value }) => (
               <div key={label} className="flex justify-between gap-3 py-2 text-sm">
                 <dt className="text-ink-soft">{label}</dt>
@@ -79,11 +89,8 @@ export function CaseDashboard({ clientId }: { clientId: string }) {
           </dl>
           {persons.length > 0 && (
             <div className="mt-3 border-t border-border pt-4">
-              <h4 className="mb-2 text-sm font-semibold text-ink">Gênero registrado</h4>
-              <div
-                className="flex h-2 overflow-hidden rounded-full border border-border"
-                aria-hidden
-              >
+              <h3 className="mb-2 text-sm font-semibold text-ink">Gênero registrado</h3>
+              <div className="flex h-1.5 overflow-hidden border border-input" aria-hidden>
                 {composition
                   .filter(({ value }) => value > 0)
                   .map(({ label, value, color }) => (
@@ -98,7 +105,7 @@ export function CaseDashboard({ clientId }: { clientId: string }) {
                 {composition.map(({ label, value, color }) => (
                   <li key={label} className="flex items-center gap-2 text-sm text-ink-soft">
                     <span
-                      className={`size-2.5 shrink-0 rounded-full border border-border ${color}`}
+                      className={`size-2.5 shrink-0 border border-input ${color}`}
                       aria-hidden
                     />
                     <span>{label}</span>

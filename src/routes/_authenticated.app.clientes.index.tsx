@@ -1,11 +1,14 @@
 import { deleteClientDossier, pendingDossierDeletionsKey } from "@/lib/delete-client-dossier";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { readClientListPreferences, writePref } from "@/lib/recent-activity";
 import { foldSearch } from "@/lib/client-index";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   MoreHorizontal,
+  ArrowUpRight,
+  FolderOpen,
+  X,
   Pencil,
   Plus,
   Search,
@@ -18,12 +21,9 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { DocumentHeader } from "@/components/ui/document-header";
-import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,15 +41,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { ClientFormDialog } from "@/components/clients/client-form-dialog";
 import { calcAge } from "@/lib/clients";
-import { DossierCard, DossierCardSkeleton } from "@/components/ui/dossier-card";
-import { ArchiveEmptyState } from "@/components/ui/archive-empty-state";
-import type { PatternItem } from "@/components/ui/dossier-card";
 import type { Database } from "@/integrations/supabase/types";
+import "@/components/archive/work-desk.css";
 
 type ClientRow = Database["public"]["Tables"]["clients"]["Row"];
 type ClientSummary = Pick<
@@ -68,52 +65,9 @@ type ClientSummary = Pick<
 >;
 
 export const Route = createFileRoute("/_authenticated/app/clientes/")({
+  head: () => ({ meta: [{ title: "Dossiês clínicos — GENEALIZ" }] }),
   component: ClientesIndex,
 });
-
-/* ─────────────────────────────────────────────────────────────
-   Helpers — sem dados fictícios, sem random
-   ───────────────────────────────────────────────────────────── */
-
-/** Gera número de registro determinístico a partir do ID */
-function toRegistrationNumber(id: string): string {
-  const hash = id.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
-  return String(hash % 999999).padStart(6, "0");
-}
-
-/** Normaliza capitalização preservando preposições */
-const PREPS = new Set(["de", "da", "do", "dos", "das", "e", "em"]);
-function normalizeName(raw: string): string {
-  return raw
-    .trim()
-    .toLowerCase()
-    .split(" ")
-    .filter(Boolean)
-    .map((w, i) => (i > 0 && PREPS.has(w) ? w : w.charAt(0).toUpperCase() + w.slice(1)))
-    .join(" ");
-}
-
-/** Extrai padrões clínicos das tags do cliente (real — sem invenção) */
-function patternsFromTags(tags: string[] | null): PatternItem[] {
-  if (!tags || tags.length === 0) return [];
-  const typeMap: Record<string, PatternItem["type"]> = {
-    "síndrome de aniversário": "aniversario",
-    aniversario: "aniversario",
-    aniversário: "aniversario",
-    "projeto sentido": "sentido",
-    sentido: "sentido",
-    lealdade: "lealdade",
-    lealdades: "lealdade",
-  };
-  return tags.map((t) => ({
-    label: t,
-    type: typeMap[t.toLowerCase()] ?? "geral",
-  }));
-}
-
-/* ─────────────────────────────────────────────────────────────
-   PÁGINA PRINCIPAL
-   ───────────────────────────────────────────────────────────── */
 
 function ClientesIndex() {
   const { user } = Route.useRouteContext();
@@ -122,6 +76,7 @@ function ClientesIndex() {
   // Visualização e aba são preferências. A busca fica somente nesta tela.
   const [tab, setTab] = useState<"active" | "archived">("active");
   const [query, setQuery] = useState("");
+  const searchInput = useRef<HTMLInputElement>(null);
   const [viewMode, setViewMode] = useState<"cards" | "list">("list");
   const [prefsLoadedFor, setPrefsLoadedFor] = useState<string | null>(null);
   useEffect(() => {
@@ -244,313 +199,190 @@ function ClientesIndex() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
 
+  function toggleArchive(client: ClientSummary) {
+    setStatus.mutate({ id: client.id, status: client.status === "active" ? "archived" : "active" });
+  }
+
+  function clearSearch() {
+    setQuery("");
+    searchInput.current?.focus();
+  }
+
+  const hasQuery = query.trim().length > 0;
+
   return (
-    <div className="min-h-screen bg-surface-archive">
-      {/* ── HEADER ─────────────────────────────────────────── */}
-      <DocumentHeader
-        breadcrumb="Clientes"
-        title="Dossiês Clínicos"
-        subtitle="Todos os pacientes em acompanhamento."
-        actions={
-          <Button
-            onClick={() => setCreating(true)}
-            className="gap-2 rounded-[10px] bg-gold px-5 font-sans text-[13px] font-bold tracking-[0.02em] text-forest shadow-[0_2px_10px_rgba(212,168,67,0.2),0_1px_3px_rgba(0,0,0,0.05)] transition-all duration-200 hover:-translate-y-px hover:bg-gold-soft hover:shadow-[0_4px_14px_rgba(212,168,67,0.3),0_2px_6px_rgba(0,0,0,0.1)]"
+    <div className="container-liz work-clients">
+      <header className="work-desk-heading">
+        <h1>Dossiês clínicos</h1>
+        <Button variant="forest" onClick={() => setCreating(true)}>
+          <Plus aria-hidden /> Novo cliente
+        </Button>
+      </header>
+
+      <div className="work-clients-controls">
+        <div role="group" aria-label="Status dos dossiês" className="work-client-filters">
+          <button type="button" aria-pressed={tab === "active"} onClick={() => setTab("active")}>
+            Em acompanhamento
+          </button>
+          <button
+            type="button"
+            aria-pressed={tab === "archived"}
+            onClick={() => setTab("archived")}
           >
-            <Plus className="size-4" strokeWidth={2.5} />
-            Novo cliente
-          </Button>
-        }
-      />
-
-      {/* ── TOOLBAR ─────────────────────────────────────────── */}
-      <div className="border-b border-material-border bg-surface-document py-4">
-        <div className="container-liz flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <Tabs value={tab} onValueChange={(v) => setTab(v as "active" | "archived")}>
-              <TabsList>
-                <TabsTrigger value="active">Ativos</TabsTrigger>
-                <TabsTrigger value="archived">Arquivados</TabsTrigger>
-              </TabsList>
-            </Tabs>
-
-            {/* View mode */}
-            <div
-              role="group"
-              aria-label="Modo de visualização"
-              className="flex items-center rounded-lg border border-material-border bg-surface-archive p-[3px]"
-            >
-              <button
-                onClick={() => setViewMode("cards")}
-                title="Grade de Dossiês"
-                aria-label="Grade de Dossiês"
-                aria-pressed={viewMode === "cards"}
-                className={`flex size-9 items-center justify-center rounded-[6px] transition-all duration-150 ${
-                  viewMode === "cards"
-                    ? "bg-surface-document text-forest shadow-[0_1px_3px_rgba(18,41,31,0.08)]"
-                    : "text-warm-gray hover:text-ink"
-                }`}
-              >
-                <LayoutGrid className="size-3.5" strokeWidth={1.75} />
+            Arquivados
+          </button>
+        </div>
+        <div className="work-client-find">
+          <div className="work-client-search">
+            <Search size={18} aria-hidden />
+            <Input
+              ref={searchInput}
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Nome, queixa ou tag"
+              aria-label="Buscar dossiês"
+            />
+            {query && (
+              <button type="button" aria-label="Limpar busca" onClick={clearSearch}>
+                <X size={17} aria-hidden />
               </button>
-              <button
-                onClick={() => setViewMode("list")}
-                title="Lista Compacta"
-                aria-label="Lista Compacta"
-                aria-pressed={viewMode === "list"}
-                className={`flex size-9 items-center justify-center rounded-[6px] transition-all duration-150 ${
-                  viewMode === "list"
-                    ? "bg-surface-document text-forest shadow-[0_1px_3px_rgba(18,41,31,0.08)]"
-                    : "text-warm-gray hover:text-ink"
-                }`}
-              >
-                <List className="size-3.5" strokeWidth={1.75} />
-              </button>
-            </div>
-
-            {/* Contagem */}
-            {!isLoading && (
-              <span className="text-xs text-warm-gray">
-                {filtered.length} {filtered.length === 1 ? "dossiê" : "dossiês"}
-              </span>
             )}
           </div>
-
-          {/* Busca */}
-          <div className="relative w-full sm:max-w-[320px]">
-            <Search
-              className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-warm-gray"
-              strokeWidth={1.5}
-            />
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Nome, queixa, tag..."
-              aria-label="Buscar dossiês"
-              className="h-9 pl-9 text-[13px]"
-            />
+          <div role="group" aria-label="Modo de visualização" className="work-client-views">
+            <button
+              type="button"
+              title="Lista compacta"
+              aria-label="Lista compacta"
+              aria-pressed={viewMode === "list"}
+              onClick={() => setViewMode("list")}
+            >
+              <List size={18} aria-hidden />
+            </button>
+            <button
+              type="button"
+              title="Grade de dossiês"
+              aria-label="Grade de dossiês"
+              aria-pressed={viewMode === "cards"}
+              onClick={() => setViewMode("cards")}
+            >
+              <LayoutGrid size={17} aria-hidden />
+            </button>
           </div>
         </div>
       </div>
 
-      {/* ── GRID DE DOSSIÊS ─────────────────────────────────── */}
-      <div className="container-liz pt-7 pb-12">
-        {isLoading ? (
-          <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-5 p-0">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <li key={i}>
-                <DossierCardSkeleton />
-              </li>
-            ))}
-          </ul>
-        ) : isError ? (
-          <div
-            role="alert"
-            className="flex flex-wrap items-center gap-3 rounded-xl border border-destructive/40 bg-card p-5 text-[15px] text-destructive"
-          >
-            Não foi possível carregar os clientes.
-            <Button variant="outline" className="min-h-11" onClick={() => refetch()}>
-              Tentar de novo
-            </Button>
-          </div>
-        ) : filtered.length === 0 ? (
-          <>
-            <EmptyState hasQuery={query.length > 0} onCreate={() => setCreating(true)} tab={tab} />
-            {query.length > 0 && (
-              <div className="mt-4 flex justify-center">
-                <Button variant="outline" className="min-h-11" onClick={() => setQuery("")}>
-                  Limpar busca
-                </Button>
-              </div>
-            )}
-          </>
-        ) : viewMode === "cards" ? (
-          <motion.ul
-            className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-5 p-0"
-            initial="hidden"
-            animate="visible"
-            variants={{
-              hidden: { opacity: 0 },
-              visible: { opacity: 1, transition: { staggerChildren: 0.06 } },
-            }}
-          >
-            {filtered.map((c) => {
-              const age = calcAge(c.birth_date);
-              const patterns = patternsFromTags(c.tags);
-              const consentStatus = c.consent_given_at ? "signed" : "pending";
-
-              return (
-                <motion.li
-                  key={c.id}
-                  variants={{
-                    hidden: { opacity: 0, y: 12 },
-                    visible: {
-                      opacity: 1,
-                      y: 0,
-                      transition: { type: "spring", stiffness: 320, damping: 26 },
-                    },
-                  }}
-                >
-                  <DossierCard
-                    id={c.id}
-                    registrationNumber={toRegistrationNumber(c.id)}
-                    patientName={normalizeName(c.full_name)}
-                    preferredName={c.preferred_name ? normalizeName(c.preferred_name) : undefined}
-                    subtitle={c.tags?.[0] ?? undefined}
-                    age={age}
-                    birthplace={c.birthplace ?? undefined}
-                    presentingComplaint={c.presenting_complaint ?? undefined}
-                    status={c.status as "active" | "archived"}
-                    patterns={patterns}
-                    aiInsight={null} /* Real: sem dados fictícios — IA real a implementar */
-                    consentStatus={consentStatus}
-                    onEdit={() => setEditing(c)}
-                    onArchive={() =>
-                      setStatus.mutate({
-                        id: c.id,
-                        status: c.status === "active" ? "archived" : "active",
-                      })
-                    }
-                    onDelete={() => setDeleting(c)}
-                  />
-                </motion.li>
-              );
-            })}
-          </motion.ul>
-        ) : (
-          /* ── LISTA COMPACTA (alta densidade) ── */
-          <div className="overflow-hidden rounded-[14px] border border-material-border bg-surface-document shadow-[0_1px_3px_rgba(18,41,31,0.04),0_6px_16px_rgba(18,41,31,0.06)]">
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-[13px]">
-                <thead>
-                  <tr className="border-b border-material-border bg-surface-archive">
-                    <Th className="pl-5">Cliente</Th>
-                    <Th className="hidden md:table-cell">Contato</Th>
-                    <Th className="hidden lg:table-cell">Queixa</Th>
-                    <Th className="hidden sm:table-cell">Tags</Th>
-                    <Th>Consentimento</Th>
-                    <Th className="pr-5 text-right">Ações</Th>
+      {isLoading ? (
+        <div className="work-client-loading" role="status">
+          <p>Carregando dossiês…</p>
+          <div className="work-skeleton" aria-hidden />
+          <div className="work-skeleton" aria-hidden />
+          <div className="work-skeleton" aria-hidden />
+        </div>
+      ) : isError ? (
+        <div role="alert" className="work-desk-error work-client-page-status">
+          Não foi possível carregar os clientes.
+          <Button variant="outline" onClick={() => void refetch()}>
+            Tentar de novo
+          </Button>
+        </div>
+      ) : (
+        <>
+          <p role="status" className="work-client-count">
+            {filtered.length} {filtered.length === 1 ? "dossiê" : "dossiês"}
+            {hasQuery && ` de ${clients.length}`}
+          </p>
+          {filtered.length === 0 ? (
+            <EmptyState
+              hasQuery={hasQuery}
+              onClear={clearSearch}
+              onCreate={() => setCreating(true)}
+              tab={tab}
+            />
+          ) : viewMode === "cards" ? (
+            <ul className="work-client-grid" aria-label="Dossiês em grade">
+              {filtered.map((client) => (
+                <li key={client.id} className="work-client-file">
+                  <div className="work-client-file-head">
+                    <ClientName client={client} />
+                    <ClientActions
+                      client={client}
+                      onEdit={() => setEditing(client)}
+                      onArchive={() => toggleArchive(client)}
+                      onDelete={() => setDeleting(client)}
+                    />
+                  </div>
+                  {client.presenting_complaint && (
+                    <p className="work-client-summary">{client.presenting_complaint}</p>
+                  )}
+                  {client.tags?.length ? <ClientTags tags={client.tags} /> : null}
+                  <footer>
+                    <ClientConsent given={!!client.consent_given_at} />
+                  </footer>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <table className="work-client-ledger">
+              <caption className="sr-only">
+                {tab === "active" ? "Dossiês em acompanhamento" : "Dossiês arquivados"}
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">Cliente</th>
+                  <th scope="col" className="work-client-contact">
+                    Contato
+                  </th>
+                  <th scope="col" className="work-client-concern">
+                    Queixa
+                  </th>
+                  <th scope="col" className="work-client-tags-column">
+                    Tags
+                  </th>
+                  <th scope="col" className="work-client-consent-column">
+                    Consentimento
+                  </th>
+                  <th scope="col">
+                    <span className="sr-only">Ações</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((client) => (
+                  <tr key={client.id}>
+                    <th scope="row">
+                      <ClientName client={client} />
+                    </th>
+                    <td className="work-client-contact">
+                      {client.email && <span>{client.email}</span>}
+                      {client.phone && <span>{client.phone}</span>}
+                      {!client.email && !client.phone && <span>—</span>}
+                    </td>
+                    <td className="work-client-concern">
+                      <span>{client.presenting_complaint || "—"}</span>
+                    </td>
+                    <td className="work-client-tags-column">
+                      <ClientTags tags={client.tags} />
+                    </td>
+                    <td className="work-client-consent-column">
+                      <ClientConsent given={!!client.consent_given_at} />
+                    </td>
+                    <td className="work-client-action">
+                      <ClientActions
+                        client={client}
+                        onEdit={() => setEditing(client)}
+                        onArchive={() => toggleArchive(client)}
+                        onDelete={() => setDeleting(client)}
+                      />
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((c) => {
-                    const age = calcAge(c.birth_date);
-                    return (
-                      <tr
-                        key={c.id}
-                        className="border-b border-material-border/50 transition-colors duration-100 hover:bg-surface-archive/60"
-                      >
-                        <td className="py-3 pr-4 pl-5">
-                          <Link
-                            to="/app/clientes/$clientId"
-                            params={{ clientId: c.id }}
-                            className="block font-serif text-[15px] font-bold text-ink no-underline hover:text-forest-soft"
-                          >
-                            {normalizeName(c.preferred_name || c.full_name)}
-                          </Link>
-                          <span className="text-[11px] text-warm-gray">
-                            {age !== null ? `${age} anos` : ""}
-                            {c.birthplace ? ` · ${c.birthplace}` : ""}
-                          </span>
-                        </td>
-                        <td className="hidden px-4 py-3 font-mono text-[11px] text-ink-soft md:table-cell">
-                          {c.email || "—"}
-                          <br />
-                          {c.phone || "—"}
-                        </td>
-                        <td className="hidden max-w-[200px] px-4 py-3 lg:table-cell">
-                          <span className="line-clamp-2 text-[13px] text-ink-soft">
-                            {c.presenting_complaint || "—"}
-                          </span>
-                        </td>
-                        <td className="hidden px-4 py-3 sm:table-cell">
-                          <div className="flex flex-wrap gap-1">
-                            {c.tags?.slice(0, 3).map((t) => (
-                              <Badge
-                                key={t}
-                                variant="secondary"
-                                className="px-1.5 py-0.5 text-[9px] font-bold"
-                              >
-                                {t}
-                              </Badge>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={`flex items-center gap-1 text-[11px] font-semibold ${
-                              c.consent_given_at ? "text-forest-soft" : "text-clinical-critical"
-                            }`}
-                          >
-                            {c.consent_given_at ? (
-                              <>
-                                <FileCheck className="size-3" aria-hidden /> Assinado
-                              </>
-                            ) : (
-                              <>
-                                <AlertTriangle className="size-3" aria-hidden /> Pendente
-                              </>
-                            )}
-                          </span>
-                        </td>
-                        <td className="py-3 pr-5 pl-4 text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                className="size-8"
-                                aria-label={`Ações para ${c.full_name}`}
-                              >
-                                <MoreHorizontal className="size-3.5" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => setEditing(c)}>
-                                <Pencil className="size-[13px]" /> Editar
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  setStatus.mutate({
-                                    id: c.id,
-                                    status: c.status === "active" ? "archived" : "active",
-                                  })
-                                }
-                              >
-                                {c.status === "active" ? (
-                                  <>
-                                    <Archive className="size-[13px]" /> Arquivar
-                                  </>
-                                ) : (
-                                  <>
-                                    <ArchiveRestore className="size-[13px]" /> Reativar
-                                  </>
-                                )}
-                              </DropdownMenuItem>
-                              {c.status === "archived" && (
-                                <>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem
-                                    className="text-destructive focus:text-destructive"
-                                    onClick={() => setDeleting(c)}
-                                  >
-                                    <Trash2 className="size-[13px]" /> Excluir
-                                  </DropdownMenuItem>
-                                </>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </div>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </>
+      )}
 
-      {/* ── DIALOGS ─────────────────────────────────────────── */}
       <ClientFormDialog
         open={creating}
         onOpenChange={setCreating}
@@ -629,61 +461,141 @@ function ClientesIndex() {
   );
 }
 
-function Th({ className = "", children }: { className?: string; children: ReactNode }) {
+function ClientName({ client }: { client: ClientSummary }) {
+  const age = calcAge(client.birth_date);
+  const metadata = [
+    client.preferred_name && client.preferred_name !== client.full_name ? client.full_name : null,
+    age !== null ? `${age} anos` : null,
+    client.birthplace,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
-    <th
-      className={`px-4 py-3 text-left text-[9px] font-extrabold tracking-[0.14em] text-warm-gray uppercase ${className}`}
+    <Link
+      to="/app/clientes/$clientId"
+      params={{ clientId: client.id }}
+      className="work-client-name"
     >
-      {children}
-    </th>
+      <span className="work-client-folder">
+        <FolderOpen size={20} aria-hidden />
+      </span>
+      <span>
+        <strong>{client.preferred_name || client.full_name}</strong>
+        {metadata && <small>{metadata}</small>}
+      </span>
+      <ArrowUpRight size={17} aria-hidden />
+    </Link>
   );
 }
 
-/* ─────────────────────────────────────────────────────────────
-   EMPTY STATE
-   ───────────────────────────────────────────────────────────── */
+function ClientTags({ tags }: { tags: string[] | null }) {
+  return tags?.length ? (
+    <ul className="work-client-tags">
+      {tags.slice(0, 3).map((tag, index) => (
+        <li key={`${tag}-${index}`}>{tag}</li>
+      ))}
+    </ul>
+  ) : (
+    <span>—</span>
+  );
+}
+
+function ClientConsent({ given }: { given: boolean }) {
+  return (
+    <span className="work-client-consent" data-pending={given ? undefined : true}>
+      {given ? <FileCheck size={16} aria-hidden /> : <AlertTriangle size={16} aria-hidden />}
+      {given ? "Registrado" : "Pendente"}
+    </span>
+  );
+}
+
+function ClientActions({
+  client,
+  onEdit,
+  onArchive,
+  onDelete,
+}: {
+  client: ClientSummary;
+  onEdit: () => void;
+  onArchive: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" aria-label={`Ações para ${client.full_name}`}>
+          <MoreHorizontal />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onSelect={onEdit}>
+          <Pencil aria-hidden /> Editar
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={onArchive}>
+          {client.status === "active" ? (
+            <>
+              <Archive aria-hidden /> Arquivar
+            </>
+          ) : (
+            <>
+              <ArchiveRestore aria-hidden /> Reativar
+            </>
+          )}
+        </DropdownMenuItem>
+        {client.status === "archived" && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onSelect={onDelete}
+            >
+              <Trash2 aria-hidden /> Excluir
+            </DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function EmptyState({
   hasQuery,
+  onClear,
   onCreate,
   tab,
 }: {
   hasQuery: boolean;
+  onClear: () => void;
   onCreate: () => void;
   tab: "active" | "archived";
 }) {
-  if (hasQuery) {
-    return (
-      <ArchiveEmptyState
-        image="/assets/renders/lupa-documentos.jpg"
-        withSeal={false}
-        eyebrow="Busca no arquivo"
-        title="Nada encontrado nas fichas."
-        description="Tente outro termo — nome, queixa ou tag — ou remova o filtro para ver todos os dossiês."
-      />
-    );
-  }
   return (
-    <ArchiveEmptyState
-      image="/assets/renders/gaveta-arquivo.jpg"
-      withSeal={false}
-      eyebrow={tab === "active" ? "Arquivo de dossiês" : "Dossiês arquivados"}
-      title={tab === "active" ? "A jornada começa aqui." : "Nenhum dossiê arquivado."}
-      description={
-        tab === "active"
-          ? "Todo caso começa por um nome. O genossociograma, as sessões e os padrões sistêmicos se constroem a partir do paciente-índice."
-          : "Quando arquivar um dossiê, ele aparecerá aqui para consulta histórica."
-      }
-      action={
-        tab === "active" && (
-          <Button
-            onClick={onCreate}
-            className="gap-2 rounded-[10px] bg-forest px-5 py-3 text-sm font-bold tracking-[0.02em] text-white hover:bg-forest-mid"
-          >
-            <Plus className="size-[15px]" strokeWidth={2.5} />
-            Cadastrar primeiro cliente
-          </Button>
-        )
-      }
-    />
+    <section className="work-client-empty" aria-labelledby="work-client-empty-title">
+      {hasQuery ? <Search size={26} aria-hidden /> : <FolderOpen size={28} aria-hidden />}
+      <h2 id="work-client-empty-title">
+        {hasQuery
+          ? "Nenhum dossiê encontrado"
+          : tab === "active"
+            ? "Nenhum cliente cadastrado"
+            : "Nenhum dossiê arquivado"}
+      </h2>
+      <p>
+        {hasQuery
+          ? "Tente outro nome, queixa ou tag."
+          : tab === "active"
+            ? "Cadastre o primeiro cliente para começar o dossiê."
+            : "Os dossiês ficam disponíveis aqui após o arquivamento."}
+      </p>
+      {hasQuery ? (
+        <Button variant="outline" onClick={onClear}>
+          Limpar busca
+        </Button>
+      ) : tab === "active" ? (
+        <Button variant="forest" onClick={onCreate}>
+          <Plus aria-hidden /> Cadastrar primeiro cliente
+        </Button>
+      ) : null}
+    </section>
   );
 }

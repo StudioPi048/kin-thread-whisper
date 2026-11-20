@@ -162,12 +162,12 @@ export function ClientTimeline({ clientId, focusEvent }: Props) {
 
   if (all.length === 0)
     return (
-      <div className="rounded-md border border-dashed border-border bg-card p-8 text-center">
-        <CalendarClock className="mx-auto size-8 text-forest" aria-hidden />
-        <p className="mt-3 text-lg font-semibold text-primary">
+      <div className="case-timeline-empty">
+        <CalendarClock className="size-6 text-forest" aria-hidden />
+        <h2 className="mt-3 text-lg font-semibold text-primary">
           Ainda não há registros na linha do tempo
-        </p>
-        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
+        </h2>
+        <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
           Abra a planilha para preencher datas ou a ficha de um familiar para registrar um evento.
         </p>
         <Button asChild variant="outline" className="mt-4 min-h-11">
@@ -327,7 +327,7 @@ export function ClientTimeline({ clientId, focusEvent }: Props) {
           </select>
         </div>
       </div>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-x-3 text-sm text-muted-foreground">
+      <div className="case-timeline-count">
         <p role="status">
           {items.length} de {all.length} registros
         </p>
@@ -378,7 +378,7 @@ export function ClientTimeline({ clientId, focusEvent }: Props) {
             </Button>
           </div>
           <section className="case-timeline-list" aria-labelledby="case-timeline-list-title">
-            <h3 id="case-timeline-list-title">Cronologia</h3>
+            <h2 id="case-timeline-list-title">Cronologia</h2>
             {dated.length > 0 && (
               <TimelineList
                 items={dated}
@@ -390,9 +390,9 @@ export function ClientTimeline({ clientId, focusEvent }: Props) {
             )}
             {undated.length > 0 && (
               <div className="case-timeline-undated">
-                <h4>
+                <h3>
                   Fora do gráfico por falta de data ou ano <span>{undated.length}</span>
-                </h4>
+                </h3>
                 <TimelineList
                   items={undated}
                   selected={selected}
@@ -517,26 +517,28 @@ function TimelineOverview({
   return (
     <section className="case-timeline-overview" aria-labelledby="case-timeline-overview-title">
       <header className="case-timeline-overview-header">
-        <h3 id="case-timeline-overview-title">Panorama cronológico</h3>
-        {scale && (
-          <p className="case-timeline-range">
-            {scale.fromYear === scale.toYear
-              ? scale.fromYear
-              : `${scale.fromYear} – ${scale.toYear}`}
-          </p>
+        <div>
+          <h2 id="case-timeline-overview-title">Panorama cronológico</h2>
+          {scale && (
+            <p className="case-timeline-range">
+              {scale.fromYear === scale.toYear
+                ? scale.fromYear
+                : `${scale.fromYear} – ${scale.toYear}`}
+            </p>
+          )}
+        </div>
+        {scale && onCompareBranches && (
+          <Button
+            type="button"
+            variant="outline"
+            className="case-timeline-compare min-h-11"
+            aria-pressed={compareBranches}
+            onClick={onCompareBranches}
+          >
+            Comparar ramos
+          </Button>
         )}
       </header>
-      {scale && onCompareBranches && (
-        <Button
-          type="button"
-          variant="outline"
-          className="ml-4 min-h-11"
-          aria-pressed={compareBranches}
-          onClick={onCompareBranches}
-        >
-          Comparar ramos
-        </Button>
-      )}
       {scale ? (
         <figure className="case-timeline-figure">
           <div className="case-timeline-ruler" aria-hidden="true">
@@ -555,7 +557,7 @@ function TimelineOverview({
             </div>
             {lanes.map(({ id, title, groups }) => (
               <div className="case-timeline-lane" key={id} role="group" aria-label={title}>
-                <h4>{title}</h4>
+                <h3>{title}</h3>
                 <div className="case-timeline-track">
                   {groups.map((group) => {
                     const index = group.members.findIndex(({ item }) => item.key === selected.key);

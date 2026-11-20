@@ -91,22 +91,25 @@ function ConfigPage() {
 
   return (
     <div className="min-h-screen bg-surface-archive">
-      <DocumentHeader
-        breadcrumb="Configurações"
-        title="Sua conta"
-        subtitle="Dados profissionais registrados na plataforma."
-      />
+      <DocumentHeader title="Sua conta" subtitle="Dados profissionais registrados na plataforma." />
 
-      <div className="container-liz pb-16">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!unavailable && dirty && !mutation.isPending) mutation.mutate(edits);
-          }}
-          className="max-w-2xl space-y-6"
-        >
-          <div className="rounded-[14px] border border-material-border bg-surface-document p-6 shadow-surface sm:p-8">
-            <h2 className="m-0 font-serif text-2xl text-ink">Perfil profissional</h2>
+      <div className="container-liz archive-settings-layout">
+        <nav className="archive-settings-index" aria-label="Seções da conta">
+          <a href="#perfil-profissional">Perfil profissional</a>
+          <a href="#preferencias">Preferências</a>
+          <a href="#dados-da-conta">Meus dados</a>
+          <a href="#ajuda-da-conta">Ajuda</a>
+        </nav>
+        <div className="min-w-0 space-y-6">
+          <form
+            id="perfil-profissional"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!unavailable && dirty && !mutation.isPending) mutation.mutate(edits);
+            }}
+            className="archive-profile-pane"
+          >
+            <h2 className="m-0 text-lg font-semibold text-ink">Perfil profissional</h2>
 
             {isError && (
               <div
@@ -190,17 +193,16 @@ function ConfigPage() {
                 {mutation.isPending ? "Salvando…" : "Salvar alterações"}
               </Button>
             </div>
+          </form>
+          <div id="preferencias">
+            <AccountPreferences userId={user.id} />
           </div>
-        </form>
-        <div className="mt-6 max-w-2xl space-y-6">
-          <AccountPreferences userId={user.id} />
-          <DataExport userId={user.id} />
-          <PendingDossierDeletions userId={user.id} />
-          <section
-            className="rounded-[14px] border border-material-border bg-surface-document p-6 shadow-surface sm:p-8"
-            aria-labelledby="help-h"
-          >
-            <h2 id="help-h" className="m-0 font-serif text-2xl text-ink">
+          <div id="dados-da-conta" className="space-y-6">
+            <DataExport userId={user.id} />
+            <PendingDossierDeletions userId={user.id} />
+          </div>
+          <section id="ajuda-da-conta" className="archive-profile-pane" aria-labelledby="help-h">
+            <h2 id="help-h" className="m-0 text-lg font-semibold text-ink">
               Ajuda
             </h2>
             <ul className="mt-4 space-y-2 text-[15px]">

@@ -78,12 +78,12 @@ export function AudioConsentPanel({
       id="audio-consents"
       tabIndex={-1}
       aria-labelledby="audio-consents-title"
-      className="scroll-mt-24 space-y-4 rounded-sm border border-border bg-surface-document p-4 sm:p-5"
+      className="dossier-session-consents scroll-mt-24"
     >
       <div>
-        <h3 id="audio-consents-title" className="text-base font-semibold text-primary">
+        <h2 id="audio-consents-title" className="dossier-work-heading">
           Autorizações de áudio
-        </h3>
+        </h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Registre a decisão do consultante para cada finalidade, no caso inteiro ou em uma sessão.
         </p>
@@ -121,14 +121,14 @@ export function AudioConsentPanel({
       )}
       {!loading && !unavailable && (
         <>
-          <ul className="grid gap-3 lg:grid-cols-2">
+          <ul className="dossier-consent-list">
             {(Object.keys(AUDIO_CONSENT_SCOPE) as AudioConsentScope[]).map((scope) => {
               const latest = latestAudioDecision(events, scope, sessionId || undefined);
               return (
-                <li key={scope} className="space-y-2 rounded-sm border border-border p-3">
+                <li key={scope}>
                   <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
-                    <h4 className="text-sm font-semibold">{AUDIO_CONSENT_SCOPE[scope]}</h4>
-                    <span className="text-sm text-muted-foreground">
+                    <h3 className="text-sm font-semibold">{AUDIO_CONSENT_SCOPE[scope]}</h3>
+                    <span className="dossier-consent-state" data-granted={latest?.granted === true}>
                       {latest?.granted ? "Autorizado" : latest ? "Revogado" : "Sem autorização"}
                     </span>
                   </div>

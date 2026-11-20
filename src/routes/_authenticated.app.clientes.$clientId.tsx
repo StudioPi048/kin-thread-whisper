@@ -37,6 +37,8 @@ import {
   Ellipsis,
   Download,
   Pencil,
+  ClipboardList,
+  CalendarDays,
   ShieldCheck,
   ShieldAlert,
   Trash2,
@@ -45,10 +47,8 @@ import {
   History,
   FileText,
   Camera,
-  MapPin,
   RefreshCw,
   Table2,
-  Repeat,
   CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -79,7 +79,6 @@ import { deleteClientDossier, pendingDossierDeletionsKey } from "@/lib/delete-cl
 import { supabase } from "@/integrations/supabase/client";
 import { ClientFormDialog } from "@/components/clients/client-form-dialog";
 import { ClinicalIntelligencePanel } from "@/components/clients/clinical-intelligence-panel";
-import { DocumentHeader } from "@/components/ui/document-header";
 
 import { recordVisit, writePref } from "@/lib/recent-activity";
 import { clinicalIntelQuery, getMappablePersons } from "@/lib/clinical-intel";
@@ -87,20 +86,15 @@ import { detectPatterns } from "@/lib/patterns";
 import { informationGaps } from "@/lib/evidence";
 import { calcAge, formatBirthDate, genderOptions, initialsFrom } from "@/lib/clients";
 import { JOURNEY_STAGES, deriveStage, stageIndex } from "@/lib/clinical-catalog";
+import "@/components/clients/client-dossier.css";
 
 function TabSuspense({ children }: { children: React.ReactNode }) {
   return (
     <Suspense
       fallback={
-        <div
-          className="flex min-h-40 items-center justify-center gap-3 text-sm text-muted-foreground"
-          role="status"
-        >
-          <span
-            className="size-5 animate-spin rounded-full border-2 border-forest border-r-transparent"
-            aria-hidden
-          />
+        <div className="dossier-loading" role="status">
           Carregando seção…
+          <span className="dossier-loading-line animate-pulse" aria-hidden />
         </div>
       }
     >
@@ -182,7 +176,7 @@ function ClientDossierPage() {
   const [reportOpen, setReportOpen] = useState(false);
   const [avatar, setAvatar] = useState<{ path: string; url: string } | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
-  const titleRef = useRef<HTMLSpanElement>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
   const recoveringClientRef = useRef<string | null>(null);
   const [mapFocus, setMapFocus] = useState<{ clientId: string; personId: string }>();
   const rememberMapFocus = useCallback(
@@ -480,12 +474,7 @@ function ClientDossierPage() {
         }));
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="pb-12 atlas-dossier"
-      data-active-tab={activeTab}
-    >
+    <div className="client-dossier" data-active-tab={activeTab}>
       <input
         ref={avatarInputRef}
         type="file"
@@ -493,155 +482,149 @@ function ClientDossierPage() {
         hidden
         onChange={handleAvatarUpload}
       />
-      <DocumentHeader
-        breadcrumb={
-          <>
-            {from === "agenda" ? (
-              <Link
-                to="/app/agenda"
-                search={agendaDate ? { date: agendaDate } : {}}
-                className="hover:text-gold transition-colors"
-              >
-                Agenda
-              </Link>
-            ) : (
-              <Link to="/app/clientes" className="hover:text-gold transition-colors">
-                Clientes
-              </Link>
-            )}
-            <span className="mx-1.5 opacity-40">/</span>
-            {display}
-          </>
-        }
-        title={
-          <div className="flex min-w-0 items-center gap-3">
-            <motion.div
-              aria-hidden
-              layoutId={`avatar-${client.id}`}
-              className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-archive-old text-base font-semibold text-ink"
-            >
-              {avatarUrl ? (
-                <img src={avatarUrl} alt="" className="size-full object-cover" />
+      <header className="dossier-masthead">
+        <div className="container-liz">
+          <div className="dossier-masthead-tools">
+            <nav aria-label="Localização" className="dossier-back">
+              {from === "agenda" ? (
+                <Link to="/app/agenda" search={agendaDate ? { date: agendaDate } : {}}>
+                  <ArrowLeft size={16} aria-hidden /> Agenda
+                </Link>
               ) : (
-                <span>{initials}</span>
+                <Link to="/app/clientes">
+                  <ArrowLeft size={16} aria-hidden /> Clientes
+                </Link>
               )}
-            </motion.div>
-            <span ref={titleRef} tabIndex={-1} className="min-w-0 wrap-anywhere tracking-tight">
-              {display}
-            </span>
-          </div>
-        }
-        subtitle={
-          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 font-sans text-[14px] font-normal not-italic tracking-normal text-ink-soft">
-            {age !== null && <span>{age} anos</span>}
-            {client.birthplace && <span>{client.birthplace}</span>}
-            {sessionCount !== undefined && (
-              <span>
-                {sessionCount} {sessionCount === 1 ? "sessão" : "sessões"}
-              </span>
-            )}
-            {nextSession ? (
-              <Link
-                to="/app/clientes/$clientId"
-                params={{ clientId }}
-                search={(previous) => ({ ...previous, tab: "sessions", session: nextSession.id })}
-                className="inline-flex min-h-11 items-center font-medium text-forest underline-offset-4 hover:underline"
-              >
-                Próxima sessão ·{" "}
-                {new Date(nextSession.session_date).toLocaleString("pt-BR", {
-                  day: "2-digit",
-                  month: "short",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </Link>
-            ) : (
-              nextSession === null && <span>Sem sessão agendada</span>
-            )}
-            {sessionLoading && <span role="status">Carregando sessões…</span>}
-            {sessionError && (
-              <ReadFailure
-                retry={() =>
-                  sessionQueries
-                    .filter((query) => query.isError)
-                    .forEach((query) => void query.refetch())
+            </nav>
+            <div className="dossier-actions">
+              <LibraryCasePanel
+                reference={
+                  activeTab === "genogram"
+                    ? "manual-genossociograma"
+                    : activeTab === "timeline" || activeTab === "patterns"
+                      ? "manual-cronologia"
+                      : activeTab === "intake" || activeTab === "clan"
+                        ? "manual-investigacao"
+                        : undefined
                 }
-              >
-                Consulta de sessões incompleta.
-              </ReadFailure>
-            )}
-          </div>
-        }
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <LibraryCasePanel
-              reference={
-                activeTab === "genogram"
-                  ? "manual-genossociograma"
-                  : activeTab === "timeline" || activeTab === "patterns"
-                    ? "manual-cronologia"
-                    : activeTab === "intake" || activeTab === "clan"
-                      ? "manual-investigacao"
-                      : undefined
-              }
-            />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="min-h-11" aria-label="Mais ações do dossiê">
-                  <Ellipsis className="size-4" aria-hidden />
-                  <span className="hidden sm:inline">Mais ações</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem className="min-h-11" onSelect={() => setEditing(true)}>
-                  <Pencil className="size-4" aria-hidden /> Editar dossiê
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="min-h-11"
-                  disabled={uploadingAvatar}
-                  onSelect={() => avatarInputRef.current?.click()}
-                >
-                  <Camera className="size-4" aria-hidden />
-                  {uploadingAvatar ? "Enviando foto…" : "Alterar foto do consultante"}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="min-h-11"
-                  disabled={exportCase.isPending}
-                  onSelect={() => exportCase.mutate()}
-                >
-                  <Download className="size-4" aria-hidden />
-                  {exportCase.isPending ? "Exportando…" : "Exportar dossiê em JSON"}
-                </DropdownMenuItem>
-                <DropdownMenuItem className="min-h-11" onSelect={() => setReportOpen(true)}>
-                  <Download className="size-4" aria-hidden /> Preparar relatório PDF
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="min-h-11"
-                  disabled={toggleArchive.isPending}
-                  onSelect={() => toggleArchive.mutate()}
-                >
-                  {client.status === "active" ? (
-                    <Archive aria-hidden />
-                  ) : (
-                    <ArchiveRestore aria-hidden />
-                  )}
-                  {client.status === "active" ? "Arquivar dossiê" : "Reativar dossiê"}
-                </DropdownMenuItem>
-                {client.status === "archived" && (
-                  <DropdownMenuItem
-                    className="min-h-11 text-destructive focus:bg-destructive/10 focus:text-destructive"
-                    onSelect={() => setDeleting(true)}
-                  >
-                    <Trash2 className="size-4" aria-hidden /> Excluir dossiê
+              />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="min-h-11" aria-label="Mais ações do dossiê">
+                    <Ellipsis className="size-4" aria-hidden />
+                    <span className="hidden sm:inline">Mais ações</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem className="min-h-11" onSelect={() => setEditing(true)}>
+                    <Pencil className="size-4" aria-hidden /> Editar dossiê
                   </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  <DropdownMenuItem
+                    className="min-h-11"
+                    disabled={uploadingAvatar}
+                    onSelect={() => avatarInputRef.current?.click()}
+                  >
+                    <Camera className="size-4" aria-hidden />
+                    {uploadingAvatar ? "Enviando foto…" : "Alterar foto do consultante"}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="min-h-11"
+                    disabled={exportCase.isPending}
+                    onSelect={() => exportCase.mutate()}
+                  >
+                    <Download className="size-4" aria-hidden />
+                    {exportCase.isPending ? "Exportando…" : "Exportar dossiê em JSON"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="min-h-11" onSelect={() => setReportOpen(true)}>
+                    <Download className="size-4" aria-hidden /> Preparar relatório PDF
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="min-h-11"
+                    disabled={toggleArchive.isPending}
+                    onSelect={() => toggleArchive.mutate()}
+                  >
+                    {client.status === "active" ? (
+                      <Archive aria-hidden />
+                    ) : (
+                      <ArchiveRestore aria-hidden />
+                    )}
+                    {client.status === "active" ? "Arquivar dossiê" : "Reativar dossiê"}
+                  </DropdownMenuItem>
+                  {client.status === "archived" && (
+                    <DropdownMenuItem
+                      className="min-h-11 text-destructive focus:bg-destructive/10 focus:text-destructive"
+                      onSelect={() => setDeleting(true)}
+                    >
+                      <Trash2 className="size-4" aria-hidden /> Excluir dossiê
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
-        }
-      />
+
+          <div className="dossier-masthead-case">
+            <motion.div aria-hidden layoutId={`avatar-${client.id}`} className="dossier-avatar">
+              {avatarUrl ? <img src={avatarUrl} alt="" /> : <span>{initials}</span>}
+            </motion.div>
+            <div className="dossier-identity">
+              <h1 ref={titleRef} tabIndex={-1}>
+                {display}
+              </h1>
+              <div className="dossier-identifiers">
+                {client.status === "archived" && (
+                  <span className="dossier-archived">Dossiê arquivado</span>
+                )}
+                {age !== null && <span>{age} anos</span>}
+                {client.birthplace && <span>{client.birthplace}</span>}
+                {sessionCount !== undefined && (
+                  <span>
+                    {sessionCount} {sessionCount === 1 ? "sessão" : "sessões"}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="dossier-next-session">
+              {nextSession ? (
+                <Link
+                  to="/app/clientes/$clientId"
+                  params={{ clientId }}
+                  search={(previous) => ({ ...previous, tab: "sessions", session: nextSession.id })}
+                >
+                  <CalendarDays size={17} aria-hidden />
+                  <span>
+                    Próxima sessão
+                    <time dateTime={nextSession.session_date}>
+                      {new Date(nextSession.session_date).toLocaleString("pt-BR", {
+                        day: "2-digit",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </time>
+                  </span>
+                </Link>
+              ) : (
+                nextSession === null && <span>Sem sessão agendada</span>
+              )}
+              {sessionLoading && <span role="status">Carregando sessões…</span>}
+              {sessionError && (
+                <ReadFailure
+                  retry={() =>
+                    sessionQueries
+                      .filter((query) => query.isError)
+                      .forEach((query) => void query.refetch())
+                  }
+                >
+                  Consulta de sessões incompleta.
+                </ReadFailure>
+              )}
+            </div>
+          </div>
+        </div>
+      </header>
 
       {clientQ.isError && (
         <div className="container-liz mb-3">
@@ -655,354 +638,335 @@ function ClientDossierPage() {
           Enviando foto do consultante…
         </p>
       )}
-      <div className="container-liz -mt-2 relative z-20 flex gap-6 items-start atlas-tabs">
-        {/* Main Content (Tabs) */}
-        <div className="flex-1 min-w-0">
-          <Tabs
-            value={activeTab}
-            onValueChange={(v) => goToTab(v as DossierTab)}
-            activationMode="manual"
-            className="w-full"
-          >
-            {/* STICKY NAV TABS — rolagem horizontal no mobile */}
-            <div className="sticky top-0 z-30 -mx-[18px] flex items-center gap-2 border-b border-border/40 bg-surface-archive px-[18px] py-2 sm:mx-0 sm:px-0">
-              <div
-                ref={tabScrollRef}
-                className="min-w-0 flex-1 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-              >
-                <TabsList className="flex h-auto w-max flex-nowrap justify-start gap-1 rounded-full border border-border/40 bg-surface-document p-1 shadow-md">
+      <div className="dossier-body">
+        <Tabs
+          value={activeTab}
+          onValueChange={(v) => goToTab(v as DossierTab)}
+          activationMode="manual"
+          className="w-full"
+        >
+          <div className="dossier-index">
+            <div className="container-liz">
+              <div ref={tabScrollRef} className="dossier-index-scroll">
+                <TabsList className="dossier-tablist" aria-label="Seções do dossiê">
                   {(
                     [
                       { value: "overview", label: "Visão geral", Icon: FileText },
                       { value: "genogram", label: "Genossociograma", Icon: TreePine },
+                      { value: "clan", label: "Planilha", Icon: Table2 },
                       { value: "timeline", label: "Linha do tempo", Icon: History },
                       { value: "patterns", label: "Evidências", Icon: Activity },
-                      { value: "intake", label: "Anamnese", Icon: null },
-                      { value: "sessions", label: "Sessões", Icon: null },
-                      { value: "clan", label: "Planilha", Icon: null },
+                      { value: "intake", label: "Anamnese", Icon: ClipboardList },
+                      { value: "sessions", label: "Sessões", Icon: CalendarDays },
                     ] as const
                   ).map(({ value, label, Icon }) => (
-                    <TabsTrigger
-                      key={value}
-                      value={value}
-                      className="flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 px-4 py-2 font-semibold whitespace-nowrap text-muted-foreground transition-colors"
-                    >
-                      {Icon && <Icon className="size-3.5" aria-hidden />} {label}
+                    <TabsTrigger key={value} value={value} className="dossier-tab">
+                      <Icon size={16} aria-hidden /> {label}
                     </TabsTrigger>
                   ))}
                 </TabsList>
               </div>
-
-              {/* Atalho rápido Genograma ↔ Planilha — as duas telas de dados do clã mais usadas */}
-              {(activeTab === "genogram" || activeTab === "clan") && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => goToTab(activeTab === "genogram" ? "clan" : "genogram")}
-                  className="atlas-dossier-quick-tab hidden shrink-0 gap-1.5 font-semibold 2xl:flex"
-                >
-                  <Repeat className="size-3.5" />
-                  {activeTab === "genogram" ? (
-                    <>
-                      <Table2 className="size-3.5" /> Ver planilha
-                    </>
-                  ) : (
-                    <>
-                      <TreePine className="size-3.5" /> Ver genossociograma
-                    </>
-                  )}
-                </Button>
-              )}
             </div>
+          </div>
 
-            <div className="mt-4">
-              {/* Visão Geral (Resumo Executivo Clinico) */}
-              <TabsContent value="overview">
-                {intelQ.isSuccess && family && family.every((person) => person.is_proband) && (
-                  <section className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-card p-4">
-                    <div>
-                      <h2 className="font-semibold text-primary">Começar a árvore da família</h2>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Traga uma planilha ou registre o primeiro familiar.
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        className="min-h-11"
-                        variant="outline"
-                        onClick={() => goToTab("clan")}
-                      >
-                        Abrir planilha para importar
-                      </Button>
-                      <Button className="min-h-11" onClick={() => goToTab("genogram")}>
-                        Abrir mapa para adicionar familiar
-                      </Button>
-                    </div>
-                  </section>
-                )}
-
-                <div className="mb-6">
-                  {journeyErrors.length ? (
-                    <ReadFailure
-                      retry={() => journeyErrors.forEach((query) => void query.refetch())}
-                    >
-                      Não foi possível atualizar a etapa do acompanhamento.
-                    </ReadFailure>
-                  ) : journeyStages ? (
-                    <JourneyStrip stages={journeyStages} />
-                  ) : (
-                    <p role="status" className="text-sm text-muted-foreground">
-                      Carregando etapa do acompanhamento…
+          <div className="container-liz dossier-content">
+            <TabsContent value="overview">
+              {intelQ.isSuccess && family && family.every((person) => person.is_proband) && (
+                <section className="dossier-start-map">
+                  <div>
+                    <h2>Começar a árvore da família</h2>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Traga uma planilha ou registre o primeiro familiar.
                     </p>
-                  )}
-                </div>
-                <div className="grid gap-6 xl:grid-cols-3">
-                  <section className="xl:col-span-2 space-y-6">
-                    {intelQ.data && patterns.length > 0 ? (
-                      <Panel title="Evidências detectadas">
-                        <p className="text-[15px] text-ink">
-                          A leitura automática do genossociograma identificou{" "}
-                          <strong>
-                            {patterns.length}{" "}
-                            {patterns.length === 1 ? "padrão sistêmico" : "padrões sistêmicos"}
-                          </strong>{" "}
-                          nos registros atuais.
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button className="min-h-11" variant="outline" onClick={() => goToTab("clan")}>
+                      Abrir planilha para importar
+                    </Button>
+                    <Button
+                      variant="forest"
+                      className="min-h-11"
+                      onClick={() => goToTab("genogram")}
+                    >
+                      Abrir mapa para adicionar familiar
+                    </Button>
+                  </div>
+                </section>
+              )}
+
+              <div>
+                {journeyErrors.length ? (
+                  <ReadFailure retry={() => journeyErrors.forEach((query) => void query.refetch())}>
+                    Não foi possível atualizar a etapa do acompanhamento.
+                  </ReadFailure>
+                ) : journeyStages ? (
+                  <JourneyStrip stages={journeyStages} />
+                ) : (
+                  <p role="status" className="text-sm text-muted-foreground">
+                    Carregando etapa do acompanhamento…
+                  </p>
+                )}
+              </div>
+              <div className="dossier-overview">
+                <section className="dossier-overview-notes" aria-label="Registros do caso">
+                  <Panel title="Queixa apresentada">
+                    {client.presenting_complaint ? (
+                      <p className="dossier-case-note">{client.presenting_complaint}</p>
+                    ) : (
+                      <p className="text-sm text-ink-soft">Sem queixa registrada.</p>
+                    )}
+                  </Panel>
+
+                  <Panel
+                    title="Notas clínicas"
+                    action={
+                      <Button
+                        variant="link"
+                        className="min-h-11 px-0"
+                        onClick={() => setEditing(true)}
+                      >
+                        <Pencil size={15} aria-hidden /> Editar dossiê
+                      </Button>
+                    }
+                  >
+                    {client.clinical_notes ? (
+                      <p className="dossier-case-note">{client.clinical_notes}</p>
+                    ) : (
+                      <p className="text-sm text-ink-soft">Sem notas no dossiê.</p>
+                    )}
+                  </Panel>
+
+                  {intelQ.data && patterns.length > 0 ? (
+                    <Panel title="Evidências detectadas">
+                      <p className="text-[15px] text-ink">
+                        A leitura automática do genossociograma identificou{" "}
+                        <strong>
+                          {patterns.length}{" "}
+                          {patterns.length === 1 ? "padrão sistêmico" : "padrões sistêmicos"}
+                        </strong>{" "}
+                        nos registros atuais.
+                      </p>
+                      <ul className="mt-2 list-disc space-y-1 pl-5 text-[15px] text-ink-soft">
+                        {patterns.slice(0, 3).map((pattern) => (
+                          <li key={pattern.id}>{pattern.title}</li>
+                        ))}
+                      </ul>
+                      <Button
+                        variant="link"
+                        className="min-h-11 px-0 text-[14px]"
+                        onClick={() => goToTab("patterns")}
+                      >
+                        Conferir evidências e fontes
+                      </Button>
+                    </Panel>
+                  ) : (
+                    intelQ.isSuccess && (
+                      <Panel title="Evidências">
+                        <p className="text-[15px] text-muted-foreground">
+                          A leitura do genossociograma não encontrou repetições nos dados atuais.
                         </p>
-                        <ul className="mt-2 list-disc space-y-1 pl-5 text-[15px] text-ink-soft">
-                          {patterns.slice(0, 3).map((pattern) => (
-                            <li key={pattern.id}>{pattern.title}</li>
+                      </Panel>
+                    )
+                  )}
+
+                  <Panel title="Lacunas do caso">
+                    {intelQ.isError && !intelQ.isFetching ? (
+                      <ReadFailure retry={() => void intelQ.refetch()}>
+                        Não foi possível ler o genossociograma.
+                      </ReadFailure>
+                    ) : !intelQ.data ? (
+                      <p role="status" className="text-[15px] text-muted-foreground">
+                        Verificando…
+                      </p>
+                    ) : gaps.length === 0 ? (
+                      <p className="text-[15px] text-muted-foreground">
+                        Sem lacunas nos campos verificados.
+                      </p>
+                    ) : (
+                      <>
+                        <ul className="ml-5 list-disc space-y-1 text-[15px]">
+                          {gaps.slice(0, 6).map((g) => (
+                            <li key={g}>{g}</li>
                           ))}
                         </ul>
-                        <Button
-                          variant="link"
-                          className="min-h-11 px-0 text-[14px]"
-                          onClick={() => goToTab("patterns")}
+                        {gaps.length > 6 && (
+                          <p className="mt-2 text-[14px] text-muted-foreground">
+                            + {gaps.length - 6} outras lacunas
+                          </p>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => goToTab("clan")}
+                          className="mt-3 inline-flex min-h-11 items-center text-[15px] font-medium text-primary underline underline-offset-4"
                         >
-                          Conferir evidências e fontes
-                        </Button>
-                      </Panel>
-                    ) : (
-                      intelQ.isSuccess && (
-                        <Panel title="Evidências">
-                          <p className="text-[15px] text-muted-foreground">
-                            A leitura do genossociograma não encontrou repetições nos dados atuais.
-                          </p>
-                        </Panel>
-                      )
+                          Completar na planilha do clã
+                        </button>
+                      </>
                     )}
+                  </Panel>
 
-                    <Panel title="Lacunas do caso" accent="gold">
-                      {intelQ.isError && !intelQ.isFetching ? (
-                        <ReadFailure retry={() => void intelQ.refetch()}>
-                          Não foi possível ler o genossociograma.
-                        </ReadFailure>
-                      ) : !intelQ.data ? (
-                        <p role="status" className="text-[15px] text-muted-foreground">
-                          Verificando…
-                        </p>
-                      ) : gaps.length === 0 ? (
-                        <p className="text-[15px] text-muted-foreground">
-                          Sem lacunas nos campos verificados.
-                        </p>
-                      ) : (
-                        <>
-                          <ul className="ml-5 list-disc space-y-1 text-[15px]">
-                            {gaps.slice(0, 6).map((g) => (
-                              <li key={g}>{g}</li>
-                            ))}
-                          </ul>
-                          {gaps.length > 6 && (
-                            <p className="mt-2 text-[14px] text-muted-foreground">
-                              + {gaps.length - 6} outras lacunas
-                            </p>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => goToTab("clan")}
-                            className="mt-3 inline-flex min-h-11 items-center text-[15px] font-medium text-primary underline underline-offset-4"
+                  {client.tags && client.tags.length > 0 && (
+                    <Panel title="Marcadores">
+                      <div className="flex flex-wrap gap-2">
+                        {client.tags.map((t) => (
+                          <Badge
+                            key={t}
+                            variant="secondary"
+                            className="font-semibold px-2 py-1 bg-background border border-border"
                           >
-                            Completar na planilha do clã
-                          </button>
-                        </>
-                      )}
+                            {t}
+                          </Badge>
+                        ))}
+                      </div>
                     </Panel>
+                  )}
+                </section>
 
-                    <Panel title="Queixa apresentada" accent="forest">
-                      {client.presenting_complaint ? (
-                        <p className="whitespace-pre-wrap text-[14px] leading-relaxed text-foreground/80 font-serif">
-                          {client.presenting_complaint}
-                        </p>
+                <aside
+                  className="dossier-overview-reference"
+                  aria-label="Identificação e composição familiar"
+                >
+                  <TabSuspense>
+                    <CaseDashboard clientId={client.id} />
+                  </TabSuspense>
+
+                  <Panel title="Identificação do consultante">
+                    <dl>
+                      <InfoRow label="Nome completo" value={client.full_name} />
+                      <InfoRow label="Gênero" value={genderLabel} />
+                      <InfoRow
+                        label="Nascimento"
+                        value={client.birth_date ? formatBirthDate(client.birth_date) : "—"}
+                      />
+                      <InfoRow label="Cidade" value={client.birthplace ?? "—"} />
+                      <InfoRow label="Telefone" value={client.phone ?? "—"} />
+                      <InfoRow label="E-mail" value={client.email ?? "—"} />
+                    </dl>
+                  </Panel>
+                  <ClinicalIntelligencePanel clientId={clientId} />
+
+                  <Panel
+                    title="Consentimento geral"
+                    icon={
+                      client.consent_given_at ? (
+                        <ShieldCheck className="size-4 text-clinical-positive" />
                       ) : (
-                        <EmptyLine>Sem queixa registrada ainda.</EmptyLine>
-                      )}
-                    </Panel>
-
-                    <Panel title="Notas clínicas" accent="gold">
-                      {client.clinical_notes ? (
-                        <p className="whitespace-pre-wrap text-[14px] leading-relaxed text-foreground/80 font-serif">
-                          {client.clinical_notes}
+                        <ShieldAlert className="size-4 text-clinical-warning" />
+                      )
+                    }
+                  >
+                    {client.consent_given_at ? (
+                      <>
+                        <p className="text-sm text-foreground font-medium">
+                          Consentimento registrado em{" "}
+                          <strong className="text-clinical-positive">
+                            {new Date(client.consent_given_at).toLocaleDateString("pt-BR")}
+                          </strong>
                         </p>
-                      ) : (
-                        <EmptyLine>
-                          Sem notas no dossiê. Use Editar dossiê para adicionar.
-                        </EmptyLine>
-                      )}
-                    </Panel>
-
-                    {client.tags && client.tags.length > 0 && (
-                      <Panel title="Marcadores">
-                        <div className="flex flex-wrap gap-2">
-                          {client.tags.map((t) => (
-                            <Badge
-                              key={t}
-                              variant="secondary"
-                              className="font-semibold px-2 py-1 bg-background border border-border"
-                            >
-                              {t}
-                            </Badge>
-                          ))}
-                        </div>
-                      </Panel>
-                    )}
-                  </section>
-
-                  <aside className="space-y-6">
-                    <TabSuspense>
-                      <CaseDashboard clientId={client.id} />
-                    </TabSuspense>
-
-                    <Panel title="Identificação do consultante">
-                      <dl>
-                        <InfoRow label="Nome completo" value={client.full_name} />
-                        <InfoRow label="Gênero" value={genderLabel} />
-                        <InfoRow
-                          label="Nascimento"
-                          value={client.birth_date ? formatBirthDate(client.birth_date) : "—"}
-                        />
-                        <InfoRow label="Cidade" value={client.birthplace ?? "—"} />
-                        <InfoRow label="Telefone" value={client.phone ?? "—"} />
-                        <InfoRow label="E-mail" value={client.email ?? "—"} />
-                      </dl>
-                    </Panel>
-                    <ClinicalIntelligencePanel clientId={clientId} />
-
-                    <Panel
-                      title="Consentimento geral"
-                      icon={
-                        client.consent_given_at ? (
-                          <ShieldCheck className="size-4 text-clinical-positive" />
-                        ) : (
-                          <ShieldAlert className="size-4 text-clinical-warning" />
-                        )
-                      }
-                    >
-                      {client.consent_given_at ? (
-                        <>
-                          <p className="text-[13px] text-foreground font-medium">
-                            Consentimento registrado em{" "}
-                            <strong className="text-clinical-positive">
-                              {new Date(client.consent_given_at).toLocaleDateString("pt-BR")}
-                            </strong>
+                        {client.consent_notes && (
+                          <p className="mt-2 text-sm text-muted-foreground">
+                            {client.consent_notes}
                           </p>
-                          {client.consent_notes && (
-                            <p className="mt-2 text-[12px] text-muted-foreground">
-                              {client.consent_notes}
-                            </p>
-                          )}
-                        </>
-                      ) : (
-                        <p className="text-[13px] font-bold text-clinical-warning">
-                          Consentimento geral pendente.
-                        </p>
-                      )}
-                      <Button
-                        variant="outline"
-                        className="mt-3 min-h-11"
-                        onClick={() => goToTab("sessions")}
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-sm font-semibold text-clinical-warning">
+                        Consentimento geral pendente.
+                      </p>
+                    )}
+                    <Button asChild variant="outline" className="mt-3 min-h-11">
+                      <Link
+                        to="/app/clientes/$clientId"
+                        params={{ clientId }}
+                        search={(previous) => ({
+                          ...previous,
+                          tab: "sessions",
+                          focus: "audio-consent",
+                        })}
                       >
                         Autorizações de áudio
-                      </Button>
-                    </Panel>
-                  </aside>
-                </div>
-              </TabsContent>
+                      </Link>
+                    </Button>
+                  </Panel>
+                </aside>
+              </div>
+            </TabsContent>
 
-              <TabsContent value="genogram">
-                <TabSuspense>
-                  <GenogramCanvas
-                    key={client.id}
-                    clientId={client.id}
-                    focusPersonId={focusPerson}
-                    reviewParentagePersonId={review === "parentage" ? focusPerson : undefined}
-                    resumePersonId={mapFocus?.clientId === clientId ? mapFocus.personId : undefined}
-                    onFocusPerson={rememberMapFocus}
-                    onOpenSpreadsheet={() => goToTab("clan")}
-                  />
-                </TabSuspense>
-              </TabsContent>
+            <TabsContent value="genogram">
+              <TabSuspense>
+                <GenogramCanvas
+                  key={client.id}
+                  clientId={client.id}
+                  focusPersonId={focusPerson}
+                  reviewParentagePersonId={review === "parentage" ? focusPerson : undefined}
+                  resumePersonId={mapFocus?.clientId === clientId ? mapFocus.personId : undefined}
+                  onFocusPerson={rememberMapFocus}
+                  onOpenSpreadsheet={() => goToTab("clan")}
+                />
+              </TabSuspense>
+            </TabsContent>
 
-              <TabsContent value="timeline">
-                <TabSuspense>
-                  <ClientTimeline
-                    key={`${client.id}:${focusEvent ?? ""}`}
-                    clientId={client.id}
-                    focusEvent={focusEvent}
-                  />
-                </TabSuspense>
-              </TabsContent>
+            <TabsContent value="timeline">
+              <TabSuspense>
+                <ClientTimeline
+                  key={`${client.id}:${focusEvent ?? ""}`}
+                  clientId={client.id}
+                  focusEvent={focusEvent}
+                />
+              </TabSuspense>
+            </TabsContent>
 
-              <TabsContent value="patterns">
-                <TabSuspense>
-                  <PatternsPanel clientId={client.id} />
-                </TabSuspense>
-              </TabsContent>
+            <TabsContent value="patterns">
+              <TabSuspense>
+                <PatternsPanel clientId={client.id} />
+              </TabSuspense>
+            </TabsContent>
 
-              <TabsContent value="intake">
-                <TabSuspense>
-                  <IntakeForm
-                    clientId={client.id}
-                    professionalId={user.id}
-                    focusQuestion={focusQuestion}
-                  />
-                </TabSuspense>
-              </TabsContent>
+            <TabsContent value="intake">
+              <TabSuspense>
+                <IntakeForm
+                  clientId={client.id}
+                  professionalId={user.id}
+                  focusQuestion={focusQuestion}
+                />
+              </TabSuspense>
+            </TabsContent>
 
-              <TabsContent value="clan">
-                <TabSuspense>
-                  <ClanSpreadsheet
-                    clientId={client.id}
-                    onOpenGenogram={() => goToTab("genogram")}
-                    focusPersonId={focusPerson}
-                    onReviewParentage={(personId) =>
-                      void navigate({
-                        from: Route.fullPath,
-                        search: (prev) => ({
-                          ...prev,
-                          tab: "genogram",
-                          person: personId,
-                          review: "parentage",
-                          event: undefined,
-                        }),
-                      })
-                    }
-                  />
-                </TabSuspense>
-              </TabsContent>
+            <TabsContent value="clan">
+              <TabSuspense>
+                <ClanSpreadsheet
+                  clientId={client.id}
+                  onOpenGenogram={() => goToTab("genogram")}
+                  focusPersonId={focusPerson}
+                  onReviewParentage={(personId) =>
+                    void navigate({
+                      from: Route.fullPath,
+                      search: (prev) => ({
+                        ...prev,
+                        tab: "genogram",
+                        person: personId,
+                        review: "parentage",
+                        event: undefined,
+                      }),
+                    })
+                  }
+                />
+              </TabSuspense>
+            </TabsContent>
 
-              <TabsContent value="sessions">
-                <TabSuspense>
-                  <SessionsPanel
-                    key={client.id}
-                    clientId={client.id}
-                    clientName={display}
-                    focusedSessionId={focusedSessionId}
-                    focusConsent={focus === "audio-consent"}
-                  />
-                </TabSuspense>
-              </TabsContent>
-            </div>
-          </Tabs>
-        </div>
+            <TabsContent value="sessions">
+              <TabSuspense>
+                <SessionsPanel
+                  key={client.id}
+                  clientId={client.id}
+                  clientName={display}
+                  focusedSessionId={focusedSessionId}
+                  focusConsent={focus === "audio-consent"}
+                />
+              </TabSuspense>
+            </TabsContent>
+          </div>
+        </Tabs>
       </div>
 
       <ClientFormDialog
@@ -1055,7 +1019,7 @@ function ClientDossierPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </motion.div>
+    </div>
   );
 }
 
@@ -1096,47 +1060,25 @@ function JourneyStrip({
   }[];
 }) {
   return (
-    <details className="rounded-xl border border-border bg-card px-4">
-      <summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold text-ink focus-visible:outline-2 focus-visible:outline-ring">
-        Acompanhamento · {stages.find((s) => s.status === "current")?.label}
+    <details className="dossier-journey">
+      <summary>
+        Etapa do acompanhamento <span>{stages.find((s) => s.status === "current")?.label}</span>
       </summary>
-      <div className="flex items-stretch gap-1 overflow-x-auto pb-1">
-        {stages.map((s, i) => {
-          const isCurrent = s.status === "current";
-          const isDone = s.status === "done";
-          return (
-            <div key={s.key} className="flex-1 min-w-[100px]">
-              <div className="flex items-center gap-1">
-                <div
-                  className={`size-6 rounded-full flex items-center justify-center shrink-0 text-white text-[10px] font-bold ${
-                    isCurrent
-                      ? "bg-forest ring-4 ring-forest/15"
-                      : isDone
-                        ? "bg-forest"
-                        : "bg-cream border border-border text-muted-foreground"
-                  }`}
-                >
-                  {isDone ? <CheckCircle2 className="size-3.5" /> : i + 1}
-                </div>
-                {i < stages.length - 1 && (
-                  <div
-                    className={`h-0.5 flex-1 rounded-full ${isDone ? "bg-forest" : "bg-border"}`}
-                  />
-                )}
-              </div>
-              <p
-                aria-current={isCurrent ? "step" : undefined}
-                className={`mt-2 text-sm font-semibold ${isCurrent ? "text-forest" : isDone ? "text-primary" : "text-muted-foreground"}`}
-              >
-                {s.label}
-              </p>
-              <p className="mb-3 mt-1 text-sm leading-snug text-muted-foreground">
-                {s.description}
-              </p>
-            </div>
-          );
-        })}
-      </div>
+      <ol>
+        {stages.map(({ key, label, description, status }) => (
+          <li
+            key={key}
+            data-status={status}
+            aria-current={status === "current" ? "step" : undefined}
+          >
+            <span className="dossier-journey-name">
+              {status === "done" && <CheckCircle2 size={16} aria-label="Concluída" />}
+              {label}
+            </span>
+            <p>{description}</p>
+          </li>
+        ))}
+      </ol>
     </details>
   );
 }
@@ -1144,23 +1086,23 @@ function JourneyStrip({
 function Panel({
   title,
   icon,
-  accent,
+  action,
   children,
 }: {
   title: string;
   icon?: React.ReactNode;
-  accent?: "forest" | "gold";
+  action?: React.ReactNode;
   children: React.ReactNode;
 }) {
-  const accentClass =
-    accent === "forest" ? "accent-bar-forest" : accent === "gold" ? "accent-bar-gold" : "";
-
   return (
-    <section className={`surface shadow-surface rounded-[1rem] p-6 ${accentClass}`}>
-      <div className="mb-4 flex items-center gap-2 border-b border-border/50 pb-2">
-        {icon}
-        <h3 className="text-[15px] font-semibold text-ink">{title}</h3>
-      </div>
+    <section className="dossier-section">
+      <header className="dossier-section-heading">
+        <h2 className="flex items-center gap-2">
+          {icon}
+          {title}
+        </h2>
+        {action}
+      </header>
       {children}
     </section>
   );
@@ -1173,8 +1115,4 @@ function InfoRow({ label, value }: { label: string; value: string }) {
       <dd className="max-w-[60%] wrap-anywhere text-right text-foreground font-medium">{value}</dd>
     </div>
   );
-}
-
-function EmptyLine({ children }: { children: React.ReactNode }) {
-  return <p className="text-[14px] italic text-muted-foreground">{children}</p>;
 }

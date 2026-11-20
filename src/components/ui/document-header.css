@@ -1,0 +1,43 @@
+.workspace-shell .archive-document-header {
+  margin: 0 0 clamp(1rem, 2.3vw, 2rem);
+  padding-block: clamp(1.3rem, 3vw, 2.5rem);
+  background: var(--forest-mist);
+  border-block-end: 1px solid var(--input);
+}
+
+.archive-document-header .atlas-breadcrumb {
+  margin-bottom: 0.7rem;
+  font-size: 0.875rem;
+}
+
+.archive-document-header .atlas-breadcrumb a {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.archive-document-header .atlas-page-heading {
+  align-items: end;
+}
+
+.archive-document-header .atlas-title {
+  color: var(--forest);
+  font-size: 3.5rem;
+  line-height: 0.98;
+  text-wrap: balance;
+}
+
+.archive-document-header .atlas-subtitle {
+  margin-top: 0.7rem;
+  color: var(--ink-soft);
+  font-size: 0.9375rem;
+}
+
+@media (max-width: 767px) {
+  .archive-document-header .atlas-page-heading {
+    align-items: start;
+  }
+
+  .archive-document-header .atlas-title {
+    font-size: 2.6rem;
+  }
+}

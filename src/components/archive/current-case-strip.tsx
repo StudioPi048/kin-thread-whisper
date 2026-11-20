@@ -43,26 +43,25 @@ export function CurrentCaseStrip({ userId, pathname }: { userId: string; pathnam
   if (!visit || inDossier || hidden || !q.data) return null;
   const name = q.data.preferred_name || q.data.full_name;
   return (
-    <div
-      className="flex min-h-11 items-center gap-3 border-b border-border bg-card px-4 text-[14px]"
-      role="region"
-      aria-label="Caso atual"
-    >
-      <span className="text-muted-foreground">Caso atual:</span>
+    <div className="workspace-current-case" role="region" aria-label="Retomar caso">
       <Link
         to="/app/clientes/$clientId"
         params={{ clientId: visit.clientId }}
         search={{ tab: visit.tab as "overview" }}
-        className="inline-flex min-h-11 items-center gap-1.5 font-semibold text-foreground underline-offset-4 hover:underline focus-visible:outline-2"
+        className="workspace-current-link"
       >
-        {name}
-        <span className="text-muted-foreground">· {TAB_LABEL[visit.tab] ?? "Dossiê"}</span>
-        <ArrowRight className="size-4" aria-hidden />
+        <span>
+          <span className="workspace-current-label">
+            Retomar · {TAB_LABEL[visit.tab] ?? "Dossiê"}
+          </span>
+          <strong title={name}>{name}</strong>
+        </span>
+        <ArrowRight size={15} aria-hidden />
       </Link>
       <button
         type="button"
         onClick={() => setHidden(true)}
-        className="ml-auto inline-flex size-11 items-center justify-center rounded-md text-muted-foreground hover:bg-muted"
+        className="workspace-icon"
         aria-label="Ocultar caso atual nesta visita"
       >
         <X className="size-4" />

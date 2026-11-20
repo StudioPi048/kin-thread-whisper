@@ -14,7 +14,13 @@ Direção única e vigente. A direção "Atlas" (azul/âmbar) foi rejeitada; seu
 - A marca vigente é a árvore circular escolhida por Pietro. Os traços do símbolo e do lettering vêm do mesmo PNG aprovado. Use `GenealizWordmark` em bronze sobre fundo claro e em dourado claro sobre verde. A versão vertical conserva a composição original. O favicon usa o símbolo.
 
 ## Capa pública e demonstração
-A capa apresenta a finalidade da plataforma, uma única fotografia ilustrativa de arquivo e um acesso direto ao caso fictício. A próxima seção inclui o exercício editável, com a mesma família em 2D, 3D e cronologia. O visitante pode revisar uma filiação e desfazer, editar um nome e ajustar posições na própria geração. O estado do exercício fica em memória. A capa do Manual da Psicogenealogia vem do acervo editorial já usado no site de Letícia Baccin.
+A capa apresenta o acesso à conta e uma prévia do dossiê de uma família fictícia. O visitante pode alternar vínculos, cronologia e registros e abrir a ficha das quatro pessoas do recorte. O exercício completo carrega sob demanda, com a mesma família em 2D, 3D e cronologia. O visitante pode revisar uma filiação e desfazer, editar um nome e ajustar posições na própria geração. O estado do exercício fica em memória. A capa do Manual da Psicogenealogia vem do acervo editorial já usado no site de Letícia Baccin.
+
+## Área de trabalho
+
+- Navegação clara em três grupos, com o verde concentrado na área ativa. A busca global e o último ponto de trabalho ficam no cabeçalho. No celular, as quatro seções principais ficam ao alcance do polegar e o restante abre em Mais.
+- A Mesa começa pelo próximo atendimento e mantém o retorno aos dossiês e as pendências acessíveis. Índices de clientes, árvores e cronologias usam linhas com ações legíveis. As prévias das árvores carregam quando abertas.
+- O dossiê organiza a identificação, os atalhos e as seções em duas faixas. O mapa usa controles dedicados para edição e câmera, com a ficha de filiação ao lado e uma gaveta em telas pequenas. Anamnese, sessões e evidências apresentam os registros em blocos delimitados por linhas.
 
 ## Cores
 - **Verde profundo (`forest`, `forest-mid`)**: orientação — navegação, botão principal, foco, seleção.

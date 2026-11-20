@@ -1,0 +1,331 @@
+.archive-register {
+  margin: 0;
+  padding: 0;
+  border-block: 1px solid var(--border);
+  background: var(--archive-doc);
+  list-style: none;
+}
+
+.archive-register > li + li {
+  border-block-start: 1px solid var(--border);
+}
+
+.archive-map-record-row,
+.archive-timeline-record {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.9rem;
+  min-height: 4.5rem;
+  padding: 0.65rem 1.1rem;
+}
+
+.archive-map-record-row > svg {
+  color: var(--forest);
+}
+
+.archive-map-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 1rem;
+}
+
+.archive-text-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.75rem;
+  color: var(--forest);
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+.archive-text-action:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.archive-map-preview:not([hidden]) {
+  display: grid;
+  min-height: 8rem;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--border);
+  background: var(--forest-mist);
+}
+
+.archive-map-preview .gv-map-thumbnail {
+  max-width: 38rem;
+  height: 12rem;
+  padding: 0.65rem 0;
+  justify-self: center;
+}
+
+.archive-timeline-record {
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 12rem) auto;
+}
+
+.archive-timeline-record:hover,
+.archive-library-record:hover {
+  background: var(--forest-mist);
+}
+
+.archive-agenda-tools,
+.archive-agenda-totals {
+  display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
+  align-items: center;
+  gap: 0.65rem 1rem;
+}
+
+.archive-agenda-tools {
+  justify-content: space-between;
+  padding-block: 0 0.85rem;
+  border-block-end: 1px solid var(--input);
+}
+
+.archive-agenda-totals {
+  margin: 0;
+  padding: 0.8rem 1rem;
+  background: var(--forest-mist);
+  color: var(--ink-soft);
+  font-size: 0.875rem;
+}
+
+.archive-agenda-totals > div + div {
+  border-inline-start: 1px solid var(--input);
+  padding-inline-start: 1rem;
+}
+
+.archive-library-search {
+  margin-bottom: 1.1rem;
+}
+
+.archive-library-layout,
+.archive-evidence-layout,
+.archive-settings-layout {
+  display: grid;
+  grid-template-columns: minmax(11rem, 0.31fr) minmax(0, 1fr);
+  gap: clamp(1.1rem, 3vw, 2.5rem);
+  padding-bottom: 2.5rem;
+}
+
+.archive-library-index,
+.archive-settings-index,
+.archive-evidence-controls {
+  align-self: start;
+  border-block-start: 1px solid var(--input);
+}
+
+.archive-library-index > nav {
+  display: grid;
+  gap: 0.2rem;
+  padding-block: 0.6rem;
+}
+
+.archive-library-index .atlas-library-category {
+  min-height: 2.75rem;
+  padding-inline: 0.65rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+}
+
+.archive-library-index .atlas-library-category[aria-pressed="true"] {
+  background: var(--forest);
+  color: var(--ivory);
+}
+
+.archive-library-index .atlas-library-category[aria-pressed="true"] span {
+  color: var(--ivory);
+}
+
+.archive-library-themes {
+  border-block-start: 1px solid var(--border);
+  padding-block-start: 0.85rem;
+}
+
+.archive-theme-button {
+  min-height: 2.75rem;
+  padding: 0.3rem 0.5rem;
+  color: var(--forest);
+  font-size: 0.875rem;
+  text-align: start;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.archive-theme-button:hover {
+  background: var(--forest-mist);
+}
+
+.archive-register-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem 1rem;
+  padding: 0.75rem 1rem;
+  border-block: 1px solid var(--input);
+  background: var(--forest-mist);
+}
+
+.archive-register-heading h2 {
+  color: var(--forest);
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+.archive-library-list {
+  background: var(--archive-doc);
+}
+
+.archive-library-record {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(4rem, 7rem) auto;
+  gap: 0.85rem;
+  align-items: start;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 1.05rem 1rem;
+  border-block-end: 1px solid var(--border);
+  color: var(--forest);
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.archive-library-record > svg:last-child {
+  color: var(--bronze);
+}
+
+.archive-guide-practice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.65rem 1rem;
+  padding: 1.15rem clamp(1rem, 2.5vw, 1.6rem);
+  background: var(--forest);
+  color: var(--ivory);
+}
+
+.archive-guide-practice :is(h2, a) {
+  color: var(--ivory);
+}
+
+.archive-guide-practice p {
+  max-width: 62ch;
+  color: var(--forest-mist);
+}
+
+.archive-guide-practice a:focus-visible {
+  outline-color: var(--gold-soft);
+}
+
+.archive-evidence-controls {
+  padding-block: 0.9rem;
+}
+
+.archive-evidence-controls > button {
+  width: 100%;
+}
+
+.archive-evidence-sheet {
+  min-width: 0;
+  padding: 1rem clamp(1rem, 2.2vw, 1.5rem);
+  border-block: 1px solid var(--border);
+  background: var(--archive-doc);
+}
+
+.archive-settings-layout {
+  grid-template-columns: minmax(9rem, 0.25fr) minmax(0, 47rem);
+}
+
+.archive-settings-index {
+  position: sticky;
+  top: 1rem;
+  display: grid;
+  padding-block: 0.35rem;
+}
+
+.archive-settings-index a {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0.4rem 0.65rem;
+  border-block-end: 1px solid var(--border);
+  color: var(--forest);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.archive-settings-index a:hover {
+  background: var(--forest-mist);
+}
+
+.archive-profile-pane {
+  padding: clamp(1rem, 2.5vw, 1.6rem);
+  border-block: 1px solid var(--input);
+  background: var(--archive-doc);
+}
+
+.archive-settings-layout [id] {
+  scroll-margin-top: 1rem;
+}
+
+@media (max-width: 767px) {
+  .archive-map-record-row,
+  .archive-timeline-record {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.3rem 0.7rem;
+    padding: 0.85rem;
+  }
+
+  .archive-map-actions {
+    grid-column: 2;
+  }
+
+  .archive-timeline-record p {
+    grid-column: 2;
+  }
+
+  .archive-timeline-record > svg:last-child {
+    display: none;
+  }
+
+  .archive-agenda-totals > div + div {
+    border-inline-start: 0;
+    padding-inline-start: 0;
+  }
+
+  .archive-library-layout,
+  .archive-evidence-layout,
+  .archive-settings-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .archive-library-index > nav,
+  .archive-settings-index {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .archive-library-record {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .archive-library-record-category {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .archive-library-record > svg:last-child {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .archive-settings-index {
+    position: static;
+  }
+}

@@ -97,8 +97,8 @@ function IaClinicaPage() {
         title="Evidências e hipóteses"
         subtitle="Selecione um caso. As hipóteses vêm apenas do que está registrado no genossociograma."
       />
-      <div className="mx-auto w-full max-w-4xl space-y-6 p-4 sm:p-6">
-        <div className="space-y-2">
+      <div className="container-liz archive-evidence-layout">
+        <section aria-label="Selecionar caso" className="archive-evidence-controls space-y-2">
           {clientsQ.isError ? (
             <div className="flex flex-wrap items-center gap-3 text-[15px] text-destructive">
               <span role="alert">Não foi possível carregar os casos.</span>
@@ -148,145 +148,146 @@ function IaClinicaPage() {
               Usar caso atual · {recentCase.full_name || recentCase.preferred_name}
             </Button>
           )}
-        </div>
+        </section>
 
-        {caseId && !clientId && clientsQ.isSuccess && (
-          <p className="text-[15px] text-muted-foreground">
-            O caso solicitado está indisponível. Selecione outro dossiê para continuar.
-          </p>
-        )}
-        {clientId && caseQ.isPending && (
-          <p role="status" className="text-[15px] text-muted-foreground">
-            Carregando registros familiares…
-          </p>
-        )}
-        {clientId && caseQ.isError && (
-          <div className="flex flex-wrap items-center gap-3 text-[15px] text-destructive">
-            <span role="alert">Não foi possível carregar as evidências do caso.</span>
-            <Button
-              variant="outline"
-              className="min-h-11"
-              disabled={caseQ.isFetching}
-              onClick={() => void caseQ.refetch()}
-            >
-              <RefreshCw className="size-4" aria-hidden />
-              {caseQ.isFetching ? "Carregando…" : "Tentar novamente"}
-            </Button>
-          </div>
-        )}
-
-        {ev && evidenceData && (
-          <>
-            <section aria-labelledby="ev-h" className="space-y-3">
-              <h2 id="ev-h" className="text-lg font-semibold text-foreground">
-                Evidências detectadas ({ev.patterns.length})
-              </h2>
-              {ev.patterns.length === 0 ? (
-                <p className="text-[15px] text-muted-foreground">
-                  A leitura do genossociograma não encontrou repetições nos registros atuais.
-                </p>
-              ) : (
-                <ul className="space-y-2">
-                  {ev.patterns.map((pattern) => (
-                    <li
-                      key={pattern.id}
-                      className="space-y-2 rounded-lg border border-border bg-card px-4 pt-3 text-[15px]"
-                    >
-                      <label className="flex min-h-11 cursor-pointer items-start gap-3">
-                        <input
-                          type="checkbox"
-                          className="mt-1 size-5 accent-[var(--color-primary)]"
-                          checked={selected.has(pattern.id)}
-                          onChange={() => toggle(pattern.id)}
-                        />
-                        <span>
-                          <strong className="block">{pattern.title}</strong>
-                          {pattern.description}
-                        </span>
-                      </label>
-                      <EvidenceSources
-                        clientId={clientId}
-                        pattern={pattern}
-                        persons={evidenceData.persons}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-
-            {ev.patterns.length > 0 && (
+        <div className="archive-evidence-sheet space-y-6">
+          {!clientId && !caseId && clients.length > 0 && (
+            <p className="text-ink-soft">
+              Escolha um dossiê para consultar as evidências registradas.
+            </p>
+          )}
+          {caseId && !clientId && clientsQ.isSuccess && (
+            <p className="text-[15px] text-muted-foreground">
+              O caso solicitado está indisponível. Selecione outro dossiê para continuar.
+            </p>
+          )}
+          {clientId && caseQ.isPending && (
+            <p role="status" className="text-[15px] text-muted-foreground">
+              Carregando registros familiares…
+            </p>
+          )}
+          {clientId && caseQ.isError && (
+            <div className="flex flex-wrap items-center gap-3 text-[15px] text-destructive">
+              <span role="alert">Não foi possível carregar as evidências do caso.</span>
               <Button
+                variant="outline"
                 className="min-h-11"
-                disabled={selected.size === 0}
-                onClick={() => setPanel({ clientId, selected, showHyp: true })}
+                disabled={caseQ.isFetching}
+                onClick={() => void caseQ.refetch()}
               >
-                Ver hipóteses{" "}
-                {selected.size > 0 && (
-                  <span>
-                    · {selected.size}{" "}
-                    {selected.size === 1 ? "evidência selecionada" : "evidências selecionadas"}
-                  </span>
-                )}
+                <RefreshCw className="size-4" aria-hidden />
+                {caseQ.isFetching ? "Carregando…" : "Tentar novamente"}
               </Button>
-            )}
-            {hyps.length > 0 && (
-              <section aria-labelledby="hy-h" className="space-y-3">
-                <h2
-                  id="hy-h"
-                  ref={hypothesisHeadingRef}
-                  tabIndex={-1}
-                  className="text-lg font-semibold text-foreground"
-                >
-                  Hipóteses provisórias
+            </div>
+          )}
+
+          {ev && evidenceData && (
+            <>
+              <section aria-labelledby="ev-h" className="space-y-3">
+                <h2 id="ev-h" className="text-lg font-semibold text-foreground">
+                  Evidências detectadas ({ev.patterns.length})
                 </h2>
-                {hyps.map((h) => (
-                  <article
-                    key={h.id}
-                    className="space-y-2 rounded-lg border border-border bg-card p-4"
-                  >
-                    <h3 className="text-[16px] font-semibold">{h.title}</h3>
-                    <p className="text-[15px]">{h.description}</p>
-                    <p className="text-[15px]">
-                      <strong>Familiares mencionados</strong> · {h.sources.join(", ")}
-                    </p>
-                    <p className="text-[14px] text-muted-foreground">
-                      <strong>Limites</strong> · {h.limits}
-                    </p>
-                    <div className="text-[15px]">
-                      <strong>Perguntas para a sessão</strong>
-                      <ul className="ml-5 list-disc">
-                        {h.questions.map((q) => (
-                          <li key={q}>{q}</li>
-                        ))}
-                      </ul>
-                    </div>
-                    {(() => {
-                      const pt = ev.patterns.find((x) => x.id === h.patternId);
-                      return pt ? (
-                        <HypothesisReview
+                {ev.patterns.length === 0 ? (
+                  <p className="text-[15px] text-muted-foreground">
+                    A leitura do genossociograma não encontrou repetições nos registros atuais.
+                  </p>
+                ) : (
+                  <ul className="archive-register">
+                    {ev.patterns.map((pattern) => (
+                      <li key={pattern.id} className="space-y-2 px-4 pt-3 text-[15px]">
+                        <label className="flex min-h-11 cursor-pointer items-start gap-3">
+                          <input
+                            type="checkbox"
+                            className="mt-1 size-5 accent-[var(--color-primary)]"
+                            checked={selected.has(pattern.id)}
+                            onChange={() => toggle(pattern.id)}
+                          />
+                          <span>
+                            <strong className="block">{pattern.title}</strong>
+                            {pattern.description}
+                          </span>
+                        </label>
+                        <EvidenceSources
                           clientId={clientId}
-                          hypothesisKey={h.id}
-                          title={h.title}
-                          pattern={pt}
+                          pattern={pattern}
+                          persons={evidenceData.persons}
                         />
-                      ) : null;
-                    })()}
-                  </article>
-                ))}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </section>
-            )}
-            <HypothesisReviewArchive clientId={clientId} patterns={ev.patterns} />
-            <Link
-              to="/app/clientes/$clientId"
-              params={{ clientId }}
-              search={{ tab: "patterns" }}
-              className="inline-flex min-h-11 items-center text-[15px] font-medium text-primary underline underline-offset-4"
-            >
-              Voltar às evidências do dossiê
-            </Link>
-          </>
-        )}
+
+              {ev.patterns.length > 0 && (
+                <Button
+                  className="min-h-11"
+                  disabled={selected.size === 0}
+                  onClick={() => setPanel({ clientId, selected, showHyp: true })}
+                >
+                  Ver hipóteses{" "}
+                  {selected.size > 0 && (
+                    <span>
+                      · {selected.size}{" "}
+                      {selected.size === 1 ? "evidência selecionada" : "evidências selecionadas"}
+                    </span>
+                  )}
+                </Button>
+              )}
+              {hyps.length > 0 && (
+                <section aria-labelledby="hy-h" className="space-y-3">
+                  <h2
+                    id="hy-h"
+                    ref={hypothesisHeadingRef}
+                    tabIndex={-1}
+                    className="text-lg font-semibold text-foreground"
+                  >
+                    Hipóteses provisórias
+                  </h2>
+                  {hyps.map((h) => (
+                    <article key={h.id} className="space-y-2 border-b border-border bg-card p-4">
+                      <h3 className="text-[16px] font-semibold">{h.title}</h3>
+                      <p className="text-[15px]">{h.description}</p>
+                      <p className="text-[15px]">
+                        <strong>Familiares mencionados</strong> · {h.sources.join(", ")}
+                      </p>
+                      <p className="text-[14px] text-muted-foreground">
+                        <strong>Limites</strong> · {h.limits}
+                      </p>
+                      <div className="text-[15px]">
+                        <strong>Perguntas para a sessão</strong>
+                        <ul className="ml-5 list-disc">
+                          {h.questions.map((q) => (
+                            <li key={q}>{q}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      {(() => {
+                        const pt = ev.patterns.find((x) => x.id === h.patternId);
+                        return pt ? (
+                          <HypothesisReview
+                            clientId={clientId}
+                            hypothesisKey={h.id}
+                            title={h.title}
+                            pattern={pt}
+                          />
+                        ) : null;
+                      })()}
+                    </article>
+                  ))}
+                </section>
+              )}
+              <HypothesisReviewArchive clientId={clientId} patterns={ev.patterns} />
+              <Link
+                to="/app/clientes/$clientId"
+                params={{ clientId }}
+                search={{ tab: "patterns" }}
+                className="inline-flex min-h-11 items-center text-[15px] font-medium text-primary underline underline-offset-4"
+              >
+                Voltar às evidências do dossiê
+              </Link>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

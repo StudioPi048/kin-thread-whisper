@@ -27,8 +27,8 @@ import {
   History,
   ClipboardList,
   Search,
-  ChevronLeft,
-  ChevronRight,
+  PanelLeftClose,
+  PanelLeftOpen,
   BookOpen,
   MoreHorizontal,
 } from "lucide-react";
@@ -39,6 +39,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { GenealizWordmark } from "@/components/genealiz-wordmark";
 import { CommandDialog, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import "@/components/archive/workspace-shell.css";
+import "@/components/archive/workspace-pages.css";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -76,6 +78,11 @@ const nav = [
 /** Itens fixos da navegação inferior (mobile). Os demais abrem na gaveta "Mais". */
 const mobilePrimary = nav.slice(0, 4);
 const mobileSecondary = nav.slice(4);
+const desktopGroups = [
+  { label: "Consultório", entries: [nav[0], nav[1], nav[2]] },
+  { label: "Pesquisa familiar", entries: [nav[3], nav[4], nav[6]] },
+  { label: "Acervo e método", entries: [nav[5], nav[7]] },
+] as const;
 
 function isNavActive(item: (typeof nav)[number], pathname: string) {
   return "exact" in item && item.exact ? pathname === item.to : pathname.startsWith(item.to);
@@ -165,56 +172,82 @@ function AuthenticatedLayout() {
     .join("");
 
   return (
-    <div className={`atlas-app ${isCollapsed ? "atlas-app--collapsed" : ""}`}>
+    <div className="workspace-shell" data-collapsed={isCollapsed || undefined}>
       <a href="#conteudo" className="atlas-skip">
         Pular para o conteúdo
       </a>
-      <aside className="atlas-sidebar">
-        <div className="atlas-brand-row">
+      <aside className="workspace-sidebar">
+        <div className="workspace-brand-row">
           <Link to="/app" aria-label="GENEALIZ — Mesa de trabalho">
-            <GenealizWordmark tone="dark" variant={isCollapsed ? "symbol" : "horizontal"} />
+            <GenealizWordmark variant={isCollapsed ? "symbol" : "horizontal"} />
           </Link>
           <button
-            className="atlas-icon-button"
-            onClick={() => setIsCollapsed(!isCollapsed)}
+            type="button"
+            className="workspace-icon"
+            onClick={() => setIsCollapsed((collapsed) => !collapsed)}
             aria-label={isCollapsed ? "Expandir menu" : "Recolher menu"}
+            aria-expanded={!isCollapsed}
           >
-            {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+            {isCollapsed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
           </button>
         </div>
-        <nav className="atlas-nav" aria-label="Navegação principal">
-          {nav.map((item) => (
-            <Link
-              key={item.to}
-              to={item.to as "/app"}
-              activeOptions={{ exact: true }}
-              title={isCollapsed ? item.label : undefined}
-              aria-label={item.label}
-              aria-current={isNavActive(item, location.pathname) ? "page" : undefined}
-            >
-              <item.icon size={19} strokeWidth={1.6} />
-              {!isCollapsed && <span>{item.label}</span>}
-            </Link>
+        <nav className="workspace-nav" aria-label="Navegação principal">
+          {desktopGroups.map(({ label, entries }) => (
+            <div key={label} className="workspace-nav-group" role="group" aria-label={label}>
+              {!isCollapsed && (
+                <p className="workspace-nav-label" aria-hidden>
+                  {label}
+                </p>
+              )}
+              {entries.map((item) => (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  activeOptions={{ exact: true }}
+                  title={isCollapsed ? item.label : undefined}
+                  aria-label={item.label}
+                  aria-current={isNavActive(item, location.pathname) ? "page" : undefined}
+                  className="workspace-nav-link"
+                >
+                  <item.icon size={18} strokeWidth={1.7} aria-hidden />
+                  {!isCollapsed && <span>{item.label}</span>}
+                </Link>
+              ))}
+            </div>
           ))}
         </nav>
-        <div className="atlas-sidebar-footer">
+        <div className="workspace-sidebar-footer">
+          <Link
+            to="/app/configuracoes"
+            className="workspace-nav-link"
+            aria-current={isNavActive(nav[8], location.pathname) ? "page" : undefined}
+            aria-label="Configurações"
+            title={isCollapsed ? "Configurações" : undefined}
+          >
+            <Settings size={18} strokeWidth={1.7} aria-hidden />
+            {!isCollapsed && <span>Configurações</span>}
+          </Link>
           <button
-            className="atlas-icon-button"
+            type="button"
+            className="workspace-nav-link"
             onClick={handleSignOut}
             aria-label="Sair da plataforma"
+            title={isCollapsed ? "Sair da plataforma" : undefined}
           >
-            <LogOut size={18} />
+            <LogOut size={18} strokeWidth={1.7} aria-hidden />
+            {!isCollapsed && <span>Sair</span>}
           </button>
         </div>
       </aside>
-      <div className="atlas-body">
-        <header className="atlas-topbar">
-          <Link to="/app" className="lg:hidden" aria-label="GENEALIZ — Início">
+      <div className="workspace-body">
+        <header className="workspace-topbar">
+          <Link to="/app" className="workspace-mobile-brand" aria-label="GENEALIZ — Início">
             <GenealizWordmark />
           </Link>
           <button
             ref={searchTriggerRef}
-            className="atlas-search"
+            className="workspace-search"
+            type="button"
             onClick={() => {
               searchReturnFocus.current = searchTriggerRef.current;
               setIsSearchOpen(true);
@@ -222,21 +255,23 @@ function AuthenticatedLayout() {
             aria-label="Buscar clientes ou páginas"
             aria-keyshortcuts="Meta+K Control+K"
           >
-            <Search size={18} />
-            <span>Buscar clientes ou páginas...</span>
-            <kbd>⌘ K</kbd>
+            <Search size={18} aria-hidden />
+            <span>Buscar clientes ou páginas</span>
+            <kbd aria-hidden>⌘ / Ctrl K</kbd>
           </button>
+          <CurrentCaseStrip userId={user.id} pathname={location.pathname} />
           <Link
             to="/app/configuracoes"
-            className="atlas-account"
+            className="workspace-account"
             aria-label="Abrir configurações da conta"
           >
-            <span className="atlas-avatar">{initials || "?"}</span>
-            <span className="hidden sm:block truncate max-w-40">{displayName}</span>
+            <span className="workspace-avatar" aria-hidden>
+              {initials || "?"}
+            </span>
+            <span className="workspace-account-name">{displayName}</span>
           </Link>
         </header>
-        <CurrentCaseStrip userId={user.id} pathname={location.pathname} />
-        <main id="conteudo" className="atlas-content">
+        <main id="conteudo" className="workspace-content">
           <MotionConfig reducedMotion={prefsQ.data?.reduceMotion ? "always" : "user"}>
             <UnsavedProvider>
               <Outlet />
@@ -244,7 +279,7 @@ function AuthenticatedLayout() {
           </MotionConfig>
         </main>
       </div>
-      <nav className="atlas-mobile-nav" aria-label="Navegação no celular">
+      <nav className="workspace-mobile-nav" aria-label="Navegação no celular">
         {mobilePrimary.map((item) => (
           <Link
             key={item.to}
@@ -256,13 +291,13 @@ function AuthenticatedLayout() {
             <span>{item.shortLabel}</span>
           </Link>
         ))}
-        <button onClick={() => setIsMoreOpen(true)} aria-expanded={isMoreOpen}>
+        <button type="button" onClick={() => setIsMoreOpen(true)} aria-expanded={isMoreOpen}>
           <MoreHorizontal size={20} />
           <span>Mais</span>
         </button>
       </nav>
       <Sheet open={isMoreOpen} onOpenChange={setIsMoreOpen}>
-        <SheetContent side="bottom" className="atlas-more">
+        <SheetContent side="bottom" className="workspace-more">
           <SheetTitle>Mais seções</SheetTitle>
           <nav className="grid gap-1 py-4">
             {mobileSecondary.map((item) => (

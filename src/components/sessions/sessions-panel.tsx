@@ -28,8 +28,8 @@ import {
   Save,
   CheckCircle2,
   Plus,
+  CalendarDays,
 } from "lucide-react";
-import { motion } from "framer-motion";
 
 import { supabase } from "@/integrations/supabase/client";
 import { processSessionAudio } from "@/lib/ai/session-processing.functions";
@@ -632,14 +632,11 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
   });
 
   return (
-    <div className="space-y-6">
+    <div className="dossier-sessions">
       {preparing && (
-        <section
-          className="space-y-3 rounded-md border border-border bg-card p-4"
-          aria-label="Preparação do atendimento"
-        >
+        <section className="dossier-session-preparation" aria-label="Preparação do atendimento">
           <header>
-            <h3 className="font-serif text-2xl font-bold text-primary">Preparar atendimento</h3>
+            <h2 className="dossier-work-heading">Preparar atendimento</h2>
             <p className="text-sm text-muted-foreground">
               {format(new Date(preparing.session_date), "dd/MM/yyyy HH:mm")}
             </p>
@@ -697,14 +694,12 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
           </div>
         </section>
       )}
-      <section className="space-y-4 rounded-sm border border-border bg-surface-document p-4 sm:p-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h3 className="font-serif text-2xl font-bold text-primary">Registro de sessão</h3>
-          </div>
+      <section className="dossier-session-record">
+        <header className="dossier-session-record-head">
+          <h2 className="dossier-work-heading">Registro de sessão</h2>
           <div className="flex flex-wrap items-center gap-2">
             <Button
-              variant="outline"
+              variant="forest"
               className="min-h-11"
               onClick={() => createManual.mutate()}
               disabled={createManual.isPending}
@@ -712,12 +707,13 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
               <Plus className="mr-2 size-4" /> Registrar sessão sem áudio
             </Button>
             <Button variant="outline" className="min-h-11" onClick={() => setScheduling(true)}>
+              <CalendarDays size={16} aria-hidden />
               Agendar sessão
             </Button>
           </div>
-        </div>
-        <div className="border-t border-border pt-4">
-          <h4 className="mb-2 text-base font-semibold text-primary">Gravação de áudio</h4>
+        </header>
+        <section className="dossier-session-capture" aria-label="Gravação de áudio">
+          <h3 className="mb-2 text-base font-semibold text-primary">Gravação de áudio</h3>
           <p className="mb-3 max-w-prose text-sm text-muted-foreground">
             Guarde o áudio no dossiê. O envio para transcrição é uma etapa posterior, com
             autorização própria.
@@ -794,7 +790,7 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
               )}
             </div>
           )}
-        </div>
+        </section>
         {operationError && (
           <p role="alert" className="text-sm text-destructive">
             {operationError}
@@ -887,10 +883,17 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className="space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-3">
-          <h3 className="font-serif text-2xl font-bold text-primary">Histórico de Sessões</h3>
-        </div>
+      <section className="dossier-session-history" aria-labelledby="session-history-title">
+        <header>
+          <h2 id="session-history-title" className="dossier-work-heading">
+            Histórico de sessões
+          </h2>
+          {!isLoading && !isError && (
+            <span>
+              {sessions.length} {sessions.length === 1 ? "sessão" : "sessões"}
+            </span>
+          )}
+        </header>
 
         {isLoading && (
           <div
@@ -912,75 +915,38 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
         )}
 
         {!isLoading && !isError && sessions.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="rounded-sm border border-dashed border-border bg-forest-soft/40 p-16 text-center"
-          >
-            <img
-              src="/assets/renders/tinteiro-pena.jpg"
-              alt=""
-              aria-hidden
-              loading="lazy"
-              className="mx-auto w-[170px] mix-blend-darken [mask-image:radial-gradient(120%_120%_at_50%_45%,black_58%,transparent_90%)]"
-            />
-            <p className="mt-4 font-serif text-2xl font-bold text-primary">
-              Nenhuma sessão registrada
-            </p>
-            <p className="mx-auto mt-2 max-w-md text-[14px] leading-relaxed text-muted-foreground">
-              Use o registro manual ou guarde um relato de áudio autorizado.
-            </p>
-          </motion.div>
+          <p className="dossier-session-empty">Nenhuma sessão registrada.</p>
         )}
 
-        <motion.div
-          className="grid gap-6"
-          initial="hidden"
-          animate="visible"
-          variants={{
-            hidden: { opacity: 0 },
-            visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
-          }}
-        >
+        <div className="dossier-session-ledger">
           {sessions.map((s) => (
-            <motion.div
+            <SessionCard
               key={s.id}
-              variants={{
-                hidden: { opacity: 0, y: 15 },
-                visible: {
-                  opacity: 1,
-                  y: 0,
-                  transition: { type: "spring", stiffness: 300, damping: 24 },
-                },
+              session={s}
+              clientId={clientId}
+              onReprocess={() => setProcessingTarget(s.id)}
+              onDelete={() => {
+                if (
+                  window.confirm(
+                    "Excluir esta sessão, suas notas e o áudio? Isso não pode ser desfeito.",
+                  )
+                ) {
+                  deleteSession.mutate(s);
+                }
               }}
-            >
-              <SessionCard
-                session={s}
-                clientId={clientId}
-                onReprocess={() => setProcessingTarget(s.id)}
-                onDelete={() => {
-                  if (
-                    window.confirm(
-                      "Excluir esta sessão, suas notas e o áudio? Isso não pode ser desfeito.",
-                    )
-                  ) {
-                    deleteSession.mutate(s);
-                  }
-                }}
-                onDiscardUpload={() => clearOrphanUpload.mutate(s)}
-                discardingUpload={clearOrphanUpload.isPending}
-                showDiscardUpload={pendingAudio?.sessionId !== s.id}
-                processingAuthorized={!!grantFor("external_processing", s.id)}
-                processingBusy={reprocess.isPending}
-                onOpenConsent={focusAudioConsent}
-                recordingAuthorization={events.find(({ id }) => id === s.recording_consent_id)}
-                processingAuthorization={events.find(({ id }) => id === s.processing_consent_id)}
-                reprocessing={reprocess.isPending && reprocess.variables === s.id}
-              />
-            </motion.div>
+              onDiscardUpload={() => clearOrphanUpload.mutate(s)}
+              discardingUpload={clearOrphanUpload.isPending}
+              showDiscardUpload={pendingAudio?.sessionId !== s.id}
+              processingAuthorized={!!grantFor("external_processing", s.id)}
+              processingBusy={reprocess.isPending}
+              onOpenConsent={focusAudioConsent}
+              recordingAuthorization={events.find(({ id }) => id === s.recording_consent_id)}
+              processingAuthorization={events.find(({ id }) => id === s.processing_consent_id)}
+              reprocessing={reprocess.isPending && reprocess.variables === s.id}
+            />
           ))}
-        </motion.div>
-      </div>
+        </div>
+      </section>
     </div>
   );
 }
@@ -1123,21 +1089,18 @@ function SessionCard({
       id={`session-${session.id}`}
       tabIndex={-1}
       aria-labelledby={`session-title-${session.id}`}
-      className="scroll-mt-24 rounded-sm border border-border bg-surface-document shadow-sm overflow-hidden accent-bar-forest"
+      className="dossier-session-entry scroll-mt-24"
     >
-      <div className="border-b border-border/40 bg-background/50 px-6 py-4 flex flex-wrap items-start justify-between gap-4">
+      <div className="dossier-session-entry-head">
         <div>
           <p className="text-[14px] font-semibold text-muted-foreground mb-1">
             {format(new Date(session.session_date), "dd 'de' MMMM 'de' yyyy, HH:mm", {
               locale: ptBR,
             })}
           </p>
-          <h4
-            id={`session-title-${session.id}`}
-            className="font-serif text-2xl font-bold text-primary"
-          >
+          <h3 id={`session-title-${session.id}`} className="text-lg font-semibold text-primary">
             {session.title ?? "Sessão"}
-          </h4>
+          </h3>
           {session.audio_path && (
             <p className="text-[14px] text-muted-foreground mt-1 flex items-center gap-2">
               <Mic className="size-3.5" aria-hidden />

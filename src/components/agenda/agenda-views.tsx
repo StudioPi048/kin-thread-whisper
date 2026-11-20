@@ -191,7 +191,7 @@ export function DayList({
   return (
     <section
       aria-labelledby="day-list-title"
-      className="surface rounded-xl border border-border p-3 md:p-4"
+      className="border-y border-border bg-card px-3 py-4 md:px-5"
     >
       <h2 id="day-list-title" className="mb-2 text-base font-semibold text-primary">
         Atendimentos do dia

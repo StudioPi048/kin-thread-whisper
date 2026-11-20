@@ -239,30 +239,33 @@ function CaseIntakeForm({ clientId, professionalId, focusQuestion }: Props) {
   }
 
   return (
-    <div className="min-w-0 space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-3 rounded-lg border border-border bg-card p-4">
-        <div role="group" aria-label="Modo da anamnese" className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            aria-pressed={mode === "brief"}
-            className="min-h-11"
-            variant={mode === "brief" ? "default" : "ghost"}
-            onClick={() => {
-              setMode("brief");
-              setSection("opening");
-            }}
-          >
-            Primeira sessão
-          </Button>
-          <Button
-            type="button"
-            aria-pressed={mode === "full"}
-            className="min-h-11"
-            variant={mode === "full" ? "default" : "ghost"}
-            onClick={() => setMode("full")}
-          >
-            Anamnese completa
-          </Button>
+    <div className="dossier-intake">
+      <header className="dossier-intake-head">
+        <div className="dossier-intake-mode">
+          <h2>Anamnese</h2>
+          <div role="group" aria-label="Modo da anamnese" className="flex flex-wrap gap-1.5">
+            <Button
+              type="button"
+              aria-pressed={mode === "brief"}
+              className="min-h-11"
+              variant={mode === "brief" ? "forest" : "ghost"}
+              onClick={() => {
+                setMode("brief");
+                setSection("opening");
+              }}
+            >
+              Primeira sessão
+            </Button>
+            <Button
+              type="button"
+              aria-pressed={mode === "full"}
+              className="min-h-11"
+              variant={mode === "full" ? "forest" : "ghost"}
+              onClick={() => setMode("full")}
+            >
+              Anamnese completa
+            </Button>
+          </div>
         </div>
         <label className="grid w-full gap-1.5 text-sm font-medium sm:max-w-xs">
           Buscar pergunta
@@ -313,8 +316,8 @@ function CaseIntakeForm({ clientId, professionalId, focusQuestion }: Props) {
             )}
           </div>
         )}
-      </div>
-      <div className="sticky top-[76px] z-20 flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-md border border-border bg-card px-3 py-2">
+      </header>
+      <div className="dossier-intake-save">
         <p role="status" className="flex items-center gap-1.5 text-sm text-muted-foreground">
           {save.isPending ? (
             <>
@@ -360,10 +363,9 @@ function CaseIntakeForm({ clientId, professionalId, focusQuestion }: Props) {
           propose: setFinding,
         }}
       >
-        <div ref={formRef} className="grid min-w-0 gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
-          {/* Sidebar */}
-          <aside className="space-y-4">
-            <div className="rounded-lg border border-border bg-card p-4">
+        <div ref={formRef} className="dossier-intake-workarea">
+          <aside className="dossier-intake-reference">
+            <div className="dossier-intake-completion">
               <div className="flex flex-wrap items-baseline justify-between gap-x-2 text-sm">
                 <p className="font-semibold text-primary">Preenchimento total</p>
                 <span className="font-semibold tabular-nums text-primary">{completion}%</span>
@@ -377,7 +379,7 @@ function CaseIntakeForm({ clientId, professionalId, focusQuestion }: Props) {
 
             {mode === "full" && (
               <>
-                <label className="grid min-w-0 gap-1.5 text-sm font-medium text-foreground lg:hidden">
+                <label className="dossier-intake-select">
                   Seção da anamnese
                   <select
                     className="min-h-11 w-full min-w-0 rounded-md border border-input bg-card px-3 text-base"
@@ -392,10 +394,7 @@ function CaseIntakeForm({ clientId, professionalId, focusQuestion }: Props) {
                   </select>
                 </label>
 
-                <nav
-                  aria-label="Seções da anamnese"
-                  className="hidden rounded-lg border border-border bg-card p-2 lg:block"
-                >
+                <nav aria-label="Seções da anamnese" className="dossier-intake-index">
                   {INTAKE_SECTIONS.map((s) => {
                     const sc = calcSectionCompletion(draft, s.id);
                     return (
@@ -404,15 +403,11 @@ function CaseIntakeForm({ clientId, professionalId, focusQuestion }: Props) {
                         type="button"
                         aria-current={section === s.id ? "step" : undefined}
                         onClick={() => setSection(s.id)}
-                        className={`block min-h-11 w-full rounded-md px-3 py-2 text-left text-sm transition ${
-                          section === s.id
-                            ? "bg-accent text-accent-foreground font-medium"
-                            : "text-foreground hover:bg-accent"
-                        }`}
+                        className="dossier-intake-index-item"
                       >
                         <span className="flex items-center justify-between gap-2">
                           <span>{s.label}</span>
-                          <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
+                          <span className="dossier-intake-question-count">
                             {sc.filled}/{sc.total}
                           </span>
                         </span>
@@ -424,18 +419,13 @@ function CaseIntakeForm({ clientId, professionalId, focusQuestion }: Props) {
             )}
           </aside>
 
-          {/* Content */}
-          <div className="min-w-0 space-y-6">
-            <header className="min-w-0 space-y-3">
-              <h2
-                ref={sectionTitleRef}
-                tabIndex={-1}
-                className="scroll-mt-44 text-balance font-serif text-2xl text-primary"
-              >
+          <div className="dossier-intake-sheet">
+            <header className="dossier-intake-section-head">
+              <h3 ref={sectionTitleRef} tabIndex={-1} className="scroll-mt-44 text-balance">
                 {mode === "brief"
                   ? "Pontos de partida"
                   : INTAKE_SECTIONS.find((s) => s.id === section)?.label}
-              </h2>
+              </h3>
               <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-3 text-sm sm:flex sm:flex-wrap">
                 {mode === "full" && (
                   <label className="col-span-2 grid min-w-0 gap-1.5 font-medium text-foreground">
@@ -467,7 +457,7 @@ function CaseIntakeForm({ clientId, professionalId, focusQuestion }: Props) {
               </div>
             </header>
 
-            <div className="min-w-0 rounded-lg border border-border bg-card p-4 sm:p-6">
+            <div className="dossier-intake-fields">
               {mode === "brief" ? (
                 <div className="space-y-5">
                   <AreaField

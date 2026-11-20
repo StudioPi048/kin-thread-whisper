@@ -754,3 +754,98 @@
     justify-content: center;
   }
 }
+
+/* The authenticated editor keeps camera tools outside the diagnostic field. */
+.geno-workbench .geno-spatial {
+  --spatial-field: var(--archive);
+}
+
+.geno-workbench .geno-spatial-features {
+  flex: none;
+  gap: 3px;
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--archive-old);
+}
+
+.geno-workbench
+  .geno-spatial-features
+  button:not([aria-pressed="true"]):not([aria-expanded="true"]) {
+  border-color: transparent;
+  background: transparent;
+}
+
+.geno-workbench
+  .geno-spatial-features
+  button:not([aria-pressed="true"]):not([aria-expanded="true"]):hover {
+  background: var(--forest-mist);
+}
+
+.geno-workbench .geno-spatial-feedback {
+  color: var(--ink);
+  font-size: 0.875rem;
+}
+
+.geno-workbench .geno-spatial-workspace {
+  flex-direction: column;
+}
+
+.geno-workbench .geno-spatial-viewport {
+  min-height: 0;
+}
+
+.geno-workbench .geno-spatial-guide {
+  stroke: var(--input);
+  stroke-dasharray: 2 5;
+}
+
+.geno-workbench .geno-spatial-person {
+  border-radius: 5px;
+}
+
+.geno-workbench .geno-spatial-context {
+  top: auto;
+  bottom: 60px;
+  z-index: 4;
+}
+
+.geno-workbench .geno-spatial-branches {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--archive-doc);
+}
+
+.geno-workbench .geno-spatial-deck {
+  position: relative;
+  inset: auto;
+  flex: none;
+  padding: 3px 8px;
+  border-top: 1px solid var(--border);
+  background: var(--archive-doc);
+  pointer-events: auto;
+}
+
+.geno-workbench .geno-spatial-tools {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+.geno-workbench .geno-spatial-directory {
+  border-radius: 5px;
+}
+
+@container (max-width: 430px) {
+  .geno-workbench .geno-spatial-features {
+    column-gap: 0;
+    padding-inline: 5px;
+  }
+
+  .geno-workbench .geno-spatial-features button {
+    padding-inline: 6px;
+  }
+
+  .geno-workbench .geno-spatial-context {
+    display: none;
+  }
+}

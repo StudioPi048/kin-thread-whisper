@@ -141,25 +141,23 @@ function TimelinesPage() {
             }
           />
         ) : (
-          <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <ul className="archive-register" aria-label="Cronologias por cliente">
             {rows.map((row) => (
               <li key={row.id}>
                 <Link
                   to="/app/clientes/$clientId"
                   params={{ clientId: row.id }}
                   search={{ tab: "timeline" }}
-                  className="flex h-full min-h-24 items-start gap-3 rounded-lg border border-border bg-card p-4 hover:border-primary focus-visible:outline-2 focus-visible:outline-ring"
+                  className="archive-timeline-record"
                 >
-                  <Calendar className="mt-1 size-5 shrink-0 text-primary" aria-hidden />
-                  <div className="min-w-0 flex-1">
-                    <h2 className="break-words text-base font-semibold text-foreground">
-                      {row.preferred_name || row.full_name}
-                    </h2>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {row.has_events ? "Com acontecimentos registrados" : "Aguardando registros"}
-                    </p>
-                  </div>
-                  <ArrowRight className="mt-1 size-4 shrink-0 text-primary" aria-hidden />
+                  <Calendar className="size-5 shrink-0 text-forest" aria-hidden />
+                  <h2 className="min-w-0 break-words text-base font-semibold text-foreground">
+                    {row.preferred_name || row.full_name}
+                  </h2>
+                  <p className="text-sm text-ink-soft">
+                    {row.has_events ? "Com acontecimentos" : "Aguardando registros"}
+                  </p>
+                  <ArrowRight className="size-4 shrink-0 text-bronze" aria-hidden />
                 </Link>
               </li>
             ))}

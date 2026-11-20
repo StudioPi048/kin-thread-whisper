@@ -90,7 +90,7 @@ function AgendaPage() {
       />
 
       <div className="container-liz space-y-4 pb-10 pt-4">
-        <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-3">
+        <div className="archive-agenda-tools">
           <div
             role="group"
             aria-label="Visualização da agenda"
@@ -164,7 +164,7 @@ function AgendaPage() {
           </div>
         ) : (
           <>
-            <dl className="flex flex-wrap items-baseline gap-x-6 gap-y-2 text-sm text-muted-foreground">
+            <dl className="archive-agenda-totals">
               <div className="flex gap-2">
                 <dt>Atendimentos</dt>
                 <dd className="font-semibold tabular-nums text-foreground">
@@ -198,14 +198,14 @@ function AgendaPage() {
                 preparation={(session) => <CasePreparation session={session} />}
               />
             ) : (
-              <section className="rounded-xl border border-border bg-card p-5">
+              <section className="border-b border-border bg-card px-5 py-8">
                 <h2 className="text-base font-semibold text-foreground">
                   Nenhum atendimento neste dia
                 </h2>
               </section>
             )}
             {query.data.orphanClients.length > 0 && (
-              <details className="rounded-xl border border-border bg-card px-4 py-2">
+              <details className="border-y border-border bg-card px-4 py-2">
                 <summary className="min-h-11 cursor-pointer content-center font-semibold text-forest">
                   Clientes sem próxima sessão
                 </summary>

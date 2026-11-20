@@ -137,15 +137,14 @@ function GuiaPage() {
   return (
     <div className="pb-16">
       <DocumentHeader
-        breadcrumb="Guia"
         title="Guia de tarefas"
         subtitle="O que fazer, passo a passo, em cada etapa do atendimento."
       />
       <section className="container-liz mb-8" aria-labelledby="guia-exercicio">
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card p-4">
+        <div className="archive-guide-practice">
           <div>
             <h2 id="guia-exercicio" className="text-lg font-semibold text-forest">
-              Pratique no Consultante fictício
+              Pratique com uma família fictícia
             </h2>
             <p className="mt-1 text-sm leading-relaxed text-ink-soft">
               Localize um familiar, confirme e desfaça uma filiação e compare as vistas 2D, 3D e a

@@ -1,6 +1,11 @@
 .case-timeline {
-  padding-block: 0.5rem 1.5rem;
   color: var(--ink);
+}
+
+.case-timeline-empty {
+  padding: 1.35rem;
+  border-block: 1px solid var(--border);
+  background: var(--archive-doc);
 }
 
 .case-timeline-filters {
@@ -8,7 +13,9 @@
   flex-wrap: wrap;
   align-items: end;
   gap: 0.65rem 0.75rem;
-  padding-bottom: 1rem;
+  padding: 0.8rem 1.05rem;
+  border-block: 1px solid var(--border);
+  background: var(--archive-doc);
 }
 
 .case-timeline-filters > div {
@@ -34,21 +41,37 @@
   display: grid;
   grid-template-columns: minmax(17rem, 0.84fr) minmax(20rem, 1.16fr);
   align-items: start;
-  gap: clamp(1rem, 3vw, 2.5rem);
-  padding-top: 1rem;
-  border-top: 1px solid var(--border);
+  gap: clamp(0.95rem, 2vw, 1.6rem);
 }
 
-.case-timeline-list h3,
-.case-timeline-overview h3 {
+.case-timeline-count {
+  display: flex;
+  min-height: 2.8rem;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.1rem 0.8rem;
+  color: var(--ink-soft);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.case-timeline-list {
+  min-width: 0;
+  border-block: 1px solid var(--border);
+  background: var(--archive-doc);
+}
+
+.case-timeline-list h2,
+.case-timeline-overview h2 {
   margin: 0;
-  color: var(--ink);
-  font-size: 1.1rem;
+  font-size: 1.13rem;
   font-weight: 650;
 }
 
-.case-timeline-list h3 {
-  margin-block: 0.25rem 0.75rem;
+.case-timeline-list h2 {
+  padding: 0.85rem 0.95rem;
+  color: var(--forest);
 }
 
 .case-timeline-entries {
@@ -75,13 +98,15 @@
 }
 
 .case-timeline-row:hover {
-  background: var(--archive-doc);
+  background: var(--archive);
 }
 
 .case-timeline-row[aria-pressed="true"] {
-  border-color: var(--input);
-  border-radius: 5px;
   background: var(--forest-mist);
+}
+
+.case-timeline-row[aria-pressed="true"] .case-timeline-row-date {
+  color: var(--forest);
 }
 
 .case-timeline-row:focus-visible,
@@ -125,11 +150,11 @@
 }
 
 .case-timeline-undated {
-  margin-top: 1.4rem;
+  margin-top: 0.7rem;
 }
 
-.case-timeline-undated h4,
-.case-timeline-lane h4 {
+.case-timeline-undated h3,
+.case-timeline-lane h3 {
   display: flex;
   align-items: center;
   gap: 0.55rem;
@@ -139,41 +164,63 @@
   font-weight: 650;
 }
 
-.case-timeline-undated h4 > span {
+.case-timeline-undated h3 > span {
   color: var(--ink-soft);
   font-variant-numeric: tabular-nums;
 }
 
+.case-timeline-undated h3 {
+  padding-inline: 0.7rem;
+}
+
 .case-timeline-overview {
   position: sticky;
-  top: 1rem;
+  top: calc(var(--dossier-index-height, 0rem) + 1rem);
   min-width: 0;
   border: 1px solid var(--border);
-  border-radius: 12px;
   background: var(--archive-doc);
 }
 
 .case-timeline-overview-header {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  column-gap: 1rem;
-  padding: 1rem 1.2rem;
-  border-bottom: 1px solid var(--border);
+  gap: 0.5rem 1rem;
+  padding: 0.8rem 1.05rem;
+  background: var(--forest);
+  color: var(--archive-doc);
 }
 
 .case-timeline-range {
-  color: var(--forest);
-  font-size: 1.125rem;
-  font-weight: 650;
+  margin-top: 0.15rem;
+  color: var(--gold-soft);
+  font-size: 0.9375rem;
+  font-weight: 550;
   font-variant-numeric: tabular-nums;
+}
+
+.case-timeline-overview-header .case-timeline-compare {
+  border-color: var(--gold-soft);
+  background: transparent;
+  color: var(--archive-doc);
+}
+
+.case-timeline-overview-header .case-timeline-compare:hover,
+.case-timeline-overview-header .case-timeline-compare[aria-pressed="true"] {
+  background: var(--gold-soft);
+  color: var(--forest);
+}
+
+.case-timeline-overview-header .case-timeline-compare:focus-visible {
+  outline: 2px solid var(--gold-soft);
+  outline-offset: 2px;
 }
 
 .case-timeline-figure {
   margin: 0;
-  padding: 0.9rem 1.2rem 0.8rem;
-  background: var(--archive);
+  padding: 1.1rem 1.2rem 0.8rem;
+  background: var(--forest-mist);
 }
 
 .case-timeline-figure figcaption,
@@ -231,12 +278,12 @@
   padding-top: 0.3rem;
 }
 
-.case-timeline-lane h4 {
+.case-timeline-lane h3 {
   width: fit-content;
   max-width: 100%;
   margin: 0 0 0 -0.2rem;
   padding: 0.18rem 0.22rem;
-  background: var(--archive);
+  background: var(--forest-mist);
 }
 
 .case-timeline-track {
@@ -248,7 +295,7 @@
 .case-timeline-track::before {
   position: absolute;
   inset: 50% 0 auto;
-  border-top: 1px solid var(--input);
+  border-top: 1px solid var(--forest-soft);
   content: "";
 }
 
@@ -268,7 +315,7 @@
 }
 
 .case-timeline-pin:hover {
-  background: var(--forest-mist);
+  background: var(--archive-doc);
 }
 
 .case-timeline-pin[aria-pressed="true"] {

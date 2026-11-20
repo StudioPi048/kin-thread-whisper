@@ -99,11 +99,10 @@ function BibliotecaPage() {
   return (
     <div className="pb-14">
       <DocumentHeader
-        breadcrumb="Biblioteca"
-        title="Referências para o seu trabalho."
+        title="Biblioteca"
         subtitle="Consulte autores, obras, conceitos e materiais do acervo."
       />
-      <div className="container-liz mb-5">
+      <div className="container-liz archive-library-search">
         <div className="relative">
           <Search className="absolute left-4 top-3.5 size-4 text-muted-foreground" />
           <input
@@ -128,12 +127,13 @@ function BibliotecaPage() {
           </button>
         )}
       </div>
-      <div className="container-liz atlas-library">
-        <aside>
+      <div className="container-liz archive-library-layout">
+        <aside className="archive-library-index">
           <nav aria-label="Categorias da biblioteca">
             {categories.map((c) => (
               <button
                 key={c}
+                type="button"
                 onClick={() => setCategory(c)}
                 aria-pressed={category === c}
                 className="atlas-library-category"
@@ -145,17 +145,18 @@ function BibliotecaPage() {
               </button>
             ))}
           </nav>
-          <div className="mt-7 border-t border-border pt-5">
-            <h2 className="font-serif text-xl">Temas</h2>
-            <div className="mt-3 flex flex-wrap gap-2">
+          <div className="archive-library-themes">
+            <h2 className="text-sm font-semibold text-forest">Buscar por tema</h2>
+            <div className="mt-3 flex flex-wrap gap-1">
               {THEMES.map((t) => (
                 <button
                   key={t.name}
+                  type="button"
                   onClick={() => {
                     setQ(t.name);
                     setCategory("Todos");
                   }}
-                  className="atlas-chip"
+                  className="archive-theme-button"
                 >
                   {t.name}
                 </button>
@@ -164,9 +165,11 @@ function BibliotecaPage() {
           </div>
         </aside>
         <section className="min-w-0">
-          <div className="flex justify-between items-center py-6">
-            <h2 className="font-serif text-3xl font-semibold">{category}</h2>
-            <span className="text-xs text-muted-foreground">{shown.length} resultados</span>
+          <div className="archive-register-heading">
+            <h2>{category === "Todos" ? "Catálogo completo" : category}</h2>
+            <span aria-live="polite" className="text-sm text-ink-soft">
+              {shown.length} {shown.length === 1 ? "resultado" : "resultados"}
+            </span>
           </div>
           {isLoading && category === "Meu acervo" && (
             <p role="status" className="text-sm text-muted-foreground">
@@ -186,24 +189,27 @@ function BibliotecaPage() {
               </Button>
             </div>
           )}
-          <div className="atlas-library-list">
+          <div className="archive-library-list">
             {shown.map((x) => (
               <button
                 key={x.key}
+                type="button"
                 onClick={(event) => {
                   openerRef.current = event.currentTarget;
                   setSelected(x);
                 }}
-                className="atlas-library-item"
+                className="archive-library-record"
               >
-                <BookOpen size={20} strokeWidth={1.4} />
+                <BookOpen size={20} strokeWidth={1.6} aria-hidden />
                 <div>
-                  <span className="text-xs text-muted-foreground">{x.category}</span>
-                  <h3>{x.title}</h3>
-                  <p>{x.meta}</p>
-                  <p className="line-clamp-2">{x.body}</p>
+                  <strong className="block text-base text-forest">{x.title}</strong>
+                  <span className="block text-sm text-ink-soft">{x.meta}</span>
+                  <span className="mt-1 line-clamp-2 text-sm text-ink-soft">{x.body}</span>
                 </div>
-                <ChevronRight size={17} />
+                <span className="archive-library-record-category text-sm text-ink-soft">
+                  {x.category}
+                </span>
+                <ChevronRight size={17} aria-hidden />
               </button>
             ))}
           </div>
@@ -225,27 +231,6 @@ function BibliotecaPage() {
           )}
         </section>
       </div>
-      {!q && category === "Todos" && (
-        <div className="container-liz mt-8">
-          <div className="gv-library-banner">
-            <img
-              src="/assets/genealiz/archive-library.jpg"
-              loading="lazy"
-              decoding="async"
-              alt="Livros e fotografias, composição de acervo ilustrativa"
-            />
-            <div>
-              <p className="gv-category">Acervo de consulta</p>
-              <h2>
-                Conhecimento que
-                <br />
-                acompanha a prática.
-              </h2>
-              <p>Conceitos, autores e leituras para voltar sempre que precisar.</p>
-            </div>
-          </div>
-        </div>
-      )}
       <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
         <SheetContent
           side="right"
