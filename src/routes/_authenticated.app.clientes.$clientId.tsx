@@ -483,8 +483,8 @@ function ClientDossierPage() {
         onChange={handleAvatarUpload}
       />
       <header className="dossier-masthead">
-        <div className="container-liz">
-          <div className="dossier-masthead-tools">
+        <div className="dossier-masthead-band">
+          <div className="container-liz dossier-masthead-tools">
             <nav aria-label="Localização" className="dossier-back">
               {from === "agenda" ? (
                 <Link to="/app/agenda" search={agendaDate ? { date: agendaDate } : {}}>
@@ -564,28 +564,30 @@ function ClientDossierPage() {
               </DropdownMenu>
             </div>
           </div>
+        </div>
 
-          <div className="dossier-masthead-case">
-            <motion.div aria-hidden layoutId={`avatar-${client.id}`} className="dossier-avatar">
-              {avatarUrl ? <img src={avatarUrl} alt="" /> : <span>{initials}</span>}
-            </motion.div>
-            <div className="dossier-identity">
-              <h1 ref={titleRef} tabIndex={-1}>
-                {display}
-              </h1>
-              <div className="dossier-identifiers">
-                {client.status === "archived" && (
-                  <span className="dossier-archived">Dossiê arquivado</span>
-                )}
-                {age !== null && <span>{age} anos</span>}
-                {client.birthplace && <span>{client.birthplace}</span>}
-                {sessionCount !== undefined && (
-                  <span>
-                    {sessionCount} {sessionCount === 1 ? "sessão" : "sessões"}
-                  </span>
-                )}
-              </div>
+        <div className="container-liz dossier-masthead-case">
+          <motion.div aria-hidden layoutId={`avatar-${client.id}`} className="dossier-avatar">
+            {avatarUrl ? <img src={avatarUrl} alt="" /> : <span>{initials}</span>}
+          </motion.div>
+          <div className="dossier-identity">
+            <h1 ref={titleRef} tabIndex={-1}>
+              {display}
+            </h1>
+            <div className="dossier-identifiers">
+              {client.status === "archived" && (
+                <span className="dossier-archived">Dossiê arquivado</span>
+              )}
+              {age !== null && <span>{age} anos</span>}
+              {client.birthplace && <span>{client.birthplace}</span>}
+              {sessionCount !== undefined && (
+                <span>
+                  {sessionCount} {sessionCount === 1 ? "sessão" : "sessões"}
+                </span>
+              )}
             </div>
+          </div>
+          {activeTab === "overview" && (
             <img
               className="dossier-root-art"
               src="/assets/genealiz/acervo/raizes.webp"
@@ -594,42 +596,52 @@ function ClientDossierPage() {
               height={500}
               decoding="async"
             />
-            <div className="dossier-next-session">
-              {nextSession ? (
+          )}
+          <div className="dossier-next-session">
+            {nextSession ? (
+              <Link
+                to="/app/clientes/$clientId"
+                params={{ clientId }}
+                search={(previous) => ({ ...previous, tab: "sessions", session: nextSession.id })}
+              >
+                <CalendarDays size={17} aria-hidden />
+                <span>
+                  Próxima sessão
+                  <time dateTime={nextSession.session_date}>
+                    {new Date(nextSession.session_date).toLocaleString("pt-BR", {
+                      day: "2-digit",
+                      month: "short",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </time>
+                </span>
+              </Link>
+            ) : (
+              nextSession === null && (
                 <Link
                   to="/app/clientes/$clientId"
                   params={{ clientId }}
-                  search={(previous) => ({ ...previous, tab: "sessions", session: nextSession.id })}
+                  search={(previous) => ({ ...previous, tab: "sessions", session: undefined })}
+                  aria-label="Sem sessão agendada. Abrir sessões"
                 >
                   <CalendarDays size={17} aria-hidden />
-                  <span>
-                    Próxima sessão
-                    <time dateTime={nextSession.session_date}>
-                      {new Date(nextSession.session_date).toLocaleString("pt-BR", {
-                        day: "2-digit",
-                        month: "short",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </time>
-                  </span>
+                  <span>Sem sessão agendada</span>
                 </Link>
-              ) : (
-                nextSession === null && <span>Sem sessão agendada</span>
-              )}
-              {sessionLoading && <span role="status">Carregando sessões…</span>}
-              {sessionError && (
-                <ReadFailure
-                  retry={() =>
-                    sessionQueries
-                      .filter((query) => query.isError)
-                      .forEach((query) => void query.refetch())
-                  }
-                >
-                  Consulta de sessões incompleta.
-                </ReadFailure>
-              )}
-            </div>
+              )
+            )}
+            {sessionLoading && <span role="status">Carregando sessões…</span>}
+            {sessionError && (
+              <ReadFailure
+                retry={() =>
+                  sessionQueries
+                    .filter((query) => query.isError)
+                    .forEach((query) => void query.refetch())
+                }
+              >
+                Consulta de sessões incompleta.
+              </ReadFailure>
+            )}
           </div>
         </div>
       </header>

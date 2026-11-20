@@ -5,6 +5,7 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useId,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -171,6 +172,7 @@ const personName = (person?: PersonRow) =>
  * com a linha do casal.
  */
 const UNION_SIZE = 12;
+const MAP_OVERVIEW_PADDING = 0.11;
 const UnionNodeComponent = ({ data }: NodeProps) => {
   const d = (data as { label?: string; kind?: string; isSingle?: boolean }) ?? {};
   const isDivorce = d.kind === "divorcio";
@@ -698,7 +700,8 @@ function GenogramCanvasInner({
   const stageRef = useRef<HTMLDivElement>(null);
   const reviewTriggerRef = useRef<HTMLElement | null>(null);
   const reviewEditTriggerRef = useRef<HTMLButtonElement | null>(null);
-  const [panelOpen, setPanelOpen] = useState(true);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const locateId = useId();
   const reviewMapContext = useRef<{
     viewport: Viewport;
     anchor?: MapViewAnchor;
@@ -755,11 +758,46 @@ function GenogramCanvasInner({
   }, [data?.layout?.is_fixed]);
   const rfInstance = useReactFlow();
 
-  function fitViewport2D(width: number, height: number) {
-    const people = rfInstance.getNodes().filter((node) => node.type === "person");
-    if (!width || !height || !people.length) return;
-    return getViewportForBounds(getNodesBounds(people), width, height, 0.075, 1.2, 0.18);
-  }
+  const fitViewport2D = useCallback(
+    (width: number, height: number) => {
+      const people = rfInstance.getNodes().filter((node) => node.type === "person");
+      if (!width || !height || !people.length) return;
+      return getViewportForBounds(
+        getNodesBounds(people),
+        width,
+        height,
+        0.075,
+        1.2,
+        MAP_OVERVIEW_PADDING,
+      );
+    },
+    [rfInstance],
+  );
+
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    let width = stage.clientWidth;
+    let height = stage.clientHeight;
+    const observer = new ResizeObserver(() => {
+      const nextWidth = stage.clientWidth;
+      const nextHeight = stage.clientHeight;
+      if (nextWidth === width && nextHeight === height) return;
+      const previousFit = fitViewport2D(width, height);
+      width = nextWidth;
+      height = nextHeight;
+      if (!previousFit) return;
+      const viewport = rfInstance.getViewport();
+      const stillInOverview =
+        Math.abs(viewport.x - previousFit.x) < 9 &&
+        Math.abs(viewport.y - previousFit.y) < 9 &&
+        Math.abs(viewport.zoom / previousFit.zoom - 1) < 0.06;
+      const nextFit = stillInOverview && fitViewport2D(width, height);
+      if (nextFit) void rfInstance.setViewport(nextFit);
+    });
+    observer.observe(stage);
+    return () => observer.disconnect();
+  }, [fitViewport2D, rfInstance]);
 
   function readAnchor2D() {
     const stage = stageRef.current;
@@ -934,7 +972,7 @@ function GenogramCanvasInner({
     if (!people.length) return;
     const timer = window.setTimeout(() => {
       mapInitialized.current = true;
-      void rfInstance.fitView({ nodes: people, padding: 0.18, maxZoom: 1.2 });
+      void rfInstance.fitView({ nodes: people, padding: MAP_OVERVIEW_PADDING, maxZoom: 1.2 });
     }, 100);
     return () => window.clearTimeout(timer);
   }, [renderGraph, withQuickAdd, setNodes, setEdges, rfInstance]);
@@ -1814,7 +1852,7 @@ function GenogramCanvasInner({
     else
       void rfInstance.fitView({
         nodes: rfInstance.getNodes().filter((node) => node.type === "person"),
-        padding: 0.18,
+        padding: MAP_OVERVIEW_PADDING,
         maxZoom: 1.2,
       });
   }
@@ -2107,23 +2145,67 @@ function GenogramCanvasInner({
           </Button>
         </div>
 
-        {qualifiedCount > 0 && (
-          <div className="geno-editor-meta">
+        <div className="geno-editor-edit" role="group" aria-label="Editar o mapa">
+          <Button
+            size="sm"
+            variant="forest"
+            className="geno-editor-add-person"
+            aria-label="Adicionar pessoa"
+            title="Adicionar pessoa"
+            onClick={addPerson}
+          >
+            <UserPlus className="size-4" aria-hidden />{" "}
             <span>
-              <UsersRound className="size-4" aria-hidden />
-              {qualifiedCount} {qualifiedCount === 1 ? "familiar" : "familiares"}
+              <span className="geno-editor-person-word">Adicionar </span>pessoa
             </span>
-            {(layoutDirty || lastSavedAt) && (
-              <span role="status" className="geno-editor-save-status">
-                {layoutDirty
-                  ? saveLayout.isPending
-                    ? "Salvando…"
-                    : "Alterações pendentes"
-                  : `Salvo às ${lastSavedAt}`}
-              </span>
-            )}
+          </Button>
+          <Button
+            size="sm"
+            variant={connection ? "forest" : "outline"}
+            className="geno-editor-connect"
+            aria-label="Conectar"
+            title="Conectar duas pessoas"
+            aria-pressed={!!connection}
+            disabled={qualifiedCount < 2}
+            onClick={() => (connection ? setConnection(null) : startConnection())}
+          >
+            <Link2 className="size-4" aria-hidden /> <span>Conectar</span>
+          </Button>
+        </div>
+
+        <div className="geno-editor-navigation">
+          <div className="geno-editor-find">
+            <label htmlFor={locateId} className="sr-only">
+              Localizar familiar
+            </label>
+            <Search className="size-4 shrink-0" aria-hidden />
+            <select
+              id={locateId}
+              value=""
+              onChange={(event) => {
+                const id = event.currentTarget.value;
+                if (!id) return;
+                if (connection) activatePerson(id);
+                else locatePerson(id);
+              }}
+            >
+              <option value="">{connection ? "Escolher familiar…" : "Localizar familiar…"}</option>
+              {persons
+                .filter((person) => mappedIds.has(person.id))
+                .map((person) => {
+                  const name = person.full_name?.trim() || personName(person);
+                  const role = person.is_proband ? "Consultante" : person.relationship_to_proband;
+                  return (
+                    <option key={person.id} value={person.id}>
+                      {name}
+                      {role && role !== name ? " · " + role : ""}
+                      {person.birth_date ? " · " + person.birth_date.slice(0, 4) : ""}
+                    </option>
+                  );
+                })}
+            </select>
           </div>
-        )}
+        </div>
 
         <div className="geno-editor-tools">
           <Button
@@ -2283,6 +2365,17 @@ function GenogramCanvasInner({
                 >
                   <Link2 className="size-4" /> Preencher vínculo
                 </Button>
+                {onOpenSpreadsheet && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setToolsOpen(false);
+                      onOpenSpreadsheet();
+                    }}
+                  >
+                    <Table2 className="size-4" aria-hidden /> Abrir planilha
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   disabled={!qualifiedCount}
@@ -2313,197 +2406,6 @@ function GenogramCanvasInner({
         </div>
       </header>
       <div className="atlas-map-workspace geno-editor-workspace">
-        <div className="geno-editor-command" role="group" aria-label="Navegar e editar">
-          <div className="geno-editor-edit" role="group" aria-label="Editar o mapa">
-            <Button
-              size="sm"
-              variant="forest"
-              className="geno-editor-add-person"
-              aria-label="Adicionar pessoa"
-              title="Adicionar pessoa"
-              onClick={addPerson}
-            >
-              <UserPlus className="size-4" aria-hidden />{" "}
-              <span>
-                <span className="geno-editor-person-word">Adicionar </span>pessoa
-              </span>
-            </Button>
-            <Button
-              size="sm"
-              variant={connection ? "forest" : "outline"}
-              className="geno-editor-connect"
-              aria-label="Conectar"
-              title="Conectar duas pessoas"
-              aria-pressed={!!connection}
-              disabled={qualifiedCount < 2}
-              onClick={() => (connection ? setConnection(null) : startConnection())}
-            >
-              <Link2 className="size-4" aria-hidden /> <span>Conectar</span>
-            </Button>
-          </div>
-
-          <div className="geno-editor-navigation">
-            <div className="geno-editor-find">
-              <label htmlFor="geno-locate" className="sr-only">
-                Localizar familiar
-              </label>
-              <Search className="size-4 shrink-0" aria-hidden />
-              <select
-                id="geno-locate"
-                value=""
-                onChange={(event) => {
-                  const id = event.currentTarget.value;
-                  if (!id) return;
-                  if (connection) activatePerson(id);
-                  else locatePerson(id);
-                }}
-              >
-                <option value="">
-                  {connection ? "Escolher familiar…" : "Localizar familiar…"}
-                </option>
-                {persons
-                  .filter((person) => mappedIds.has(person.id))
-                  .map((person) => {
-                    const name = person.full_name?.trim() || personName(person);
-                    const role = person.is_proband ? "Consultante" : person.relationship_to_proband;
-                    return (
-                      <option key={person.id} value={person.id}>
-                        {name}
-                        {role && role !== name ? " · " + role : ""}
-                        {person.birth_date ? " · " + person.birth_date.slice(0, 4) : ""}
-                      </option>
-                    );
-                  })}
-              </select>
-            </div>
-            {onOpenSpreadsheet && (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="shrink-0"
-                onClick={onOpenSpreadsheet}
-              >
-                <Table2 className="size-4" aria-hidden /> Planilha
-              </Button>
-            )}
-          </div>
-
-          {qualifiedCount > 0 && !connection && (
-            <div className="geno-editor-status">
-              {mapWarnings.length > 0 && (
-                <Popover open={warningsOpen} onOpenChange={setWarningsOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="geno-editor-review"
-                      aria-label={`${mapWarnings.length} para revisar`}
-                    >
-                      <AlertTriangle className="size-4" aria-hidden />
-                      {mapWarnings.length}
-                      <span className="geno-editor-warning-copy">para revisar</span>
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    className="w-[min(24rem,calc(100vw-2rem))] max-h-96 overflow-y-auto"
-                    align="start"
-                    onCloseAutoFocus={(event) => {
-                      if (parentageDraft) event.preventDefault();
-                    }}
-                  >
-                    <h3 className="mb-2 text-sm font-semibold">Pendências do mapa</h3>
-                    <ul className="divide-y divide-border">
-                      {mapWarnings.map((warning) => (
-                        <li
-                          key={warning.personId + warning.message}
-                          className="py-2 text-sm leading-snug"
-                        >
-                          {mappedIds.has(warning.personId) ? (
-                            <button
-                              type="button"
-                              className="min-h-11 text-left hover:underline"
-                              onClick={() => {
-                                if (warning.position) {
-                                  locatePerson(warning.personId);
-                                  setWarningsOpen(false);
-                                } else startParentageReview(warning.personId);
-                              }}
-                            >
-                              {warning.message}
-                            </button>
-                          ) : (
-                            warning.message
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  </PopoverContent>
-                </Popover>
-              )}
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    title="Legenda do mapa"
-                    aria-label="Legenda do mapa"
-                  >
-                    <Layers className="size-4" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-72 space-y-2 text-sm" align="start">
-                  <h3 className="font-semibold">Legenda do mapa</h3>
-                  {legendFlags.masculino && <p>Quadrado · masculino</p>}
-                  {legendFlags.feminino && <p>Círculo · feminino</p>}
-                  {legendFlags.outro && <p>Losango · não binário ou desconhecido</p>}
-                  {legendFlags.aborto && <p>Triângulo · perda gestacional</p>}
-                  {legendFlags.falecido && <p>Traço horizontal superior · falecimento</p>}
-                  <p>Linha contínua · filiação biológica</p>
-                  <p>Linha pontilhada em bronze · filiação sugerida</p>
-                  <p>Linha tracejada · confira a natureza do vínculo na ficha</p>
-                </PopoverContent>
-              </Popover>
-              <MapNavigator
-                nodes={positionedNodes}
-                focusId={focusedPerson?.id}
-                branch={mapBranch}
-                onBranch={(branch) => {
-                  setOrganizationProposal(null);
-                  setMapBranch(branch);
-                }}
-                onLocate={locatePerson}
-                onFit={fitAllPeople}
-              />
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                className="geno-editor-fit"
-                aria-label="Árvore inteira"
-                title="Enquadrar a árvore inteira"
-                onClick={fitAllPeople}
-              >
-                <Focus className="size-4" aria-hidden />
-                <span>Árvore inteira</span>
-              </Button>
-              <Button
-                size="icon"
-                variant={mapReading ? "forest" : "ghost"}
-                aria-label="Lupa de leitura do mapa"
-                title="Lupa de leitura do mapa"
-                aria-pressed={mapReading}
-                onClick={() => {
-                  setReaderPersonId(focusedPerson?.id ?? null);
-                  setMapReading((active) => !active);
-                }}
-              >
-                <ScanText className="size-4" aria-hidden />
-              </Button>
-            </div>
-          )}
-        </div>
-
         {organizationProposal && (
           <div className="geno-parentage-feedback">
             <span role="status">
@@ -2666,6 +2568,7 @@ function GenogramCanvasInner({
                 }}
               >
                 <ReactFlow
+                  className="geno-drafting-plane"
                   nodes={interactiveNodes.map((node) =>
                     reviewHighlights.has(node.id)
                       ? { ...node, className: cn(node.className, "geno-parentage-highlight") }
@@ -2711,7 +2614,7 @@ function GenogramCanvasInner({
                   }}
                   fitView
                   fitViewOptions={{
-                    padding: 0.18,
+                    padding: MAP_OVERVIEW_PADDING,
                     nodes: nodes.filter((n) => n.type === "person"),
                   }}
                 >
@@ -2726,10 +2629,11 @@ function GenogramCanvasInner({
                   )}
                   <Controls
                     className="geno-editor-map-controls"
+                    position="top-left"
                     showInteractive={false}
                     fitViewOptions={{
                       nodes: nodes.filter((n) => n.type === "person"),
-                      padding: 0.18,
+                      padding: MAP_OVERVIEW_PADDING,
                     }}
                   />
                 </ReactFlow>
@@ -2749,6 +2653,7 @@ function GenogramCanvasInner({
                   >
                     <SpatialView
                       key={clientId}
+                      workbench
                       nodes={positionedNodes}
                       edges={visibleEdges}
                       onSelectPerson={activatePerson}
@@ -2840,6 +2745,140 @@ function GenogramCanvasInner({
             </>
           )}
         </div>
+        {qualifiedCount > 0 && (
+          <div className="geno-editor-base">
+            {qualifiedCount > 0 && (
+              <div className="geno-editor-meta">
+                <span>
+                  <UsersRound className="size-4" aria-hidden />
+                  {qualifiedCount} {qualifiedCount === 1 ? "familiar" : "familiares"}
+                </span>
+                {(layoutDirty || lastSavedAt) && (
+                  <span role="status" className="geno-editor-save-status">
+                    {layoutDirty
+                      ? saveLayout.isPending
+                        ? "Salvando…"
+                        : "Alterações pendentes"
+                      : `Salvo às ${lastSavedAt}`}
+                  </span>
+                )}
+              </div>
+            )}
+            {qualifiedCount > 0 && !connection && (
+              <div className="geno-editor-status">
+                {mapWarnings.length > 0 && (
+                  <Popover open={warningsOpen} onOpenChange={setWarningsOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="geno-editor-review"
+                        aria-label={`${mapWarnings.length} para revisar`}
+                      >
+                        <AlertTriangle className="size-4" aria-hidden />
+                        {mapWarnings.length}
+                        <span className="geno-editor-warning-copy">para revisar</span>
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="w-[min(24rem,calc(100vw-2rem))] max-h-96 overflow-y-auto"
+                      align="start"
+                      onCloseAutoFocus={(event) => {
+                        if (parentageDraft) event.preventDefault();
+                      }}
+                    >
+                      <h3 className="mb-2 text-sm font-semibold">Pendências do mapa</h3>
+                      <ul className="divide-y divide-border">
+                        {mapWarnings.map((warning) => (
+                          <li
+                            key={warning.personId + warning.message}
+                            className="py-2 text-sm leading-snug"
+                          >
+                            {mappedIds.has(warning.personId) ? (
+                              <button
+                                type="button"
+                                className="min-h-11 text-left hover:underline"
+                                onClick={() => {
+                                  if (warning.position) {
+                                    locatePerson(warning.personId);
+                                    setWarningsOpen(false);
+                                  } else startParentageReview(warning.personId);
+                                }}
+                              >
+                                {warning.message}
+                              </button>
+                            ) : (
+                              warning.message
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </PopoverContent>
+                  </Popover>
+                )}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      title="Legenda do mapa"
+                      aria-label="Legenda do mapa"
+                    >
+                      <Layers className="size-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-72 space-y-2 text-sm" align="start">
+                    <h3 className="font-semibold">Legenda do mapa</h3>
+                    {legendFlags.masculino && <p>Quadrado · masculino</p>}
+                    {legendFlags.feminino && <p>Círculo · feminino</p>}
+                    {legendFlags.outro && <p>Losango · não binário ou desconhecido</p>}
+                    {legendFlags.aborto && <p>Triângulo · perda gestacional</p>}
+                    {legendFlags.falecido && <p>Traço horizontal superior · falecimento</p>}
+                    <p>Linha contínua · filiação biológica</p>
+                    <p>Linha pontilhada em bronze · filiação sugerida</p>
+                    <p>Linha tracejada · confira a natureza do vínculo na ficha</p>
+                  </PopoverContent>
+                </Popover>
+                <MapNavigator
+                  nodes={positionedNodes}
+                  focusId={focusedPerson?.id}
+                  branch={mapBranch}
+                  onBranch={(branch) => {
+                    setOrganizationProposal(null);
+                    setMapBranch(branch);
+                  }}
+                  onLocate={locatePerson}
+                  onFit={fitAllPeople}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="geno-editor-fit"
+                  aria-label="Árvore inteira"
+                  title="Enquadrar a árvore inteira"
+                  onClick={fitAllPeople}
+                >
+                  <Focus className="size-4" aria-hidden />
+                  <span>Árvore inteira</span>
+                </Button>
+                <Button
+                  size="icon"
+                  variant={mapReading ? "forest" : "ghost"}
+                  aria-label="Lupa de leitura do mapa"
+                  title="Lupa de leitura do mapa"
+                  aria-pressed={mapReading}
+                  onClick={() => {
+                    setReaderPersonId(focusedPerson?.id ?? null);
+                    setMapReading((active) => !active);
+                  }}
+                >
+                  <ScanText className="size-4" aria-hidden />
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
         {isMobile && !reviewCollapsed && reviewPanel}
       </div>
       {isMobile ? (

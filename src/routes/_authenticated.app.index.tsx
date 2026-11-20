@@ -1,8 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { ArrowRight, CalendarDays, BookOpen, Check, X, RefreshCw } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  ArrowRight,
+  CalendarDays,
+  CalendarPlus,
+  BookOpen,
+  Check,
+  X,
+  RefreshCw,
+} from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { ScheduleDialog } from "@/components/agenda/agenda-views";
 import { Button } from "@/components/ui/button";
 import { getPendingRecordCount } from "@/lib/agenda.functions";
 import { activeAudioConsent, readAudioConsents } from "@/lib/audio-consent";
@@ -72,6 +81,9 @@ function AppHome() {
   const { user } = Route.useRouteContext();
   const [visits, setVisits] = useState<Visit[]>([]);
   const [onbHidden, setOnbHidden] = useState(true);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const scheduleTrigger = useRef<HTMLButtonElement>(null);
+  const upcomingHeading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     setVisits(readVisits(user.id));
     setOnbHidden(readPref(user.id, "onboarding", { hidden: false }).hidden);
@@ -185,16 +197,24 @@ function AppHome() {
   const onb = onbQ.data;
   const showOnb = !onbHidden && onb && onb.done < onb.total;
 
+  const today = new Date();
+  const tz = browserTz();
+  const todayKey = dateKeyInTz(today, tz);
+  const day = new Intl.DateTimeFormat("pt-BR", { timeZone: tz, weekday: "long" }).format(today);
+  const date = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: tz,
+    day: "numeric",
+    month: "long",
+  }).format(today);
   const fmtTime = (iso: string) =>
     new Date(iso).toLocaleString("pt-BR", {
+      timeZone: tz,
       weekday: "short",
       day: "2-digit",
       hour: "2-digit",
       minute: "2-digit",
     });
 
-  const today = new Date();
-  const tz = browserTz();
   const nextDate = next ? new Date(next.session_date) : null;
 
   return (
@@ -208,10 +228,11 @@ function AppHome() {
           </p>
         </div>
         <div className="work-desk-heading-tools">
-          <time dateTime={dateKeyInTz(today, tz)}>
-            {today.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}
+          <time dateTime={todayKey}>
+            <span>{day}</span>
+            <strong>{date}</strong>
           </time>
-          <Button asChild variant={next ? "outline" : "forest"}>
+          <Button asChild variant="outline">
             <Link to="/app/agenda">
               <CalendarDays aria-hidden /> Abrir agenda
             </Link>
@@ -223,7 +244,12 @@ function AppHome() {
         <section aria-labelledby="next-h" className="work-desk-agenda">
           <div className="work-next">
             <div className="work-next-content">
-              <h2 id="next-h">Próximo atendimento</h2>
+              <header className="work-next-header">
+                <CalendarDays size={18} aria-hidden />
+                <h2 id="next-h" ref={upcomingHeading} tabIndex={-1}>
+                  Próximo atendimento
+                </h2>
+              </header>
               {upcomingQ.isLoading ? (
                 <div role="status" className="work-next-loading">
                   <p>Carregando agenda…</p>
@@ -240,6 +266,7 @@ function AppHome() {
                     <strong>{timeInTz(nextDate, tz)}</strong>
                     <span>
                       {nextDate.toLocaleDateString("pt-BR", {
+                        timeZone: tz,
                         weekday: "long",
                         day: "numeric",
                         month: "short",
@@ -256,25 +283,45 @@ function AppHome() {
                       {next.title || "Atendimento"}
                       {nextDuration !== null && ` · ${formatDurationMinutes(nextDuration)}`}
                     </p>
+                  </div>
+                  <Button asChild className="work-next-action" variant="forest">
                     <Link
                       to="/app/clientes/$clientId"
                       params={{ clientId: next.client_id }}
                       search={{ tab: "sessions", session: next.id }}
-                      className="work-next-link"
                     >
-                      Abrir atendimento <ArrowRight size={17} aria-hidden />
+                      Abrir atendimento <ArrowRight size={16} aria-hidden />
                     </Link>
-                  </div>
+                  </Button>
                 </div>
               ) : (
-                <p className="work-next-empty">Nenhum atendimento futuro agendado.</p>
+                <div className="work-next-empty">
+                  <p>Nenhum atendimento futuro agendado.</p>
+                  {clientsQ.isSuccess && clients.length === 0 ? (
+                    <Button asChild className="work-next-action" variant="forest">
+                      <Link to="/app/clientes">
+                        Cadastrar cliente <ArrowRight size={16} aria-hidden />
+                      </Link>
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      className="work-next-action"
+                      variant="forest"
+                      ref={scheduleTrigger}
+                      onClick={() => setScheduleOpen(true)}
+                    >
+                      <CalendarPlus size={16} aria-hidden /> Agendar atendimento
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
             <div className="work-next-art">
               <img
                 src="/assets/genealiz/acervo/mesa-arquivo.webp"
                 srcSet="/assets/genealiz/acervo/mesa-arquivo-560.webp 560w, /assets/genealiz/acervo/mesa-arquivo.webp 1180w"
-                sizes="(min-width: 1680px) 640px, (min-width: 1024px) calc(49vw - 9rem), (min-width: 630px) 48vw, 100vw"
+                sizes="(min-width: 1024px) calc(100vw - 16rem), (min-width: 600px) 96vw, 92vw"
                 alt=""
                 width={1180}
                 height={787}
@@ -493,6 +540,18 @@ function AppHome() {
           </section>
         </div>
       </div>
+
+      {scheduleOpen && (
+        <ScheduleDialog
+          date={todayKey}
+          onClose={() => {
+            setScheduleOpen(false);
+            window.requestAnimationFrame(() => {
+              (scheduleTrigger.current ?? upcomingHeading.current)?.focus();
+            });
+          }}
+        />
+      )}
 
       {showOnb && (
         <section aria-labelledby="onb-h" className="work-desk-onboarding">

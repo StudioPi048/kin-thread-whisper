@@ -11,6 +11,7 @@ import {
 import type { CSSProperties, KeyboardEvent, PointerEvent, Ref } from "react";
 import type { Edge, Node } from "@xyflow/react";
 import {
+  Box,
   GitFork,
   Layers2,
   List,
@@ -25,6 +26,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { formatDateBR, relationshipLabel, relationshipQualifiers } from "@/lib/genogram";
 import { cn } from "@/lib/utils";
 import type { PersonNodeData } from "./person-node";
@@ -51,6 +53,7 @@ import "./genogram-spatial-view.css";
 interface GenogramSpatialViewProps {
   nodes: Node[];
   edges: Edge[];
+  workbench?: boolean;
   onSelectPerson: (id: string) => void;
   selectedPersonId?: string | null;
   connectionOriginId?: string | null;
@@ -67,7 +70,7 @@ interface GenogramSpatialViewProps {
   onMovePerson?: (id: string, deltaX: number) => void;
 }
 
-type Frame = { width: number; height: number };
+type Frame = { width: number; height: number; controls: number };
 type Camera = SpatialAngles & { x: number; y: number; zoom: number };
 export type SpatialCamera = Camera;
 export type SpatialCameraHandle = {
@@ -118,6 +121,7 @@ function sameRoute(a: SpatialRoute | undefined, b: SpatialRoute) {
 }
 
 const FRONT_ANGLES = { yaw: 0, pitch: 0 };
+const OBLIQUE_ANGLES = { yaw: -0.34, pitch: 0.18 };
 const MAX_ZOOM = 2.4;
 const PAN_STEP = 64;
 const FRAME_MARGIN = 24;
@@ -151,23 +155,28 @@ function fitProjectedPeople(
   const zoom = Math.min(
     1.14,
     Math.max(1, frame.width - rulerWidth - 2 * FRAME_MARGIN) / (right - left),
-    Math.max(1, frame.height - HEADER_SPACE - CONTROLS_SPACE - FRAME_MARGIN) / (bottom - top),
+    Math.max(1, frame.height - HEADER_SPACE - frame.controls - FRAME_MARGIN) / (bottom - top),
   );
   return {
     x: (-(left + right) * zoom + rulerWidth) / 2,
-    y: (-(top + bottom) * zoom + HEADER_SPACE - CONTROLS_SPACE) / 2,
+    y: (-(top + bottom) * zoom + HEADER_SPACE - frame.controls) / 2,
     zoom,
     yaw,
     pitch,
   };
 }
 
-function centerPerson(camera: Camera, person: ProjectedPerson, zoom: number): Camera {
+function centerPerson(
+  camera: Camera,
+  person: ProjectedPerson,
+  zoom: number,
+  controls: number,
+): Camera {
   return {
     ...camera,
     zoom,
     x: -person.x * zoom,
-    y: -(person.y + person.height / 2) * zoom + (HEADER_SPACE - CONTROLS_SPACE) / 2,
+    y: -(person.y + person.height / 2) * zoom + (HEADER_SPACE - controls) / 2,
   };
 }
 
@@ -272,6 +281,7 @@ const foldText = (value: string) =>
 export function GenogramSpatialView({
   nodes,
   edges,
+  workbench = false,
   onSelectPerson,
   selectedPersonId,
   connectionOriginId,
@@ -306,7 +316,8 @@ export function GenogramSpatialView({
     moved: boolean;
   } | null>(null);
   const skipPersonClick = useRef(false);
-  const [frame, setFrame] = useState<Frame>({ width: 0, height: 0 });
+  const [frame, setFrame] = useState<Frame>({ width: 0, height: 0, controls: 0 });
+  const [spatialToolsOpen, setSpatialToolsOpen] = useState(false);
   const [manualCamera, setManualCamera] = useState<Camera | null>(null);
   const [dragging, setDragging] = useState(false);
   const [panMode, setPanMode] = useState(true);
@@ -422,12 +433,17 @@ export function GenogramSpatialView({
   useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
-    const resize = () => setFrame({ width: viewport.clientWidth, height: viewport.clientHeight });
+    const resize = () =>
+      setFrame({
+        width: viewport.clientWidth,
+        height: viewport.clientHeight,
+        controls: workbench ? 0 : CONTROLS_SPACE,
+      });
     const observer = new ResizeObserver(resize);
     observer.observe(viewport);
     resize();
     return () => observer.disconnect();
-  }, []);
+  }, [workbench]);
 
   useEffect(() => {
     if (!hasFrame || !focusRequest || focusRequest === lastFocus.current) return;
@@ -440,7 +456,12 @@ export function GenogramSpatialView({
     changeCamera((current) =>
       related.length
         ? fitProjectedPeople([requested, ...related], frame, current)
-        : centerPerson(current, requested, Math.max(1.08 / requested.scale, current.zoom)),
+        : centerPerson(
+            current,
+            requested,
+            Math.max(1.08 / requested.scale, current.zoom),
+            frame.controls,
+          ),
     );
   }, [changeCamera, focusRequest, frame, hasFrame, display.people]);
 
@@ -530,6 +551,7 @@ export function GenogramSpatialView({
         current,
         person,
         clamp(Math.max(current.zoom, 1.06 / person.scale), minZoom, MAX_ZOOM),
+        frame.controls,
       ),
     );
   }
@@ -794,12 +816,72 @@ export function GenogramSpatialView({
         })
       : [];
 
+  const spatialFeatureButtons = (
+    <>
+      <Button
+        type="button"
+        size="sm"
+        variant={separateLinks ? "forest" : "outline"}
+        aria-pressed={separateLinks}
+        onClick={() => {
+          setSeparateLinks((active) => !active);
+          setChosenRoute(null);
+          setSpatialToolsOpen(false);
+        }}
+      >
+        <Layers2 aria-hidden />
+        Separar vínculos
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        variant={expandedPersonId ? "forest" : "outline"}
+        aria-expanded={!!expandedPersonId}
+        aria-controls={unionsId}
+        disabled={!unionMembers.length}
+        title={unionMembers.length ? undefined : "Nenhum familiar tem mais de uma união no mapa"}
+        onClick={() => {
+          toggleUnions();
+          setSpatialToolsOpen(false);
+        }}
+      >
+        <GitFork aria-hidden />
+        {expandedPersonId ? "Recolher uniões" : "Abrir uniões"}
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        variant={positionMode ? "forest" : "outline"}
+        aria-pressed={positionMode}
+        disabled={!canMovePeople || !onMovePerson}
+        onClick={() => {
+          setMoveMode((active) => !active);
+          setSpatialToolsOpen(false);
+        }}
+      >
+        <MoveHorizontal aria-hidden />
+        Mover pessoa
+      </Button>
+    </>
+  );
+
+  const spatialModeFeedback = positionMode
+    ? "Arraste a pessoa para os lados"
+    : separateLinks
+      ? bridgeStatus
+      : "";
+
   return (
     <section className="geno-spatial" aria-label="Visualização 3D do genossociograma">
       <span className="sr-only" role="status">
         {activeRouteDescription &&
           `Vínculo destacado no mapa. ${activeRouteDescription.title}. ${activeRouteDescription.detail}.`}
       </span>
+      {workbench && (
+        <span className="sr-only" role="status">
+          {spatialModeFeedback}
+        </span>
+      )}
       {(hasPaternal || hasMaternal || hasSuggestions) && (
         <div className="geno-spatial-context">
           <div className="geno-spatial-branches" aria-label="Traços do mapa">
@@ -809,48 +891,18 @@ export function GenogramSpatialView({
           </div>
         </div>
       )}
-      <div className="geno-spatial-features" role="group" aria-label="Trabalhar com a árvore em 3D">
-        <Button
-          type="button"
-          size="sm"
-          variant={separateLinks ? "forest" : "outline"}
-          aria-pressed={separateLinks}
-          onClick={() => {
-            setSeparateLinks((active) => !active);
-            setChosenRoute(null);
-          }}
+      {!workbench && (
+        <div
+          className="geno-spatial-features"
+          role="group"
+          aria-label="Trabalhar com a árvore em 3D"
         >
-          <Layers2 aria-hidden />
-          Separar vínculos
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant={expandedPersonId ? "forest" : "outline"}
-          aria-expanded={!!expandedPersonId}
-          aria-controls={unionsId}
-          disabled={!unionMembers.length}
-          title={unionMembers.length ? undefined : "Nenhum familiar tem mais de uma união no mapa"}
-          onClick={toggleUnions}
-        >
-          <GitFork aria-hidden />
-          {expandedPersonId ? "Recolher uniões" : "Abrir uniões"}
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant={positionMode ? "forest" : "outline"}
-          aria-pressed={positionMode}
-          disabled={!canMovePeople || !onMovePerson}
-          onClick={() => setMoveMode((active) => !active)}
-        >
-          <MoveHorizontal aria-hidden />
-          Mover pessoa
-        </Button>
-        <span className="geno-spatial-feedback" role="status">
-          {positionMode ? "Arraste a pessoa para os lados" : separateLinks ? bridgeStatus : ""}
-        </span>
-      </div>
+          {spatialFeatureButtons}
+          <span className="geno-spatial-feedback" role="status">
+            {spatialModeFeedback}
+          </span>
+        </div>
+      )}
       {(activeRouteDescription || expandedUnion) && (
         <section className="geno-spatial-link-context" aria-label="Vínculo em foco">
           <div className="flex items-start justify-between gap-2">
@@ -1281,17 +1333,32 @@ export function GenogramSpatialView({
         )}
         <div className="geno-spatial-deck">
           <div className="geno-spatial-tools" role="group" aria-label="Controles do mapa 3D">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-pressed={!panMode}
-              aria-label="Girar ao arrastar"
-              title={panMode ? "Girar ao arrastar" : "Mover mapa ao arrastar"}
-              onClick={() => setPanMode((active) => !active)}
-            >
-              <Rotate3D />
-            </Button>
+            {!workbench && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-pressed={!panMode}
+                aria-label="Girar ao arrastar"
+                title={panMode ? "Girar ao arrastar" : "Mover mapa ao arrastar"}
+                onClick={() => setPanMode((active) => !active)}
+              >
+                <Rotate3D />
+              </Button>
+            )}
+            {workbench && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Vista em perspectiva"
+                title="Enquadrar a árvore em perspectiva"
+                aria-pressed={!frontal}
+                onClick={() => fit(OBLIQUE_ANGLES)}
+              >
+                <Box aria-hidden />
+              </Button>
+            )}
             <Button
               type="button"
               variant="ghost"
@@ -1351,8 +1418,43 @@ export function GenogramSpatialView({
               <List />
               <span>Pessoas e vínculos</span>
             </Button>
+            {workbench && (
+              <Popover open={spatialToolsOpen} onOpenChange={setSpatialToolsOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Ferramentas 3D"
+                    title="Ferramentas 3D"
+                  >
+                    <Layers2 aria-hidden />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="geno-spatial-tools-popover" align="start" side="top">
+                  <Button
+                    type="button"
+                    variant={panMode ? "outline" : "forest"}
+                    size="sm"
+                    aria-pressed={!panMode}
+                    onClick={() => {
+                      setPanMode((active) => !active);
+                      setSpatialToolsOpen(false);
+                    }}
+                  >
+                    <Rotate3D aria-hidden /> Girar ao arrastar
+                  </Button>
+                  {spatialFeatureButtons}
+                </PopoverContent>
+              </Popover>
+            )}
           </div>
-          <div className="geno-spatial-help">
+          <div className="geno-spatial-help" data-mode-active={workbench && !!spatialModeFeedback}>
+            {workbench && spatialModeFeedback && (
+              <span className="geno-spatial-mode" aria-hidden="true">
+                {spatialModeFeedback}
+              </span>
+            )}
             {selected && (
               <button type="button" onClick={() => focusPerson(selected)}>
                 Focar pessoa

@@ -1,7 +1,7 @@
 .work-desk,
 .work-clients {
   container-type: inline-size;
-  padding-block: 2.5rem 3.5rem;
+  padding-block: clamp(1.6rem, 3.25vw, 3rem) 3.5rem;
 }
 
 .work-desk-heading {
@@ -9,16 +9,14 @@
   align-items: end;
   justify-content: space-between;
   gap: 1.25rem;
-  margin-bottom: 1.75rem;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 1.35rem;
+  margin-bottom: 1.5rem;
 }
 
 .work-desk-heading h1 {
   margin: 0;
   color: var(--forest);
   font-family: var(--font-serif);
-  font-size: 4.125rem;
+  font-size: 4.65rem;
   font-weight: 600;
   line-height: 0.97;
   letter-spacing: -0.035em;
@@ -35,14 +33,26 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: end;
-  gap: 0.75rem 1rem;
+  gap: 0.75rem 1.25rem;
 }
 
 .work-desk-heading-tools time {
-  display: inline-block;
-  color: var(--bronze);
+  display: grid;
+  gap: 0.12rem;
+  border-inline-start: 1px solid var(--workspace-rule);
+  padding-inline-start: 0.85rem;
+  color: var(--ink-soft);
   font-size: 0.875rem;
-  font-weight: 600;
+  line-height: 1.25;
+}
+
+.work-desk-heading-tools time > span::first-letter {
+  text-transform: uppercase;
+}
+
+.work-desk-heading-tools time strong {
+  color: var(--forest);
+  font-weight: 650;
 }
 
 .work-desk-columns {
@@ -51,7 +61,7 @@
     "agenda agenda" auto
     "review dossier" 1fr
     / minmax(0, 1.72fr) minmax(16rem, 1fr);
-  gap: 1.75rem 1.5rem;
+  gap: 2.15rem clamp(1.5rem, 3.2cqi, 3rem);
   align-items: start;
 }
 
@@ -66,26 +76,32 @@
 }
 
 .work-next {
+  position: relative;
+  isolation: isolate;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 0.94fr);
-  min-height: 16.5rem;
-  background: var(--forest);
-  color: var(--ivory);
-  box-shadow: 0 8px 23px color-mix(in srgb, var(--ink) 12%, transparent);
+  align-items: center;
+  min-height: clamp(19rem, 29cqi, 25rem);
+  padding: clamp(1.1rem, 4.1cqi, 3.1rem);
+  overflow: hidden;
+  background: var(--workspace-rail-ink);
 }
 
 .work-next-content {
+  position: relative;
   display: grid;
-  min-width: 0;
-  align-content: center;
-  gap: 1.2rem;
-  padding: clamp(1.3rem, 3.75cqi, 2.75rem);
+  width: min(100%, 26rem);
+  gap: 1.05rem;
+  padding: clamp(1.1rem, 2.25cqi, 1.66rem);
+  background: var(--archive-doc);
+  color: var(--forest);
+  box-shadow: 0 10px 32px color-mix(in srgb, var(--ink) 23%, transparent);
 }
 
 .work-next-art {
-  position: relative;
+  position: absolute;
+  z-index: -1;
+  inset: 0;
   overflow: hidden;
-  border-inline-start: 1px solid var(--gold);
 }
 
 .work-next-art img {
@@ -95,7 +111,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: 55% 52%;
+  object-position: 56% 68%;
 }
 
 .work-next h2,
@@ -107,27 +123,42 @@
   line-height: 1.25;
 }
 
+.work-next-header {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+  border-block-end: 1px solid var(--workspace-rule);
+  padding-block-end: 0.75rem;
+}
+
+.work-next-header svg {
+  flex: none;
+  color: var(--bronze);
+}
+
 .work-next h2 {
-  color: var(--ivory);
-  font-size: 1.35rem;
+  margin: 0;
+  color: var(--forest);
+  font-size: 1rem;
 }
 
 .work-next-details {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 1.25rem;
+  grid-template-columns: minmax(5.25rem, auto) minmax(0, 1fr);
+  align-items: start;
+  gap: 0.85rem 1.05rem;
 }
 
 .work-next-details time {
-  min-width: 7.45rem;
-  padding-right: 1.2rem;
-  border-right: 1px solid var(--forest-soft);
+  padding-inline-end: 0.9rem;
+  border-inline-end: 1px solid var(--workspace-rule);
 }
 
 .work-next-details time strong {
   display: block;
   font-variant-numeric: tabular-nums;
-  color: var(--gold-soft);
+  color: var(--bronze);
   font-size: 2rem;
   line-height: 1.1;
   font-weight: 550;
@@ -138,7 +169,7 @@
   display: block;
   margin-top: 0.25rem;
   max-width: 15ch;
-  color: var(--forest-mist);
+  color: var(--ink-soft);
   font-size: 0.875rem;
 }
 
@@ -148,52 +179,38 @@
 }
 
 .work-next-client p {
-  color: var(--forest-mist);
+  color: var(--ink-soft);
   font-size: 0.875rem;
 }
 
 .work-next-client .work-next-name {
   margin-bottom: 0.2rem;
-  color: var(--ivory);
-  font-size: 1.35rem;
+  color: var(--forest);
+  font-size: 1.2rem;
   font-weight: 650;
   line-height: 1.2;
 }
 
-.work-next-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-height: 2.75rem;
-  margin-top: 0.25rem;
-  color: var(--gold-soft);
-  font-size: 0.875rem;
-  font-weight: 650;
-  text-decoration: underline;
-  text-underline-offset: 0.24em;
+.work-next-action {
+  grid-column: 1 / -1;
+  justify-self: start;
 }
 
-.work-next-link:hover {
-  color: var(--ivory);
+.work-next-empty {
+  display: grid;
+  gap: 0.85rem;
+  align-items: start;
 }
 
-.work-next-link:focus-visible {
-  outline-color: var(--gold-soft);
+.work-next-empty p {
+  color: var(--forest);
+  font-size: 1.28rem;
+  font-weight: 550;
 }
 
-.work-next-empty,
 .work-next-loading {
-  color: var(--forest-mist);
+  color: var(--ink-soft);
   font-size: 0.9375rem;
-}
-
-.work-next .work-skeleton {
-  max-width: 27rem;
-  background: var(--forest-mid);
-}
-
-.work-next .work-desk-error {
-  color: var(--ivory);
 }
 
 .work-upcoming {
@@ -279,10 +296,9 @@
 
 .work-desk-secondary {
   grid-area: dossier;
-  padding: 1.35rem 1.15rem 0;
-  border: 1px solid var(--border);
-  border-top-color: var(--gold);
-  background: color-mix(in srgb, var(--gold-muted) 55%, var(--archive-doc));
+  padding: 1.35rem 1.2rem 0;
+  border-block-start: 1px solid var(--forest-soft);
+  background: var(--forest-mist);
 }
 
 .work-desk-section h2,
@@ -325,10 +341,10 @@
 .work-desk-reference {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
-  margin: 0.5rem -1.15rem 0;
-  border-top: 1px solid var(--border);
-  padding: 0.85rem 1.15rem;
-  background: color-mix(in srgb, var(--gold-muted) 78%, var(--archive-doc));
+  margin: 0.5rem -1.2rem 0;
+  border-top: 1px solid color-mix(in srgb, var(--forest-soft) 34%, transparent);
+  padding: 0.85rem 1.2rem;
+  background: color-mix(in srgb, var(--forest-mist) 82%, var(--workspace-rail-muted));
   font-size: 0.875rem;
   font-weight: 650;
 }
@@ -445,33 +461,8 @@
 }
 
 .work-client-heading {
-  display: grid;
-  grid-template: "title roots action" / minmax(0, 1fr) minmax(6.5rem, 0.62fr) auto;
-  align-items: center;
-  min-height: 10rem;
-  margin-bottom: 1.4rem;
-  border-block: 1px solid var(--border);
-  padding: 0.8rem clamp(1rem, 2.9cqi, 2rem);
-  background: color-mix(in srgb, var(--gold-muted) 65%, var(--archive-doc));
-}
-
-.work-client-heading h1 {
-  grid-area: title;
-}
-
-.work-client-heading > button {
-  grid-area: action;
-  justify-self: start;
-}
-
-.work-client-heading-image {
-  grid-area: roots;
-  place-self: center;
-  width: 100%;
-  max-width: 13rem;
-  height: 8rem;
-  object-fit: contain;
-  mix-blend-mode: multiply;
+  align-items: end;
+  padding-block: 0 0.3rem;
 }
 
 .work-clients-controls,
@@ -486,8 +477,9 @@
   justify-content: space-between;
   gap: 0.6rem 1.25rem;
   min-width: 0;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--border);
+  padding: 0.72rem 0.8rem;
+  border-block: 1px solid var(--workspace-rule);
+  background: var(--archive-doc);
 }
 
 .work-client-filters {
@@ -510,7 +502,7 @@
 }
 
 .work-client-filters button {
-  padding: 0.45rem 0.65rem;
+  padding: 0.45rem 0.82rem;
   border-bottom: 2px solid transparent;
   text-align: start;
 }
@@ -552,6 +544,7 @@
 .work-client-search input {
   height: 2.75rem;
   padding-inline: 2.3rem 2.75rem;
+  background: var(--background);
   font-size: 0.875rem;
 }
 
@@ -587,8 +580,9 @@
 }
 
 .work-client-count {
-  padding: 1rem 0 0.7rem;
+  margin: 1.2rem 0 0.5rem;
   font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
   color: var(--ink-soft);
 }
 
@@ -608,7 +602,7 @@
 }
 
 .work-client-ledger thead {
-  background: color-mix(in srgb, var(--forest-mist) 78%, var(--archive-old));
+  background: var(--forest-mist);
 }
 
 .work-client-ledger thead th {
@@ -688,13 +682,16 @@
   font-weight: 400;
 }
 
-.work-client-folder {
+.work-client-initials {
   display: grid;
   place-items: center;
-  inline-size: 2.45rem;
-  block-size: 2.45rem;
-  background: var(--gold-muted);
+  inline-size: 2.3rem;
+  block-size: 2.3rem;
+  border-radius: 0.28rem;
+  background: color-mix(in srgb, var(--forest-mist) 74%, var(--archive-doc));
   color: var(--forest);
+  font-size: 0.875rem;
+  font-weight: 650;
 }
 
 .work-client-name > svg {
@@ -792,12 +789,25 @@
 }
 
 .work-client-empty {
+  position: relative;
+  isolation: isolate;
   display: grid;
   justify-items: start;
   gap: 0.55rem;
   padding-inline: 1.25rem;
   border-block: 1px solid var(--border);
   background: var(--archive-doc);
+}
+
+.work-client-empty-art {
+  position: absolute;
+  z-index: -1;
+  inset: auto 1.25rem 0.25rem auto;
+  width: min(24%, 9rem);
+  height: 100%;
+  object-fit: contain;
+  opacity: 0.55;
+  pointer-events: none;
 }
 
 .work-client-empty > svg {
@@ -841,10 +851,6 @@
     font-size: 3.15rem;
   }
 
-  .work-next {
-    min-height: 13rem;
-  }
-
   .work-clients-controls {
     flex-direction: column;
     align-items: stretch;
@@ -866,18 +872,16 @@
 
 @container (max-width: 37rem) {
   .work-next {
-    grid-template-columns: minmax(0, 1fr);
     min-height: 0;
+    padding: clamp(6.5rem, 27cqi, 10rem) 0.75rem 0.75rem;
   }
 
-  .work-next-art {
-    height: clamp(7rem, 36cqi, 10rem);
-    border-inline-start: none;
-    border-block-start: 1px solid var(--gold);
+  .work-next-content {
+    width: 100%;
   }
 
   .work-next-art img {
-    object-position: 55% 56%;
+    object-position: 62% 48%;
   }
 }
 
@@ -889,6 +893,7 @@
 
   .work-desk-heading-tools {
     justify-content: start;
+    gap: 0.625rem 1rem;
   }
 
   .work-desk-heading h1 {
@@ -904,8 +909,7 @@
   }
 
   .work-next-details time {
-    min-width: 5rem;
-    padding-right: 0.65rem;
+    padding-inline-end: 0.65rem;
   }
 
   .work-next-client .work-next-name {
@@ -920,35 +924,21 @@
     grid-template-columns: 1fr;
   }
 
-  .work-client-heading {
-    grid-template:
-      "title roots" auto
-      "action roots" auto
-      / minmax(0, 1fr) minmax(4.25rem, 0.38fr);
-    align-items: center;
-    gap: 0.7rem 0.25rem;
-    min-height: 0;
-    padding-block: 1.15rem;
-  }
-
-  .work-client-heading h1 {
-    font-size: 2.7rem;
-  }
-
-  .work-client-heading-image {
-    height: 6.6rem;
-  }
-
   .work-client-ledger th,
   .work-client-ledger td {
     padding-inline: 0.4rem;
   }
 
   .work-client-ledger .work-client-name {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.5rem;
   }
 
-  .work-client-ledger .work-client-folder,
+  .work-client-ledger .work-client-initials {
+    inline-size: 1.875rem;
+    block-size: 1.875rem;
+  }
+
   .work-client-ledger .work-client-name > svg {
     display: none;
   }

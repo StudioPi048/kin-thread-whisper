@@ -6,7 +6,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   MoreHorizontal,
-  ArrowUpRight,
+  ArrowRight,
   FolderOpen,
   X,
   Pencil,
@@ -214,15 +214,7 @@ function ClientesIndex() {
     <div className="container-liz work-clients">
       <header className="work-desk-heading work-client-heading">
         <h1>Dossiês clínicos</h1>
-        <img
-          src="/assets/genealiz/acervo/raizes.webp"
-          className="work-client-heading-image"
-          alt=""
-          width={500}
-          height={500}
-          decoding="async"
-        />
-        <Button variant="forest" onClick={() => setCreating(true)}>
+        <Button type="button" variant="forest" onClick={() => setCreating(true)}>
           <Plus aria-hidden /> Novo cliente
         </Button>
       </header>
@@ -471,6 +463,11 @@ function ClientesIndex() {
 
 function ClientName({ client }: { client: ClientSummary }) {
   const age = calcAge(client.birth_date);
+  const [first = "", ...surnames] = client.full_name.trim().split(/\s+/);
+  const initials =
+    `${Array.from(first)[0] ?? ""}${Array.from(surnames.at(-1) ?? "")[0] ?? ""}`.toLocaleUpperCase(
+      "pt-BR",
+    );
   const metadata = [
     client.preferred_name && client.preferred_name !== client.full_name ? client.full_name : null,
     age !== null ? `${age} anos` : null,
@@ -485,14 +482,14 @@ function ClientName({ client }: { client: ClientSummary }) {
       params={{ clientId: client.id }}
       className="work-client-name"
     >
-      <span className="work-client-folder">
-        <FolderOpen size={20} aria-hidden />
+      <span className="work-client-initials" aria-hidden="true">
+        {initials}
       </span>
       <span>
         <strong>{client.preferred_name || client.full_name}</strong>
         {metadata && <small>{metadata}</small>}
       </span>
-      <ArrowUpRight size={17} aria-hidden />
+      <ArrowRight size={16} aria-hidden />
     </Link>
   );
 }
@@ -580,6 +577,16 @@ function EmptyState({
 }) {
   return (
     <section className="work-client-empty" aria-labelledby="work-client-empty-title">
+      {!hasQuery && tab === "active" && (
+        <img
+          src="/assets/genealiz/acervo/raizes.webp"
+          alt=""
+          className="work-client-empty-art"
+          width={500}
+          height={500}
+          decoding="async"
+        />
+      )}
       {hasQuery ? <Search size={26} aria-hidden /> : <FolderOpen size={28} aria-hidden />}
       <h2 id="work-client-empty-title">
         {hasQuery

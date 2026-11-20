@@ -210,23 +210,57 @@ export function ClientTimeline({ clientId, focusEvent }: Props) {
           </Button>
         </div>
       )}
-      <div className="mb-3 flex flex-wrap items-center gap-2 sm:hidden">
-        <Button
-          type="button"
-          variant="outline"
-          className="min-h-11"
-          aria-controls="timeline-filters"
-          aria-expanded={filtersOpen}
-          onClick={() => setFiltersOpen((open) => !open)}
-        >
-          <ListFilter size={16} aria-hidden /> Filtros{" "}
-          {activeFilters.length > 0 && `(${activeFilters.length})`}
-        </Button>
-      </div>
+      <header className="case-timeline-heading">
+        <div className="case-timeline-heading-title">
+          <h2>Linha do tempo</h2>
+          <p role="status">
+            {items.length} de {all.length} {all.length === 1 ? "registro" : "registros"}
+          </p>
+        </div>
+        <div className="case-timeline-actions">
+          {selected && (
+            <div
+              className="case-timeline-view-switch"
+              role="group"
+              aria-label="Modo da linha do tempo"
+            >
+              <Button
+                type="button"
+                variant={activeView === "list" ? "secondary" : "ghost"}
+                className="min-h-11"
+                aria-pressed={activeView === "list"}
+                onClick={() => setView("list")}
+              >
+                Lista
+              </Button>
+              <Button
+                type="button"
+                variant={activeView === "chart" ? "secondary" : "ghost"}
+                className="min-h-11"
+                aria-pressed={activeView === "chart"}
+                onClick={() => setView("chart")}
+              >
+                Gráfico
+              </Button>
+            </div>
+          )}
+          <Button
+            type="button"
+            variant={filtersOpen ? "secondary" : "outline"}
+            className="min-h-11"
+            aria-controls="timeline-filters"
+            aria-expanded={filtersOpen}
+            onClick={() => setFiltersOpen((open) => !open)}
+          >
+            <ListFilter size={16} aria-hidden /> Filtros
+            {activeFilters.length > 0 && ` (${activeFilters.length})`}
+          </Button>
+        </div>
+      </header>
       <div
         id="timeline-filters"
         className="case-timeline-filters"
-        data-open={filtersOpen}
+        hidden={!filtersOpen}
         role="group"
         aria-label="Filtros da linha do tempo"
       >
@@ -330,25 +364,18 @@ export function ClientTimeline({ clientId, focusEvent }: Props) {
           </select>
         </div>
       </div>
-      <div className="case-timeline-count">
-        <p role="status">
-          {items.length} de {all.length} registros
-        </p>
-        {activeFilters.length > 0 && (
-          <div className="flex flex-wrap items-center gap-x-2">
-            <ul aria-label="Filtros ativos" className="flex flex-wrap gap-1.5">
-              {activeFilters.map((filter, i) => (
-                <li key={i} className="rounded-md bg-archive-old px-2 py-1">
-                  {filter}
-                </li>
-              ))}
-            </ul>
-            <Button variant="link" className="min-h-11 px-1" onClick={() => setFilter({})}>
-              Limpar filtros
-            </Button>
-          </div>
-        )}
-      </div>
+      {activeFilters.length > 0 && (
+        <div className="case-timeline-applied-filters">
+          <ul aria-label="Filtros ativos">
+            {activeFilters.map((label, index) => (
+              <li key={index}>{label}</li>
+            ))}
+          </ul>
+          <Button variant="link" className="min-h-11 px-1" onClick={() => setFilter({})}>
+            Limpar filtros
+          </Button>
+        </div>
+      )}
 
       {!selected ? (
         <p className="rounded-md border border-border bg-card p-6 text-sm text-muted-foreground">
@@ -356,32 +383,8 @@ export function ClientTimeline({ clientId, focusEvent }: Props) {
         </p>
       ) : (
         <div className="case-timeline-layout" data-view={activeView}>
-          <div
-            className="case-timeline-view-switch"
-            role="group"
-            aria-label="Modo da linha do tempo"
-          >
-            <Button
-              type="button"
-              variant={activeView === "list" ? "secondary" : "outline"}
-              className="min-h-11"
-              aria-pressed={activeView === "list"}
-              onClick={() => setView("list")}
-            >
-              Lista
-            </Button>
-            <Button
-              type="button"
-              variant={activeView === "chart" ? "secondary" : "outline"}
-              className="min-h-11"
-              aria-pressed={activeView === "chart"}
-              onClick={() => setView("chart")}
-            >
-              Gráfico
-            </Button>
-          </div>
           <section className="case-timeline-list" aria-labelledby="case-timeline-list-title">
-            <h2 id="case-timeline-list-title">Cronologia</h2>
+            <h2 id="case-timeline-list-title">Acontecimentos</h2>
             {dated.length > 0 && (
               <TimelineList
                 items={dated}
@@ -394,7 +397,7 @@ export function ClientTimeline({ clientId, focusEvent }: Props) {
             {undated.length > 0 && (
               <div className="case-timeline-undated">
                 <h3>
-                  Fora do gráfico por falta de data ou ano <span>{undated.length}</span>
+                  Sem data para o gráfico <span>{undated.length}</span>
                 </h3>
                 <TimelineList
                   items={undated}
@@ -521,14 +524,6 @@ function TimelineOverview({
     <section className="case-timeline-overview" aria-labelledby="case-timeline-overview-title">
       <header className="case-timeline-overview-header">
         <div className="case-timeline-overview-title">
-          <img
-            className="case-timeline-watch"
-            src={WATCH_ART}
-            alt=""
-            width={500}
-            height={387}
-            decoding="async"
-          />
           <div>
             <h2 id="case-timeline-overview-title">Panorama cronológico</h2>
             {scale && (
@@ -551,6 +546,14 @@ function TimelineOverview({
             Comparar ramos
           </Button>
         )}
+        <img
+          className="case-timeline-watch"
+          src={WATCH_ART}
+          alt=""
+          width={500}
+          height={387}
+          decoding="async"
+        />
       </header>
       {scale ? (
         <figure className="case-timeline-figure">

@@ -37,7 +37,13 @@ import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { GenealizWordmark } from "@/components/genealiz-wordmark";
-import { CommandDialog, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import {
+  CommandDialog,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import "@/components/archive/workspace-shell.css";
 import "@/components/archive/workspace-pages.css";
@@ -164,6 +170,8 @@ function AuthenticatedLayout() {
   }
 
   const displayName = profile?.full_name ?? user.email ?? "";
+  const searchShortcut =
+    typeof navigator !== "undefined" && /mac/i.test(navigator.userAgent) ? "⌘ K" : "Ctrl K";
   const initials = displayName
     .split(" ")
     .filter(Boolean)
@@ -187,11 +195,16 @@ function AuthenticatedLayout() {
             onClick={() => setIsCollapsed((collapsed) => !collapsed)}
             aria-label={isCollapsed ? "Expandir menu" : "Recolher menu"}
             aria-expanded={!isCollapsed}
+            aria-controls="workspace-primary-navigation"
           >
             {isCollapsed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
           </button>
         </div>
-        <nav className="workspace-nav" aria-label="Navegação principal">
+        <nav
+          id="workspace-primary-navigation"
+          className="workspace-nav"
+          aria-label="Navegação principal"
+        >
           {desktopGroups.map(({ label, entries }) => (
             <div key={label} className="workspace-nav-group" role="group" aria-label={label}>
               {!isCollapsed && (
@@ -210,7 +223,9 @@ function AuthenticatedLayout() {
                   className="workspace-nav-link"
                 >
                   <item.icon size={18} strokeWidth={1.7} aria-hidden />
-                  {!isCollapsed && <span>{item.label}</span>}
+                  {!isCollapsed && (
+                    <span>{item.to === "/app/ia-clinica" ? item.shortLabel : item.label}</span>
+                  )}
                 </Link>
               ))}
             </div>
@@ -257,7 +272,7 @@ function AuthenticatedLayout() {
           >
             <Search size={18} aria-hidden />
             <span>Buscar clientes ou páginas</span>
-            <kbd aria-hidden>⌘ / Ctrl K</kbd>
+            <kbd aria-hidden>{searchShortcut}</kbd>
           </button>
           <CurrentCaseStrip userId={user.id} pathname={location.pathname} />
           <Link
@@ -322,6 +337,7 @@ function AuthenticatedLayout() {
         open={isSearchOpen}
         onOpenChange={setIsSearchOpen}
         shouldFilter={false}
+        contentClassName="workspace-command"
         onCloseAutoFocus={(event) => {
           event.preventDefault();
           const target = searchReturnFocus.current;
@@ -335,7 +351,8 @@ function AuthenticatedLayout() {
           value={searchQuery}
           onValueChange={setSearchQuery}
           maxLength={96}
-          placeholder="Buscar clientes ou páginas..."
+          aria-label="Buscar clientes ou páginas"
+          placeholder="Buscar clientes ou páginas…"
         />
         <CommandList>
           {isSearchOpen &&
@@ -364,61 +381,68 @@ function AuthenticatedLayout() {
               </CommandItem>
             </>
           )}
-          {pages.map((n) => (
-            <CommandItem
-              key={n.to}
-              value={`page:${n.to}`}
-              onSelect={() => {
-                setIsSearchOpen(false);
-                navigate({ to: n.to });
-              }}
-              className="flex items-center gap-2 px-3 py-2.5 text-[15px]"
-            >
-              <n.icon className="size-4" aria-hidden />
-              {n.label}
-              <span className="ml-auto text-[13px] text-muted-foreground">Página</span>
-            </CommandItem>
-          ))}
-          {searchResults.map((c) => (
-            <CommandItem
-              key={c.id}
-              value={c.id}
-              onSelect={() => {
-                setIsSearchOpen(false);
-                const last = readVisits(user.id).find((v) => v.clientId === c.id);
-                const person =
-                  last?.tab === "genogram"
-                    ? readPref<{ personId?: string }>(user.id, `map-focus:${c.id}`, {}).personId
-                    : undefined;
-                navigate({
-                  to: "/app/clientes/$clientId",
-                  params: { clientId: c.id },
-                  search: last
-                    ? { tab: last.tab as "overview", ...(person ? { person } : {}) }
-                    : {},
-                });
-              }}
-              className="flex flex-col items-start gap-0.5 px-3 py-2.5"
-            >
-              <span className="font-serif text-[15px] font-bold text-ink">
-                {c.preferred_name || c.full_name}
-              </span>
-              {c.preferred_name && c.preferred_name !== c.full_name && (
-                <span className="text-sm text-muted-foreground">{c.full_name}</span>
-              )}
-            </CommandItem>
-          ))}
+          {searchResults.length > 0 && (
+            <CommandGroup heading="Dossiês">
+              {searchResults.map((c) => (
+                <CommandItem
+                  key={c.id}
+                  value={c.id}
+                  onSelect={() => {
+                    setIsSearchOpen(false);
+                    const last = readVisits(user.id).find((v) => v.clientId === c.id);
+                    const person =
+                      last?.tab === "genogram"
+                        ? readPref<{ personId?: string }>(user.id, `map-focus:${c.id}`, {}).personId
+                        : undefined;
+                    navigate({
+                      to: "/app/clientes/$clientId",
+                      params: { clientId: c.id },
+                      search: last
+                        ? { tab: last.tab as "overview", ...(person ? { person } : {}) }
+                        : {},
+                    });
+                  }}
+                  className="flex flex-col items-start gap-0.5 px-3 py-2.5"
+                >
+                  <span className="font-semibold text-ink">{c.preferred_name || c.full_name}</span>
+                  {c.preferred_name && c.preferred_name !== c.full_name && (
+                    <span className="text-sm text-muted-foreground">{c.full_name}</span>
+                  )}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
+          {pages.length > 0 && (
+            <CommandGroup heading="Páginas">
+              {pages.map((page) => (
+                <CommandItem
+                  key={page.to}
+                  value={`page:${page.to}`}
+                  onSelect={() => {
+                    setIsSearchOpen(false);
+                    navigate({ to: page.to });
+                  }}
+                  className="flex items-center gap-2 px-3 py-2.5 text-[15px]"
+                >
+                  <page.icon className="size-4" aria-hidden />
+                  {page.label}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
           {isSearchReady && clientSearch.data?.hasMore && (
             <p className="px-3 py-2 text-sm text-muted-foreground">
               Digite mais letras para refinar a busca.
             </p>
           )}
         </CommandList>
-        <div className="flex items-center justify-between border-t border-border bg-secondary px-4 py-2">
-          <span className="text-[11px] text-warm-gray">Clique ou Enter para abrir o dossiê</span>
-          <kbd className="rounded-[5px] border border-border bg-card px-2 py-0.5 font-mono text-[10px] text-warm-gray">
-            Esc
-          </kbd>
+        <div className="workspace-command-footer">
+          <span>
+            <kbd>Enter</kbd> para abrir
+          </span>
+          <span>
+            <kbd>Esc</kbd> para fechar
+          </span>
         </div>
       </CommandDialog>
     </div>

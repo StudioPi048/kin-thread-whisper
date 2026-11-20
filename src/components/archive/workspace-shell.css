@@ -1,5 +1,5 @@
 .workspace-shell {
-  --workspace-rail: 14rem;
+  --workspace-rail: 13.25rem;
   --archive: var(--workspace-linen);
   --archive-doc: var(--workspace-sheet);
   --archive-old: var(--workspace-manila);
@@ -42,12 +42,12 @@
 }
 
 .workspace-brand-row {
-  min-height: 4.625rem;
+  min-height: 4.25rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.25rem;
-  padding: 0.75rem 0.75rem 0.75rem 1.25rem;
+  padding: 0.7rem 0.65rem 0.7rem 1.05rem;
   border-block-end: 1px solid var(--workspace-rail-rule);
 }
 
@@ -111,9 +111,9 @@
   flex: 1;
   display: grid;
   align-content: start;
-  gap: 0.9rem;
+  gap: 0.75rem;
   overflow-y: auto;
-  padding: 1.3rem 0.85rem 0.8rem;
+  padding: 1.12rem 0.75rem 0.8rem;
 }
 
 .workspace-nav-group + .workspace-nav-group {
@@ -146,7 +146,7 @@
 }
 
 .workspace-sidebar .workspace-nav-link[aria-current="page"] {
-  background: var(--gold-muted);
+  background: var(--workspace-rail-text);
   color: var(--workspace-rail-ink);
   font-weight: 600;
 }
@@ -154,17 +154,6 @@
 .workspace-sidebar-footer {
   padding: 0.5rem 0.85rem 0.7rem;
   border-block-start: 1px solid var(--workspace-rail-rule);
-}
-
-@media (min-width: 1024px) and (min-height: 850px) {
-  .workspace-shell:not([data-collapsed]) .workspace-sidebar-footer::before {
-    display: block;
-    height: 5.8rem;
-    margin-block: 0.25rem 0.6rem;
-    background: url("/assets/genealiz/acervo/raizes.webp") center / 6.4rem auto no-repeat;
-    opacity: 0.85;
-    content: "";
-  }
 }
 
 .workspace-shell[data-collapsed] .workspace-brand-row {
@@ -191,7 +180,7 @@
 .workspace-topbar {
   display: flex;
   align-items: center;
-  min-height: 4.625rem;
+  min-height: 4.25rem;
   gap: 0.9rem;
   padding: 0.58rem clamp(1rem, 3vw, 2.5rem);
   border-block-end: 1px solid var(--border);
@@ -204,7 +193,7 @@
 }
 
 .workspace-search {
-  flex: 0 1 24rem;
+  flex: 0 1 21rem;
   display: flex;
   align-items: center;
   gap: 0.65rem;
@@ -212,7 +201,7 @@
   border: 1px solid var(--input);
   border-radius: 4px;
   padding: 0.45rem 0.65rem;
-  background: var(--archive);
+  background: transparent;
   text-align: start;
   color: var(--ink-soft);
   font-size: 0.875rem;
@@ -229,9 +218,11 @@
 
 .workspace-search kbd {
   margin-inline-start: auto;
-  padding-inline: 0.3rem;
-  border-inline-start: 1px solid var(--border);
+  padding: 0.1rem 0.36rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
   font: inherit;
+  font-size: 0.8rem;
   white-space: nowrap;
 }
 
@@ -319,6 +310,44 @@
   border-color: var(--workspace-rule);
   padding-bottom: calc(1rem + env(safe-area-inset-bottom));
   background: var(--workspace-sheet);
+}
+
+.workspace-command {
+  border-color: var(--workspace-rule);
+  background: var(--workspace-sheet);
+}
+
+.workspace-command [cmdk-root] {
+  background: var(--workspace-sheet);
+}
+
+.workspace-command [cmdk-input-wrapper],
+.workspace-command-footer {
+  border-color: var(--workspace-rule);
+}
+
+.workspace-command [cmdk-item][data-selected="true"] {
+  background: var(--workspace-sage);
+  color: var(--forest);
+}
+
+.workspace-command-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 1rem;
+  padding: 0.75rem 1rem;
+  border-block-start: 1px solid;
+  border-color: var(--workspace-rule);
+  color: var(--workspace-ink-soft);
+  font-size: 0.875rem;
+}
+
+.workspace-command-footer kbd {
+  padding: 0.12rem 0.35rem;
+  border: 1px solid var(--workspace-rule);
+  border-radius: 4px;
+  font: inherit;
+  font-weight: 600;
 }
 
 @media (max-width: 1023px) {

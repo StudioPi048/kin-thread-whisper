@@ -1,7 +1,7 @@
 .genealiz-public {
   --public-side: clamp(1rem, 4.8vw, 5.5rem);
   --public-space: clamp(3.5rem, 7vw, 7rem);
-  background: var(--archive);
+  background: var(--workspace-sheet);
   color: var(--ink);
 }
 
@@ -11,13 +11,13 @@
 }
 
 .public-masthead {
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--workspace-rule);
 }
 
 .public-masthead .public-wrap,
 .public-footer .public-wrap {
   display: flex;
-  min-height: 4.9rem;
+  min-height: 4.35rem;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
@@ -48,8 +48,8 @@
 .public-signin {
   gap: 0.55rem;
   padding-inline: 0.85rem;
-  border: 1px solid var(--input);
-  border-radius: 5px;
+  border: 1px solid var(--workspace-rule);
+  border-radius: 3px;
 }
 
 .public-masthead nav a:hover,
@@ -59,12 +59,17 @@
   text-underline-offset: 0.22em;
 }
 
+.public-intro-band {
+  background: var(--workspace-rail-ink);
+  color: var(--workspace-rail-text);
+}
+
 .public-intro {
   display: grid;
-  grid-template-columns: minmax(0, 0.78fr) minmax(0, 1.22fr);
+  grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr);
   align-items: center;
-  gap: clamp(2rem, 5vw, 5rem);
-  padding-block: clamp(2.5rem, 5.4vw, 5rem);
+  gap: clamp(2rem, 6vw, 6.25rem);
+  padding-block: clamp(2.75rem, 5.5vw, 5.7rem);
 }
 
 .public-intro h1,
@@ -80,14 +85,15 @@
 }
 
 .public-intro h1 {
-  color: var(--forest);
-  font-size: clamp(2.85rem, 5.55vw, 5.85rem);
-  line-height: 0.98;
-  text-wrap: pretty;
+  max-width: 12ch;
+  color: var(--workspace-rail-text);
+  font-size: clamp(3.2rem, 5.8vw, 6rem);
+  line-height: 0.92;
+  text-wrap: balance;
 }
 
 .public-intro h1 em {
-  color: var(--bronze);
+  color: var(--gold-soft);
   font-weight: 400;
 }
 
@@ -103,6 +109,7 @@
 
 .public-intro-copy p {
   max-width: 36ch;
+  color: var(--workspace-rail-muted);
 }
 
 .public-actions {
@@ -153,10 +160,34 @@
   color: var(--bronze);
 }
 
+.public-intro .public-button {
+  border-color: var(--gold-muted);
+  background: var(--gold-muted);
+  color: var(--workspace-rail-ink);
+}
+
+.public-intro .public-button:hover {
+  border-color: var(--gold-soft);
+  background: var(--gold-soft);
+}
+
+.public-intro .public-text-link {
+  color: var(--workspace-rail-text);
+  text-decoration-color: var(--workspace-rail-muted);
+}
+
+.public-intro .public-text-link:hover {
+  color: var(--gold-soft);
+}
+
+.public-intro-copy a:focus-visible {
+  outline-color: var(--gold-soft);
+}
+
 .public-case {
   scroll-margin-top: 1rem;
   padding-block: var(--public-space);
-  background: var(--forest-mist);
+  background: var(--workspace-linen);
 }
 
 .public-section-heading {
@@ -215,6 +246,16 @@
   max-width: 16ch;
   color: var(--forest);
   text-wrap: initial;
+}
+
+.public-practice-intro img {
+  display: block;
+  width: min(100%, 31rem);
+  height: auto;
+  aspect-ratio: 11 / 5;
+  margin-top: 1.5rem;
+  object-fit: cover;
+  object-position: 57% 53%;
 }
 
 .public-practice-list {
@@ -304,13 +345,13 @@
   }
 
   .public-intro {
-    gap: 1.65rem;
-    padding-top: 2.5rem;
+    gap: 2rem;
+    padding-block: 2rem 2.4rem;
   }
 
   .public-intro h1 {
-    font-size: clamp(2.55rem, 10.8vw, 4.8rem);
-    max-width: 13ch;
+    font-size: clamp(2.75rem, 10.8vw, 4.8rem);
+    max-width: 15ch;
   }
 
   .public-intro-copy p {

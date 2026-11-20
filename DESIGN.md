@@ -14,17 +14,17 @@ Direção única e vigente. A direção "Atlas" (azul/âmbar) foi rejeitada; seu
 - A marca vigente é a árvore circular escolhida por Pietro. Os traços do símbolo e do lettering vêm do mesmo PNG aprovado. Use `GenealizWordmark` em bronze sobre fundo claro e em dourado claro sobre verde. A versão vertical conserva a composição original. O favicon usa o símbolo.
 
 ## Capa pública e demonstração
-A capa apresenta o acesso à conta e uma prévia do dossiê de uma família fictícia. O visitante pode alternar vínculos, cronologia e registros e abrir a ficha das quatro pessoas do recorte. O exercício completo carrega sob demanda, com a mesma família em 2D, 3D e cronologia. O visitante pode revisar uma filiação e desfazer, editar um nome e ajustar posições na própria geração. O estado do exercício fica em memória. A capa do Manual da Psicogenealogia vem do acervo editorial já usado no site de Letícia Baccin.
+A capa põe o dossiê em papel claro diante da apresentação em verde. O botão do exercício leva à família completa e a entrada na conta usa um link direto no cabeçalho e na abertura. O visitante pode alternar vínculos, cronologia e registros e abrir a ficha das quatro pessoas do recorte. O exercício completo carrega sob demanda, com a mesma família em 2D, 3D e cronologia. O visitante pode revisar uma filiação e desfazer, editar um nome e ajustar posições na própria geração. O estado do exercício fica em memória. A capa do Manual da Psicogenealogia vem do acervo editorial já usado no site de Letícia Baccin.
 
 ## Área de trabalho
 
-- Navegação em verde de mata, com a seção ativa em dourado pálido, organizada em três grupos. A busca global e o último ponto de trabalho ficam no cabeçalho. No celular, as quatro seções principais ficam ao alcance do polegar e o restante abre em Mais.
-- A Mesa começa pelo próximo atendimento e mantém o retorno aos dossiês e as pendências acessíveis. Índices de clientes, árvores e cronologias usam linhas com ações legíveis. As prévias das árvores carregam quando abertas.
+- Navegação em verde de mata, com a seção ativa em papel claro, organizada em três grupos. A busca global reúne resultados por dossiês e páginas e o último ponto de trabalho fica no cabeçalho. No celular, as quatro seções principais ficam ao alcance do polegar e o restante abre em Mais.
+- A Mesa começa pelo próximo atendimento e permite agendar no próprio painel quando não há sessão futura. O retorno aos dossiês e as pendências vêm abaixo. Índices de clientes, árvores e cronologias usam linhas com ações legíveis. As prévias das árvores carregam quando abertas.
 - O dossiê organiza a identificação, os atalhos e as seções em duas faixas. O mapa usa controles dedicados para edição e câmera, com a ficha de filiação ao lado e uma gaveta em telas pequenas. Anamnese, sessões e evidências apresentam os registros em blocos delimitados por linhas.
 
 ## Acervo ilustrado da aplicação
 
-- A Mesa associa o próximo atendimento a uma fotografia de um livro de arquivo com um ramo prensado. O enquadramento deixa as ações no painel adjacente.
+- A Mesa apresenta a fotografia de um livro de arquivo com um ramo prensado. Uma ficha opaca sobre a cena traz o próximo atendimento. No celular, a ficha antecede a fotografia.
 - A gravura de raízes acompanha dossiês e árvores. O relógio de bolso acompanha datas e cronologias, os livros marcam a Biblioteca e as chaves ficam na entrada das Evidências. São peças ilustrativas criadas para o Genealiz, servidas em WebP, com transparência preservada onde a arte é isolada.
 - A aplicação usa linho quente para o fundo, papel creme para leitura, manilha e sálvia para agrupamento. As imagens ficam em espaços próprios das capas e cabeçalhos. O campo de edição usa uma superfície lisa e deixa nomes e vínculos em primeiro plano.
 
@@ -63,7 +63,7 @@ Essas razões verificam os pares definidos, não certificam todas as combinaçõ
 ## Genossociograma (inviolável)
 O consultante e os irmãos consanguíneos ocupam o topo. Pais, avós e antepassados descem em faixas. Cada parentesco usa o grafo comum. O arranjo automático aproxima o eixo de cada casal da fratria correspondente e mantém cada par de antepassados junto, com espaço para distinguir as uniões vizinhas. Cartões opacos protegem nomes e datas das linhas. Os nomes completos quebram em linhas no 2D e no 3D, inclusive no panorama. As sugestões de filiação têm traço pontilhado em bronze e exigem confirmação na ficha. O traço horizontal superior marca falecimento, segundo o Manual da Psicogenealogia, p. 164. A ficha escreve a natureza da filiação ao lado do vínculo.
 
-A vista 3D abre de frente, com a árvore inteira enquadrada. Os cartões permanecem voltados para leitura enquanto a câmera inclina. Separar vínculos usa pontes desenhadas em profundidade para distinguir cruzamentos sem alterar as filiações. Abrir uniões desloca as junções de um familiar em profundidade e mostra os filhos de cada par, com cada pessoa representada uma vez. As cores dos trajetos distinguem os ramos quando o parentesco os identifica. O índice de nomes aproxima a câmera do familiar escolhido.
+O mapa abre com o campo de trabalho ocupando a largura disponível. A ficha aparece ao selecionar uma pessoa ou usar seu botão. A vista 3D abre de frente, com a árvore inteira enquadrada, e oferece um atalho para a perspectiva. Os cartões claros permanecem voltados para leitura à medida que a câmera inclina. Separar vínculos usa pontes desenhadas em profundidade para distinguir cruzamentos sem alterar as filiações. Abrir uniões desloca as junções de um familiar em profundidade e mostra os filhos de cada par, com cada pessoa representada uma vez. As cores dos trajetos distinguem os ramos quando o parentesco os identifica. O índice de nomes aproxima a câmera do familiar escolhido.
 
 Arrastar o fundo desloca a câmera. Mover pessoa ajusta a posição horizontal do cartão na própria geração. A edição de posições, o histórico e os comandos de filiação usam o mesmo estado nas duas vistas.
 

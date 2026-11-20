@@ -24,6 +24,7 @@ const Command = React.forwardRef<
 Command.displayName = CommandPrimitive.displayName;
 
 interface CommandDialogProps extends DialogProps {
+  contentClassName?: string;
   /** Título acessível anunciado por leitores de tela. */
   title?: string;
   /** Repassado ao cmdk — desligue para filtrar os itens manualmente. */
@@ -35,13 +36,14 @@ const CommandDialog = ({
   children,
   title = "Busca rápida",
   shouldFilter,
+  contentClassName,
   onCloseAutoFocus,
   ...props
 }: CommandDialogProps) => {
   return (
     <Dialog {...props}>
       <DialogContent
-        className="overflow-hidden p-0"
+        className={cn("overflow-hidden p-0", contentClassName)}
         aria-describedby={undefined}
         onCloseAutoFocus={onCloseAutoFocus}
       >

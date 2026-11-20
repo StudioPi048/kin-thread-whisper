@@ -1,11 +1,13 @@
 .home-case-preview {
-  --case-inset: clamp(1rem, 7%, 2.25rem);
-  --case-rule: color-mix(in srgb, var(--forest) 35%, var(--forest-soft));
-  --case-trace: color-mix(in srgb, var(--gold) 80%, var(--forest));
+  --case-inset: clamp(1rem, 6%, 2rem);
+  --case-rule: var(--workspace-rule);
+  --case-trace: var(--bronze);
   container-type: inline-size;
   min-width: 0;
-  background: var(--forest);
-  color: var(--archive);
+  border-radius: 5px;
+  background: var(--workspace-sheet);
+  color: var(--ink);
+  box-shadow: 0 18px 44px color-mix(in srgb, var(--ink) 40%, transparent);
 }
 
 .home-case-header {
@@ -13,18 +15,15 @@
 }
 
 .home-case-header p {
-  color: var(--gold-soft);
+  margin-top: 0.45rem;
+  color: var(--workspace-ink-soft);
   font-size: 0.875rem;
-  font-weight: 600;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
 }
 
 .home-case-header h2 {
-  margin-top: 0.35rem;
-  color: var(--archive);
+  color: var(--forest);
   font-family: var(--font-serif);
-  font-size: clamp(2.2rem, 7.9cqi, 3.65rem);
+  font-size: clamp(2.15rem, 7.5cqi, 3.45rem);
   font-weight: 600;
   line-height: 0.94;
   letter-spacing: -0.025em;
@@ -45,21 +44,20 @@
   min-height: 2.75rem;
   padding-inline: clamp(0.5rem, 2.8cqi, 1.1rem);
   border-block-end: 2px solid transparent;
-  color: var(--forest-mist);
+  color: var(--workspace-ink-soft);
   cursor: pointer;
   font-size: 0.875rem;
   font-weight: 600;
 }
 
 .home-case-tab[data-state="active"] {
-  border-color: var(--gold);
-  background: var(--forest-mid);
-  color: var(--gold-soft);
+  border-color: var(--bronze);
+  color: var(--forest);
 }
 
 .home-case-tab:hover,
 .home-case-footer a:hover {
-  color: var(--gold-soft);
+  color: var(--bronze);
 }
 
 .home-case-tab:focus-visible,
@@ -67,7 +65,7 @@
 .home-case-name:focus-visible,
 .home-case-record h3:focus-visible,
 .home-case-footer a:focus-visible {
-  outline: 2px solid var(--gold-soft);
+  outline: 2px solid var(--forest-soft);
   outline-offset: 3px;
 }
 
@@ -79,7 +77,7 @@
 }
 
 .home-case-map {
-  --case-gap: clamp(2rem, 14cqi, 6.25rem);
+  --case-gap: clamp(1.9rem, 13cqi, 5.75rem);
   width: 100%;
   margin: 0;
 }
@@ -94,10 +92,10 @@
   min-height: 4.5rem;
   align-content: center;
   gap: 0.2rem;
-  border: 1px solid var(--forest-soft);
+  border: 1px solid var(--case-rule);
   padding: 0.5rem clamp(0.45rem, 2.45cqi, 1rem);
-  background: var(--forest-mid);
-  color: var(--archive);
+  background: color-mix(in srgb, var(--workspace-sheet) 59%, var(--workspace-linen));
+  color: var(--forest);
   cursor: pointer;
   text-align: start;
 }
@@ -107,13 +105,12 @@
 }
 
 .home-case-name:hover {
-  border-color: var(--gold);
+  border-color: var(--bronze);
 }
 
 .home-case-name[aria-current="true"] {
-  border-color: var(--gold);
-  background: var(--gold-muted);
-  color: var(--ink);
+  border-color: var(--forest-soft);
+  background: var(--workspace-sage);
 }
 
 .home-case-name strong {
@@ -136,7 +133,7 @@
   height: 0.6rem;
   flex: none;
   border: 1px solid currentColor;
-  color: var(--gold-soft);
+  color: var(--bronze);
 }
 
 .home-case-person-mark[data-gender="F"] {
@@ -146,7 +143,7 @@
 .home-case-name-arrow {
   flex: none;
   margin-inline-start: auto;
-  color: var(--gold-soft);
+  color: var(--bronze);
 }
 
 .home-case-name[aria-current="true"] :is(.home-case-person-mark, .home-case-name-arrow) {
@@ -202,8 +199,8 @@
   height: 0.66rem;
   translate: -50% -50%;
   rotate: 45deg;
-  border: 1px solid var(--gold);
-  background: var(--forest);
+  border: 1px solid var(--case-trace);
+  background: var(--workspace-sheet);
 }
 
 .home-case-years {
@@ -221,7 +218,7 @@
 
 .home-case-years time {
   padding-bottom: 0.75rem;
-  color: var(--gold-soft);
+  color: var(--bronze);
   font-size: clamp(1.25rem, 5.5cqi, 2rem);
   font-variant-numeric: tabular-nums;
   font-weight: 500;
@@ -242,25 +239,25 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--gold);
+  background: var(--bronze);
   content: "";
 }
 
 .home-case-record {
-  border: 1px solid var(--forest-soft);
+  border: 1px solid var(--case-rule);
   padding: 0.8rem clamp(0.65rem, 4cqi, 1.15rem);
-  background: var(--forest-mid);
+  background: color-mix(in srgb, var(--workspace-sheet) 59%, var(--workspace-linen));
   font-size: 0.875rem;
 }
 
 .home-case-record p {
-  color: var(--gold-soft);
+  color: var(--bronze);
   font-weight: 650;
 }
 
 .home-case-record h3 {
   margin-top: 0.08rem;
-  color: var(--archive);
+  color: var(--forest);
   font-size: clamp(1rem, 3.65cqi, 1.25rem);
   font-weight: 650;
   line-height: 1.2;
@@ -274,13 +271,13 @@
   display: grid;
   grid-template-columns: minmax(5.45rem, 0.6fr) minmax(0, 1fr);
   gap: 0.55rem;
-  border-block-start: 1px solid var(--forest-soft);
+  border-block-start: 1px solid var(--case-rule);
   padding-block: 0.4rem;
 }
 
 .home-case-record dt,
 .home-case-footer span {
-  color: var(--forest-mist);
+  color: var(--workspace-ink-soft);
 }
 
 .home-case-record dd {
@@ -301,7 +298,7 @@
   gap: 0 0.75rem;
   padding: 0.22rem var(--case-inset);
   border-block-start: 1px solid var(--case-rule);
-  color: var(--archive);
+  color: var(--ink);
   font-size: 0.875rem;
 }
 
@@ -310,15 +307,15 @@
   min-height: 2.75rem;
   align-items: center;
   gap: 0.5rem;
-  color: var(--archive);
+  color: var(--forest);
   font-weight: 650;
   text-decoration: underline;
-  text-decoration-color: var(--gold);
+  text-decoration-color: var(--bronze);
   text-underline-offset: 0.25em;
 }
 
 .home-case-footer a svg {
-  color: var(--gold-soft);
+  color: var(--bronze);
 }
 
 @container (max-width: 22rem) {

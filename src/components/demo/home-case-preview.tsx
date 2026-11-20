@@ -96,8 +96,8 @@ export function HomeCasePreview({
   return (
     <section className="home-case-preview" aria-labelledby={titleId}>
       <header className="home-case-header">
-        <p>Dossiê de exemplo</p>
         <h2 id={titleId}>{consultante.full_name}</h2>
+        <p>Dossiê fictício</p>
       </header>
 
       <Tabs.Root value={tab} onValueChange={setTab} className="home-case-tabs">
@@ -194,7 +194,7 @@ export function HomeCasePreview({
       </Tabs.Root>
 
       <footer className="home-case-footer">
-        <span>Família fictícia</span>
+        <span>{Object.keys(roles).length} pessoas neste recorte</span>
         <a href="#caso-ficticio" onClick={onOpenCase}>
           Ver caso completo <ArrowDown size={16} aria-hidden="true" />
         </a>

@@ -755,35 +755,12 @@
   }
 }
 
-/* The authenticated editor keeps camera tools outside the diagnostic field. */
+/* The drafting field and perspective field share tools, not projection colors. */
 .geno-workbench .geno-spatial {
-  --spatial-field: var(--archive);
-}
-
-.geno-workbench .geno-spatial-features {
-  flex: none;
-  gap: 3px;
-  padding: 5px 10px;
-  border-bottom: 1px solid var(--border);
-  background: var(--archive-old);
-}
-
-.geno-workbench
-  .geno-spatial-features
-  button:not([aria-pressed="true"]):not([aria-expanded="true"]) {
-  border-color: transparent;
-  background: transparent;
-}
-
-.geno-workbench
-  .geno-spatial-features
-  button:not([aria-pressed="true"]):not([aria-expanded="true"]):hover {
-  background: var(--forest-mist);
-}
-
-.geno-workbench .geno-spatial-feedback {
-  color: var(--ink);
-  font-size: 0.875rem;
+  --spatial-field: var(--workspace-rail-ink, var(--forest));
+  --spatial-trace: var(--workspace-rail-muted, var(--forest-mist));
+  --spatial-ruler: var(--workspace-rail-text, var(--archive-doc));
+  background: var(--spatial-field);
 }
 
 .geno-workbench .geno-spatial-workspace {
@@ -792,34 +769,92 @@
 
 .geno-workbench .geno-spatial-viewport {
   min-height: 0;
+  background-image:
+    linear-gradient(color-mix(in oklab, var(--spatial-trace) 6%, transparent) 1px, transparent 1px),
+    linear-gradient(
+      90deg,
+      color-mix(in oklab, var(--spatial-trace) 6%, transparent) 1px,
+      transparent 1px
+    );
+  background-size: 32px 32px;
+  background-position: center;
+}
+
+.geno-workbench .geno-spatial-viewport:focus-visible {
+  outline-color: var(--gold-soft);
 }
 
 .geno-workbench .geno-spatial-guide {
-  stroke: var(--input);
+  stroke: color-mix(in oklab, var(--spatial-trace) 43%, var(--spatial-field));
   stroke-dasharray: 2 5;
+}
+
+.geno-workbench .geno-spatial-generation {
+  color: var(--spatial-ruler);
+}
+
+.geno-workbench .geno-spatial-generation::before {
+  background: var(--gold-soft);
+}
+
+.geno-workbench .geno-spatial-geometry {
+  --forest: var(--spatial-trace);
+  --forest-soft: var(--spatial-trace);
+  --forest-mid: var(--spatial-trace);
+  --warm-gray: color-mix(in oklab, var(--spatial-trace) 65%, var(--spatial-field));
+  --bronze: var(--gold-soft);
+}
+
+.geno-workbench .geno-spatial-geometry [data-branch="maternal"],
+.geno-workbench .geno-spatial-branches [data-branch="maternal"] {
+  --branch-ink: var(--gold-soft);
+}
+
+.geno-workbench .geno-spatial-geometry [data-branch="paternal"],
+.geno-workbench .geno-spatial-branches [data-branch="paternal"] {
+  --branch-ink: var(--spatial-trace);
 }
 
 .geno-workbench .geno-spatial-person {
   border-radius: 5px;
+  box-shadow: var(--depth-x, -4px) var(--depth-y, 2px) 2px
+    color-mix(in oklab, var(--ink) 45%, transparent);
+}
+
+.geno-workbench .geno-spatial-person:is(:focus-visible, [aria-pressed="true"]) {
+  outline-color: var(--gold-soft);
+}
+
+.geno-workbench .geno-spatial-person[data-parentage-person] {
+  outline-color: var(--spatial-trace);
+}
+
+.geno-workbench .geno-spatial-person[data-parentage-person="proposed"],
+.geno-workbench .geno-spatial-person[data-parentage-person]:focus-visible {
+  outline-color: var(--gold-soft);
 }
 
 .geno-workbench .geno-spatial-context {
-  top: auto;
-  bottom: 60px;
+  inset: 9px 10px auto auto;
   z-index: 4;
 }
 
 .geno-workbench .geno-spatial-branches {
-  border: 1px solid var(--border);
+  border-color: var(--forest-soft);
   border-radius: 4px;
-  background: var(--archive-doc);
+  background: var(--spatial-field);
+  color: var(--spatial-ruler);
+}
+
+.geno-workbench .geno-spatial-branches [data-suggested="true"]::before {
+  border-color: var(--gold-soft);
 }
 
 .geno-workbench .geno-spatial-deck {
   position: relative;
   inset: auto;
   flex: none;
-  padding: 3px 8px;
+  padding: 2px 8px;
   border-top: 1px solid var(--border);
   background: var(--archive-doc);
   pointer-events: auto;
@@ -835,17 +870,46 @@
   border-radius: 5px;
 }
 
+.geno-spatial-tools-popover {
+  display: grid;
+  gap: 4px;
+  width: min(240px, calc(100vw - 24px));
+  padding: 8px;
+}
+
+.geno-spatial-tools-popover button {
+  justify-content: flex-start;
+  min-height: 44px;
+}
+
+@container (max-width: 689px) {
+  .geno-workbench .geno-spatial-deck:has([data-mode-active="true"]) {
+    flex-wrap: wrap;
+  }
+
+  .geno-workbench .geno-spatial-help[data-mode-active="true"] {
+    display: flex;
+    flex-basis: 100%;
+    justify-content: center;
+  }
+
+  .geno-workbench .geno-spatial-help > :not(.geno-spatial-mode) {
+    display: none;
+  }
+}
+
 @container (max-width: 430px) {
-  .geno-workbench .geno-spatial-features {
-    column-gap: 0;
-    padding-inline: 5px;
-  }
-
-  .geno-workbench .geno-spatial-features button {
-    padding-inline: 6px;
-  }
-
   .geno-workbench .geno-spatial-context {
     display: none;
+  }
+
+  .geno-workbench .geno-spatial-deck {
+    padding-inline: 2px;
+  }
+
+  .geno-workbench .geno-spatial-tools {
+    max-width: 100%;
+    flex-wrap: wrap;
+    justify-content: center;
   }
 }
