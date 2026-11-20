@@ -1,5 +1,6 @@
 import { invalidateCase } from "@/lib/clinical-intel";
-import { civilDate } from "@/lib/civil-date";
+import { parseDateString } from "@/lib/clan-import";
+import { parseClanVitalDate } from "@/lib/clan-workbook";
 import { formatByPrecision, precisionOf } from "@/lib/timeline";
 import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -113,8 +114,8 @@ export function PersonFormDialog({
         full_name: editing.full_name,
         preferred_name: editing.preferred_name ?? "",
         gender: editing.gender ?? "desconhecido",
-        birth_date: editing.birth_date ?? "",
-        death_date: editing.death_date ?? "",
+        birth_date: editing.birth_date ?? editing.birth_date_partial ?? "",
+        death_date: editing.death_date ?? editing.death_date_partial ?? "",
         is_deceased: editing.is_deceased,
         is_proband: editing.is_proband,
         occupation: editing.occupation ?? "",
@@ -140,23 +141,20 @@ export function PersonFormDialog({
   const mutation = useMutation({
     mutationFn: async (form: FormState) => {
       if (!fromClient && !form.full_name.trim()) throw new Error("Nome é obrigatório.");
-      for (const date of [form.birth_date, form.death_date]) {
-        if (date && civilDate(date)?.precision !== "day") {
-          throw new Error("Informe uma data completa válida para nascimento e falecimento.");
-        }
-      }
-      if (form.birth_date && form.death_date && form.death_date < form.birth_date) {
+      const birth = parseClanVitalDate("birth_date", form.birth_date);
+      const death = parseClanVitalDate("death_date", form.death_date);
+      if (birth.birth_date && death.death_date && death.death_date < birth.birth_date) {
         throw new Error("O falecimento deve ser na data do nascimento ou depois.");
       }
       const identity = {
         full_name: form.full_name.trim(),
         preferred_name: form.preferred_name.trim() || null,
         gender: form.gender || null,
-        birth_date: form.birth_date || null,
+        ...birth,
       };
       const payload = {
         client_id: clientId,
-        death_date: form.death_date || null,
+        ...death,
         is_deceased: form.is_deceased || Boolean(form.death_date),
         is_proband: form.is_proband,
         occupation: form.occupation.trim() || null,
@@ -248,8 +246,9 @@ export function PersonFormDialog({
 
   // Concepção estimada (nasc. - 9 meses) e checagem de "filho de substituição":
   // nascimento caindo até ~9 meses depois do falecimento de outro membro do clã.
-  const conceptionDate = estimateConceptionDate(v.birth_date);
-  const nearbyLosses = findNearbyLosses(v.birth_date, editing?.id ?? "", allPersons);
+  const exactBirth = parseDateString(v.birth_date);
+  const conceptionDate = estimateConceptionDate(exactBirth);
+  const nearbyLosses = findNearbyLosses(exactBirth, editing?.id ?? "", allPersons);
 
   // Visual header: initials
   const initials = v.full_name
@@ -390,7 +389,7 @@ export function PersonFormDialog({
                 <Field label="Nascimento" id="birth_date">
                   <Input
                     id="birth_date"
-                    type="date"
+                    placeholder="DD/MM/AAAA ou ano"
                     readOnly={fromClient}
                     value={v.birth_date}
                     onChange={(e) => set("birth_date", e.target.value)}
@@ -399,7 +398,7 @@ export function PersonFormDialog({
                 <Field label="Falecimento" id="death_date">
                   <Input
                     id="death_date"
-                    type="date"
+                    placeholder="DD/MM/AAAA ou ano"
                     value={v.death_date}
                     onChange={(e) => set("death_date", e.target.value)}
                   />

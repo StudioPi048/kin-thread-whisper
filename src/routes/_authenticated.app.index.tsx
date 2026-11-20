@@ -13,6 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { getPendingRecordCount } from "@/lib/agenda.functions";
+import { activeAudioConsent, readAudioConsents } from "@/lib/audio-consent";
 import { profileQuery } from "@/lib/profile";
 import { appointmentDurationMin, formatDurationMinutes } from "@/lib/scheduling";
 import {
@@ -127,7 +128,14 @@ function AppHome() {
 
   const pendingRecordsQ = useQuery({
     queryKey: ["mesa-pending-records", user.id],
-    queryFn: () => getPendingRecordCount(),
+    queryFn: async () => {
+      const [count, records] = await Promise.all([
+        getPendingRecordCount(),
+        supabase.rpc("mesa_pending_clinical_records", {}),
+      ]);
+      if (records.error) throw records.error;
+      return { count, records: records.data ?? [] };
+    },
   });
 
   const onbQ = useQuery({
@@ -159,10 +167,19 @@ function AppHome() {
     return c ? c.preferred_name || c.full_name : "Cliente";
   };
   const firstName = profileQ.data?.full_name?.split(" ")[0] ?? user.email?.split("@")[0] ?? "";
-  const pendingConsent = clients.filter((c) => !c.consent_given_at).length;
+  const pendingGeneral = clients.filter((c) => !c.consent_given_at);
   const resumable = visits.filter((v) => clients.some((c) => c.id === v.clientId)).slice(0, 4);
   const next = upcomingQ.data?.[0];
   const nextDuration = next ? appointmentDurationMin(next) : null;
+  const consentQ = useQuery({
+    queryKey: ["audio-consent", next?.client_id],
+    queryFn: () => readAudioConsents(supabase, next!.client_id),
+    enabled: !!next,
+    retry: false,
+  });
+  const nextRecording = next && activeAudioConsent(consentQ.data ?? [], "recording", next.id);
+  const nextProcessing =
+    next && activeAudioConsent(consentQ.data ?? [], "external_processing", next.id);
   const onb = onbQ.data;
   const showOnb = !onbHidden && onb && onb.done < onb.total;
 
@@ -238,6 +255,13 @@ function AppHome() {
               </li>
             ))}
           </ol>
+          <Link
+            to="/"
+            hash="caso-ficticio"
+            className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-primary hover:underline"
+          >
+            Praticar no Consultante fictício <ArrowRight className="size-4" aria-hidden />
+          </Link>
         </section>
       )}
 
@@ -307,42 +331,122 @@ function AppHome() {
           <h2 id="pend-h" className={`${h2} flex items-center gap-2`}>
             <ClipboardCheck className="size-5 text-primary" aria-hidden /> Pendências
           </h2>
-          {clientsQ.isError ? (
-            <ErrorRow
-              msg="Não foi possível carregar os casos."
-              onRetry={() => clientsQ.refetch()}
-            />
-          ) : pendingRecordsQ.isError ? (
-            <ErrorRow
-              msg="Não foi possível carregar os registros."
-              onRetry={() => pendingRecordsQ.refetch()}
-            />
-          ) : clientsQ.isLoading || pendingRecordsQ.isLoading ? (
-            <p role="status" className="text-[15px] text-muted-foreground">
-              Carregando…
-            </p>
-          ) : (
-            <ul className="space-y-2 text-[15px]">
-              <li>
-                <Link
-                  to="/app/agenda"
-                  className="flex min-h-11 items-center justify-between gap-2 hover:underline"
-                >
-                  <span>Registros de sessão pendentes</span>
-                  <strong className="tabular-nums">{pendingRecordsQ.data}</strong>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/app/clientes"
-                  className="flex min-h-11 items-center justify-between gap-2 hover:underline"
-                >
-                  <span>Consentimentos a conferir</span>
-                  <strong className="tabular-nums">{pendingConsent}</strong>
-                </Link>
-              </li>
-            </ul>
-          )}
+          <div className="space-y-3">
+            <div>
+              <h3 className="text-sm font-semibold">Registros de sessão</h3>
+              {pendingRecordsQ.isError ? (
+                <ErrorRow
+                  msg="Não foi possível carregar os registros."
+                  onRetry={() => pendingRecordsQ.refetch()}
+                />
+              ) : pendingRecordsQ.isLoading ? (
+                <p className="text-sm text-muted-foreground" role="status">
+                  Carregando registros…
+                </p>
+              ) : pendingRecordsQ.data?.records.length ? (
+                <ul className="divide-y divide-border">
+                  {pendingRecordsQ.data.records.map((record) => (
+                    <li key={record.id}>
+                      <Link
+                        to="/app/clientes/$clientId"
+                        params={{ clientId: record.client_id }}
+                        search={{ tab: "sessions", session: record.id }}
+                        className="flex min-h-11 items-center justify-between gap-2 py-2 text-sm hover:underline"
+                      >
+                        <span>
+                          {nameOf(record.client_id)} · {fmtTime(record.session_date)}
+                        </span>
+                        <ArrowRight className="size-4 shrink-0 text-primary" aria-hidden />
+                      </Link>
+                    </li>
+                  ))}
+                  {pendingRecordsQ.data.count > pendingRecordsQ.data.records.length && (
+                    <li>
+                      <Link
+                        to="/app/agenda"
+                        className="inline-flex min-h-11 items-center text-sm text-primary hover:underline"
+                      >
+                        Ver todos os {pendingRecordsQ.data.count} registros
+                      </Link>
+                    </li>
+                  )}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground">Nenhum registro de sessão pendente.</p>
+              )}
+            </div>
+            <div className="border-t border-border pt-3">
+              <h3 className="text-sm font-semibold">Consentimentos gerais</h3>
+              {clientsQ.isError ? (
+                <ErrorRow
+                  msg="Não foi possível conferir os consentimentos."
+                  onRetry={() => clientsQ.refetch()}
+                />
+              ) : clientsQ.isLoading ? (
+                <p className="text-sm text-muted-foreground" role="status">
+                  Conferindo casos…
+                </p>
+              ) : pendingGeneral.length ? (
+                <ul className="divide-y divide-border">
+                  {pendingGeneral.slice(0, 3).map((client) => (
+                    <li key={client.id}>
+                      <Link
+                        to="/app/clientes/$clientId"
+                        params={{ clientId: client.id }}
+                        search={{ tab: "overview" }}
+                        className="flex min-h-11 items-center justify-between gap-2 py-2 text-sm hover:underline"
+                      >
+                        <span>{nameOf(client.id)}</span>
+                        <ArrowRight className="size-4 shrink-0 text-primary" aria-hidden />
+                      </Link>
+                    </li>
+                  ))}
+                  {pendingGeneral.length > 3 && (
+                    <li>
+                      <Link
+                        to="/app/clientes"
+                        className="inline-flex min-h-11 items-center text-sm text-primary hover:underline"
+                      >
+                        Conferir outros casos
+                      </Link>
+                    </li>
+                  )}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Consentimentos gerais registrados nos casos ativos.
+                </p>
+              )}
+            </div>
+            {next && (
+              <div className="border-t border-border pt-3">
+                <h3 className="text-sm font-semibold">Áudio do próximo atendimento</h3>
+                {consentQ.isError ? (
+                  <ErrorRow
+                    msg="Autorizações de áudio indisponíveis."
+                    onRetry={() => consentQ.refetch()}
+                  />
+                ) : consentQ.isLoading ? (
+                  <p className="text-sm text-muted-foreground" role="status">
+                    Conferindo autorizações…
+                  </p>
+                ) : (
+                  <Link
+                    to="/app/clientes/$clientId"
+                    params={{ clientId: next.client_id }}
+                    search={{ tab: "sessions", session: next.id, focus: "audio-consent" }}
+                    className="flex min-h-11 items-center justify-between gap-2 py-2 text-sm hover:underline"
+                  >
+                    <span>
+                      Gravação {nextRecording ? "autorizada" : "sem autorização vigente"} ·
+                      Processamento {nextProcessing ? "autorizado" : "sem autorização vigente"}
+                    </span>
+                    <ArrowRight className="size-4 shrink-0 text-primary" aria-hidden />
+                  </Link>
+                )}
+              </div>
+            )}
+          </div>
         </section>
 
         <section aria-labelledby="resume-h" className={`${card} space-y-3`}>

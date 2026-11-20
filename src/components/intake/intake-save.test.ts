@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { calculateCompletion, type ClientIntake } from "@/lib/intake";
+import {
+  calculateCompletion,
+  findIntakeQuestions,
+  sectionCompletion,
+  type ClientIntake,
+} from "@/lib/intake";
 import { KeyedDebounce } from "@/lib/unsaved";
 import {
   acknowledgeIntakeEdits,
@@ -93,6 +98,28 @@ describe("salvamento da anamnese", () => {
       expect.objectContaining({ updated_at: "revision-2" }),
     );
     expect(saved.signature_notes).toBe("Conferida em outra aba");
+  });
+
+  it("preserva outras fontes quando altera só a situação de uma resposta", () => {
+    const previous = sample({
+      field_context: {
+        presenting_intention: { note: "Relato", source: "client" },
+        signature_notes: { source: "document" },
+      },
+    });
+    const edits = captureIntakeEdits({ "context:presenting_intention:status": "unknown" }, 1);
+    const patch = intakePatch(previous, edits);
+    expect(patch.field_context).toEqual({
+      presenting_intention: { note: "Relato", source: "client", status: "unknown" },
+      signature_notes: { source: "document" },
+    });
+    expect(sectionCompletion({ ...previous, ...patch }, "opening")).toMatchObject({
+      filled: 1,
+      unknown: 1,
+    });
+    expect(findIntakeQuestions("gestacao").some(({ section }) => section.id === "origins")).toBe(
+      true,
+    );
   });
 
   it("retoma o envio mais recente após falha sem descartar outros campos da fila", async () => {

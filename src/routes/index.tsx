@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { lazy, Suspense, useState } from "react";
 import {
   ArrowRight,
   ArrowUpRight,
@@ -9,6 +10,9 @@ import {
   FolderOpen,
 } from "lucide-react";
 import { GenealizWordmark } from "@/components/genealiz-wordmark";
+
+const ConsultanteDemo = lazy(() => import("@/components/demo/consultante-demo"));
+
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
@@ -29,8 +33,12 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 function Index() {
+  const [demoOpen, setDemoOpen] = useState(false);
   return (
     <div className="gv-public">
+      <a href="#conteudo-publico" className="atlas-skip">
+        Pular para o conteúdo
+      </a>
       <header className="gv-public-nav">
         <Link to="/" aria-label="GENEALIZ — início">
           <GenealizWordmark />
@@ -43,13 +51,17 @@ function Index() {
           </Link>
         </nav>
       </header>
-      <main>
+      <main id="conteudo-publico">
         <section className="gv-hero">
           <img
-            src="/assets/genealiz/archive-hero.jpg"
+            src="/assets/genealiz/archive-hero.webp"
+            srcSet="/assets/genealiz/archive-hero-768.webp 768w, /assets/genealiz/archive-hero.webp 1536w"
+            sizes="(max-width: 767px) 100vw, 75vw"
             alt="Mãos organizam fotografias de diferentes gerações em um arquivo familiar; composição ilustrativa."
             fetchPriority="high"
             className="gv-hero-image"
+            width={1536}
+            height={1024}
           />
           <div className="gv-hero-copy">
             <span className="gv-category">Psicogenealogia · espaço de trabalho</span>
@@ -66,7 +78,7 @@ function Index() {
               Criar meu espaço <ArrowRight size={18} />
             </Link>
             <a href="#caso-ficticio" className="gv-hero-secondary">
-              Ver exemplo fictício <span aria-hidden="true">↓</span>
+              Experimentar com uma família fictícia <span aria-hidden="true">↓</span>
             </a>
           </div>
           <div className="gv-hero-foot">
@@ -131,7 +143,7 @@ function Index() {
               <ul>
                 <li>
                   <Check size={16} />
-                  Cliente no topo, ancestralidade abaixo
+                  Consultante e irmãos de sangue no topo
                 </li>
                 <li>
                   <Check size={16} />
@@ -143,12 +155,12 @@ function Index() {
                 </li>
               </ul>
               <a href="#caso-ficticio">
-                Ver o mapa do caso fictício <ArrowRight size={18} />
+                Explorar o caso fictício <ArrowRight size={18} />
               </a>
             </div>
             <figure className="gv-family-photo">
               <img
-                src="/assets/genealiz/archive-hero.jpg"
+                src="/assets/genealiz/archive-hero-768.webp"
                 alt="Detalhe ilustrativo de mãos reunindo fotografias de diferentes gerações de uma família."
                 loading="lazy"
                 width={1536}
@@ -157,31 +169,59 @@ function Index() {
               <figcaption>Memórias, pessoas e vínculos. Composição ilustrativa.</figcaption>
             </figure>
           </div>
-          <figure
+          <section
             id="caso-ficticio"
-            className="mx-0 my-8 scroll-mt-4 overflow-hidden rounded-lg border border-border bg-card md:my-12"
+            aria-labelledby="caso-ficticio-titulo"
+            className="my-8 scroll-mt-4 md:my-12"
           >
-            <img
-              src="/assets/genealiz/editor-demo.webp"
-              alt="Editor do genossociograma com três casais em faixas ancestrais e a ficha da tia Teresa aberta."
-              width={1150}
-              height={666}
-              loading="lazy"
-              decoding="async"
-              className="block h-auto w-full"
-            />
-            <figcaption className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-2 text-sm text-ink-soft">
-              Captura do editor com uma família fictícia.
-              <a
-                href="/assets/genealiz/editor-demo.webp"
-                className="inline-flex min-h-11 items-center gap-2 font-semibold text-forest underline underline-offset-4"
-                target="_blank"
-                rel="noopener"
+            <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <h3
+                  id="caso-ficticio-titulo"
+                  className="font-serif text-4xl font-semibold text-forest"
+                >
+                  Consultante fictício
+                </h3>
+                <p className="mt-1 max-w-xl text-sm leading-relaxed text-ink-soft">
+                  Localize um familiar, revise uma filiação e experimente desfazer. Alterne entre
+                  2D, 3D e linha do tempo.
+                </p>
+              </div>
+              {!demoOpen && (
+                <button
+                  type="button"
+                  className="gv-button inline-flex min-h-11 bg-forest text-white"
+                  onClick={() => setDemoOpen(true)}
+                >
+                  Abrir exercício <ArrowRight size={17} aria-hidden />
+                </button>
+              )}
+            </div>
+            {demoOpen ? (
+              <Suspense
+                fallback={
+                  <p
+                    role="status"
+                    className="rounded-lg border border-border bg-card p-5 text-ink-soft"
+                  >
+                    Carregando exercício…
+                  </p>
+                }
               >
-                Abrir imagem em tamanho completo <ArrowUpRight size={16} aria-hidden />
-              </a>
-            </figcaption>
-          </figure>
+                <ConsultanteDemo />
+              </Suspense>
+            ) : (
+              <img
+                src="/assets/genealiz/editor-demo.webp"
+                alt="Exemplo do editor com três casais dispostos em faixas ancestrais e a ficha de um familiar aberta."
+                width={1150}
+                height={666}
+                loading="lazy"
+                decoding="async"
+                className="block h-auto w-full rounded-lg border border-border bg-card"
+              />
+            )}
+          </section>
           <div className="gv-feature-pair">
             <article>
               <CalendarDays size={24} />
@@ -196,7 +236,9 @@ function Index() {
             </article>
             <article className="gv-library-feature">
               <img
-                src="/assets/genealiz/archive-library.jpg"
+                src="/assets/genealiz/archive-library.webp"
+                srcSet="/assets/genealiz/archive-library-440.webp 440w, /assets/genealiz/archive-library.webp 820w"
+                sizes="(max-width: 767px) 100vw, 420px"
                 alt="Livros e uma fotografia familiar sobre papel, composição ilustrativa."
                 loading="lazy"
               />
@@ -225,16 +267,32 @@ function Index() {
             Prepare o seu espaço de trabalho em psicogenealogia. O cadastro é por e-mail ou Google.
           </p>
           <Link to="/auth" search={{ mode: "signup" }} className="gv-button gv-button-gold">
-            Criar minha conta <ArrowRight size={18} />
+            Criar meu espaço <ArrowRight size={18} />
           </Link>
         </section>
       </main>
       <footer className="gv-footer">
         <GenealizWordmark />
-        <p>Histórias, relações e continuidade.</p>
-        <Link to="/auth">
-          Acessar a plataforma <ArrowUpRight size={16} />
-        </Link>
+        <p>Um espaço de trabalho do Instituto Liz para psicogenealogistas.</p>
+        <nav className="ml-auto flex flex-wrap items-center gap-x-5" aria-label="Ajuda e acesso">
+          <Link
+            to="/auth"
+            search={{ redirect: "/app/guia" }}
+            className="inline-flex min-h-11 items-center text-sm"
+          >
+            Guia de uso
+          </Link>
+          <Link
+            to="/auth"
+            search={{ redirect: "/app/configuracoes" }}
+            className="inline-flex min-h-11 items-center text-sm"
+          >
+            Dados da conta
+          </Link>
+          <Link to="/auth" className="inline-flex min-h-11 items-center gap-2 text-sm font-medium">
+            Acessar a plataforma <ArrowUpRight size={16} aria-hidden />
+          </Link>
+        </nav>
       </footer>
     </div>
   );

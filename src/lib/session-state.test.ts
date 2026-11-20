@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   audioStateOf,
   clinicalStatusOf,
+  canRetryAudioProcessing,
   confirmReview,
   isDirty,
   noteDraftInit,
@@ -99,5 +100,18 @@ describe("descartar nota no diálogo de saída", () => {
     s = noteReducer(s, { type: "discard" });
     expect(s.text).toBe("salvo");
     expect(isDirty(s)).toBe(false);
+  });
+});
+
+describe("recuperação de processamento de áudio", () => {
+  it("só libera a retomada após expirar a tentativa em andamento", () => {
+    expect(
+      canRetryAudioProcessing("transcribing", "2026-11-02T11:59:00Z", past, now.getTime()),
+    ).toBe(false);
+    expect(
+      canRetryAudioProcessing("structuring", "2026-11-02T11:49:00Z", past, now.getTime()),
+    ).toBe(true);
+    expect(canRetryAudioProcessing("structuring", null, past, now.getTime())).toBe(true);
+    expect(canRetryAudioProcessing("ready", null, past, now.getTime())).toBe(false);
   });
 });

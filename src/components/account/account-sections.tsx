@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, Loader2, RefreshCw } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +8,11 @@ import { DEFAULT_PREFERENCES, preferencesKey, type Preferences } from "@/lib/pre
 import { usePreferences } from "./use-preferences";
 import { exportAccountData } from "@/lib/data-export";
 import { downloadJson, readExportPage } from "@/lib/download-export";
+import {
+  listPendingDossierDeletions,
+  pendingDossierDeletionsKey,
+  resumeDossierDeletion,
+} from "@/lib/delete-client-dossier";
 
 const card =
   "rounded-[14px] border border-material-border bg-surface-document p-6 shadow-surface sm:p-8";
@@ -178,6 +183,73 @@ export function DataExport({ userId }: { userId: string }) {
               : ""}
         </span>
       </div>
+    </section>
+  );
+}
+
+export function PendingDossierDeletions({ userId }: { userId: string }) {
+  const qc = useQueryClient();
+  const key = pendingDossierDeletionsKey(userId);
+  const pending = useQuery({ queryKey: key, queryFn: listPendingDossierDeletions, retry: false });
+  const resume = useMutation({
+    mutationFn: resumeDossierDeletion,
+    onSuccess: () => qc.invalidateQueries({ queryKey: key }),
+  });
+  const date = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" });
+
+  return (
+    <section id="exclusoes" className={card + " scroll-mt-6"} aria-labelledby="exclusoes-h">
+      <h2 id="exclusoes-h" className="m-0 font-serif text-2xl text-ink">
+        Limpeza de arquivos
+      </h2>
+      <p className="mt-1 text-sm text-ink-soft">
+        Retome a limpeza de áudios ou fotos quando a exclusão de um dossiê for interrompida.
+      </p>
+      {pending.isPending ? (
+        <p role="status" className="mt-4 text-sm text-ink-soft">
+          Consultando exclusões pendentes…
+        </p>
+      ) : pending.isError ? (
+        <div role="alert" className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+          Não foi possível consultar as exclusões.
+          <Button variant="outline" className="min-h-11" onClick={() => void pending.refetch()}>
+            Tentar novamente
+          </Button>
+        </div>
+      ) : pending.data.length === 0 ? (
+        <p className="mt-4 text-sm text-ink-soft">Nenhuma limpeza pendente.</p>
+      ) : (
+        <ul className="mt-3 divide-y divide-border">
+          {pending.data.map((job) => (
+            <li
+              key={job.client_id}
+              className="flex flex-wrap items-center justify-between gap-3 py-2"
+            >
+              <span className="text-sm">Pedido de {date.format(new Date(job.created_at))}</span>
+              <Button
+                variant="outline"
+                className="min-h-11"
+                disabled={resume.isPending}
+                onClick={() => resume.mutate(job.client_id)}
+              >
+                {resume.isPending && resume.variables === job.client_id
+                  ? "Limpando…"
+                  : "Retomar limpeza"}
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {resume.isError && (
+        <p role="alert" className="mt-2 text-sm text-destructive">
+          {resume.error.message}
+        </p>
+      )}
+      {resume.isSuccess && (
+        <p role="status" className="mt-2 text-sm text-forest">
+          Arquivos removidos.
+        </p>
+      )}
     </section>
   );
 }

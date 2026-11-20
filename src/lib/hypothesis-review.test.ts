@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  compareReviewEvidence,
   evidenceFingerprint,
   evidenceSnapshot,
   isStale,
@@ -68,6 +69,18 @@ describe("versionamento de evidências", () => {
     evidence_fingerprint: fp,
     created_at: "",
   });
+  it("mostra apenas os valores removidos e os que passaram a sustentar a hipótese", () => {
+    const reviewed = { ...row(1, "old"), evidence_snapshot: [evidenceSnapshot(base)] };
+    const updatedFact = { ...base.facts[0], value: "2000-01-05" };
+    expect(
+      compareReviewEvidence(reviewed, { ...base, facts: [base.facts[1], updatedFact] }),
+    ).toEqual({
+      previous: [base.facts[0]],
+      current: [updatedFact],
+    });
+    expect(compareReviewEvidence(row(1, "old"), base)).toBeNull();
+  });
+
   it("última revisão = maior versão; desatualizada se a evidência mudou", () => {
     const fp = evidenceFingerprint(base);
     const rows = [row(1, "old"), row(2, fp)];

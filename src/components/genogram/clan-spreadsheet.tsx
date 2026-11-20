@@ -5,7 +5,6 @@ import {
   type ClinicalIntelData,
 } from "@/lib/clinical-intel";
 import { useUnsaved } from "@/components/unsaved/unsaved-guard";
-import { civilDate } from "@/lib/civil-date";
 import { KeyedDebounce } from "@/lib/unsaved";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import * as React from "react";
@@ -51,13 +50,22 @@ import {
 } from "@/lib/geno/build";
 import {
   inferGenderFromRelationship,
-  readClanFile,
+  readClanWorkbook,
   autoMap,
   analyzeImport,
   IMPORT_FIELDS,
   type Mapping,
   type ImportRecord,
+  type ClanSheet,
 } from "@/lib/clan-import";
+import {
+  createClanWorkbook,
+  isClanLinksSheet,
+  isIdentifiedClanSheet,
+  parseClanVitalDate,
+  planClanWorkbook,
+} from "@/lib/clan-workbook";
+import { ClanSheetSelect, ClanWorkbookPreview } from "./clan-workbook-preview";
 import {
   Dialog,
   DialogContent,
@@ -68,7 +76,12 @@ import {
 } from "@/components/ui/dialog";
 
 type Person = Tables<"genogram_persons">;
-type Props = { clientId: string; onOpenGenogram?: () => void };
+type Props = {
+  clientId: string;
+  onOpenGenogram?: () => void;
+  onReviewParentage?: (personId: string) => void;
+  focusPersonId?: string;
+};
 
 const RELATIONSHIP_TEMPLATE = [
   "Irmã(o)",
@@ -137,7 +150,12 @@ function parentSummary(graph: LogicalGraph, personId: string) {
   return { parents, names };
 }
 
-export function ClanSpreadsheet({ clientId, onOpenGenogram }: Props) {
+export function ClanSpreadsheet({
+  clientId,
+  onOpenGenogram,
+  onReviewParentage,
+  focusPersonId,
+}: Props) {
   const qc = useQueryClient();
   const [drafts, setDrafts] = useState<Record<string, Partial<Person>>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -347,20 +365,25 @@ export function ClanSpreadsheet({ clientId, onOpenGenogram }: Props) {
   };
 
   const saveVitalDate = (person: Person, field: "birth_date" | "death_date", value: string) => {
-    if (value && civilDate(value)?.precision !== "day") {
-      toast.error("Informe uma data completa válida.");
-      return;
+    try {
+      const patch = parseClanVitalDate(field, value);
+      const birth = field === "birth_date" ? patch.birth_date : person.birth_date;
+      const death = field === "death_date" ? patch.death_date : person.death_date;
+      if (birth && death && death < birth) {
+        toast.error("O falecimento deve ser na data do nascimento ou depois.");
+        return false;
+      }
+      scheduleSave(person.id, {
+        ...patch,
+        ...(field === "death_date" && value ? { is_deceased: true } : {}),
+      });
+      return true;
+    } catch (error) {
+      toast.error(
+        `Confira a data. ${error instanceof Error ? error.message : "Use dia, mês e ano ou uma data parcial."}`,
+      );
+      return false;
     }
-    const birth = field === "birth_date" ? value : person.birth_date;
-    const death = field === "death_date" ? value : person.death_date;
-    if (birth && death && death < birth) {
-      toast.error("O falecimento deve ser na data do nascimento ou depois.");
-      return;
-    }
-    scheduleSave(person.id, {
-      [field]: value || null,
-      ...(field === "death_date" && value ? { is_deceased: true } : {}),
-    });
   };
 
   useUnsaved(`clan:${clientId}`, {
@@ -449,6 +472,21 @@ export function ClanSpreadsheet({ clientId, onOpenGenogram }: Props) {
     document.getElementById(`clan-person-${newPersonId}`)?.focus();
     setNewPersonId(null);
   }, [newPersonId, visibleRows]);
+  const lastFocusRequest = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (!focusPersonId) {
+      lastFocusRequest.current = undefined;
+      return;
+    }
+    if (
+      lastFocusRequest.current === focusPersonId ||
+      !visibleRows.some((person) => person.id === focusPersonId)
+    )
+      return;
+    lastFocusRequest.current = focusPersonId;
+    setExpandedRows((previous) => new Set([...previous, focusPersonId]));
+    document.getElementById(`clan-person-${focusPersonId}`)?.focus();
+  }, [focusPersonId, visibleRows]);
   // Teclado: ↑/↓ movem para a mesma coluna da linha vizinha
   const onGridKeyDown = (e: React.KeyboardEvent<HTMLTableSectionElement>) => {
     if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
@@ -474,24 +512,53 @@ export function ClanSpreadsheet({ clientId, onOpenGenogram }: Props) {
   };
 
   const [importPreview, setImportPreview] = useState<{
-    header: string[];
-    rows: string[][];
+    sheets: ClanSheet[];
+    people: ClanSheet;
+    linkSheet: string;
     mapping: Mapping;
   } | null>(null);
+  const [identityChoices, setIdentityChoices] = useState<Record<string, string>>({});
+  const [replaceParentage, setReplaceParentage] = useState(false);
   const [importReplace, setImportReplace] = useState(false);
   const [importDuplicates, setImportDuplicates] = useState(false);
+  const structuredImport = !!importPreview && isIdentifiedClanSheet(importPreview.people);
+  const selectedLinkSheet = importPreview?.sheets.find(
+    (sheet) => sheet.name === importPreview.linkSheet,
+  );
+  const workbookPreview = useMemo(
+    () =>
+      structuredImport && importPreview
+        ? planClanWorkbook({
+            peopleSheet: importPreview.people,
+            linksSheet: selectedLinkSheet,
+            existingPeople: persons ?? [],
+            existingLinks: relationships ?? [],
+            choices: identityChoices,
+            replaceParentage,
+          })
+        : null,
+    [
+      structuredImport,
+      importPreview,
+      selectedLinkSheet,
+      persons,
+      relationships,
+      identityChoices,
+      replaceParentage,
+    ],
+  );
   const analysis = useMemo(
     () =>
-      importPreview
+      importPreview && !structuredImport
         ? analyzeImport(
-            importPreview.rows,
+            importPreview.people.rows,
             importPreview.mapping,
             importReplace
               ? []
               : (persons ?? []).map((p) => ({ full_name: p.full_name, birth_date: p.birth_date })),
           )
         : [],
-    [importPreview, importReplace, persons],
+    [importPreview, importReplace, persons, structuredImport],
   );
   const toImport = useMemo(
     () =>
@@ -518,12 +585,39 @@ export function ClanSpreadsheet({ clientId, onOpenGenogram }: Props) {
     mutationFn: async () => {
       await queueRef.current!.flush();
       const latest = await qc.fetchQuery({ ...familyQuery, staleTime: 0 });
+      if (!importPreview) throw new Error("Abra uma planilha para importar.");
+      if (structuredImport && workbookPreview) {
+        const current = planClanWorkbook({
+          peopleSheet: importPreview.people,
+          linksSheet: selectedLinkSheet,
+          existingPeople: latest.persons,
+          existingLinks: latest.relationships,
+          choices: identityChoices,
+          replaceParentage,
+        });
+        if (
+          current.blocking ||
+          !current.actionable ||
+          JSON.stringify(current.plan) !== JSON.stringify(workbookPreview.plan)
+        ) {
+          throw new Error(
+            "A família mudou desde a prévia. Confira as pessoas e os vínculos antes de confirmar.",
+          );
+        }
+        const { data, error } = await supabase.rpc("import_clan_workbook", {
+          _client_id: clientId,
+          _people: current.plan.people as never,
+          _links: current.plan.links as never,
+          _parentages: current.plan.parentages as never,
+        });
+        if (error) throw new Error(error.message);
+        return data;
+      }
       if (importReplace && latest.relationships.length) {
         throw new Error("Há vínculos registrados. Adicione as linhas ou edite a planilha atual.");
       }
-      if (!importPreview) throw new Error("Abra uma planilha para importar.");
       const currentAnalysis = analyzeImport(
-        importPreview.rows,
+        importPreview.people.rows,
         importPreview.mapping,
         importReplace ? [] : latest.persons,
       );
@@ -543,9 +637,13 @@ export function ClanSpreadsheet({ clientId, onOpenGenogram }: Props) {
       if (error) throw new Error(error.message);
       return data as number;
     },
-    onSuccess: async (n) => {
+    onSuccess: async (result) => {
       await invalidateCase(qc, clientId);
-      toast.success(`${n} familiares importados.`);
+      toast.success(
+        typeof result === "number"
+          ? `${result} familiares importados.`
+          : `Planilha salva. ${result.inserted} novas pessoas, ${result.updated} atualizadas, ${result.related} vínculos e ${result.reviewed} filiações revisadas.`,
+      );
       setImportPreview(null);
       setImportReplace(false);
       setImportDuplicates(false);
@@ -564,17 +662,43 @@ export function ClanSpreadsheet({ clientId, onOpenGenogram }: Props) {
     event.target.value = "";
     setIsImporting(true);
     try {
-      const { header, rows } = await readClanFile(
+      const sheets = await readClanWorkbook(
         await file.arrayBuffer(),
         /\.csv$/i.test(file.name) ? "csv" : "xlsx",
       );
       setImportReplace(false);
       setImportDuplicates(false);
-      setImportPreview({ header, rows, mapping: autoMap(header) });
+      setIdentityChoices({});
+      setReplaceParentage(false);
+      const valid = sheets.filter((sheet) => sheet.header.length && !isClanLinksSheet(sheet));
+      const people =
+        valid.find(isIdentifiedClanSheet) ?? valid.find((sheet) => sheet.rows.length) ?? valid[0];
+      if (!people) throw new Error("Inclua uma aba de pessoas com os cabeçalhos do modelo.");
+      setImportPreview({
+        sheets,
+        people,
+        linkSheet: sheets.find(isClanLinksSheet)?.name ?? "",
+        mapping: autoMap(people.header),
+      });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Verifique o formato do arquivo.");
     } finally {
       setIsImporting(false);
+    }
+  };
+
+  const exportWorkbook = async (template = false) => {
+    try {
+      if (!template) await queueRef.current!.flush();
+      const latest = template ? null : await qc.fetchQuery({ ...familyQuery, staleTime: 0 });
+      const workbook = await createClanWorkbook(latest?.persons ?? [], latest?.relationships ?? []);
+      const XLSX = await import("xlsx");
+      XLSX.writeFile(
+        workbook,
+        template ? "modelo-planilha-cla.xlsx" : `planilha-cla-${clientId.slice(0, 8)}.xlsx`,
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível exportar a planilha.");
     }
   };
 
@@ -598,9 +722,9 @@ export function ClanSpreadsheet({ clientId, onOpenGenogram }: Props) {
         [
           r.full_name ?? "",
           r.relationship_to_proband ?? "",
-          r.birth_date ?? "",
+          r.birth_date ?? r.birth_date_partial ?? "",
           r.gestational_weeks ?? "",
-          r.death_date ?? (r.is_deceased ? "Sim" : ""),
+          r.death_date ?? r.death_date_partial ?? (r.is_deceased ? "Sim" : ""),
           (r.health_conditions ?? []).join(", "),
           r.occupation ?? "",
           r.vices ?? "",
@@ -695,10 +819,21 @@ export function ClanSpreadsheet({ clientId, onOpenGenogram }: Props) {
           <Button
             variant="outline"
             className="min-h-11"
+            onClick={() => void exportWorkbook()}
+            disabled={rows.length === 0}
+          >
+            <Download className="size-4 mr-2" /> Exportar Excel
+          </Button>
+          <Button
+            variant="ghost"
+            className="min-h-11"
             onClick={exportCsv}
             disabled={rows.length === 0}
           >
-            <Download className="size-4 mr-2" /> Exportar CSV
+            CSV
+          </Button>
+          <Button variant="ghost" className="min-h-11" onClick={() => void exportWorkbook(true)}>
+            Modelo Excel
           </Button>
           <Button
             className="min-h-11"
@@ -881,20 +1016,32 @@ export function ClanSpreadsheet({ clientId, onOpenGenogram }: Props) {
                                         ? relationLabel
                                         : "Sem filiação informada")}
                                 </p>
-                                <Link
-                                  to="/app/clientes/$clientId"
-                                  params={{ clientId }}
-                                  search={(previous) => ({
-                                    ...previous,
-                                    tab: "genogram",
-                                    person: r.id,
-                                  })}
-                                  aria-label={`Revisar no mapa: ${r.full_name || `linha ${i + 1}`}`}
-                                  className="inline-flex min-h-11 items-center gap-1.5 font-medium text-forest underline-offset-4 hover:underline focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                >
-                                  <MapPin className="size-4" aria-hidden />
-                                  Revisar no mapa
-                                </Link>
+                                {onReviewParentage ? (
+                                  <Button
+                                    type="button"
+                                    variant="link"
+                                    className="min-h-11 px-0 text-forest"
+                                    aria-label={`Revisar no mapa: ${r.full_name || `linha ${i + 1}`}`}
+                                    onClick={() => onReviewParentage(r.id)}
+                                  >
+                                    <MapPin className="size-4" aria-hidden /> Revisar no mapa
+                                  </Button>
+                                ) : (
+                                  <Link
+                                    to="/app/clientes/$clientId"
+                                    params={{ clientId }}
+                                    search={(previous) => ({
+                                      ...previous,
+                                      tab: "genogram",
+                                      person: r.id,
+                                    })}
+                                    aria-label={`Revisar no mapa: ${r.full_name || `linha ${i + 1}`}`}
+                                    className="inline-flex min-h-11 items-center gap-1.5 font-medium text-forest underline-offset-4 hover:underline focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                  >
+                                    <MapPin className="size-4" aria-hidden />
+                                    Revisar no mapa
+                                  </Link>
+                                )}
                               </>
                             ) : (
                               <p className="text-muted-foreground">A preencher</p>
@@ -904,11 +1051,10 @@ export function ClanSpreadsheet({ clientId, onOpenGenogram }: Props) {
                         {showDates && (
                           <>
                             <Td>
-                              <CellInput
-                                type="date"
-                                value={r.birth_date ?? ""}
+                              <VitalDateInput
+                                value={r.birth_date ?? r.birth_date_partial ?? ""}
                                 ariaLabel={`Nascimento da linha ${i + 1}`}
-                                onChange={
+                                onSave={
                                   r.is_proband
                                     ? undefined
                                     : (v) => saveVitalDate(r, "birth_date", v)
@@ -921,13 +1067,12 @@ export function ClanSpreadsheet({ clientId, onOpenGenogram }: Props) {
                               />
                             </Td>
                             <Td>
-                              <CellInput
-                                type="date"
-                                value={r.death_date ?? ""}
+                              <VitalDateInput
+                                value={r.death_date ?? r.death_date_partial ?? ""}
                                 ariaLabel={`Falecimento da linha ${i + 1}`}
-                                onChange={(v) => saveVitalDate(r, "death_date", v)}
+                                onSave={(v) => saveVitalDate(r, "death_date", v)}
                               />
-                              {r.is_deceased && !r.death_date && (
+                              {r.is_deceased && !r.death_date && !r.death_date_partial && (
                                 <p className="px-2 pb-1 text-[14px] text-muted-foreground">
                                   Falecimento sem data
                                 </p>
@@ -1033,8 +1178,10 @@ export function ClanSpreadsheet({ clientId, onOpenGenogram }: Props) {
                                 <input
                                   type="checkbox"
                                   className="size-4"
-                                  checked={r.is_deceased || Boolean(r.death_date)}
-                                  disabled={Boolean(r.death_date)}
+                                  checked={
+                                    r.is_deceased || Boolean(r.death_date || r.death_date_partial)
+                                  }
+                                  disabled={Boolean(r.death_date || r.death_date_partial)}
                                   onChange={(e) =>
                                     scheduleSave(r.id, { is_deceased: e.target.checked })
                                   }
@@ -1156,11 +1303,59 @@ export function ClanSpreadsheet({ clientId, onOpenGenogram }: Props) {
           <DialogHeader>
             <DialogTitle>Prévia da importação</DialogTitle>
             <DialogDescription>
-              Confira as colunas e as sugestões de filiação. O arquivo traz dados das pessoas.
-              Vínculos registrados são revisados no mapa.
+              {structuredImport
+                ? "Revise as pessoas e os vínculos que serão gravados no dossiê."
+                : "Confira as colunas e as sugestões. A planilha com IDs também permite importar vínculos."}
             </DialogDescription>
           </DialogHeader>
-          {importPreview && (
+          {importPreview && importPreview.sheets.length > 1 && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <ClanSheetSelect
+                label="Aba de pessoas"
+                sheets={importPreview.sheets.filter(
+                  (sheet) => sheet.header.length && !isClanLinksSheet(sheet),
+                )}
+                value={importPreview.people.name}
+                disabled={confirmImport.isPending}
+                onChange={(name) => {
+                  const people = importPreview.sheets.find((sheet) => sheet.name === name);
+                  if (!people) return;
+                  setIdentityChoices({});
+                  setImportReplace(false);
+                  setReplaceParentage(false);
+                  setImportPreview({ ...importPreview, people, mapping: autoMap(people.header) });
+                }}
+              />
+              {structuredImport && (
+                <ClanSheetSelect
+                  label="Aba de vínculos"
+                  optional
+                  sheets={importPreview.sheets.filter(isClanLinksSheet)}
+                  value={importPreview.linkSheet}
+                  disabled={confirmImport.isPending}
+                  onChange={(linkSheet) => {
+                    setReplaceParentage(false);
+                    setImportPreview({ ...importPreview, linkSheet });
+                  }}
+                />
+              )}
+            </div>
+          )}
+          {workbookPreview && (
+            <ClanWorkbookPreview
+              preview={workbookPreview}
+              choices={identityChoices}
+              onChoice={(key, value) =>
+                setIdentityChoices((previous) => ({ ...previous, [key]: value }))
+              }
+              allowReplacement={replaceParentage}
+              onAllowReplacement={setReplaceParentage}
+              canReplace={!!selectedLinkSheet?.rows.length && hasRegisteredLinks}
+              pending={confirmImport.isPending}
+              onTemplate={() => void exportWorkbook(true)}
+            />
+          )}
+          {importPreview && !structuredImport && (
             <div className="space-y-4 text-[15px]">
               <fieldset className="grid gap-2 sm:grid-cols-3" disabled={confirmImport.isPending}>
                 <legend className="mb-2 font-semibold">Colunas do arquivo</legend>
@@ -1186,7 +1381,7 @@ export function ClanSpreadsheet({ clientId, onOpenGenogram }: Props) {
                       }}
                     >
                       <option value="">— não importar —</option>
-                      {importPreview.header.map((h, i) => (
+                      {importPreview.people.header.map((h, i) => (
                         <option key={i} value={i}>
                           {h || `Coluna ${i + 1}`}
                         </option>
@@ -1301,14 +1496,17 @@ export function ClanSpreadsheet({ clientId, onOpenGenogram }: Props) {
               variant={importReplace ? "destructive" : "default"}
               disabled={
                 confirmImport.isPending ||
-                toImport.length === 0 ||
-                (importReplace && hasRegisteredLinks)
+                (workbookPreview
+                  ? workbookPreview.blocking || !workbookPreview.actionable
+                  : toImport.length === 0 || (importReplace && hasRegisteredLinks))
               }
               onClick={() => confirmImport.mutate()}
             >
               {confirmImport.isPending
                 ? "Gravando…"
-                : `${importReplace ? "Substituir e importar" : "Importar"} ${toImport.length} linha(s)`}
+                : workbookPreview
+                  ? "Gravar alterações"
+                  : `${importReplace ? "Substituir e importar" : "Importar"} ${toImport.length} linha(s)`}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1390,6 +1588,49 @@ function DetailField({
       </span>
       {children}
     </label>
+  );
+}
+
+function VitalDateInput({
+  value,
+  ariaLabel,
+  title,
+  onSave,
+}: {
+  value: string;
+  ariaLabel: string;
+  title?: string;
+  onSave?: (value: string) => boolean;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const [invalid, setInvalid] = useState(false);
+  return (
+    <input
+      className="h-11 w-full rounded-sm bg-transparent px-2 text-[15px] focus:outline-none focus:ring-1 focus:ring-forest aria-invalid:ring-1 aria-invalid:ring-clinical-critical"
+      aria-label={ariaLabel}
+      aria-invalid={invalid}
+      title={title}
+      readOnly={!onSave}
+      value={draft ?? value}
+      placeholder={onSave ? "DD/MM/AAAA ou ano" : undefined}
+      onChange={(event) => {
+        setDraft(event.target.value);
+        setInvalid(false);
+      }}
+      onBlur={() => {
+        if (draft === null || draft.trim() === value || onSave?.(draft.trim())) {
+          setDraft(null);
+          setInvalid(false);
+        } else setInvalid(true);
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") event.currentTarget.blur();
+        if (event.key === "Escape") {
+          setDraft(null);
+          setInvalid(false);
+        }
+      }}
+    />
   );
 }
 

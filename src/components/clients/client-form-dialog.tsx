@@ -127,6 +127,7 @@ export function ClientFormDialog({
     onSuccess: async (saved) => {
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["clients"] }),
+        qc.invalidateQueries({ queryKey: ["all-clients-search"] }),
         qc.invalidateQueries({ queryKey: ["client", saved.id] }),
         qc.invalidateQueries({ queryKey: ["mesa-clients"] }),
         qc.invalidateQueries({ queryKey: ["case-strip-name", saved.id] }),

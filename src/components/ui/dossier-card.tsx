@@ -99,11 +99,15 @@ export function DossierCard({
               {status === "archived" ? <ArchiveRestore /> : <Archive />}
               {status === "archived" ? "Reativar" : "Arquivar"}
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onDelete} className="text-destructive">
-              <Trash2 />
-              Excluir
-            </DropdownMenuItem>
+            {status === "archived" && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={onDelete} className="text-destructive">
+                  <Trash2 />
+                  Excluir
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

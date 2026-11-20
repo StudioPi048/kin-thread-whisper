@@ -68,6 +68,8 @@ export type Database = {
           gender: string | null
           historical_context_at_birth: string | null
           id: string
+          field_context: Json
+          last_field_edited: string | null
           last_section_edited: string | null
           life_mission: string | null
           marking_fairy_tales: string | null
@@ -168,6 +170,8 @@ export type Database = {
           gender?: string | null
           historical_context_at_birth?: string | null
           id?: string
+          field_context?: Json
+          last_field_edited?: string | null
           last_section_edited?: string | null
           life_mission?: string | null
           marking_fairy_tales?: string | null
@@ -268,6 +272,8 @@ export type Database = {
           gender?: string | null
           historical_context_at_birth?: string | null
           id?: string
+          field_context?: Json
+          last_field_edited?: string | null
           last_section_edited?: string | null
           life_mission?: string | null
           marking_fairy_tales?: string | null
@@ -398,6 +404,9 @@ export type Database = {
           granted: boolean
           source: string
           created_at: string
+          session_id: string | null
+          term_version: string | null
+          document_reference: string | null
         }
         Insert: never
         Update: never
@@ -415,6 +424,8 @@ export type Database = {
           id: string
           manual_notes: string | null
           planned_duration_minutes: number | null
+          processing_attempt_id: string | null
+          processing_started_at: string | null
           processing_consent_id: string | null
           recording_consent_id: string | null
           session_date: string
@@ -422,6 +433,8 @@ export type Database = {
           structured_note: Json | null
           time_zone: string | null
           title: string | null
+          transcript_segments: Json
+          transcript_reviews: Json
           transcript: string | null
           updated_at: string
           user_id: string
@@ -437,6 +450,8 @@ export type Database = {
           id?: string
           manual_notes?: string | null
           planned_duration_minutes?: number | null
+          processing_attempt_id?: string | null
+          processing_started_at?: string | null
           processing_consent_id?: string | null
           recording_consent_id?: string | null
           session_date?: string
@@ -444,6 +459,8 @@ export type Database = {
           structured_note?: Json | null
           time_zone?: string | null
           title?: string | null
+          transcript_segments?: Json
+          transcript_reviews?: Json
           transcript?: string | null
           updated_at?: string
           user_id: string
@@ -459,6 +476,8 @@ export type Database = {
           id?: string
           manual_notes?: string | null
           planned_duration_minutes?: number | null
+          processing_attempt_id?: string | null
+          processing_started_at?: string | null
           processing_consent_id?: string | null
           recording_consent_id?: string | null
           session_date?: string
@@ -466,6 +485,8 @@ export type Database = {
           structured_note?: Json | null
           time_zone?: string | null
           title?: string | null
+          transcript_segments?: Json
+          transcript_reviews?: Json
           transcript?: string | null
           updated_at?: string
           user_id?: string
@@ -562,11 +583,14 @@ export type Database = {
       genogram_persons: {
         Row: {
           birth_date: string | null
+          birth_date_partial?: string | null
           birth_order: number | null
           cause_of_death: string | null
           client_id: string
+          clan_reference?: string | null
           created_at: string
           death_date: string | null
+          death_date_partial?: string | null
           full_name: string
           gender: string | null
           gestational_weeks: string | null
@@ -589,11 +613,14 @@ export type Database = {
         }
         Insert: {
           birth_date?: string | null
+          birth_date_partial?: string | null
           birth_order?: number | null
           cause_of_death?: string | null
           client_id: string
+          clan_reference?: string | null
           created_at?: string
           death_date?: string | null
+          death_date_partial?: string | null
           full_name: string
           gender?: string | null
           gestational_weeks?: string | null
@@ -616,11 +643,14 @@ export type Database = {
         }
         Update: {
           birth_date?: string | null
+          birth_date_partial?: string | null
           birth_order?: number | null
           cause_of_death?: string | null
           client_id?: string
+          clan_reference?: string | null
           created_at?: string
           death_date?: string | null
+          death_date_partial?: string | null
           full_name?: string
           gender?: string | null
           gestational_weeks?: string | null
@@ -724,6 +754,7 @@ export type Database = {
       }
       genogram_relationships: {
         Row: {
+          clan_reference?: string | null
           client_id: string
           created_at: string
           end_date: string | null
@@ -738,6 +769,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          clan_reference?: string | null
           client_id: string
           created_at?: string
           end_date?: string | null
@@ -752,6 +784,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          clan_reference?: string | null
           client_id?: string
           created_at?: string
           end_date?: string | null
@@ -993,6 +1026,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      begin_dossier_deletion: { Args: { _client_id: string }; Returns: boolean }
+      dossier_deletion_manifest: { Args: { _client_id: string }; Returns: Json }
+      finish_dossier_deletion: { Args: { _client_id: string }; Returns: boolean }
+      list_dossier_deletions: {
+        Args: Record<string, never>
+        Returns: { client_id: string; created_at: string }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1004,9 +1044,33 @@ export type Database = {
         Args: { _client_id: string; _scope: string; _granted: boolean; _source: string }
         Returns: undefined
       }
+      list_timeline_cases: {
+        Args: { _status?: string; _search?: string; _offset?: number }
+        Returns: { id: string; full_name: string; preferred_name: string | null; has_events: boolean }[]
+      }
+      mesa_pending_clinical_records: {
+        Args: Record<PropertyKey, never>
+        Returns: { id: string; client_id: string; session_date: string; title: string | null }[]
+      }
+      record_audio_consent_details: {
+        Args: {
+          _client_id: string
+          _scope: string
+          _granted: boolean
+          _source: string
+          _session_id?: string
+          _term_version?: string
+          _document_reference?: string
+        }
+        Returns: undefined
+      }
       import_genogram_persons: {
         Args: { _client_id: string; _replace?: boolean; _rows: Json }
         Returns: number
+      }
+      import_clan_workbook: {
+        Args: { _client_id: string; _people: Json; _links: Json; _parentages: Json }
+        Returns: { inserted: number; updated: number; related: number; reviewed: number }
       }
       ensure_genogram_proband: {
         Args: { _client_id: string }

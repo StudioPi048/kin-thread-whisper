@@ -1,15 +1,15 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { ExportPageReader, ExportRow } from "@/lib/data-export";
 
-export const readExportPage: ExportPageReader = async ({ table, filter, from, to }) => {
+export const readExportPage: ExportPageReader = async ({ table, filter, from, to, columns }) => {
   const { data, error } = await supabase
     .from(table)
-    .select("*")
+    .select(columns ?? "*")
     .in(filter.column, filter.values)
     .order("id")
     .range(from, to);
   if (error) throw new Error(`${table}: ${error.message}`);
-  return (data ?? []) as ExportRow[];
+  return (data ?? []) as unknown as ExportRow[];
 };
 
 export function downloadJson(content: unknown, filename: string) {

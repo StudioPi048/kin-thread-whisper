@@ -161,6 +161,179 @@
   text-wrap: balance;
 }
 
+.geno-map-navigator {
+  width: min(22rem, calc(100vw - 24px));
+  display: grid;
+  gap: 10px;
+  padding: 13px;
+}
+
+.geno-map-navigator h3 {
+  color: var(--forest);
+  font-size: 0.9375rem;
+  font-weight: 650;
+}
+
+.geno-map-navigator-plot {
+  position: relative;
+  height: 106px;
+  overflow: clip;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--archive);
+}
+
+.geno-map-navigator-plot span {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 1px;
+  background: var(--forest-soft);
+}
+
+.geno-map-navigator-plot [data-branch="maternal"] {
+  background: var(--bronze);
+}
+
+.geno-map-navigator-plot [data-current] {
+  z-index: 1;
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--card);
+  outline: 1px solid var(--forest);
+  background: var(--forest);
+}
+
+.geno-map-navigator-plot [data-muted],
+.geno-map-muted-edge {
+  opacity: 0.28;
+}
+
+.geno-map-muted-person:not(.geno-parentage-highlight):not(.selected):not(:focus-within):not(
+    :hover
+  ) {
+  opacity: 0.48;
+}
+
+.geno-map-overlap .atlas-person-info {
+  outline: 2px dashed var(--bronze);
+  outline-offset: 3px;
+}
+
+.geno-map-navigator-actions,
+.geno-map-navigator-generations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.geno-map-navigator button {
+  min-height: 44px;
+}
+
+.geno-map-reader {
+  position: absolute;
+  right: 10px;
+  bottom: 68px;
+  z-index: 9;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  width: fit-content;
+  max-width: min(350px, calc(100% - 26px));
+  padding: 9px 6px 9px 13px;
+  border: 1px solid var(--input);
+  border-inline-start: 4px solid var(--forest);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--ink);
+}
+
+.geno-map-reader strong {
+  display: block;
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.geno-map-reader small {
+  display: block;
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+}
+
+.geno-parentage-candidate {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px;
+  border: 1px dashed var(--bronze);
+  border-radius: 8px;
+}
+
+.geno-parentage-candidate p {
+  flex-basis: 100%;
+}
+
+.geno-parentage-search {
+  position: relative;
+}
+
+.geno-parentage-search input {
+  min-height: 44px;
+  width: 100%;
+  padding: 6px 8px 6px 32px;
+  border: 1px solid var(--input);
+  border-radius: 6px;
+  background: var(--card);
+}
+
+.geno-parentage-search svg {
+  position: absolute;
+  left: 9px;
+  top: 14px;
+}
+
+.geno-parentage-history {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 0.875rem;
+}
+
+.geno-parentage-history > ol {
+  display: grid;
+  gap: 5px;
+  padding: 0;
+  list-style: none;
+}
+
+.geno-parentage-history > ol > li {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow-wrap: anywhere;
+}
+
+.geno-parentage-history summary {
+  min-height: 44px;
+  padding: 7px 8px;
+  cursor: pointer;
+}
+
+.geno-parentage-history time {
+  margin-inline-start: 6px;
+  color: var(--muted-foreground);
+}
+
+.geno-parentage-history details > p {
+  padding: 4px 8px 8px;
+}
+
+.geno-parentage-history-change {
+  display: grid;
+  gap: 6px;
+  padding: 4px 8px;
+}
+
 .atlas-genogram.geno-editor-expanded {
   position: fixed;
   inset: 0;

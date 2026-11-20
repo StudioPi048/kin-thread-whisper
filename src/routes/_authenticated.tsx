@@ -1,7 +1,9 @@
 import { profileQuery } from "@/lib/profile";
 import { MotionConfig } from "framer-motion";
 import { usePreferences, useApplyPreferences } from "@/components/account/use-preferences";
-import { readVisits } from "@/lib/recent-activity";
+import { readClientListPreferences, readPref, readVisits } from "@/lib/recent-activity";
+import { foldSearch, readClientNamePage } from "@/lib/client-index";
+import { workspaceDestination } from "@/lib/auth-destination";
 import { UnsavedProvider } from "@/components/unsaved/unsaved-guard";
 import { CurrentCaseStrip } from "@/components/archive/current-case-strip";
 import {
@@ -30,6 +32,7 @@ import {
   MoreHorizontal,
 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
+import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { GenealizWordmark } from "@/components/genealiz-wordmark";
@@ -44,9 +47,10 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
-  beforeLoad: async () => {
+  beforeLoad: async ({ location }) => {
     const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) throw redirect({ to: "/auth" });
+    if (error || !data.user)
+      throw redirect({ to: "/auth", search: { redirect: workspaceDestination(location.href) } });
     return { user: data.user };
   },
   component: AuthenticatedLayout,
@@ -59,7 +63,12 @@ const nav = [
   { to: "/app/genossociogramas", label: "Genossociogramas", shortLabel: "Mapas", icon: Network },
   { to: "/app/linha-do-tempo", label: "Linha do tempo", shortLabel: "Tempo", icon: History },
   { to: "/app/biblioteca", label: "Biblioteca", shortLabel: "Livros", icon: Library },
-  { to: "/app/ia-clinica", label: "Evidências e hipóteses", shortLabel: "IA", icon: Sparkles },
+  {
+    to: "/app/ia-clinica",
+    label: "Evidências e hipóteses",
+    shortLabel: "Evidências",
+    icon: Sparkles,
+  },
   { to: "/app/guia", label: "Guia", shortLabel: "Guia", icon: BookOpen },
   { to: "/app/configuracoes", label: "Configurações", shortLabel: "Ajustes", icon: Settings },
 ] as const;
@@ -67,14 +76,6 @@ const nav = [
 /** Itens fixos da navegação inferior (mobile). Os demais abrem na gaveta "Mais". */
 const mobilePrimary = nav.slice(0, 4);
 const mobileSecondary = nav.slice(4);
-
-function normalizeSearch(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .toLocaleLowerCase("pt-BR")
-    .trim();
-}
 
 function isNavActive(item: (typeof nav)[number], pathname: string) {
   return "exact" in item && item.exact ? pathname === item.to : pathname.startsWith(item.to);
@@ -88,9 +89,14 @@ function AuthenticatedLayout() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeSearch, setActiveSearch] = useState("");
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const prefsQ = usePreferences(user.id);
   useApplyPreferences(prefsQ.data);
+
+  useEffect(() => {
+    readClientListPreferences(user.id);
+  }, [user.id]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -110,30 +116,38 @@ function AuthenticatedLayout() {
 
   const { data: profile } = useQuery(profileQuery(user.id));
 
-  const { data: searchClients = [] } = useQuery({
-    queryKey: ["all-clients-search", user.id],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("clients")
-        .select("id, full_name, preferred_name")
-        .eq("status", "active");
-      return data ?? [];
-    },
-    enabled: isSearchOpen,
-  });
+  useEffect(() => {
+    if (!isSearchOpen) {
+      setSearchQuery("");
+      setActiveSearch("");
+      return;
+    }
+    const timer = window.setTimeout(() => setActiveSearch(searchQuery.trim()), 220);
+    return () => window.clearTimeout(timer);
+  }, [isSearchOpen, searchQuery]);
 
-  const searchResults = useMemo(() => {
-    if (!searchQuery.trim()) return searchClients;
-    const query = normalizeSearch(searchQuery);
-    return searchClients.filter((client) =>
-      normalizeSearch(`${client.full_name} ${client.preferred_name ?? ""}`).includes(query),
-    );
-  }, [searchClients, searchQuery]);
+  const isSearchReady = activeSearch === searchQuery.trim();
+  const clientSearch = useQuery({
+    queryKey: ["all-clients-search", user.id, activeSearch],
+    queryFn: () => readClientNamePage(user.id, activeSearch, 0, 12),
+    enabled: isSearchOpen && isSearchReady,
+    retry: false,
+    gcTime: 0,
+  });
+  const searchResults = isSearchReady ? (clientSearch.data?.clients ?? []) : [];
+  const pages = useMemo(
+    () => nav.filter((item) => foldSearch(item.label).includes(foldSearch(searchQuery))),
+    [searchQuery],
+  );
 
   async function handleSignOut() {
     await qc.cancelQueries();
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast.error("Não foi possível sair. Tente novamente.");
+      return;
+    }
     qc.clear();
-    await supabase.auth.signOut();
     navigate({ to: "/auth", replace: true });
   }
 
@@ -264,35 +278,43 @@ function AuthenticatedLayout() {
         <CommandInput
           value={searchQuery}
           onValueChange={setSearchQuery}
+          maxLength={96}
           placeholder="Buscar clientes ou páginas..."
         />
         <CommandList>
-          <CommandEmpty>
-            <span className="font-serif text-sm text-warm-gray italic">
-              Nenhum cliente ou página encontrado.
-            </span>
-          </CommandEmpty>
-          {nav
-            .filter(
-              (n) =>
-                !searchQuery.trim() ||
-                normalizeSearch(n.label).includes(normalizeSearch(searchQuery)),
-            )
-            .map((n) => (
-              <CommandItem
-                key={n.to}
-                value={`page:${n.to}`}
-                onSelect={() => {
-                  setIsSearchOpen(false);
-                  navigate({ to: n.to });
-                }}
-                className="flex items-center gap-2 px-3 py-2.5 text-[15px]"
-              >
-                <n.icon className="size-4" aria-hidden />
-                {n.label}
-                <span className="ml-auto text-[13px] text-muted-foreground">Página</span>
+          {isSearchReady && clientSearch.isSuccess && !clientSearch.data.clients.length && (
+            <CommandEmpty>Nenhum cliente ou página encontrado.</CommandEmpty>
+          )}
+          {(!isSearchReady || clientSearch.isFetching) && (
+            <p role="status" className="px-3 py-2 text-sm text-muted-foreground">
+              Buscando clientes…
+            </p>
+          )}
+          {isSearchReady && clientSearch.isError && (
+            <>
+              <p role="alert" className="px-3 py-2 text-sm text-destructive">
+                Não foi possível buscar os clientes.
+              </p>
+              <CommandItem value="retry" onSelect={() => void clientSearch.refetch()}>
+                Tentar novamente
               </CommandItem>
-            ))}
+            </>
+          )}
+          {pages.map((n) => (
+            <CommandItem
+              key={n.to}
+              value={`page:${n.to}`}
+              onSelect={() => {
+                setIsSearchOpen(false);
+                navigate({ to: n.to });
+              }}
+              className="flex items-center gap-2 px-3 py-2.5 text-[15px]"
+            >
+              <n.icon className="size-4" aria-hidden />
+              {n.label}
+              <span className="ml-auto text-[13px] text-muted-foreground">Página</span>
+            </CommandItem>
+          ))}
           {searchResults.map((c) => (
             <CommandItem
               key={c.id}
@@ -300,10 +322,16 @@ function AuthenticatedLayout() {
               onSelect={() => {
                 setIsSearchOpen(false);
                 const last = readVisits(user.id).find((v) => v.clientId === c.id);
+                const person =
+                  last?.tab === "genogram"
+                    ? readPref<{ personId?: string }>(user.id, `map-focus:${c.id}`, {}).personId
+                    : undefined;
                 navigate({
                   to: "/app/clientes/$clientId",
                   params: { clientId: c.id },
-                  search: last ? { tab: last.tab as "overview" } : {},
+                  search: last
+                    ? { tab: last.tab as "overview", ...(person ? { person } : {}) }
+                    : {},
                 });
               }}
               className="flex flex-col items-start gap-0.5 px-3 py-2.5"
@@ -316,6 +344,11 @@ function AuthenticatedLayout() {
               )}
             </CommandItem>
           ))}
+          {isSearchReady && clientSearch.data?.hasMore && (
+            <p className="px-3 py-2 text-sm text-muted-foreground">
+              Digite mais letras para refinar a busca.
+            </p>
+          )}
         </CommandList>
         <div className="flex items-center justify-between border-t border-border bg-secondary px-4 py-2">
           <span className="text-[11px] text-warm-gray">Clique ou Enter para abrir o dossiê</span>

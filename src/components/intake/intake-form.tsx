@@ -1,5 +1,6 @@
+import { IntakeEventProposal, type IntakeFinding } from "./intake-event-proposal";
 import { useUnsaved } from "@/components/unsaved/unsaved-guard";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, Save, Trash2, CheckCircle2 } from "lucide-react";
 
@@ -20,6 +21,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { KeyedDebounce } from "@/lib/unsaved";
 import {
   INTAKE_SECTIONS,
+  SECTION_FIELDS,
+  INTAKE_QUESTION_LABELS,
+  INTAKE_ANSWER_STATUS,
+  INTAKE_ANSWER_SOURCE,
+  answerContext,
+  findIntakeQuestions,
+  isIntakeSection,
+  type IntakeContextKey,
   calculateCompletion,
   sectionCompletion as calcSectionCompletion,
   INTAKE_UNKNOWN,
@@ -40,17 +49,42 @@ import {
   type IntakeFields,
 } from "./intake-save";
 
-type Props = { clientId: string; professionalId: string };
+type Props = { clientId: string; professionalId: string; focusQuestion?: string };
+const IntakeContext = createContext<{
+  draft: Partial<ClientIntake>;
+  update: (field: keyof ClientIntake, key: IntakeContextKey, value: string | null) => void;
+  propose: (finding: IntakeFinding) => void;
+} | null>(null);
 
 const AUTOSAVE_MS = 1200;
 
 export function IntakeForm(props: Props) {
-  return <CaseIntakeForm key={`${props.professionalId}:${props.clientId}`} {...props} />;
+  return (
+    <CaseIntakeForm
+      key={`${props.professionalId}:${props.clientId}:${props.focusQuestion ?? ""}`}
+      {...props}
+    />
+  );
 }
 
-function CaseIntakeForm({ clientId, professionalId }: Props) {
+function CaseIntakeForm({ clientId, professionalId, focusQuestion }: Props) {
   const qc = useQueryClient();
-  const [section, setSection] = useState<IntakeSectionId>("opening");
+  const linkedField = Object.keys(INTAKE_QUESTION_LABELS).find(
+    (field) => field === focusQuestion,
+  ) as keyof ClientIntake | undefined;
+  const linkedSection = linkedField
+    ? INTAKE_SECTIONS.find(({ id }) => SECTION_FIELDS[id].includes(linkedField))?.id
+    : undefined;
+  const [activeSection, setSection] = useState<IntakeSectionId | undefined>(linkedSection);
+  const [activeMode, setMode] = useState<"brief" | "full" | undefined>(
+    linkedField ? "full" : undefined,
+  );
+  const [search, setSearch] = useState("");
+  const [finding, setFinding] = useState<IntakeFinding>();
+  const [focusRequest, setFocusRequest] = useState<{ field: keyof ClientIntake } | undefined>(
+    linkedField ? { field: linkedField } : undefined,
+  );
+  const formRef = useRef<HTMLDivElement>(null);
   const [pending, setPending] = useState<IntakeEdits>({});
   const revision = useRef(0);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
@@ -69,6 +103,18 @@ function CaseIntakeForm({ clientId, professionalId }: Props) {
   const intake = intakeQuery.data;
   const draft = useMemo(() => ({ ...intake, ...intakePatch(intake, pending) }), [intake, pending]);
   const hasPending = Object.keys(pending).length > 0;
+  const mode = activeMode ?? (intake ? "full" : "brief");
+  const section =
+    activeSection ??
+    (isIntakeSection(intake?.last_section_edited) ? intake.last_section_edited : "opening");
+  const results = useMemo(() => findIntakeQuestions(search).slice(0, 10), [search]);
+
+  useEffect(() => {
+    if (!focusRequest) return;
+    const field = formRef.current?.querySelector(`[data-intake-field="${focusRequest.field}"]`);
+    const input = field?.querySelector<HTMLElement>("input, textarea, select");
+    input?.focus();
+  }, [focusRequest, intakeQuery.isLoading]);
 
   const save = useMutation({
     mutationFn: (edits: IntakeEdits) =>
@@ -132,9 +178,17 @@ function CaseIntakeForm({ clientId, professionalId }: Props) {
   });
   useEffect(() => () => queue.discard(), [queue]);
 
-  const update = (patch: Parameters<typeof captureIntakeEdits>[0]) => {
+  const update = (patch: Parameters<typeof captureIntakeEdits>[0], field?: keyof ClientIntake) => {
+    if (activeMode === undefined) setMode(mode);
+    const lastField = field ?? Object.keys(patch).find((key) => !key.includes(":"));
+    const lastSection =
+      mode === "brief"
+        ? lastField && ["clan_important_events", "clan_bonds_ruptures"].includes(lastField)
+          ? "clan_narratives"
+          : "opening"
+        : section;
     const edits = captureIntakeEdits(
-      { ...patch, last_section_edited: section },
+      { ...patch, last_section_edited: lastSection, last_field_edited: lastField },
       ++revision.current,
     );
     setPending((current) => ({ ...current, ...edits }));
@@ -144,6 +198,16 @@ function CaseIntakeForm({ clientId, professionalId }: Props) {
   const completion = calculateCompletion(draft);
   const { filled, total } = calcSectionCompletion(draft, section);
   const sectionCompletion = Math.round((filled / total) * 100);
+  const selectQuestion = (next: IntakeSectionId, field?: keyof ClientIntake) => {
+    setMode("full");
+    setSection(next);
+    setSearch("");
+    if (field) setFocusRequest({ field });
+  };
+  const lastQuestion = intake?.last_field_edited
+    ? (Object.keys(INTAKE_QUESTION_LABELS).find((field) => field === intake.last_field_edited) as
+        keyof ClientIntake | undefined)
+    : undefined;
 
   if (intakeQuery.isLoading) {
     return (
@@ -168,136 +232,286 @@ function CaseIntakeForm({ clientId, professionalId }: Props) {
   }
 
   return (
-    <div className="grid min-w-0 gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
-      {/* Sidebar */}
-      <aside className="space-y-4">
-        <div className="rounded-lg border border-border bg-card p-4">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-2 text-sm">
-            <p className="font-semibold text-primary">Preenchimento total</p>
-            <span className="font-semibold tabular-nums text-primary">{completion}%</span>
-          </div>
-          <Progress value={completion} aria-label="Preenchimento total" className="mt-3 h-1.5" />
-          <p role="status" className="mt-3 flex items-center gap-1.5 text-sm text-muted-foreground">
-            {save.isPending ? (
-              <>
-                <Loader2 aria-hidden className="size-3 animate-spin" /> Salvando…
-              </>
-            ) : save.isError ? (
-              <span className="text-clinical-critical">
-                Não foi possível salvar. O texto continua aqui.
-              </span>
-            ) : hasPending ? (
-              <span className="text-clinical-warning">Alterações pendentes</span>
-            ) : savedAt ? (
-              <>
-                <CheckCircle2 aria-hidden className="size-3 text-clinical-positive" /> Salvo às{" "}
-                {savedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-              </>
-            ) : (
-              <>Salvamento automático ativo</>
-            )}
-          </p>
-        </div>
-
-        <label className="grid min-w-0 gap-1.5 text-sm font-medium text-foreground lg:hidden">
-          Seção da anamnese
-          <select
-            className="min-h-11 w-full min-w-0 rounded-md border border-input bg-card px-3 text-base"
-            value={section}
-            onChange={(event) => setSection(event.target.value as IntakeSectionId)}
+    <div className="min-w-0 space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-3 rounded-lg border border-border bg-card p-4">
+        <div role="group" aria-label="Modo da anamnese" className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            aria-pressed={mode === "brief"}
+            className="min-h-11"
+            variant={mode === "brief" ? "default" : "ghost"}
+            onClick={() => {
+              setMode("brief");
+              setSection("opening");
+            }}
           >
-            {INTAKE_SECTIONS.map(({ id, label }) => (
-              <option key={id} value={id}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <nav
-          aria-label="Seções da anamnese"
-          className="hidden rounded-lg border border-border bg-card p-2 lg:block"
-        >
-          {INTAKE_SECTIONS.map((s) => {
-            const sc = calcSectionCompletion(draft, s.id);
-            return (
-              <button
-                key={s.id}
-                type="button"
-                aria-current={section === s.id ? "step" : undefined}
-                onClick={() => setSection(s.id)}
-                className={`block min-h-11 w-full rounded-md px-3 py-2 text-left text-sm transition ${
-                  section === s.id
-                    ? "bg-accent text-accent-foreground font-medium"
-                    : "text-foreground hover:bg-accent"
-                }`}
-              >
-                <span className="flex items-center justify-between gap-2">
-                  <span>{s.label}</span>
-                  <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
-                    {sc.filled}/{sc.total}
-                  </span>
-                </span>
-              </button>
-            );
-          })}
-        </nav>
-      </aside>
-
-      {/* Content */}
-      <div className="min-w-0 space-y-6">
-        <header className="min-w-0 space-y-3">
-          <h2 className="text-balance font-serif text-2xl text-primary">
-            {INTAKE_SECTIONS.find((s) => s.id === section)?.label}
-          </h2>
-          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-3 text-sm sm:flex sm:flex-wrap">
-            <label className="col-span-2 grid min-w-0 gap-1.5 font-medium text-foreground">
-              <span>Origem da informação</span>
-              <select
-                className="min-h-11 w-full min-w-0 rounded-md border border-input bg-card px-3 text-base font-normal sm:w-auto sm:text-sm"
-                value={
-                  ((draft.section_sources as Record<string, string> | null) ?? {})[section] ?? ""
-                }
-                onChange={(event) => update({ [`source:${section}`]: event.target.value || null })}
-              >
-                <option value="">Não registrada</option>
-                <option value="cliente">Relato do cliente</option>
-                <option value="familiar">Relato de familiar</option>
-                <option value="documento">Documento</option>
-                <option value="observacao">Observação da profissional</option>
-                <option value="misto">Fontes mistas</option>
-              </select>
-            </label>
-            <span className="self-center text-muted-foreground">
-              {sectionCompletion}% desta seção
-            </span>
-            <Button
-              size="sm"
-              variant="outline"
-              className="min-h-11 sm:ml-auto"
-              onClick={() => void queue.flush().catch(() => {})}
-              disabled={save.isPending || !hasPending}
-            >
-              <Save aria-hidden className="size-4" />{" "}
-              {save.isError ? "Tentar salvar de novo" : "Salvar agora"}
-            </Button>
-          </div>
-        </header>
-
-        <div className="min-w-0 rounded-lg border border-border bg-card p-4 sm:p-6">
-          {section === "opening" && <SectionOpening draft={draft} update={update} />}
-          {section === "personal" && <SectionPersonal draft={draft} update={update} />}
-          {section === "relationships" && <SectionRelationships draft={draft} update={update} />}
-          {section === "body" && <SectionBody draft={draft} update={update} />}
-          {section === "origins" && <SectionOrigins draft={draft} update={update} />}
-          {section === "subjective" && <SectionSubjective draft={draft} update={update} />}
-          {section === "siblings" && <SectionSiblings draft={draft} update={update} />}
-          {section === "professional" && <SectionProfessional draft={draft} update={update} />}
-          {section === "clan_checklist" && <SectionClanChecklist draft={draft} update={update} />}
-          {section === "clan_narratives" && <SectionClanNarratives draft={draft} update={update} />}
-          {section === "additional" && <SectionAdditional draft={draft} update={update} />}
+            Primeira sessão
+          </Button>
+          <Button
+            type="button"
+            aria-pressed={mode === "full"}
+            className="min-h-11"
+            variant={mode === "full" ? "default" : "ghost"}
+            onClick={() => setMode("full")}
+          >
+            Anamnese completa
+          </Button>
         </div>
+        <label className="grid w-full gap-1.5 text-sm font-medium sm:max-w-xs">
+          Buscar pergunta
+          <Input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Ex.: gestação, profissão"
+            className="min-h-11 text-base"
+          />
+        </label>
+        {lastQuestion && isIntakeSection(intake?.last_section_edited) && (
+          <Button
+            variant="outline"
+            className="min-h-11"
+            type="button"
+            onClick={() =>
+              selectQuestion(intake.last_section_edited as IntakeSectionId, lastQuestion)
+            }
+          >
+            Retomar última pergunta
+          </Button>
+        )}
+        {search.trim() && (
+          <div
+            className="basis-full border-t border-border pt-2"
+            aria-label="Perguntas encontradas"
+          >
+            {results.length ? (
+              <ul className="grid gap-x-4 sm:grid-cols-2">
+                {results.map(({ section, field, label }) => (
+                  <li key={field ?? section.id}>
+                    <button
+                      type="button"
+                      className="min-h-11 w-full rounded-md px-2 py-1 text-left text-sm hover:bg-accent"
+                      onClick={() => selectQuestion(section.id, field)}
+                    >
+                      <strong className="block text-foreground">{label}</strong>
+                      {field && <span className="text-muted-foreground">{section.label}</span>}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p role="status" className="text-sm text-muted-foreground">
+                Nenhuma pergunta encontrada.
+              </p>
+            )}
+          </div>
+        )}
       </div>
+      <IntakeContext.Provider
+        value={{
+          draft,
+          update: (field, key, value) =>
+            update(
+              {
+                [`context:${field}:${key}`]: value,
+              },
+              field,
+            ),
+          propose: setFinding,
+        }}
+      >
+        <div ref={formRef} className="grid min-w-0 gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
+          {/* Sidebar */}
+          <aside className="space-y-4">
+            <div className="rounded-lg border border-border bg-card p-4">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-2 text-sm">
+                <p className="font-semibold text-primary">Preenchimento total</p>
+                <span className="font-semibold tabular-nums text-primary">{completion}%</span>
+              </div>
+              <Progress
+                value={completion}
+                aria-label="Preenchimento total"
+                className="mt-3 h-1.5"
+              />
+              <p
+                role="status"
+                className="mt-3 flex items-center gap-1.5 text-sm text-muted-foreground"
+              >
+                {save.isPending ? (
+                  <>
+                    <Loader2 aria-hidden className="size-3 animate-spin" /> Salvando…
+                  </>
+                ) : save.isError ? (
+                  <span className="text-clinical-critical">
+                    Não foi possível salvar. O texto continua aqui.
+                  </span>
+                ) : hasPending ? (
+                  <span className="text-clinical-warning">Alterações pendentes</span>
+                ) : savedAt ? (
+                  <>
+                    <CheckCircle2 aria-hidden className="size-3 text-clinical-positive" /> Salvo às{" "}
+                    {savedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                  </>
+                ) : (
+                  <>Salvamento automático ativo</>
+                )}
+              </p>
+            </div>
+
+            {mode === "full" && (
+              <>
+                <label className="grid min-w-0 gap-1.5 text-sm font-medium text-foreground lg:hidden">
+                  Seção da anamnese
+                  <select
+                    className="min-h-11 w-full min-w-0 rounded-md border border-input bg-card px-3 text-base"
+                    value={section}
+                    onChange={(event) => setSection(event.target.value as IntakeSectionId)}
+                  >
+                    {INTAKE_SECTIONS.map(({ id, label }) => (
+                      <option key={id} value={id}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <nav
+                  aria-label="Seções da anamnese"
+                  className="hidden rounded-lg border border-border bg-card p-2 lg:block"
+                >
+                  {INTAKE_SECTIONS.map((s) => {
+                    const sc = calcSectionCompletion(draft, s.id);
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        aria-current={section === s.id ? "step" : undefined}
+                        onClick={() => setSection(s.id)}
+                        className={`block min-h-11 w-full rounded-md px-3 py-2 text-left text-sm transition ${
+                          section === s.id
+                            ? "bg-accent text-accent-foreground font-medium"
+                            : "text-foreground hover:bg-accent"
+                        }`}
+                      >
+                        <span className="flex items-center justify-between gap-2">
+                          <span>{s.label}</span>
+                          <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
+                            {sc.filled}/{sc.total}
+                          </span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </nav>
+              </>
+            )}
+          </aside>
+
+          {/* Content */}
+          <div className="min-w-0 space-y-6">
+            <header className="min-w-0 space-y-3">
+              <h2 className="text-balance font-serif text-2xl text-primary">
+                {mode === "brief"
+                  ? "Pontos de partida"
+                  : INTAKE_SECTIONS.find((s) => s.id === section)?.label}
+              </h2>
+              <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-3 text-sm sm:flex sm:flex-wrap">
+                {mode === "full" && (
+                  <label className="col-span-2 grid min-w-0 gap-1.5 font-medium text-foreground">
+                    <span>Origem da informação</span>
+                    <select
+                      className="min-h-11 w-full min-w-0 rounded-md border border-input bg-card px-3 text-base font-normal sm:w-auto sm:text-sm"
+                      value={
+                        ((draft.section_sources as Record<string, string> | null) ?? {})[section] ??
+                        ""
+                      }
+                      onChange={(event) =>
+                        update({ [`source:${section}`]: event.target.value || null })
+                      }
+                    >
+                      <option value="">Não registrada</option>
+                      <option value="cliente">Relato do cliente</option>
+                      <option value="familiar">Relato de familiar</option>
+                      <option value="documento">Documento</option>
+                      <option value="observacao">Observação da profissional</option>
+                      <option value="misto">Fontes mistas</option>
+                    </select>
+                  </label>
+                )}
+                {mode === "full" && (
+                  <span className="self-center text-muted-foreground">
+                    {sectionCompletion}% desta seção
+                  </span>
+                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="min-h-11 sm:ml-auto"
+                  onClick={() => void queue.flush().catch(() => {})}
+                  disabled={save.isPending || !hasPending}
+                >
+                  <Save aria-hidden className="size-4" />{" "}
+                  {save.isError ? "Tentar salvar de novo" : "Salvar agora"}
+                </Button>
+              </div>
+            </header>
+
+            <div className="min-w-0 rounded-lg border border-border bg-card p-4 sm:p-6">
+              {mode === "brief" ? (
+                <div className="space-y-5">
+                  <AreaField
+                    label={INTAKE_QUESTION_LABELS.presenting_intention}
+                    field="presenting_intention"
+                    draft={draft}
+                    update={update}
+                  />
+                  <AreaField
+                    label={INTAKE_QUESTION_LABELS.clan_important_events}
+                    field="clan_important_events"
+                    draft={draft}
+                    update={update}
+                  />
+                  <AreaField
+                    label={INTAKE_QUESTION_LABELS.clan_bonds_ruptures}
+                    field="clan_bonds_ruptures"
+                    draft={draft}
+                    update={update}
+                  />
+                </div>
+              ) : (
+                <>
+                  {section === "opening" && <SectionOpening draft={draft} update={update} />}
+                  {section === "personal" && <SectionPersonal draft={draft} update={update} />}
+                  {section === "relationships" && (
+                    <SectionRelationships draft={draft} update={update} />
+                  )}
+                  {section === "body" && <SectionBody draft={draft} update={update} />}
+                  {section === "origins" && <SectionOrigins draft={draft} update={update} />}
+                  {section === "subjective" && <SectionSubjective draft={draft} update={update} />}
+                  {section === "siblings" && <SectionSiblings draft={draft} update={update} />}
+                  {section === "professional" && (
+                    <SectionProfessional draft={draft} update={update} />
+                  )}
+                  {section === "clan_checklist" && (
+                    <SectionClanChecklist draft={draft} update={update} />
+                  )}
+                  {section === "clan_narratives" && (
+                    <SectionClanNarratives draft={draft} update={update} />
+                  )}
+                  {section === "additional" && <SectionAdditional draft={draft} update={update} />}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </IntakeContext.Provider>
+      {finding && (
+        <IntakeEventProposal
+          clientId={clientId}
+          finding={finding}
+          onClose={() => setFinding(undefined)}
+        />
+      )}
     </div>
   );
 }
@@ -316,6 +530,7 @@ function Field({
   id,
   onUnknown,
   isUnknown,
+  field,
 }: {
   label: string;
   hint?: string;
@@ -323,9 +538,10 @@ function Field({
   id?: string;
   onUnknown?: () => void;
   isUnknown?: boolean;
+  field?: keyof ClientIntake;
 }) {
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1.5 scroll-mt-5" data-intake-field={field}>
       <div className="flex items-center justify-between gap-2">
         <Label htmlFor={id} className="text-[15px] text-foreground">
           {label}
@@ -343,7 +559,92 @@ function Field({
       </div>
       {children}
       {hint && <p className="text-sm text-muted-foreground">{hint}</p>}
+      {field && <AnswerMetadata field={field} label={label} />}
     </div>
+  );
+}
+
+function AnswerMetadata({ field, label }: { field: keyof ClientIntake; label: string }) {
+  const context = useContext(IntakeContext);
+  if (!context) return null;
+  const metadata = answerContext(context.draft, field);
+  const { status, source, note } = metadata;
+  const answer = context.draft[field];
+  const eligible =
+    [
+      "presenting_intention",
+      "clan_important_events",
+      "clan_bonds_ruptures",
+      "clan_repeated_stories",
+    ].includes(field) &&
+    typeof answer === "string" &&
+    answer.trim() !== "" &&
+    answer !== INTAKE_UNKNOWN &&
+    status !== "unknown" &&
+    status !== "not_applicable";
+  const statuses = Object.entries(INTAKE_ANSWER_STATUS);
+  const sources = Object.entries(INTAKE_ANSWER_SOURCE);
+  const control = "min-h-11 min-w-0 rounded-md border border-input bg-card px-3 text-base";
+  return (
+    <details className="text-sm text-muted-foreground">
+      <summary
+        className="min-h-11 cursor-pointer py-3 font-medium"
+        aria-label={`Fonte e situação · ${label}`}
+      >
+        Fonte e situação
+        {status ? ` · ${statuses.find(([key]) => key === status)?.[1] ?? status}` : ""}
+      </summary>
+      <div className="grid gap-3 rounded-md border border-border p-3 sm:grid-cols-2">
+        <label className="grid min-w-0 gap-1.5">
+          Situação
+          <select
+            className={control}
+            value={status ?? ""}
+            onChange={(e) => context.update(field, "status", e.target.value || null)}
+          >
+            <option value="">Sem marcação</option>
+            {statuses.map(([key, text]) => (
+              <option key={key} value={key}>
+                {text}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="grid min-w-0 gap-1.5">
+          Fonte
+          <select
+            className={control}
+            value={source ?? ""}
+            onChange={(e) => context.update(field, "source", e.target.value || null)}
+          >
+            <option value="">Não registrada</option>
+            {sources.map(([key, text]) => (
+              <option key={key} value={key}>
+                {text}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="grid min-w-0 gap-1.5 sm:col-span-2">
+          Referência ou observação
+          <Textarea
+            rows={2}
+            value={note ?? ""}
+            onChange={(e) => context.update(field, "note", e.target.value || null)}
+          />
+        </label>
+        {eligible && (
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-11 justify-self-start sm:col-span-2"
+            onClick={() => context.propose({ field, label, text: answer, context: metadata })}
+          >
+            Propor acontecimento
+          </Button>
+        )}
+      </div>
+    </details>
   );
 }
 
@@ -361,6 +662,7 @@ function TextField(props: {
   return (
     <Field
       id={id}
+      field={props.field}
       label={props.label}
       hint={props.hint}
       isUnknown={value === INTAKE_UNKNOWN}
@@ -405,6 +707,7 @@ function AreaField(props: {
   return (
     <Field
       id={id}
+      field={props.field}
       label={props.label}
       hint={props.hint}
       isUnknown={value === INTAKE_UNKNOWN}
@@ -434,7 +737,7 @@ function SectionOpening({ draft, update }: SectionProps) {
         ponto de partida da leitura psicogenealógica.
       </p>
       <AreaField
-        label="Intenção do atendimento — o que ele(a) quer ser visto?"
+        label={INTAKE_QUESTION_LABELS.presenting_intention}
         field="presenting_intention"
         rows={8}
         draft={draft}
@@ -442,7 +745,7 @@ function SectionOpening({ draft, update }: SectionProps) {
         hint="Dores, desequilíbrios, temas recorrentes. Cada análise nasce de um objetivo claro."
       />
       <AreaField
-        label="Observações sobre a grafia / assinatura"
+        label={INTAKE_QUESTION_LABELS.signature_notes}
         field="signature_notes"
         rows={3}
         draft={draft}
@@ -456,30 +759,45 @@ function SectionOpening({ draft, update }: SectionProps) {
 function SectionPersonal({ draft, update }: SectionProps) {
   return (
     <div className="grid gap-5 md:grid-cols-2">
-      <TextField label="Nome completo" field="full_name" draft={draft} update={update} />
-      <TextField label="Quem escolheu o nome" field="name_chooser" draft={draft} update={update} />
+      <TextField
+        label={INTAKE_QUESTION_LABELS.full_name}
+        field="full_name"
+        draft={draft}
+        update={update}
+      />
+      <TextField
+        label={INTAKE_QUESTION_LABELS.name_chooser}
+        field="name_chooser"
+        draft={draft}
+        update={update}
+      />
       <AreaField
-        label="Intenção do nome"
+        label={INTAKE_QUESTION_LABELS.name_intention}
         field="name_intention"
         rows={2}
         draft={draft}
         update={update}
       />
       <AreaField
-        label="Repetição do nome no clã"
+        label={INTAKE_QUESTION_LABELS.name_repetition_in_family}
         field="name_repetition_in_family"
         rows={2}
         draft={draft}
         update={update}
       />
       <TextField
-        label="Data, local e hora de nascimento"
+        label={INTAKE_QUESTION_LABELS.birth_datetime}
         field="birth_datetime"
         type="datetime-local"
         draft={draft}
         update={update}
       />
-      <TextField label="Local de nascimento" field="birth_place" draft={draft} update={update} />
+      <TextField
+        label={INTAKE_QUESTION_LABELS.birth_place}
+        field="birth_place"
+        draft={draft}
+        update={update}
+      />
       <Field label="Sexo">
         <Select value={(draft.gender as string) ?? ""} onValueChange={(v) => update({ gender: v })}>
           <SelectTrigger>
@@ -492,11 +810,36 @@ function SectionPersonal({ draft, update }: SectionProps) {
           </SelectContent>
         </Select>
       </Field>
-      <TextField label="Religião" field="religion" draft={draft} update={update} />
-      <TextField label="Escolaridade" field="education" draft={draft} update={update} />
-      <TextField label="Profissão" field="profession" draft={draft} update={update} />
-      <TextField label="Etnia materna" field="ethnicity_maternal" draft={draft} update={update} />
-      <TextField label="Etnia paterna" field="ethnicity_paternal" draft={draft} update={update} />
+      <TextField
+        label={INTAKE_QUESTION_LABELS.religion}
+        field="religion"
+        draft={draft}
+        update={update}
+      />
+      <TextField
+        label={INTAKE_QUESTION_LABELS.education}
+        field="education"
+        draft={draft}
+        update={update}
+      />
+      <TextField
+        label={INTAKE_QUESTION_LABELS.profession}
+        field="profession"
+        draft={draft}
+        update={update}
+      />
+      <TextField
+        label={INTAKE_QUESTION_LABELS.ethnicity_maternal}
+        field="ethnicity_maternal"
+        draft={draft}
+        update={update}
+      />
+      <TextField
+        label={INTAKE_QUESTION_LABELS.ethnicity_paternal}
+        field="ethnicity_paternal"
+        draft={draft}
+        update={update}
+      />
     </div>
   );
 }
@@ -526,14 +869,14 @@ function SectionRelationships({ draft, update }: SectionProps) {
           </Select>
         </Field>
         <TextField
-          label="Data do casamento / marco"
+          label={INTAKE_QUESTION_LABELS.union_date}
           field="union_date"
           type="date"
           draft={draft}
           update={update}
         />
         <TextField
-          label="Nº de relacionamentos / separações"
+          label={INTAKE_QUESTION_LABELS.relationships_count}
           field="relationships_count"
           type="number"
           draft={draft}
@@ -687,7 +1030,7 @@ function SectionBody({ draft, update }: SectionProps) {
         )}
       />
       <AreaField
-        label="Pintas / manchas grandes"
+        label={INTAKE_QUESTION_LABELS.moles_notes}
         field="moles_notes"
         draft={draft}
         update={update}
@@ -695,7 +1038,7 @@ function SectionBody({ draft, update }: SectionProps) {
         hint="Local, e se há similar em outro membro da família."
       />
       <AreaField
-        label="Cicatrizes"
+        label={INTAKE_QUESTION_LABELS.scars_notes}
         field="scars_notes"
         draft={draft}
         update={update}
@@ -704,27 +1047,27 @@ function SectionBody({ draft, update }: SectionProps) {
       />
       <div className="grid gap-4 md:grid-cols-2">
         <TextField
-          label="Alargador (quando colocou)"
+          label={INTAKE_QUESTION_LABELS.ear_stretcher}
           field="ear_stretcher"
           draft={draft}
           update={update}
         />
         <TextField
-          label="Piercing (quando colocou)"
+          label={INTAKE_QUESTION_LABELS.piercings}
           field="piercings"
           draft={draft}
           update={update}
         />
       </div>
       <AreaField
-        label="Falta de membros"
+        label={INTAKE_QUESTION_LABELS.missing_limbs}
         field="missing_limbs"
         draft={draft}
         update={update}
         rows={2}
       />
       <AreaField
-        label="Membros supranumerários ou de lateralidade invertida"
+        label={INTAKE_QUESTION_LABELS.extra_or_inverted_limbs}
         field="extra_or_inverted_limbs"
         draft={draft}
         update={update}
@@ -738,21 +1081,21 @@ function SectionOrigins({ draft, update }: SectionProps) {
   return (
     <div className="space-y-5">
       <AreaField
-        label="Concepção — programada? notícia no clã?"
+        label={INTAKE_QUESTION_LABELS.conception_notes}
         field="conception_notes"
         draft={draft}
         update={update}
         rows={4}
       />
       <AreaField
-        label="Gestação — preocupações, notícias impactantes, doenças, quedas"
+        label={INTAKE_QUESTION_LABELS.pregnancy_notes}
         field="pregnancy_notes"
         draft={draft}
         update={update}
         rows={4}
       />
       <AreaField
-        label="Parto — tipo, duração, complicações"
+        label={INTAKE_QUESTION_LABELS.birth_notes}
         field="birth_notes"
         draft={draft}
         update={update}
@@ -763,42 +1106,42 @@ function SectionOrigins({ draft, update }: SectionProps) {
         <p className="mb-3 text-sm font-semibold text-bronze">Condições dos pais na gestação</p>
         <div className="grid gap-4 md:grid-cols-2">
           <AreaField
-            label="Financeiro — mãe"
+            label={INTAKE_QUESTION_LABELS.parents_financial_mother}
             field="parents_financial_mother"
             rows={2}
             draft={draft}
             update={update}
           />
           <AreaField
-            label="Financeiro — pai"
+            label={INTAKE_QUESTION_LABELS.parents_financial_father}
             field="parents_financial_father"
             rows={2}
             draft={draft}
             update={update}
           />
           <AreaField
-            label="Emocional — mãe"
+            label={INTAKE_QUESTION_LABELS.parents_emotional_mother}
             field="parents_emotional_mother"
             rows={2}
             draft={draft}
             update={update}
           />
           <AreaField
-            label="Emocional — pai"
+            label={INTAKE_QUESTION_LABELS.parents_emotional_father}
             field="parents_emotional_father"
             rows={2}
             draft={draft}
             update={update}
           />
           <AreaField
-            label="Profissional — mãe"
+            label={INTAKE_QUESTION_LABELS.parents_professional_mother}
             field="parents_professional_mother"
             rows={2}
             draft={draft}
             update={update}
           />
           <AreaField
-            label="Profissional — pai"
+            label={INTAKE_QUESTION_LABELS.parents_professional_father}
             field="parents_professional_father"
             rows={2}
             draft={draft}
@@ -808,7 +1151,7 @@ function SectionOrigins({ draft, update }: SectionProps) {
       </div>
 
       <AreaField
-        label="Contexto histórico / social no nascimento"
+        label={INTAKE_QUESTION_LABELS.historical_context_at_birth}
         field="historical_context_at_birth"
         draft={draft}
         update={update}
@@ -823,28 +1166,28 @@ function SectionSubjective({ draft, update }: SectionProps) {
   return (
     <div className="space-y-5">
       <AreaField
-        label="Missão de vida (primeiro pensamento)"
+        label={INTAKE_QUESTION_LABELS.life_mission}
         field="life_mission"
         draft={draft}
         update={update}
         rows={4}
       />
       <AreaField
-        label="Traumas de infância"
+        label={INTAKE_QUESTION_LABELS.childhood_traumas}
         field="childhood_traumas"
         draft={draft}
         update={update}
         rows={5}
       />
       <AreaField
-        label="Profissão dos sonhos na infância"
+        label={INTAKE_QUESTION_LABELS.childhood_dream_profession}
         field="childhood_dream_profession"
         draft={draft}
         update={update}
         rows={3}
       />
       <AreaField
-        label="Padrões que não gosta em si"
+        label={INTAKE_QUESTION_LABELS.disliked_patterns}
         field="disliked_patterns"
         draft={draft}
         update={update}
@@ -859,7 +1202,7 @@ function SectionSiblings({ draft, update }: SectionProps) {
   return (
     <div className="space-y-6">
       <AreaField
-        label="Como foi/é a relação com os irmãos"
+        label={INTAKE_QUESTION_LABELS.siblings_relationship}
         field="siblings_relationship"
         draft={draft}
         update={update}
@@ -906,42 +1249,42 @@ function SectionSiblings({ draft, update }: SectionProps) {
         )}
       />
       <AreaField
-        label="Falecimentos de irmãos antes/depois do cliente (inclusive abortos e natimortos)"
+        label={INTAKE_QUESTION_LABELS.siblings_deaths_notes}
         field="siblings_deaths_notes"
         draft={draft}
         update={update}
         rows={4}
       />
       <AreaField
-        label="Falecimentos precoces / abortos de irmãos dos pais"
+        label={INTAKE_QUESTION_LABELS.parents_siblings_deaths}
         field="parents_siblings_deaths"
         draft={draft}
         update={update}
         rows={4}
       />
       <AreaField
-        label="Relação com os pais — segurança, apoio nas decisões"
+        label={INTAKE_QUESTION_LABELS.parents_relationship}
         field="parents_relationship"
         draft={draft}
         update={update}
         rows={4}
       />
       <AreaField
-        label="Eventos marcantes no ambiente escolar"
+        label={INTAKE_QUESTION_LABELS.school_events}
         field="school_events"
         draft={draft}
         update={update}
         rows={4}
       />
       <AreaField
-        label="Abortos do(a) cliente — quantos e em que idades"
+        label={INTAKE_QUESTION_LABELS.own_abortions}
         field="own_abortions"
         draft={draft}
         update={update}
         rows={3}
       />
       <AreaField
-        label="Enfermidades e acidentes — breve relato com idades"
+        label={INTAKE_QUESTION_LABELS.own_illnesses}
         field="own_illnesses"
         draft={draft}
         update={update}
@@ -993,7 +1336,7 @@ function SectionProfessional({ draft, update }: SectionProps) {
         )}
       />
       <AreaField
-        label="Formação acadêmica (seja específico)"
+        label={INTAKE_QUESTION_LABELS.formal_education}
         field="formal_education"
         draft={draft}
         update={update}
@@ -1020,7 +1363,7 @@ function SectionProfessional({ draft, update }: SectionProps) {
         </Select>
       </Field>
       <AreaField
-        label="Perspectiva futura"
+        label={INTAKE_QUESTION_LABELS.future_perspective}
         field="future_perspective"
         draft={draft}
         update={update}
@@ -1070,7 +1413,7 @@ function SectionClanChecklist({ draft, update }: SectionProps) {
         ))}
       </div>
       <AreaField
-        label="Outras observações"
+        label={INTAKE_QUESTION_LABELS.clan_other_observations}
         field="clan_other_observations"
         draft={draft}
         update={update}
@@ -1084,7 +1427,7 @@ function SectionClanNarratives({ draft, update }: SectionProps) {
   return (
     <div className="space-y-5">
       <AreaField
-        label="Eventos importantes ocorridos ou contados na família"
+        label={INTAKE_QUESTION_LABELS.clan_important_events}
         field="clan_important_events"
         draft={draft}
         update={update}
@@ -1092,7 +1435,7 @@ function SectionClanNarratives({ draft, update }: SectionProps) {
         hint="Guerras, perseguições, migrações, mortes traumáticas, disputas de herança, síndromes, infertilidade…"
       />
       <AreaField
-        label="Ligações — aproximação, intensidade, afastamento, ódio, repúdio"
+        label={INTAKE_QUESTION_LABELS.clan_bonds_ruptures}
         field="clan_bonds_ruptures"
         draft={draft}
         update={update}
@@ -1100,14 +1443,14 @@ function SectionClanNarratives({ draft, update }: SectionProps) {
         hint="Casamentos entre primos, histórias de amor marcantes, ressentimentos, parentes afastados."
       />
       <AreaField
-        label="Histórias contadas repetidamente / através de gerações"
+        label={INTAKE_QUESTION_LABELS.clan_repeated_stories}
         field="clan_repeated_stories"
         draft={draft}
         update={update}
         rows={5}
       />
       <AreaField
-        label="Segredos — o que se sabe, supõe ou intui que não é comentado"
+        label={INTAKE_QUESTION_LABELS.clan_secrets}
         field="clan_secrets"
         draft={draft}
         update={update}
@@ -1123,54 +1466,54 @@ function SectionAdditional({ draft, update }: SectionProps) {
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2">
         <AreaField
-          label="Brincadeiras preferidas na infância"
+          label={INTAKE_QUESTION_LABELS.favorite_childhood_games}
           field="favorite_childhood_games"
           draft={draft}
           update={update}
           rows={3}
         />
         <AreaField
-          label="Medos na infância"
+          label={INTAKE_QUESTION_LABELS.childhood_fears}
           field="childhood_fears"
           draft={draft}
           update={update}
           rows={3}
         />
         <AreaField
-          label="Sonhos / pesadelos reiterados"
+          label={INTAKE_QUESTION_LABELS.recurring_dreams}
           field="recurring_dreams"
           draft={draft}
           update={update}
           rows={3}
         />
         <AreaField
-          label="Contos de fada / histórias marcantes"
+          label={INTAKE_QUESTION_LABELS.marking_fairy_tales}
           field="marking_fairy_tales"
           draft={draft}
           update={update}
           rows={3}
         />
         <TextField
-          label="Agenesia de dente (qual?)"
+          label={INTAKE_QUESTION_LABELS.dental_agenesis}
           field="dental_agenesis"
           draft={draft}
           update={update}
         />
         <TextField
-          label="Canal em algum dente (qual?)"
+          label={INTAKE_QUESTION_LABELS.dental_root_canal}
           field="dental_root_canal"
           draft={draft}
           update={update}
         />
         <AreaField
-          label="Herança cultural materna"
+          label={INTAKE_QUESTION_LABELS.cultural_heritage_maternal}
           field="cultural_heritage_maternal"
           draft={draft}
           update={update}
           rows={4}
         />
         <AreaField
-          label="Herança cultural paterna"
+          label={INTAKE_QUESTION_LABELS.cultural_heritage_paternal}
           field="cultural_heritage_paternal"
           draft={draft}
           update={update}
@@ -1182,56 +1525,56 @@ function SectionAdditional({ draft, update }: SectionProps) {
         <p className="mb-3 text-sm font-semibold text-bronze">Átomo social</p>
         <div className="grid gap-4 md:grid-cols-2">
           <AreaField
-            label="Objeto marcante (nome e significado)"
+            label={INTAKE_QUESTION_LABELS.social_atom_object}
             field="social_atom_object"
             draft={draft}
             update={update}
             rows={2}
           />
           <AreaField
-            label="Livro marcante"
+            label={INTAKE_QUESTION_LABELS.social_atom_book}
             field="social_atom_book"
             draft={draft}
             update={update}
             rows={2}
           />
           <AreaField
-            label="Animal de estimação"
+            label={INTAKE_QUESTION_LABELS.social_atom_pet}
             field="social_atom_pet"
             draft={draft}
             update={update}
             rows={2}
           />
           <AreaField
-            label="Momento histórico marcante"
+            label={INTAKE_QUESTION_LABELS.social_atom_historic_moment}
             field="social_atom_historic_moment"
             draft={draft}
             update={update}
             rows={2}
           />
           <AreaField
-            label="Música que marcou"
+            label={INTAKE_QUESTION_LABELS.social_atom_music}
             field="social_atom_music"
             draft={draft}
             update={update}
             rows={2}
           />
           <AreaField
-            label="Pessoas mais próximas"
+            label={INTAKE_QUESTION_LABELS.social_atom_close_people}
             field="social_atom_close_people"
             draft={draft}
             update={update}
             rows={2}
           />
           <AreaField
-            label="Símbolos, ideias, ideologias importantes"
+            label={INTAKE_QUESTION_LABELS.social_atom_symbols}
             field="social_atom_symbols"
             draft={draft}
             update={update}
             rows={2}
           />
           <AreaField
-            label="Outras memórias do clã"
+            label={INTAKE_QUESTION_LABELS.social_atom_other}
             field="social_atom_other"
             draft={draft}
             update={update}

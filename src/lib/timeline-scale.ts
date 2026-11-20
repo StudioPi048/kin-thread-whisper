@@ -1,4 +1,4 @@
-import type { CaseTimelineItem, DatePrecision } from "./timeline";
+import { yearRange, type CaseTimelineItem, type DatePrecision } from "./timeline";
 import { civilDate } from "./civil-date";
 
 const shortMonths = ["jan", "abr", "jul", "out"];
@@ -10,6 +10,17 @@ function dayStamp(year: number, month: number, date: number) {
 }
 
 function dateRange(value: string, precision: DatePrecision) {
+  if (precision === "range") {
+    const range = yearRange(value);
+    return range
+      ? {
+          year: range.first,
+          endYear: range.last,
+          begin: dayStamp(range.first, 0, 1),
+          end: dayStamp(range.last + 1, 0, 1),
+        }
+      : null;
+  }
   const date = civilDate(value);
   if (!date || date.precision !== precision) return null;
   const { year } = date;
@@ -22,10 +33,12 @@ function dateRange(value: string, precision: DatePrecision) {
       : precision === "month"
         ? dayStamp(year, month, 1)
         : begin;
-  return Number.isFinite(begin) && Number.isFinite(end) ? { year, begin, end } : null;
+  return Number.isFinite(begin) && Number.isFinite(end)
+    ? { year, endYear: year, begin, end }
+    : null;
 }
 
-export function buildTimelineScale(items: CaseTimelineItem[]) {
+export function buildTimelineScale(items: CaseTimelineItem[], decade?: number) {
   const dated = items.flatMap((item) => {
     if (!item.rawDate || item.year === null) return [];
     const range = dateRange(item.rawDate, item.precision);
@@ -33,11 +46,13 @@ export function buildTimelineScale(items: CaseTimelineItem[]) {
   });
   if (!dated.length) return null;
 
-  const fromYear = Math.min(...dated.map(({ year }) => year));
-  const toYear = Math.max(...dated.map(({ year }) => year));
+  const fromYear = decade ?? Math.min(...dated.map(({ year }) => year));
+  const toYear =
+    decade === undefined ? Math.max(...dated.map(({ endYear }) => endYear)) : decade + 9;
   const axisStart = dayStamp(fromYear, 0, 1);
   const axisEnd = dayStamp(toYear + 1, 0, 1);
-  const position = (stamp: number) => ((stamp - axisStart) / (axisEnd - axisStart)) * 100;
+  const position = (stamp: number) =>
+    Math.max(0, Math.min(100, ((stamp - axisStart) / (axisEnd - axisStart)) * 100));
   const years = toYear - fromYear;
   const yearStep =
     [1, 2, 5, 10, 20, 25, 30, 50, 100, 200, 500, 1000, 2000].find((step) => years / step <= 5) ??
@@ -57,7 +72,7 @@ export function buildTimelineScale(items: CaseTimelineItem[]) {
     ticks,
     events: dated.map(({ item, begin, end }) => ({
       item,
-      at: position((begin + end) / 2),
+      at: (position(begin) + position(end)) / 2,
       from: position(begin),
       to: position(end),
     })),

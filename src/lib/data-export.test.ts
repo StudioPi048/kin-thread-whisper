@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { exportAccountData, exportDossierData, type ExportPageReader } from "./data-export";
+import { smallFamily } from "./geno/fixtures";
+import { buildLogicalGraph, layoutGraph, type NodePositionRow } from "./geno/build";
+import type { PersonRow, RelationshipRow } from "./patterns";
 
 describe("exportação pessoal", () => {
   it("pagina além de 1000 familiares e inclui as posições apenas dos layouts da conta", async () => {
@@ -63,5 +66,46 @@ describe("exportação de um dossiê", () => {
       audio_consent_events: [{ granted: false }],
     });
     await expect(exportDossierData(read, "other", "case")).rejects.toThrow("indisponível");
+  });
+
+  it("reconstitui uma cópia isolada da topologia e das posições a partir do JSON", async () => {
+    const { persons, rels, probandId } = smallFamily();
+    const positions: NodePositionRow[] = [
+      {
+        id: "position",
+        layout_id: "layout",
+        layout_mode: "manual",
+        node_id: probandId,
+        node_type: "person",
+        x: 44,
+        y: 0,
+        created_at: "",
+        updated_at: "",
+      },
+    ];
+    const read: ExportPageReader = async ({ table }) => {
+      if (table === "clients") return [{ id: "synthetic", professional_id: "owner" }];
+      if (table === "genogram_persons") return persons;
+      if (table === "genogram_relationships") return rels;
+      if (table === "genogram_layouts") return [{ id: "layout", client_id: "synthetic" }];
+      if (table === "genogram_node_positions") return positions;
+      return [];
+    };
+    const written = await exportDossierData(read, "owner", "synthetic");
+    const copy = JSON.parse(JSON.stringify(written)) as {
+      genogram_persons: PersonRow[];
+      genogram_relationships: RelationshipRow[];
+      genogram_node_positions: NodePositionRow[];
+    };
+    const restored = buildLogicalGraph({
+      persons: copy.genogram_persons,
+      rels: copy.genogram_relationships,
+      probandId,
+      positions: copy.genogram_node_positions,
+    });
+    const original = buildLogicalGraph({ persons, rels, probandId, positions });
+    expect([...restored.parentsByChild]).toEqual([...original.parentsByChild]);
+    expect([...restored.topRowIds]).toEqual([...original.topRowIds]);
+    expect(layoutGraph(restored)).toEqual(layoutGraph(original));
   });
 });

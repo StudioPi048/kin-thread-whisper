@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parentageSnapshot, validateParentagePlan } from "./parentage-review";
+import { parentageSnapshot, reviewMatchesCurrent, validateParentagePlan } from "./parentage-review";
 
 const link = (id: string, from: string, to: string, type = "parent") => ({
   id,
@@ -56,5 +56,29 @@ describe("revisão de filiação", () => {
     const c = { personId: "new-c", kind: "unknown" } as const;
     expect(validateParentagePlan(child, [a, a], recorded)).toMatch(/registrada/);
     expect(validateParentagePlan(child, [a, b, c], recorded)).toMatch(/duas filiações/);
+  });
+
+  it("recognizes the exact saved review after reload and refuses a later link version", () => {
+    const stored = link("registered", "person-a", "child");
+    const review = {
+      id: "review",
+      review_number: 1,
+      client_id: "client",
+      child_id: "child",
+      professional_id: "professional",
+      decision: "edit",
+      source: "family_report",
+      note: null,
+      before_links: [],
+      after_links: [stored],
+      before_reviewed: false,
+      after_reviewed: true,
+      undone_review_id: null,
+      created_at: stored.updated_at,
+    };
+    expect(reviewMatchesCurrent(review, parentageSnapshot([stored], "child"), true)).toBe(true);
+    const later = { ...stored, updated_at: "2026-11-20T18:00:00.123457+00:00" };
+    expect(reviewMatchesCurrent(review, parentageSnapshot([later], "child"), true)).toBe(false);
+    expect(reviewMatchesCurrent(review, parentageSnapshot([stored], "child"), false)).toBe(false);
   });
 });

@@ -59,3 +59,51 @@ export function validateParentagePlan(
   }
   return null;
 }
+
+export type ParentageHistoryEntry = Tables<"genogram_parentage_reviews">;
+type SavedLink = {
+  id: string;
+  from_person_id: string;
+  updated_at: string;
+  qualifier: string | null;
+};
+
+export function historyLinks(links: ParentageHistoryEntry["after_links"]): SavedLink[] {
+  if (!Array.isArray(links)) return [];
+  return links.flatMap((link) => {
+    if (
+      !link ||
+      typeof link !== "object" ||
+      Array.isArray(link) ||
+      typeof link.id !== "string" ||
+      typeof link.from_person_id !== "string" ||
+      typeof link.updated_at !== "string"
+    )
+      return [];
+    return [
+      {
+        id: link.id,
+        from_person_id: link.from_person_id,
+        updated_at: link.updated_at,
+        qualifier: typeof link.qualifier === "string" ? link.qualifier : null,
+      },
+    ];
+  });
+}
+
+export function reviewMatchesCurrent(
+  review: ParentageHistoryEntry | undefined,
+  current: readonly ParentageVersion[],
+  reviewed: boolean,
+) {
+  if (!review || !Array.isArray(review.after_links) || review.after_reviewed !== reviewed)
+    return false;
+  const links = historyLinks(review.after_links);
+  return (
+    links.length === current.length &&
+    links.length === review.after_links.length &&
+    current.every((version) =>
+      links.some((link) => link.id === version.id && link.updated_at === version.updatedAt),
+    )
+  );
+}

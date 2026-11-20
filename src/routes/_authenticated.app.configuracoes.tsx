@@ -1,5 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { AccountPreferences, DataExport } from "@/components/account/account-sections";
+import {
+  AccountPreferences,
+  DataExport,
+  PendingDossierDeletions,
+} from "@/components/account/account-sections";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { PROFILE_FIELDS, profileQuery } from "@/lib/profile";
@@ -191,6 +195,7 @@ function ConfigPage() {
         <div className="mt-6 max-w-2xl space-y-6">
           <AccountPreferences userId={user.id} />
           <DataExport userId={user.id} />
+          <PendingDossierDeletions userId={user.id} />
           <section
             className="rounded-[14px] border border-material-border bg-surface-document p-6 shadow-surface sm:p-8"
             aria-labelledby="help-h"

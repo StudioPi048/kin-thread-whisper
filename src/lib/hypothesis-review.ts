@@ -73,6 +73,38 @@ export function evidenceSnapshot(p: DetectedPattern) {
   };
 }
 
+export function compareReviewEvidence(review: ReviewRow, pattern: DetectedPattern) {
+  const snapshots = Array.isArray(review.evidence_snapshot) ? review.evidence_snapshot : [];
+  const snapshot = snapshots.find(
+    (value) =>
+      value && typeof value === "object" && !Array.isArray(value) && value.type === pattern.type,
+  );
+  if (
+    !snapshot ||
+    typeof snapshot !== "object" ||
+    Array.isArray(snapshot) ||
+    !Array.isArray(snapshot.facts)
+  ) {
+    return null;
+  }
+  const facts = snapshot.facts.filter((fact): fact is EvidenceFact => {
+    if (!fact || typeof fact !== "object" || Array.isArray(fact)) return false;
+    return (
+      typeof fact.source === "string" &&
+      typeof fact.recordId === "string" &&
+      typeof fact.field === "string" &&
+      typeof fact.value === "string"
+    );
+  });
+  if (facts.length !== snapshot.facts.length) return null;
+  const previous = new Map(canonicalFacts(facts));
+  const current = new Map(canonicalFacts(pattern.facts));
+  return {
+    previous: Array.from(previous).flatMap(([key, fact]) => (current.has(key) ? [] : [fact])),
+    current: Array.from(current).flatMap(([key, fact]) => (previous.has(key) ? [] : [fact])),
+  };
+}
+
 /** A chave antiga de uma coincidência pode usar a ordem inversa dos familiares. */
 export function reviewsForPattern(rows: ReviewRow[], key: string, pattern: DetectedPattern) {
   const legacy = new Set(pattern.legacyIds?.map((id) => `h-${id}`));

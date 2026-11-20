@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -19,7 +20,6 @@ import {
   Square,
   Loader2,
   Trash2,
-  FileText,
   AlertCircle,
   RefreshCw,
   AudioLines,
@@ -32,6 +32,8 @@ import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { processSessionAudio } from "@/lib/ai/session-processing.functions";
 import { Button } from "@/components/ui/button";
+import { clinicalIntelQuery } from "@/lib/clinical-intel";
+import { informationGaps } from "@/lib/evidence";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,6 +46,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import type { Json } from "@/integrations/supabase/types";
+import { TranscriptReview } from "./transcript-review";
 import { AudioConsentPanel } from "./audio-consent-panel";
 import {
   activeAudioConsent,
@@ -56,6 +60,7 @@ import {
   CLINICAL_LABEL,
   audioStateOf,
   clinicalStatusOf,
+  canRetryAudioProcessing,
   confirmReview,
   invalidateSessionViews,
   isDirty,
@@ -74,6 +79,7 @@ interface Props {
   clientId: string;
   clientName: string;
   focusedSessionId?: string;
+  focusConsent?: boolean;
 }
 
 type Session = {
@@ -83,6 +89,12 @@ type Session = {
   duration_seconds: number | null;
   audio_path: string | null;
   transcript: string | null;
+  transcript_segments?: Json;
+  transcript_reviews?: Json;
+  updated_at: string;
+  recording_consent_id?: string | null;
+  processing_consent_id?: string | null;
+  processing_started_at?: string | null;
   status: string;
   error_message: string | null;
   structured_note: Record<string, unknown> | null;
@@ -134,7 +146,7 @@ function formatDuration(sec: number | null | undefined): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-export function SessionsPanel({ clientId, clientName, focusedSessionId }: Props) {
+export function SessionsPanel({ clientId, clientName, focusedSessionId, focusConsent }: Props) {
   const qc = useQueryClient();
   const processFn = useServerFn(processSessionAudio);
 
@@ -156,6 +168,22 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId }: Props)
     },
   });
 
+  const preparing = sessions.find(
+    (session) => session.id === focusedSessionId && clinicalStatusOf(session) === "scheduled",
+  );
+  const priorNote =
+    preparing &&
+    sessions.find(
+      (session) =>
+        Date.parse(session.session_date) < Date.parse(preparing.session_date) &&
+        session.manual_notes?.trim(),
+    );
+  const preparation = useQuery({ ...clinicalIntelQuery(clientId), enabled: Boolean(preparing) });
+  const openQuestions = useMemo(() => {
+    if (!preparing || !preparation.data) return [];
+    return informationGaps(preparation.data.persons, preparation.data.relationships).slice(0, 3);
+  }, [preparing, preparation.data]);
+
   // Poll while any session is processing
   useEffect(() => {
     const processing = sessions.some(
@@ -175,9 +203,6 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId }: Props)
     refetchInterval: 5000,
   });
   const events = consentQuery.data ?? [];
-  const recordingGrant = !consentQuery.isError && activeAudioConsent(events, "recording");
-  const processingGrant =
-    !consentQuery.isError && activeAudioConsent(events, "external_processing");
   const [pendingAudio, setPendingAudio] = useState<CapturedAudio | null>(null);
   const pendingAudioRef = useRef<CapturedAudio | null>(null);
   const updatePending = (audio: CapturedAudio | null) => {
@@ -197,12 +222,18 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId }: Props)
     (session) => !session.audio_path && clinicalStatusOf(session) !== "canceled",
   );
   const targetId = targets.some((session) => session.id === recordingTarget) ? recordingTarget : "";
+  const grantFor = (scope: "recording" | "external_processing", sessionId?: string) =>
+    !consentQuery.isError ? activeAudioConsent(events, scope, sessionId) : undefined;
+  const recordingGrant = grantFor("recording", targetId || undefined);
   const [processingTarget, setProcessingTarget] = useState<string>();
+  const processingGrant = processingTarget
+    ? grantFor("external_processing", processingTarget)
+    : undefined;
   const mountedRef = useRef(false);
   const startLock = useRef(false);
   const audioLock = useRef(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const activeGrantRef = useRef<string | null>(null);
+  const activeGrantRef = useRef<{ id: string; sessionId?: string } | null>(null);
   const timerRef = useRef<number | null>(null);
 
   const refreshSessions = () => invalidateSessionViews(qc, clientId);
@@ -235,20 +266,31 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId }: Props)
   }, [clearRecorder]);
 
   useEffect(() => {
+    const grant = activeGrantRef.current;
     if (
       mediaRecorderRef.current &&
-      activeGrantRef.current !== (recordingGrant ? recordingGrant.id : null)
+      grant &&
+      (consentQuery.isError ||
+        grant.id !== activeAudioConsent(consentQuery.data ?? [], "recording", grant.sessionId)?.id)
     ) {
       clearRecorder(true);
       setOperationError("Gravação interrompida. Confirme a autorização antes de gravar novamente.");
     }
-  }, [recordingGrant, clearRecorder]);
+  }, [consentQuery.data, consentQuery.isError, clearRecorder]);
+
+  const scrollTarget = manualFocusId ?? focusedSessionId;
+  const visibleTarget = sessions.find((session) => session.id === scrollTarget)?.id;
+  useEffect(() => {
+    if (!visibleTarget || focusConsent || preparing?.id === visibleTarget) return;
+    document.getElementById(`session-${visibleTarget}`)?.scrollIntoView({ block: "nearest" });
+  }, [visibleTarget, focusConsent, preparing?.id]);
 
   useEffect(() => {
-    const target = manualFocusId ?? focusedSessionId;
-    if (!target || !sessions.some(({ id }) => id === target)) return;
-    document.getElementById(`session-${target}`)?.scrollIntoView({ block: "nearest" });
-  }, [focusedSessionId, manualFocusId, sessions.length]);
+    if (!focusConsent) return;
+    const section = document.getElementById("audio-consents");
+    section?.scrollIntoView({ block: "start" });
+    section?.focus({ preventScroll: true });
+  }, [focusConsent]);
 
   const startRecording = async () => {
     if (startLock.current || mediaRecorderRef.current || pendingAudioRef.current || !recordingGrant)
@@ -258,13 +300,25 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId }: Props)
     setOperationError("");
     let stream: MediaStream | undefined;
     try {
-      await requireAudioConsent(supabase, clientId, "recording", recordingGrant.id);
+      await requireAudioConsent(
+        supabase,
+        clientId,
+        "recording",
+        recordingGrant.id,
+        targetId || undefined,
+      );
       if (!mountedRef.current) return;
       if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
         throw new Error("O microfone não está disponível neste navegador.");
       }
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      await requireAudioConsent(supabase, clientId, "recording", recordingGrant.id);
+      await requireAudioConsent(
+        supabase,
+        clientId,
+        "recording",
+        recordingGrant.id,
+        targetId || undefined,
+      );
       if (!mountedRef.current) return;
       const mime = ["audio/webm;codecs=opus", "audio/mp4", "audio/webm"].find((type) =>
         MediaRecorder.isTypeSupported(type),
@@ -299,7 +353,7 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId }: Props)
       recorder.start(1000);
       mediaRecorderRef.current = recorder;
       stream = undefined;
-      activeGrantRef.current = recordingGrant.id;
+      activeGrantRef.current = { id: recordingGrant.id, sessionId: targetId || undefined };
       setElapsed(0);
       setRecording(true);
       timerRef.current = window.setInterval(
@@ -329,7 +383,13 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId }: Props)
     setUploading(true);
     setOperationError("");
     try {
-      await requireAudioConsent(supabase, clientId, "recording", audio.recordingGrantId);
+      await requireAudioConsent(
+        supabase,
+        clientId,
+        "recording",
+        audio.recordingGrantId,
+        audio.existingSession ? audio.sessionId : undefined,
+      );
       const { data: userRes, error: userError } = await supabase.auth.getUser();
       const uid = userRes.user?.id;
       if (userError || !uid) throw new Error("Entre novamente para guardar o áudio.");
@@ -531,6 +591,70 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId }: Props)
 
   return (
     <div className="space-y-6">
+      {preparing && (
+        <section
+          className="space-y-3 rounded-md border border-border bg-card p-4"
+          aria-label="Preparação do atendimento"
+        >
+          <header>
+            <h3 className="font-serif text-2xl font-bold text-primary">Preparar atendimento</h3>
+            <p className="text-sm text-muted-foreground">
+              {format(new Date(preparing.session_date), "dd/MM/yyyy HH:mm")}
+            </p>
+          </header>
+          {openQuestions.length > 0 && (
+            <div>
+              <h4 className="text-sm font-semibold">Pontos em aberto no caso</h4>
+              <ul className="mt-1 space-y-1 text-sm text-muted-foreground">
+                {openQuestions.map((question) => (
+                  <li key={question}>{question}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {preparation.isError && (
+            <p className="text-sm" role="alert">
+              Não foi possível carregar os pontos da família.{" "}
+              <Button
+                type="button"
+                variant="outline"
+                className="min-h-11"
+                onClick={() => preparation.refetch()}
+              >
+                Tentar de novo
+              </Button>
+            </p>
+          )}
+          {priorNote && (
+            <details className="rounded-md border border-border px-3 pb-2">
+              <summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold">
+                Notas da última sessão registrada
+              </summary>
+              <p className="max-h-40 overflow-y-auto whitespace-pre-wrap break-words text-sm">
+                {priorNote.manual_notes}
+              </p>
+            </details>
+          )}
+          <div className="flex flex-wrap gap-x-4">
+            <Link
+              to="/app/clientes/$clientId"
+              params={{ clientId }}
+              search={{ tab: "intake" }}
+              className="inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline"
+            >
+              Abrir anamnese
+            </Link>
+            <Link
+              to="/app/clientes/$clientId"
+              params={{ clientId }}
+              search={{ tab: "patterns" }}
+              className="inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline"
+            >
+              Conferir evidências
+            </Link>
+          </div>
+        </section>
+      )}
       <section className="space-y-4 rounded-sm border border-border bg-surface-document p-4 sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -609,8 +733,10 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId }: Props)
                 className="min-h-11"
                 disabled={
                   uploading ||
-                  !recordingGrant ||
-                  recordingGrant.id !== pendingAudio.recordingGrantId
+                  grantFor(
+                    "recording",
+                    pendingAudio.existingSession ? pendingAudio.sessionId : undefined,
+                  )?.id !== pendingAudio.recordingGrantId
                 }
                 onClick={() => void uploadAudio(pendingAudio).catch(() => {})}
               >
@@ -653,6 +779,11 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId }: Props)
         loading={consentQuery.isPending}
         unavailable={consentQuery.isError}
         refresh={() => consentQuery.refetch()}
+        initialSessionId={focusedSessionId}
+        sessions={sessions.map((session) => ({
+          id: session.id,
+          label: `${format(new Date(session.session_date), "dd/MM/yyyy HH:mm")} · ${session.title || "Sessão"}`,
+        }))}
       />
 
       <AlertDialog
@@ -763,7 +894,9 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId }: Props)
                 onDiscardUpload={() => clearOrphanUpload.mutate(s)}
                 discardingUpload={clearOrphanUpload.isPending}
                 showDiscardUpload={pendingAudio?.sessionId !== s.id}
-                canProcess={!!processingGrant && !reprocess.isPending}
+                canProcess={!!grantFor("external_processing", s.id) && !reprocess.isPending}
+                recordingAuthorization={events.find(({ id }) => id === s.recording_consent_id)}
+                processingAuthorization={events.find(({ id }) => id === s.processing_consent_id)}
                 reprocessing={reprocess.isPending && reprocess.variables === s.id}
               />
             </motion.div>
@@ -784,6 +917,8 @@ function SessionCard({
   showDiscardUpload,
   canProcess,
   reprocessing,
+  recordingAuthorization,
+  processingAuthorization,
 }: {
   session: Session;
   clientId: string;
@@ -794,9 +929,11 @@ function SessionCard({
   showDiscardUpload: boolean;
   canProcess: boolean;
   reprocessing: boolean;
+  recordingAuthorization?: ReturnType<typeof activeAudioConsent>;
+  processingAuthorization?: ReturnType<typeof activeAudioConsent>;
 }) {
   const qc = useQueryClient();
-  const [showTranscript, setShowTranscript] = useState(false);
+
   const note = session.structured_note as Record<string, unknown> | null;
   const clinical = clinicalStatusOf(session);
   const audio = audioStateOf(session);
@@ -884,6 +1021,11 @@ function SessionCard({
   }, [note]);
 
   const isProcessing = audio === "processing";
+  const canRetry = canRetryAudioProcessing(
+    session.status,
+    session.processing_started_at,
+    session.updated_at,
+  );
   const isError = audio === "error";
   const notesId = `notes-${session.id}`;
   const clinicalId = `clinical-${session.id}`;
@@ -943,7 +1085,7 @@ function SessionCard({
             Áudio: {AUDIO_LABEL[audio]}
           </Badge>
           <div className="flex items-center gap-1 border-l border-border/60 pl-3">
-            {(isError || session.status === "draft") && session.audio_path && (
+            {canRetry && session.audio_path && (
               <Button
                 variant="outline"
                 onClick={onReprocess}
@@ -951,7 +1093,7 @@ function SessionCard({
                 className="min-h-11"
               >
                 <AudioLines className="mr-2 size-4" aria-hidden />
-                Processar áudio com IA
+                {isProcessing ? "Retomar processamento" : "Processar áudio com IA"}
               </Button>
             )}
             <Button
@@ -968,6 +1110,34 @@ function SessionCard({
       </div>
 
       <div className="p-6 space-y-6">
+        {(recordingAuthorization || processingAuthorization) && (
+          <details className="text-sm">
+            <summary className="min-h-11 cursor-pointer py-3 font-medium text-primary">
+              Autorizações usadas nesta sessão
+            </summary>
+            <dl className="space-y-2 text-muted-foreground">
+              {[
+                { label: "Gravação", grant: recordingAuthorization },
+                { label: "Processamento", grant: processingAuthorization },
+              ].map(
+                ({ label, grant }) =>
+                  grant && (
+                    <div key={label}>
+                      <dt className="font-semibold text-foreground">{label}</dt>
+                      <dd>
+                        {format(new Date(grant.created_at), "dd/MM/yyyy HH:mm")}
+                        {grant.term_version && ` · termo ${grant.term_version}`}
+                        {grant.session_id ? " · esta sessão" : " · caso inteiro"}
+                      </dd>
+                      {grant.document_reference && (
+                        <dd className="break-words">{grant.document_reference}</dd>
+                      )}
+                    </div>
+                  ),
+              )}
+            </dl>
+          </details>
+        )}
         {audio === "waiting_upload" && showDiscardUpload && (
           <div className="flex flex-wrap items-center gap-2 rounded-sm border border-border bg-background p-3 text-sm">
             <p className="text-muted-foreground">
@@ -982,6 +1152,14 @@ function SessionCard({
               {discardingUpload ? "Removendo…" : "Remover envio pendente"}
             </Button>
           </div>
+        )}
+        {isProcessing && canRetry && (
+          <p
+            role="status"
+            className="rounded-md border border-border p-3 text-sm text-clinical-warning"
+          >
+            O processamento está sem conclusão há mais de dez minutos. Você pode retomá-lo.
+          </p>
         )}
         {isError && (
           <div className="flex items-start gap-3 rounded-md border border-destructive/30 bg-destructive/5 p-4 text-[14px] text-destructive">
@@ -1094,25 +1272,18 @@ function SessionCard({
         )}
 
         {session.transcript && (
-          <div className="border-t border-border/40 pt-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowTranscript((v) => !v)}
-              className="min-h-11 text-[15px]"
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              {showTranscript ? "Ocultar" : "Ver"} transcrição automática
-            </Button>
-            {showTranscript && (
-              <Textarea
-                readOnly
-                aria-label="Transcrição da sessão"
-                value={session.transcript}
-                className="mt-3 font-mono text-[15px] min-h-[160px] bg-background resize-none text-muted-foreground"
-              />
-            )}
-          </div>
+          <TranscriptReview
+            key={session.transcript}
+            sessionId={session.id}
+            clientId={clientId}
+            transcript={session.transcript}
+            segments={session.transcript_segments}
+            reviews={session.transcript_reviews}
+            audioPath={session.audio_path}
+            updatedAt={session.updated_at}
+            processing={isProcessing}
+            refresh={refresh}
+          />
         )}
       </div>
     </article>

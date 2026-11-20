@@ -47,6 +47,14 @@ export function parseDateField(d?: string): ParsedDate {
       ? { kind: "partial", raw: val, label: "só o ano" }
       : bad(`ano fora de ${MIN_YEAR}–${maxYear()}`);
   }
+  const interval = /^(\d{4})\s*(?:[–—-]|a)\s*(\d{4})$/i.exec(val);
+  if (interval) {
+    const start = Number(interval[1]);
+    const end = Number(interval[2]);
+    return yearOk(start) && yearOk(end) && end >= start
+      ? { kind: "partial", raw: `${start}–${end}`, label: "intervalo de anos" }
+      : bad("intervalo de anos inválido");
+  }
   const parts = val
     .split(/[/\\\-. \t]/)
     .map((p) => p.trim())
@@ -59,13 +67,17 @@ export function parseDateField(d?: string): ParsedDate {
       const m = Number(p1);
       if (m < 1 || m > 12) return bad("mês inexistente");
       return yearOk(Number(p2))
-        ? { kind: "partial", raw: val, label: "mês e ano, sem dia" }
+        ? { kind: "partial", raw: `${p1.padStart(2, "0")}/${p2}`, label: "mês e ano, sem dia" }
         : bad(`ano fora de ${MIN_YEAR}–${maxYear()}`);
     }
     const [dd, mm] = Number(p1) > 12 ? [p1, p2] : Number(p2) > 12 ? [p2, p1] : [p1, p2];
     // Valida dia/mês num ano bissexto qualquer só para checar existência; o ano NÃO é gravado.
     return isValidYMD(`2024-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`)
-      ? { kind: "partial", raw: val, label: "dia e mês, sem ano" }
+      ? {
+          kind: "partial",
+          raw: `${dd.padStart(2, "0")}/${mm.padStart(2, "0")}`,
+          label: "dia e mês, sem ano",
+        }
       : bad("dia ou mês inexistente");
   }
   if (parts.length !== 3) return bad("formato não reconhecido");
@@ -138,33 +150,45 @@ function decodeCsv(file: ArrayBuffer): string {
   }
 }
 
+export type ClanSheet = { name: string; header: string[]; rows: string[][] };
+
 /** Preserva texto e campos vazios no CSV; só datas tipadas do Excel viram ISO. */
-export async function readClanFile(file: ArrayBuffer, format: "csv" | "xlsx") {
+export async function readClanWorkbook(file: ArrayBuffer, format: "csv" | "xlsx") {
   const XLSX = await import("xlsx");
   const workbook =
     format === "csv"
       ? XLSX.read(decodeCsv(file), { type: "string", raw: true })
       : XLSX.read(file, { type: "array", raw: true, cellDates: true });
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  if (!sheet) throw new Error("Arquivo sem planilhas.");
-  const data = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
-    header: 1,
-    raw: true,
-    defval: "",
-    blankrows: true,
-  });
-  const [first, ...rest] = data;
-  if (!first || !rest.length) throw new Error("Arquivo vazio ou sem cabeçalho.");
-  return {
-    header: first.map((cell) => String(cell ?? "")),
-    rows: rest.map((row) =>
-      row.map((cell) =>
-        cell instanceof Date && !Number.isNaN(cell.getTime())
-          ? cell.toISOString().slice(0, 10)
-          : String(cell ?? ""),
+  const sheets = workbook.SheetNames.map((name): ClanSheet => {
+    const [header = [], ...rows] = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets[name], {
+      header: 1,
+      raw: true,
+      defval: "",
+      blankrows: true,
+    });
+    return {
+      name,
+      header: header.map((cell) => String(cell ?? "")),
+      rows: rows.map((row) =>
+        row.map((cell) =>
+          cell instanceof Date && !Number.isNaN(cell.getTime())
+            ? cell.toISOString().slice(0, 10)
+            : String(cell ?? ""),
+        ),
       ),
-    ),
-  };
+    };
+  });
+  if (!sheets.some((sheet) => sheet.header.some(Boolean) && sheet.rows.length)) {
+    throw new Error("Arquivo vazio ou sem cabeçalho.");
+  }
+  return sheets;
+}
+
+export async function readClanFile(file: ArrayBuffer, format: "csv" | "xlsx") {
+  const [sheet] = await readClanWorkbook(file, format);
+  if (!sheet?.header.length || !sheet.rows.length)
+    throw new Error("Arquivo vazio ou sem cabeçalho.");
+  return { header: sheet.header, rows: sheet.rows };
 }
 
 const norm = (s: string) =>
@@ -176,14 +200,15 @@ const norm = (s: string) =>
     .trim();
 
 /** Mapeia por nome de cabeçalho; sem cabeçalho reconhecido usa a ordem oficial de 11 colunas. */
-export function autoMap(header: string[]): Mapping {
+export function autoMap(header: string[], useTemplateOrder = true): Mapping {
   const m: Mapping = {};
   header.forEach((h, i) => {
     const n = norm(h || "");
     const f = IMPORT_FIELDS.find((x) => x.aliases.some((a) => norm(a) === n));
     if (f && m[f.key] === undefined) m[f.key] = i;
   });
-  if (Object.keys(m).length < 2) IMPORT_FIELDS.forEach((f, i) => (m[f.key] = i));
+  if (useTemplateOrder && Object.keys(m).length < 2)
+    IMPORT_FIELDS.forEach((f, i) => (m[f.key] = i));
   return m;
 }
 
@@ -198,8 +223,10 @@ export interface ImportRecord {
   relationship_to_proband: string | null;
   gender: string;
   birth_date: string | null;
+  birth_date_partial?: string | null;
   gestational_weeks: string | null;
   death_date: string | null;
+  death_date_partial?: string | null;
   is_deceased: boolean;
   health_conditions: string[];
   occupation: string | null;
@@ -273,7 +300,7 @@ export function analyzeImport(
     const partialNotes: string[] = [];
     if (birthP.kind === "partial") {
       warnings.push(
-        `Nascimento parcial ("${birthP.raw}", ${birthP.label}): fica nas observações, sem data gravada`,
+        `Nascimento parcial ("${birthP.raw}", ${birthP.label}): preservado com a precisão informada`,
       );
       partialNotes.push(
         `[Importação] Nascimento informado: "${birthP.raw}" (${birthP.label}; não gravado como data exata)`,
@@ -281,7 +308,7 @@ export function analyzeImport(
     }
     if (deathP.kind === "partial") {
       warnings.push(
-        `Falecimento parcial ("${deathP.raw}", ${deathP.label}): fica nas observações, sem data gravada`,
+        `Falecimento parcial ("${deathP.raw}", ${deathP.label}): preservado com a precisão informada`,
       );
       partialNotes.push(
         `[Importação] Falecimento informado: "${deathP.raw}" (${deathP.label}; não gravado como data exata)`,
@@ -298,8 +325,10 @@ export function analyzeImport(
       relationship_to_proband: rel || null,
       gender: inferGenderFromRelationship(relCanonical ?? "") || "desconhecido",
       birth_date: birth,
+      ...(birthP.kind === "partial" ? { birth_date_partial: birthP.raw } : {}),
       gestational_weeks: get(r, "gestation") || null,
       death_date: death,
+      ...(deathP.kind === "partial" ? { death_date_partial: deathP.raw } : {}),
       is_deceased: !!deathRaw,
       health_conditions: get(r, "illnesses")
         .split(",")

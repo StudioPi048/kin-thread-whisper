@@ -52,10 +52,10 @@ const TASKS: Task[] = [
     id: "vincular",
     title: "Adicionar familiares e vincular pais",
     steps: [
-      "No Genossociograma, “Adicionar pessoa” e informe o parentesco (Irmã(o), Pai, Mãe, Avô paterno…).",
+      "No Genossociograma, use “Pessoa” para cadastrar um familiar com nome completo e parentesco.",
       "Na ficha da pessoa, “Definir pai ou mãe” liga explicitamente a pessoa aos genitores já cadastrados. Esse vínculo vale mais que o parentesco digitado.",
       "Meios-irmãos: vincule cada um ao pai/mãe correto; o mapa cria uniões separadas.",
-      "Quem não tem genitor informado continua visível com aviso — o sistema não inventa pais.",
+      "Quando a filiação estiver em aberto, consulte as pendências do mapa e registre a fonte ao revisar.",
     ],
     note: "Orientação fixa do mapa: consultante e irmãos de sangue no topo; pais logo abaixo; avós abaixo dos pais; cada geração anterior desce mais um nível.",
     to: "/app/genossociogramas",
@@ -141,6 +141,26 @@ function GuiaPage() {
         title="Guia de tarefas"
         subtitle="O que fazer, passo a passo, em cada etapa do atendimento."
       />
+      <section className="container-liz mb-8" aria-labelledby="guia-exercicio">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card p-4">
+          <div>
+            <h2 id="guia-exercicio" className="text-lg font-semibold text-forest">
+              Pratique no Consultante fictício
+            </h2>
+            <p className="mt-1 text-sm leading-relaxed text-ink-soft">
+              Localize um familiar, confirme e desfaça uma filiação e compare as vistas 2D, 3D e a
+              linha do tempo.
+            </p>
+          </div>
+          <Link
+            to="/"
+            hash="caso-ficticio"
+            className="inline-flex min-h-11 items-center gap-2 font-semibold text-forest underline underline-offset-4"
+          >
+            Abrir exercício <ArrowRight size={16} aria-hidden />
+          </Link>
+        </div>
+      </section>
       <div className="container-liz grid gap-10 lg:grid-cols-[220px_minmax(0,760px)]">
         <nav
           aria-label="Tarefas"

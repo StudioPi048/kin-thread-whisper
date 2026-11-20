@@ -3,10 +3,27 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 import { requireAudioConsent } from "@/lib/audio-consent";
+import { parseTimedTranscript } from "@/lib/transcript";
+import { canRetryAudioProcessing } from "@/lib/session-state";
+import type { TablesUpdate } from "@/integrations/supabase/types";
 
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1";
 const TRANSCRIBE_MODEL = "openai/gpt-4o-mini-transcribe";
 const STRUCTURE_MODEL = "google/gemini-2.5-flash";
+
+const structureSchema = z
+  .object({
+    resumo: z.string().default(""),
+    queixa_principal: z.string().default(""),
+    fatos_relatados: z.array(z.string()).default([]),
+    hipoteses_sistemicas: z.array(z.string()).default([]),
+    padroes_observados: z.array(z.string()).default([]),
+    figuras_do_cla_mencionadas: z.array(z.string()).default([]),
+    eventos_significativos: z.array(z.string()).default([]),
+    encaminhamentos: z.array(z.string()).default([]),
+    proxima_sessao: z.string().default(""),
+  })
+  .refine((value) => Object.values(value).some((part) => part.length > 0));
 
 const STRUCTURE_SYSTEM = `Você é assistente clínica de uma psicogenealogista.
 A partir da transcrição bruta de uma sessão, produza um prontuário estruturado
@@ -53,7 +70,7 @@ export const processSessionAudio = createServerFn({ method: "POST" })
 
     const { data: session, error: sErr } = await supabase
       .from("clinical_sessions")
-      .select("id, client_id, audio_path, user_id, status")
+      .select("id, client_id, audio_path, user_id, status, updated_at, processing_started_at")
       .eq("id", data.sessionId)
       .maybeSingle();
     if (sErr) throw new Error(sErr.message);
@@ -61,24 +78,45 @@ export const processSessionAudio = createServerFn({ method: "POST" })
     if (session.user_id !== userId) throw new Error("Sem permissão");
     if (!session.audio_path) throw new Error("Sessão sem áudio");
 
-    if (session.status !== "draft" && session.status !== "error") {
+    if (
+      !canRetryAudioProcessing(session.status, session.processing_started_at, session.updated_at)
+    ) {
       throw new Error("O áudio não está disponível para processamento.");
     }
 
-    const consent = await requireAudioConsent(supabase, session.client_id, "external_processing");
+    const consent = await requireAudioConsent(
+      supabase,
+      session.client_id,
+      "external_processing",
+      undefined,
+      session.id,
+    );
+    const attempt = crypto.randomUUID();
     const { data: claimed, error: claimError } = await supabase
       .from("clinical_sessions")
       .update({
         status: "transcribing",
         error_message: null,
         processing_consent_id: consent.id,
+        processing_attempt_id: attempt,
+        processing_started_at: new Date().toISOString(),
       })
       .eq("id", session.id)
       .eq("status", session.status)
+      .eq("updated_at", session.updated_at)
       .eq("audio_path", session.audio_path)
       .select("id")
       .maybeSingle();
     if (claimError || !claimed) throw new Error("O estado do áudio mudou. Atualize a sessão.");
+
+    const updateAttempt = (patch: TablesUpdate<"clinical_sessions">) =>
+      supabase
+        .from("clinical_sessions")
+        .update(patch)
+        .eq("id", session.id)
+        .eq("processing_attempt_id", attempt)
+        .select("id")
+        .maybeSingle();
 
     try {
       const { data: file, error: dlErr } = await supabase.storage
@@ -92,20 +130,32 @@ export const processSessionAudio = createServerFn({ method: "POST" })
       form.append("model", TRANSCRIBE_MODEL);
       form.append("language", "pt");
 
-      await requireAudioConsent(supabase, session.client_id, "external_processing", consent.id);
+      await requireAudioConsent(
+        supabase,
+        session.client_id,
+        "external_processing",
+        consent.id,
+        session.id,
+      );
       const trRes = await callGateway("/audio/transcriptions", { method: "POST", body: form });
-      const trJson = (await trRes.json()) as { text?: string };
-      const transcript = (trJson.text ?? "").trim();
+      const trJson = (await trRes.json()) as { text?: string; segments?: unknown };
+      const transcript = typeof trJson.text === "string" ? trJson.text.trim() : "";
+      const segments = parseTimedTranscript(trJson.segments);
       if (!transcript) throw new Error("Transcrição vazia");
 
-      const { error: transcriptError } = await supabase
-        .from("clinical_sessions")
-        .update({ status: "structuring" })
-        .eq("id", session.id);
-      if (transcriptError) throw new Error("Falha ao atualizar o estado do processamento.");
+      const { data: transcribed, error: transcriptError } = await updateAttempt({
+        status: "structuring",
+      });
+      if (transcriptError || !transcribed) throw new Error("O processamento deste áudio mudou.");
 
       // Structure into JSON note
-      await requireAudioConsent(supabase, session.client_id, "external_processing", consent.id);
+      await requireAudioConsent(
+        supabase,
+        session.client_id,
+        "external_processing",
+        consent.id,
+        session.id,
+      );
       const chatRes = await callGateway("/chat/completions", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -122,31 +172,41 @@ export const processSessionAudio = createServerFn({ method: "POST" })
         choices?: Array<{ message?: { content?: string } }>;
       };
       const raw = chatJson.choices?.[0]?.message?.content ?? "{}";
-      let structured: Record<string, unknown>;
+      let structured: z.infer<typeof structureSchema>;
       try {
-        structured = JSON.parse(raw) as Record<string, unknown>;
+        structured = structureSchema.parse(JSON.parse(raw));
       } catch {
-        structured = { resumo: raw };
+        throw new Error("O texto gerado não pôde ser validado. Tente processar o áudio de novo.");
       }
 
-      const { error: noteError } = await supabase
-        .from("clinical_sessions")
-        .update({
-          transcript,
-          structured_note: structured as never,
-          ai_reviewed_at: null,
-          status: "ready",
-        })
-        .eq("id", session.id);
-      if (noteError) throw new Error("Falha ao guardar o texto gerado.");
+      await requireAudioConsent(
+        supabase,
+        session.client_id,
+        "external_processing",
+        consent.id,
+        session.id,
+      );
+      const { data: saved, error: noteError } = await updateAttempt({
+        transcript,
+        transcript_segments: segments,
+        transcript_reviews: {},
+        structured_note: structured,
+        ai_reviewed_at: null,
+        status: "ready",
+        processing_attempt_id: null,
+        processing_started_at: null,
+      });
+      if (noteError || !saved) throw new Error("Falha ao guardar o texto gerado.");
 
       return { ok: true as const };
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro desconhecido";
-      await supabase
-        .from("clinical_sessions")
-        .update({ status: "error", error_message: message })
-        .eq("id", session.id);
+      await updateAttempt({
+        status: "error",
+        error_message: message,
+        processing_attempt_id: null,
+        processing_started_at: null,
+      });
       throw err;
     }
   });

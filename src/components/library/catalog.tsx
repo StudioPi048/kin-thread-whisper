@@ -548,6 +548,33 @@ export const EDITORIAL_SOURCE =
 
 export function buildLibraryItems(entries: Entry[]): LibraryItem[] {
   return [
+    {
+      key: "manual-genossociograma",
+      category: "Conceitos",
+      title: "Leitura do genossociograma",
+      meta: "Manual da Psicogenealogia · representação familiar",
+      body: "O desenho organiza gerações, vínculos e acontecimentos. Na convenção do Genealiz, o consultante e os irmãos de sangue ficam no topo, e as gerações anteriores aparecem abaixo.",
+      source:
+        "Letícia Kuchockowolec Baccin. Manual da Psicogenealogia. 1ª ed., Editora Liz, 2025, pp. 163–164.",
+    },
+    {
+      key: "manual-cronologia",
+      category: "Conceitos",
+      title: "Datas, idades e coincidências",
+      meta: "Manual da Psicogenealogia · síndrome de aniversário",
+      body: "Confira em cada acontecimento a data disponível e a sua origem. Dia e mês em comum, idade semelhante e intervalo entre eventos são comparações diferentes. Uma correspondência pode orientar perguntas durante a investigação.",
+      source:
+        "Letícia Kuchockowolec Baccin. Manual da Psicogenealogia. 1ª ed., Editora Liz, 2025, pp. 217–222.",
+    },
+    {
+      key: "manual-investigacao",
+      category: "Conceitos",
+      title: "Coleta e conferência da história familiar",
+      meta: "Manual da Psicogenealogia · fontes e filiação",
+      body: "Registre o que foi relatado e o que está documentado. Datas incertas ou diferentes versões orientam a próxima pergunta. Identifique a informação que sustenta uma revisão de parentesco.",
+      source:
+        "Letícia Kuchockowolec Baccin. Manual da Psicogenealogia. 1ª ed., Editora Liz, 2025, pp. 251–260.",
+    },
     ...LETICIA_WORKS.map((x, i) => ({
       key: `liz-${i}`,
       category: "Acervo autoral",

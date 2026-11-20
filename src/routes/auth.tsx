@@ -10,10 +10,11 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { GenealizWordmark } from "@/components/genealiz-wordmark";
+import { workspaceDestination } from "@/lib/auth-destination";
 
 const searchSchema = z.object({
   mode: z.enum(["signin", "signup", "recover", "reset"]).optional(),
-  redirect: z.string().optional(),
+  redirect: z.unknown().optional().transform(workspaceDestination),
 });
 const newPassword = z.string().min(8, "Mínimo de 8 caracteres").max(72);
 const emptyImage = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
@@ -41,7 +42,7 @@ export const Route = createFileRoute("/auth")({
     // Quem chega do link de redefinição tem sessão temporária — deixa passar.
     if (search.mode === "reset") return;
     const { data } = await supabase.auth.getSession();
-    if (data.session) throw redirect({ to: search.redirect ?? "/app" });
+    if (data.session) throw redirect({ href: search.redirect ?? "/app" });
   },
   component: AuthPage,
 });
@@ -61,6 +62,14 @@ function AuthPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [confirmationEmail, setConfirmationEmail] = useState<string | null>(null);
+  const destination = redirectTo ?? "/app";
+
+  function authCallback(mode?: "reset") {
+    const callback = new URL("/auth", window.location.origin);
+    if (mode) callback.searchParams.set("mode", mode);
+    if (redirectTo) callback.searchParams.set("redirect", redirectTo);
+    return callback.toString();
+  }
 
   useEffect(() => setMode(initialMode ?? "signin"), [initialMode]);
   const keepErrorRef = useRef(false);
@@ -114,7 +123,7 @@ function AuthPage() {
         setRecoverSent(false);
         const parsedEmail = z.string().trim().email("E-mail inválido").parse(email);
         const { error } = await supabase.auth.resetPasswordForEmail(parsedEmail, {
-          redirectTo: `${window.location.origin}/auth?mode=reset`,
+          redirectTo: authCallback("reset"),
         });
         if (error) throw error;
         setRecoverSent(true);
@@ -125,7 +134,7 @@ function AuthPage() {
         const { error } = await supabase.auth.updateUser({ password: parsedPassword });
         if (error) throw error;
         toast.success("Senha atualizada.");
-        navigate({ to: "/app" });
+        navigate({ href: destination, replace: true });
         return;
       }
       const parsed = z
@@ -144,7 +153,7 @@ function AuthPage() {
           email: parsed.email,
           password: parsed.password,
           options: {
-            emailRedirectTo: `${window.location.origin}/app`,
+            emailRedirectTo: authCallback(),
             data: { full_name: parsed.fullName },
           },
         });
@@ -171,7 +180,7 @@ function AuthPage() {
         if (error) throw error;
         toast.success("Bem-vinda ao GENEALIZ.");
       }
-      navigate({ to: redirectTo ?? "/app" });
+      navigate({ href: destination, replace: true });
     } catch (err) {
       const message = err instanceof z.ZodError ? err.errors[0]?.message : friendlyAuthError(err);
       setFormError(message ?? "Não foi possível concluir. Tente de novo.");
@@ -189,7 +198,7 @@ function AuthPage() {
       const { error } = await supabase.auth.resend({
         type: "signup",
         email: confirmationEmail,
-        options: { emailRedirectTo: `${window.location.origin}/app` },
+        options: { emailRedirectTo: authCallback() },
       });
       if (error) throw error;
       setNotice("Solicitação enviada. Confira a caixa de entrada e o spam.");
@@ -202,13 +211,14 @@ function AuthPage() {
 
   async function handleGoogle() {
     setLoading(true);
+    setFormError(null);
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
+        redirect_uri: authCallback(),
       });
       if (result.error) throw result.error;
       if (result.redirected) return;
-      navigate({ to: redirectTo ?? "/app" });
+      navigate({ href: destination, replace: true });
     } catch (err) {
       setFormError(
         `${err instanceof Error ? err.message : "Falha no login com Google"}. Tente de novo ou entre com e-mail.`,
@@ -234,7 +244,7 @@ function AuthPage() {
             Seu espaço de trabalho para organizar relações familiares e acompanhar cada atendimento.
           </p>
           <picture>
-            <source media="(min-width: 768px)" srcSet="/assets/genealiz/archive-hero.jpg" />
+            <source media="(min-width: 768px)" srcSet="/assets/genealiz/archive-hero-768.webp" />
             <img
               className="gv-auth-image"
               src={emptyImage}

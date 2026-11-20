@@ -4,6 +4,7 @@
  * sobre os dados reais do caso. Sem padrões detectados → nenhuma hipótese.
  * Nunca atribui causalidade nem confiança numérica.
  */
+import { buildLogicalGraph } from "./geno/build";
 import {
   detectPatterns,
   type DetectedPattern,
@@ -99,21 +100,46 @@ export function evidenceForCase(persons: PersonRow[], relationships: Relationshi
 }
 
 /** Lacunas reais (campos faltantes) — sem inventar; usada no dossiê e no copiloto. */
-export function informationGaps(persons: PersonRow[], now = new Date()): string[] {
+export function informationGaps(
+  persons: PersonRow[],
+  relationships?: RelationshipRow[],
+  now = new Date(),
+): string[] {
   const gaps: string[] = [];
   const name = (p: PersonRow) => p.preferred_name || p.full_name;
   const has = (k: string) =>
     persons.some((p) => (p.relationship_to_proband || "").toLowerCase().startsWith(k));
   if (persons.length === 0) return ["Nenhum familiar cadastrado no genossociograma."];
-  if (!has("pai")) gaps.push("Pai não cadastrado.");
-  if (!has("mãe") && !has("mae")) gaps.push("Mãe não cadastrada.");
+  if (relationships) {
+    const probandId = persons.find((p) => p.is_proband)?.id;
+    if (probandId) {
+      const graph = buildLogicalGraph({ persons, rels: relationships, probandId });
+      const confirmed =
+        graph.parentsByChild.get(probandId)?.filter((item) => item.kind !== "unknown") ?? [];
+      if (confirmed.length < 2) {
+        gaps.push(
+          confirmed.length === 1
+            ? "Quem é o outro genitor do consultante? Confira a fonte da filiação."
+            : "Quais genitores do consultante estão documentados ou foram relatados?",
+        );
+      }
+    }
+  } else {
+    if (!has("pai")) gaps.push("Pai não cadastrado.");
+    if (!has("mãe") && !has("mae")) gaps.push("Mãe não cadastrada.");
+  }
   for (const p of persons) {
-    if (p.is_deceased && !p.death_date)
+    if (p.is_deceased && !p.death_date && !p.death_date_partial)
       gaps.push(`Data de falecimento de ${name(p)} desconhecida.`);
     if (p.is_deceased && !p.cause_of_death)
       gaps.push(`Causa da morte de ${name(p)} não registrada.`);
-    if (!p.birth_date) gaps.push(`Data de nascimento de ${name(p)} desconhecida.`);
-    else if (now.getFullYear() - new Date(p.birth_date).getFullYear() >= 18 && !p.occupation)
+    if (!p.birth_date && !p.birth_date_partial)
+      gaps.push(`Data de nascimento de ${name(p)} desconhecida.`);
+    else if (
+      p.birth_date &&
+      now.getFullYear() - new Date(p.birth_date).getFullYear() >= 18 &&
+      !p.occupation
+    )
       gaps.push(`Profissão de ${name(p)} não registrada.`);
   }
   return gaps;

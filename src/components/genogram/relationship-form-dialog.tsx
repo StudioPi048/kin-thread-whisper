@@ -23,13 +23,14 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { validateParentLink } from "@/lib/family-relationships";
 import { supabase } from "@/integrations/supabase/client";
 import { relationshipQualifiers, relationshipTypes, type RelationshipType } from "@/lib/genogram";
 import type { Database } from "@/integrations/supabase/types";
 
 type PersonRow = Database["public"]["Tables"]["genogram_persons"]["Row"];
 type RelRow = Database["public"]["Tables"]["genogram_relationships"]["Row"];
+
+export type ProposedParentageLink = { parentId: string; kind: string; note: string };
 
 interface Props {
   open: boolean;
@@ -38,6 +39,7 @@ interface Props {
   persons: PersonRow[];
   editing?: RelRow | null;
   seed?: { from?: string; to?: string; type?: RelationshipType; qualifier?: string };
+  onReviewParentage: (childId: string, seed: ProposedParentageLink) => void;
 }
 
 interface FormState {
@@ -65,6 +67,7 @@ export function RelationshipFormDialog({
   persons,
   editing,
   seed,
+  onReviewParentage,
 }: Props) {
   const qc = useQueryClient();
   const [v, setV] = useState<FormState>(empty);
@@ -95,7 +98,10 @@ export function RelationshipFormDialog({
   }, [open, editing, seed]);
 
   const qualifierOptions = useMemo(
-    () => relationshipQualifiers[v.relationship_type] ?? [],
+    () =>
+      v.relationship_type === "parent"
+        ? [...relationshipQualifiers.parent, { value: "unknown", label: "Por confirmar" }]
+        : (relationshipQualifiers[v.relationship_type] ?? []),
     [v.relationship_type],
   );
 
@@ -109,9 +115,8 @@ export function RelationshipFormDialog({
       ) {
         throw new Error("Escolha duas pessoas cadastradas neste caso.");
       }
-      if (form.relationship_type === "parent" && !form.qualifier) {
-        throw new Error("Informe a natureza da filiação.");
-      }
+      if (form.relationship_type === "parent" || editing?.relationship_type === "parent")
+        throw new Error("Abra a revisão de filiação para alterar este vínculo.");
       const marriageOrder =
         form.relationship_type === "union" && form.marriage_order
           ? Number(form.marriage_order)
@@ -141,23 +146,6 @@ export function RelationshipFormDialog({
         }
       }
 
-      // O vínculo deve preservar a direção da filiação em toda a árvore.
-      if (form.relationship_type === "parent") {
-        const { data: existing, error: checkErr } = await supabase
-          .from("genogram_relationships")
-          .select("id, from_person_id, to_person_id")
-          .eq("client_id", clientId)
-          .eq("relationship_type", "parent");
-        if (checkErr) throw checkErr;
-        const reason = validateParentLink(
-          form.from_person_id,
-          form.to_person_id,
-          existing ?? [],
-          editing?.id,
-        );
-        if (reason) throw new Error(reason);
-      }
-
       const payload = {
         client_id: clientId,
         from_person_id: form.from_person_id,
@@ -172,7 +160,8 @@ export function RelationshipFormDialog({
           .from("genogram_relationships")
           .update(payload)
           .eq("id", editing.id)
-          .eq("client_id", clientId);
+          .eq("client_id", clientId)
+          .neq("relationship_type", "parent");
         if (error) throw error;
       } else {
         const { error } = await supabase.from("genogram_relationships").insert(payload);
@@ -199,10 +188,13 @@ export function RelationshipFormDialog({
   const removal = useMutation({
     mutationFn: async () => {
       if (!editing) return;
+      if (editing.relationship_type === "parent")
+        throw new Error("Abra a revisão de filiação para remover este vínculo.");
       const { error } = await supabase
         .from("genogram_relationships")
         .delete()
         .eq("client_id", clientId)
+        .neq("relationship_type", "parent")
         .eq("id", editing.id);
       if (error) throw error;
     },
@@ -219,11 +211,11 @@ export function RelationshipFormDialog({
   const toHint = isParentLink ? "Filho ou filha" : "Segunda pessoa";
   const pending = mutation.isPending || removal.isPending;
 
-  const personLabel = (person: PersonRow) =>
+  const personLabel = (person?: PersonRow) =>
     [
-      person.full_name || person.preferred_name || "Pessoa sem nome",
-      person.relationship_to_proband,
-      person.birth_date?.slice(0, 4),
+      person?.full_name || person?.preferred_name || "Pessoa indisponível",
+      person?.relationship_to_proband,
+      person?.birth_date?.slice(0, 4),
     ]
       .filter(Boolean)
       .join(" · ");
@@ -236,7 +228,7 @@ export function RelationshipFormDialog({
           </SheetTitle>
           <SheetDescription>
             {isParentLink
-              ? "Confirme as duas pessoas e o tipo de filiação. O mapa usa esta ligação em todas as vistas."
+              ? "Escolha as duas pessoas e confira a direção antes de abrir a revisão no mapa."
               : "Escolha se deseja registrar uma filiação, união, irmandade ou vínculo afetivo."}
           </SheetDescription>
         </SheetHeader>
@@ -247,6 +239,20 @@ export function RelationshipFormDialog({
             className="space-y-6 pb-8"
             onSubmit={(e) => {
               e.preventDefault();
+              if (isParentLink && !editing) {
+                if (!v.from_person_id || !v.to_person_id || !v.qualifier) return;
+                if (v.from_person_id === v.to_person_id) {
+                  toast.error("Escolha duas pessoas diferentes.");
+                  return;
+                }
+                onReviewParentage(v.to_person_id, {
+                  parentId: v.from_person_id,
+                  kind: v.qualifier,
+                  note: v.notes,
+                });
+                onOpenChange(false);
+                return;
+              }
               mutation.mutate(v);
             }}
           >
@@ -262,11 +268,13 @@ export function RelationshipFormDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {relationshipTypes.map((t) => (
-                    <SelectItem key={t.value} value={t.value} className="font-bold">
-                      {t.label}
-                    </SelectItem>
-                  ))}
+                  {relationshipTypes
+                    .filter(({ value }) => !editing || value !== "parent")
+                    .map((t) => (
+                      <SelectItem key={t.value} value={t.value} className="font-bold">
+                        {t.label}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -312,22 +320,29 @@ export function RelationshipFormDialog({
             </div>
 
             {isParentLink && v.from_person_id && v.to_person_id && (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="min-h-11"
-                disabled={pending}
-                onClick={() =>
-                  setV((state) => ({
-                    ...state,
-                    from_person_id: state.to_person_id,
-                    to_person_id: state.from_person_id,
-                  }))
-                }
-              >
-                <ArrowDownUp className="size-4" /> Inverter direção da filiação
-              </Button>
+              <div className="space-y-2 rounded-md border border-border bg-card p-3">
+                <p className="text-sm">
+                  <strong>{personLabel(persons.find(({ id }) => id === v.from_person_id))}</strong>{" "}
+                  como genitor de{" "}
+                  <strong>{personLabel(persons.find(({ id }) => id === v.to_person_id))}</strong>
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="min-h-11"
+                  disabled={pending}
+                  onClick={() =>
+                    setV((state) => ({
+                      ...state,
+                      from_person_id: state.to_person_id,
+                      to_person_id: state.from_person_id,
+                    }))
+                  }
+                >
+                  <ArrowDownUp className="size-4" /> Inverter direção da filiação
+                </Button>
+              </div>
             )}
 
             {qualifierOptions.length > 0 && (
@@ -437,7 +452,7 @@ export function RelationshipFormDialog({
               (isParentLink && !v.qualifier)
             }
           >
-            {mutation.isPending ? "Salvando…" : "Salvar vínculo"}
+            {isParentLink ? "Revisar no mapa" : mutation.isPending ? "Salvando…" : "Salvar vínculo"}
           </Button>
         </SheetFooter>
       </SheetContent>

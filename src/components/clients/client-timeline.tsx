@@ -10,6 +10,8 @@ import {
   buildCaseTimeline,
   filterTimeline,
   formatByPrecision,
+  yearRange,
+  type TimelineBranch,
   type CaseTimelineItem,
   type TimelineFilter,
   type TimelineKind,
@@ -19,6 +21,7 @@ import "./client-timeline.css";
 
 interface Props {
   clientId: string;
+  focusEvent?: string;
 }
 
 const GEN_LABEL = (g: number) =>
@@ -33,15 +36,17 @@ const KIND_LABEL: Record<TimelineKind, string> = {
   birth: "Nascimentos",
   death: "Falecimentos",
   event: "Eventos de vida",
+  union: "Uniões e separações",
 };
-const KINDS: TimelineKind[] = ["birth", "death", "event"];
+const KINDS: TimelineKind[] = ["birth", "death", "union", "event"];
 
-export function ClientTimeline({ clientId }: Props) {
+export function ClientTimeline({ clientId, focusEvent }: Props) {
   const q = useQuery(clinicalIntelQuery(clientId));
 
   const [filter, setFilter] = useState<TimelineFilter>({});
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [selection, setSelection] = useState<string | null>(null);
+  const [compareBranches, setCompareBranches] = useState(false);
+  const [selection, setSelection] = useState<string | null>(focusEvent ?? null);
   const all = useMemo(() => {
     if (!q.data) return [];
     const rels = q.data.relationships;
@@ -54,7 +59,8 @@ export function ClientTimeline({ clientId }: Props) {
       const name = person.full_name.trim() || person.preferred_name?.trim() || "Pessoa sem nome";
       counts.set(name, (counts.get(name) ?? 0) + 1);
     }
-    return buildCaseTimeline(persons, graph).map((item) => {
+    return buildCaseTimeline(persons, graph, rels).map((item) => {
+      if (item.personIds) return item;
       const person = byId.get(item.personId);
       if (!person || (counts.get(item.personName) ?? 0) < 2) return item;
       return {
@@ -66,7 +72,7 @@ export function ClientTimeline({ clientId }: Props) {
     });
   }, [q.data]);
   const items = useMemo(() => filterTimeline(all, filter), [all, filter]);
-  const scale = useMemo(() => buildTimelineScale(items), [items]);
+  const scale = useMemo(() => buildTimelineScale(items, filter.decade), [items, filter.decade]);
   const [dated, undated] = useMemo(() => {
     const plotted = new Set(scale?.events.map(({ item }) => item.key) ?? []);
     return [
@@ -77,16 +83,47 @@ export function ClientTimeline({ clientId }: Props) {
   const selected = items.find((item) => item.key === selection) ?? dated[0] ?? undated[0];
   const people = useMemo(
     () =>
-      [...new Map(all.map((i) => [i.personId, i.personName])).entries()].sort((a, b) =>
-        a[1].localeCompare(b[1], "pt-BR"),
-      ),
-    [all],
+      [
+        ...new Map(
+          getMappablePersons(q.data?.persons ?? [], q.data?.relationships ?? [])
+            .filter((person) =>
+              all.some((item) => (item.personIds ?? [item.personId]).includes(person.id)),
+            )
+            .map((person) => [
+              person.id,
+              [
+                person.full_name.trim() || person.preferred_name?.trim() || "Pessoa sem nome",
+                person.relationship_to_proband,
+              ]
+                .filter(Boolean)
+                .join(" · "),
+            ]),
+        ).entries(),
+      ].sort((a, b) => a[1].localeCompare(b[1], "pt-BR")),
+    [all, q.data],
   );
   const gens = useMemo(
     () =>
       [...new Set(all.map((i) => i.generation).filter((g): g is number => g !== null))].sort(
         (a, b) => a - b,
       ),
+    [all],
+  );
+  const decades = useMemo(
+    () =>
+      [
+        ...new Set(
+          all.flatMap((item) => {
+            if (item.year === null) return [];
+            const first = Math.floor(item.year / 10) * 10;
+            const last = Math.floor((yearRange(item.rawDate)?.last ?? item.year) / 10) * 10;
+            return Array.from(
+              { length: (last - first) / 10 + 1 },
+              (_, index) => first + index * 10,
+            );
+          }),
+        ),
+      ].sort((a, b) => a - b),
     [all],
   );
   const hasNoGen = all.some((i) => i.generation === null);
@@ -132,7 +169,13 @@ export function ClientTimeline({ clientId }: Props) {
 
   const selectClass =
     "h-11 min-w-0 rounded-md border border-input bg-card px-3 text-sm text-foreground";
-  const hasFilter = !!(filter.personId || filter.generation !== undefined || filter.kind);
+  const hasFilter = !!(
+    filter.personId ||
+    filter.generation !== undefined ||
+    filter.kind ||
+    filter.branch ||
+    filter.decade !== undefined
+  );
 
   return (
     <div className="case-timeline">
@@ -218,6 +261,43 @@ export function ClientTimeline({ clientId }: Props) {
             ))}
           </select>
         </div>
+        <div>
+          <label htmlFor="tl-branch">Ramo</label>
+          <select
+            id="tl-branch"
+            className={selectClass}
+            value={filter.branch ?? ""}
+            onChange={(e) =>
+              setFilter({
+                ...filter,
+                branch: (e.target.value || undefined) as TimelineBranch | undefined,
+              })
+            }
+          >
+            <option value="">Todos</option>
+            <option value="paternal">Paterno</option>
+            <option value="maternal">Materno</option>
+            <option value="other">Outros ou compartilhados</option>
+          </select>
+        </div>
+        <div>
+          <label htmlFor="tl-decade">Década</label>
+          <select
+            id="tl-decade"
+            className={selectClass}
+            value={filter.decade ?? ""}
+            onChange={(e) =>
+              setFilter({ ...filter, decade: e.target.value ? Number(e.target.value) : undefined })
+            }
+          >
+            <option value="">Todas</option>
+            {decades.map((decade) => (
+              <option key={decade} value={decade}>
+                {decade}–{decade + 9}
+              </option>
+            ))}
+          </select>
+        </div>
         {hasFilter && (
           <Button variant="ghost" className="min-h-11" onClick={() => setFilter({})}>
             Limpar filtros
@@ -262,6 +342,10 @@ export function ClientTimeline({ clientId }: Props) {
           </section>
 
           <TimelineOverview
+            compareBranches={compareBranches && !filter.branch}
+            onCompareBranches={
+              filter.branch ? undefined : () => setCompareBranches((active) => !active)
+            }
             scale={scale}
             selected={selected}
             clientId={clientId}
@@ -329,22 +413,43 @@ function TimelineOverview({
   selected,
   clientId,
   onSelect,
+  compareBranches,
+  onCompareBranches,
 }: {
   scale: Scale;
+  compareBranches: boolean;
+  onCompareBranches?: () => void;
   selected: CaseTimelineItem;
   clientId: string;
   onSelect: (key: string) => void;
 }) {
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
   const active = scale?.events.find(({ item }) => item.key === selected.key);
   const partial = scale?.events.some(({ from, to }) => to !== from);
-  const lanes = useMemo(
-    () =>
-      KINDS.flatMap((kind) => {
-        const events = scale?.events.filter(({ item }) => item.kind === kind) ?? [];
-        return events.length ? [{ kind, groups: groupTimelineMarkers(events) }] : [];
-      }),
-    [scale],
-  );
+  const lanes = useMemo(() => {
+    const events = scale?.events ?? [];
+    if (!compareBranches) {
+      return KINDS.flatMap((kind) => {
+        const list = events.filter(({ item }) => item.kind === kind);
+        return list.length
+          ? [{ id: kind, title: KIND_LABEL[kind], groups: groupTimelineMarkers(list) }]
+          : [];
+      });
+    }
+    const branches = [
+      ["paternal", "Ramo paterno"],
+      ["maternal", "Ramo materno"],
+      ["other", "Outros ou compartilhados"],
+    ] as const;
+    return branches.flatMap(([branch, title]) => {
+      const list = events.filter(({ item }) => (item.branch ?? "other") === branch);
+      return list.length ? [{ id: branch, title, groups: groupTimelineMarkers(list) }] : [];
+    });
+  }, [scale, compareBranches]);
+
+  const cluster = lanes
+    .flatMap((lane) => lane.groups)
+    .find((group) => group.members[0].item.key === openGroup && group.members.length > 1);
 
   return (
     <section className="case-timeline-overview" aria-labelledby="case-timeline-overview-title">
@@ -358,6 +463,17 @@ function TimelineOverview({
           </p>
         )}
       </header>
+      {scale && onCompareBranches && (
+        <Button
+          type="button"
+          variant="outline"
+          className="ml-4 min-h-11"
+          aria-pressed={compareBranches}
+          onClick={onCompareBranches}
+        >
+          Comparar ramos
+        </Button>
+      )}
       {scale ? (
         <figure className="case-timeline-figure">
           <div className="case-timeline-ruler" aria-hidden="true">
@@ -374,25 +490,17 @@ function TimelineOverview({
               ))}
               {active && <span className="case-timeline-guide" style={{ left: `${active.at}%` }} />}
             </div>
-            {lanes.map(({ kind, groups }) => (
-              <div
-                className="case-timeline-lane"
-                key={kind}
-                role="group"
-                aria-label={KIND_LABEL[kind]}
-              >
-                <h4>
-                  <TimelineMark kind={kind} />
-                  {KIND_LABEL[kind]}
-                </h4>
+            {lanes.map(({ id, title, groups }) => (
+              <div className="case-timeline-lane" key={id} role="group" aria-label={title}>
+                <h4>{title}</h4>
                 <div className="case-timeline-track">
                   {groups.map((group) => {
                     const index = group.members.findIndex(({ item }) => item.key === selected.key);
-                    const next = group.members[(index + 1) % group.members.length].item;
-                    const title =
-                      group.members.length === 1
-                        ? `${next.label} de ${next.personName} · ${formatByPrecision(next.rawDate, next.precision)}`
-                        : `${group.members.length} registros próximos. Selecionar ${next.label} de ${next.personName}`;
+                    const item = group.members[0].item;
+                    const single = group.members.length === 1;
+                    const title = single
+                      ? `${item.label} de ${item.personName} · ${formatByPrecision(item.rawDate, item.precision)}`
+                      : `Ver ${group.members.length} registros próximos de ${formatByPrecision(item.rawDate, item.precision)}`;
                     return (
                       <div key={group.members[0].item.key}>
                         {group.members
@@ -401,7 +509,7 @@ function TimelineOverview({
                             <span
                               key={item.key}
                               className="case-timeline-interval"
-                              data-kind={kind}
+                              data-kind={item.kind}
                               style={{ left: `${from}%`, width: `${to - from}%` }}
                               aria-hidden="true"
                             />
@@ -411,11 +519,22 @@ function TimelineOverview({
                           className="case-timeline-pin"
                           aria-label={title}
                           title={title}
-                          aria-pressed={index >= 0}
+                          aria-pressed={single ? index >= 0 : undefined}
+                          aria-expanded={
+                            single ? undefined : cluster?.members[0].item.key === item.key
+                          }
+                          aria-controls={single || !cluster ? undefined : "timeline-nearby-events"}
                           style={{ left: `${group.at}%` }}
-                          onClick={() => onSelect(next.key)}
+                          onClick={() => {
+                            if (single) {
+                              setOpenGroup(null);
+                              onSelect(item.key);
+                            } else {
+                              setOpenGroup(openGroup === item.key ? null : item.key);
+                            }
+                          }}
                         >
-                          <TimelineMark kind={kind} />
+                          <TimelineMark kind={item.kind} />
                           {group.members.length > 1 && (
                             <span className="case-timeline-cluster" aria-hidden="true">
                               {group.members.length}
@@ -429,12 +548,38 @@ function TimelineOverview({
               </div>
             ))}
           </div>
-          {partial && (
-            <figcaption>As faixas indicam registros com mês ou ano, sem dia exato.</figcaption>
-          )}
+          {partial && <figcaption>As faixas indicam datas aproximadas ou intervalos.</figcaption>}
         </figure>
       ) : (
         <p className="case-timeline-graph-empty">Os registros sem data ou ano ficam na lista.</p>
+      )}
+      {cluster && (
+        <section
+          id="timeline-nearby-events"
+          className="mt-4 rounded-md border border-border p-3"
+          aria-label="Registros próximos na cronologia"
+        >
+          <h4 className="text-sm font-semibold text-primary">Registros próximos</h4>
+          <ul className="mt-1 divide-y divide-border">
+            {cluster.members.map(({ item }) => (
+              <li key={item.key}>
+                <button
+                  type="button"
+                  aria-pressed={selected.key === item.key}
+                  className="min-h-11 w-full px-2 py-2 text-left text-sm hover:bg-muted"
+                  onClick={() => onSelect(item.key)}
+                >
+                  <strong>
+                    {item.label} · {item.personName}
+                  </strong>
+                  <span className="block text-muted-foreground">
+                    {formatByPrecision(item.rawDate, item.precision)}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
       <div className="case-timeline-overview-detail">
         <TimelineEventDetail item={selected} clientId={clientId} />
@@ -474,8 +619,29 @@ function TimelineEventDetail({
           search={{ tab: "genogram", person: item.personId }}
           className="inline-flex min-h-11 items-center gap-1.5 font-semibold text-forest hover:underline"
         >
-          <MapPin className="size-4" aria-hidden /> Ver no mapa
+          <MapPin className="size-4" aria-hidden />{" "}
+          {item.kind === "union" ? "Ver vínculo no mapa" : "Ver no mapa"}
         </Link>
+        {item.sourceTab && (
+          <Link
+            to="/app/clientes/$clientId"
+            params={{ clientId }}
+            search={{ tab: item.sourceTab, question: item.sourceField }}
+            className="inline-flex min-h-11 items-center gap-1.5 font-semibold text-forest hover:underline"
+          >
+            Abrir anamnese
+          </Link>
+        )}
+        {item.kind !== "union" && (
+          <Link
+            to="/app/clientes/$clientId"
+            params={{ clientId }}
+            search={{ tab: "clan", person: item.personId }}
+            className="inline-flex min-h-11 items-center gap-1.5 font-semibold text-forest hover:underline"
+          >
+            Ver ficha na planilha
+          </Link>
+        )}
       </footer>
     </div>
   );

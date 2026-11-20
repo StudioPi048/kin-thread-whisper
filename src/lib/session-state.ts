@@ -150,3 +150,15 @@ export async function invalidateSessionViews(qc: QueryClient, clientId: string) 
     qc.invalidateQueries({ queryKey: ["mesa-onboarding-counts"] }),
   ]);
 }
+
+export function canRetryAudioProcessing(
+  status: string,
+  processingStartedAt: string | null | undefined,
+  updatedAt: string | undefined,
+  now = Date.now(),
+) {
+  if (status === "draft" || status === "error") return true;
+  if (status !== "transcribing" && status !== "structuring") return false;
+  const startedAt = Date.parse(processingStartedAt ?? updatedAt ?? "");
+  return Number.isFinite(startedAt) && now - startedAt >= 10 * 60 * 1000;
+}

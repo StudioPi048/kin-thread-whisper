@@ -14,7 +14,7 @@ import {
 import { searchLibrary } from "@/lib/library-search";
 
 /** Consulta à Biblioteca sem sair do caso (painel lateral; tela cheia no celular). */
-export function LibraryCasePanel() {
+export function LibraryCasePanel({ reference }: { reference?: string }) {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<LibraryItem | null>(null);
   const entriesQ = useQuery({
@@ -29,10 +29,15 @@ export function LibraryCasePanel() {
   const shown = q.trim() ? searchLibrary(items, q).slice(0, 30) : [];
 
   return (
-    <Sheet>
+    <Sheet
+      onOpenChange={(visible) => {
+        if (visible && reference) setOpen(items.find((item) => item.key === reference) ?? null);
+      }}
+    >
       <SheetTrigger asChild>
         <Button variant="outline" className="min-h-11">
-          <BookOpen className="mr-2 size-4" aria-hidden /> Biblioteca
+          <BookOpen className="mr-2 size-4" aria-hidden />{" "}
+          {reference ? "Manual e biblioteca" : "Biblioteca"}
         </Button>
       </SheetTrigger>
       <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-[480px]">

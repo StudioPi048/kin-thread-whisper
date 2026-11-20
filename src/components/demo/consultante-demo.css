@@ -1,0 +1,212 @@
+.consultante-demo {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-card);
+  color: var(--color-ink);
+}
+
+.consultante-demo-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: space-between;
+  padding: 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.consultante-demo-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.consultante-demo button {
+  min-height: 44px;
+}
+
+.consultante-demo-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 28%);
+}
+
+.consultante-demo-stage {
+  min-width: 0;
+  background: var(--color-muted);
+}
+
+.consultante-plane {
+  position: relative;
+  min-height: 383px;
+}
+
+.consultante-plane svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 383px;
+  fill: none;
+  stroke: var(--color-forest-soft);
+}
+
+.consultante-plane path {
+  stroke-width: 1.5px;
+  vector-effect: non-scaling-stroke;
+}
+
+.consultante-plaque {
+  position: absolute;
+  translate: -50% 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: min(142px, 28%);
+  min-height: 82px;
+  padding: 6px 4px;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  background: var(--color-card);
+  color: var(--color-ink);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+.consultante-plaque:focus-visible,
+.consultante-plaque[aria-pressed="true"] {
+  outline: 2px solid var(--color-forest);
+  outline-offset: 2px;
+}
+
+.consultante-plaque small {
+  color: var(--color-ink-soft);
+  font-size: 0.85em;
+  font-weight: 500;
+}
+
+.consultante-person-symbol {
+  position: relative;
+  display: block;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--color-forest);
+  background: var(--color-forest-mist);
+}
+
+.consultante-person-symbol--feminino {
+  border-radius: 50%;
+}
+
+.consultante-person-symbol[data-deceased="true"]::before {
+  content: "";
+  position: absolute;
+  inset: 3px 2px auto;
+  border-top: 1px solid var(--color-forest);
+}
+
+.consultante-demo-spatial {
+  height: 398px;
+}
+
+.consultante-demo-inspector {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  border-left: 1px solid var(--color-border);
+  padding: 18px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.consultante-demo-inspector label {
+  display: block;
+  font-weight: 600;
+}
+
+.consultante-demo-inspector select {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 4px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-card);
+  color: var(--color-ink);
+  font-size: 14px;
+}
+
+.consultante-demo-inspector h4 {
+  margin: 4px 0 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-forest);
+}
+
+.consultante-demo-parents {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.consultante-demo-parents li {
+  display: flex;
+  align-items: center;
+  gap: 4px 12px;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--color-border);
+  padding: 8px 0;
+}
+
+.consultante-demo-parents small,
+.consultante-demo-status {
+  color: var(--color-ink-soft);
+}
+
+.consultante-demo-status {
+  min-height: 1.5em;
+  margin: 0;
+}
+
+.consultante-demo-timeline {
+  margin: 0;
+  padding: 16px 24px;
+  list-style: none;
+}
+
+.consultante-demo-timeline li {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  font-size: 14px;
+}
+
+.consultante-demo-timeline li button {
+  border-left: 1px solid var(--color-forest-soft);
+  padding: 6px 0 6px 16px;
+  text-align: left;
+  color: var(--color-forest);
+}
+
+.consultante-demo-timeline li button:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 800px) {
+  .consultante-demo-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .consultante-demo-inspector {
+    border-left: 0;
+    border-top: 1px solid var(--color-border);
+  }
+}

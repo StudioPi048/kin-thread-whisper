@@ -18,14 +18,26 @@ export type ExportPageReader = (request: {
   filter: ExportFilter;
   from: number;
   to: number;
+  columns?: string;
 }) => Promise<ExportRow[]>;
 
-async function allRows(read: ExportPageReader, table: ExportTable, filter: ExportFilter) {
+async function allRows(
+  read: ExportPageReader,
+  table: ExportTable,
+  filter: ExportFilter,
+  columns?: string,
+) {
   const rows: ExportRow[] = [];
   if (!filter.values.length) return rows;
   const allowed = new Set(filter.values);
   for (let from = 0; ; from += 500) {
-    const page = await read({ table, filter, from, to: from + 499 });
+    const page = await read({
+      table,
+      filter,
+      from,
+      to: from + 499,
+      ...(columns ? { columns } : {}),
+    });
     if (page.some((r) => !allowed.has(String(r[filter.column]))))
       throw new Error(`A resposta de ${table} contém registros fora do escopo da conta.`);
     rows.push(...page);
@@ -99,4 +111,51 @@ export async function exportDossierData(read: ExportPageReader, userId: string, 
     client,
     ...(await exportCases(read, [client])),
   };
+}
+
+export async function readDossierReport(
+  read: ExportPageReader,
+  userId: string,
+  clientId: string,
+  scope: { family: boolean; timeline: boolean; sessions: boolean; includeNotes: boolean },
+) {
+  if (!userId || !clientId) throw new Error("Dossiê não identificado.");
+  const filter = { column: "client_id", values: [clientId] };
+  const [client] = await allRows(
+    read,
+    "clients",
+    { column: "id", values: [clientId] },
+    "id, professional_id, full_name",
+  );
+  if (client?.professional_id !== userId) throw new Error("Dossiê indisponível para esta conta.");
+  const wantsFamily = scope.family || scope.timeline;
+  const [persons, links, sessions] = await Promise.all([
+    wantsFamily
+      ? allRows(
+          read,
+          "genogram_persons",
+          filter,
+          "id, client_id, full_name, preferred_name, relationship_to_proband, gender, is_proband, birth_order, birth_date, death_date, is_deceased, parentage_reviewed" +
+            (scope.timeline ? ", birth_date_partial, death_date_partial, life_events, notes" : ""),
+        )
+      : [],
+    wantsFamily
+      ? allRows(
+          read,
+          "genogram_relationships",
+          filter,
+          "id, client_id, from_person_id, to_person_id, relationship_type, qualifier, start_date, end_date, marriage_order",
+        )
+      : [],
+    scope.sessions
+      ? allRows(
+          read,
+          "clinical_sessions",
+          filter,
+          "id, client_id, user_id, session_date, clinical_status, status" +
+            (scope.includeNotes ? ", manual_notes" : ""),
+        )
+      : [],
+  ]);
+  return { clientName: String(client.full_name), persons, links, sessions };
 }

@@ -1,6 +1,14 @@
 import { parentLinePatterns } from "@/lib/family-relationships";
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import type { CSSProperties, KeyboardEvent, PointerEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import type { CSSProperties, KeyboardEvent, PointerEvent, Ref } from "react";
 import type { Edge, Node } from "@xyflow/react";
 import {
   GitFork,
@@ -21,6 +29,8 @@ import { formatDateBR, relationshipLabel, relationshipQualifiers } from "@/lib/g
 import { cn } from "@/lib/utils";
 import type { PersonNodeData } from "./person-node";
 import type { ParentagePreview } from "./parentage-preview";
+import { readMapViewAnchor, type MapViewAnchor } from "./map-view-context";
+import type { MapBranch } from "./map-view-context";
 import { personSymbol } from "./person-symbol";
 import {
   buildSpatialLayout,
@@ -47,6 +57,11 @@ interface GenogramSpatialViewProps {
   parentagePreview?: ParentagePreview | null;
   focusRequest?: { personId: string; relatedPersonIds?: readonly string[] };
   fitRequest?: number;
+  viewAnchor?: MapViewAnchor;
+  cameraRef?: Ref<SpatialCameraHandle>;
+  highlightedBranch?: MapBranch | null;
+  onFocusPerson?: (id: string) => void;
+  onReviewParentage?: (id: string) => void;
   canMovePeople?: boolean;
   getMovePersonDelta?: (id: string, deltaX: number) => number;
   onMovePerson?: (id: string, deltaX: number) => void;
@@ -54,6 +69,12 @@ interface GenogramSpatialViewProps {
 
 type Frame = { width: number; height: number };
 type Camera = SpatialAngles & { x: number; y: number; zoom: number };
+export type SpatialCamera = Camera;
+export type SpatialCameraHandle = {
+  read: () => SpatialCamera | undefined;
+  restore: (camera: SpatialCamera) => void;
+  readAnchor: () => MapViewAnchor | undefined;
+};
 type Pointer = { x: number; y: number };
 type Layout = ReturnType<typeof buildSpatialLayout>;
 type ProjectedPerson = ReturnType<typeof projectSpatialLayout>["people"][number];
@@ -257,6 +278,11 @@ export function GenogramSpatialView({
   parentagePreview,
   focusRequest,
   fitRequest,
+  viewAnchor,
+  cameraRef,
+  highlightedBranch,
+  onFocusPerson,
+  onReviewParentage,
   canMovePeople,
   getMovePersonDelta,
   onMovePerson,
@@ -270,6 +296,7 @@ export function GenogramSpatialView({
   const pointers = useRef(new Map<number, Pointer>());
   const lastFocus = useRef<GenogramSpatialViewProps["focusRequest"]>(undefined);
   const lastFit = useRef(fitRequest);
+  const lastAnchor = useRef<MapViewAnchor>(undefined);
   const dragPerson = useRef<{
     id: string;
     pointerId: number;
@@ -358,6 +385,34 @@ export function GenogramSpatialView({
   );
   const hasFrame = frame.width > 0 && frame.height > 0;
 
+  useImperativeHandle(
+    cameraRef,
+    () => ({
+      read: () => (hasFrame ? camera : undefined),
+      restore: setManualCamera,
+      readAnchor: () => {
+        const fitted = fitCamera(layout, frame, camera);
+        const anchor = readMapViewAnchor(
+          display.people.map(({ id, x, y, height }) => ({
+            id,
+            x: frame.width / 2 + camera.x + x * camera.zoom,
+            y: frame.height / 2 + camera.y + (y + height / 2) * camera.zoom,
+          })),
+          frame.width,
+          frame.height,
+          camera.zoom / fitted.zoom,
+          selectedPersonId,
+        );
+        const overview =
+          Math.abs(camera.x - fitted.x) < frame.width * 0.035 &&
+          Math.abs(camera.y - fitted.y) < frame.height * 0.035 &&
+          Math.abs(camera.zoom / fitted.zoom - 1) < 0.06;
+        return anchor ? { ...anchor, overview } : undefined;
+      },
+    }),
+    [camera, display.people, frame, hasFrame, layout, selectedPersonId],
+  );
+
   useEffect(() => {
     if (!hasFrame || lastFit.current === fitRequest) return;
     lastFit.current = fitRequest;
@@ -388,6 +443,24 @@ export function GenogramSpatialView({
         : centerPerson(current, requested, Math.max(1.08 / requested.scale, current.zoom)),
     );
   }, [changeCamera, focusRequest, frame, hasFrame, display.people]);
+
+  useEffect(() => {
+    if (!hasFrame || !viewAnchor || lastAnchor.current === viewAnchor) return;
+    const person = display.people.find(({ id }) => id === viewAnchor.personId);
+    if (!person) return;
+    lastAnchor.current = viewAnchor;
+    changeCamera((current) => {
+      const fitted = fitCamera(layout, frame, current);
+      if (viewAnchor.overview) return fitted;
+      const zoom = clamp(fitted.zoom * viewAnchor.scale, minZoom, MAX_ZOOM);
+      return {
+        ...current,
+        zoom,
+        x: frame.width * (viewAnchor.horizontal - 0.5) - person.x * zoom,
+        y: frame.height * (viewAnchor.vertical - 0.5) - (person.y + person.height / 2) * zoom,
+      };
+    });
+  }, [changeCamera, display.people, frame, hasFrame, layout, minZoom, viewAnchor]);
 
   useEffect(() => {
     const viewport = viewportRef.current;
@@ -618,7 +691,11 @@ export function GenogramSpatialView({
     }
     const member = unionMembers.find(({ id }) => id === selectedPersonId) ?? unionMembers[0];
     if (!member) return;
-    setOpenedPersonId(member.id);
+    openUnions(member.id);
+  }
+
+  function openUnions(id: string) {
+    setOpenedPersonId(id);
     setChosenUnion(null);
     setChosenRoute(null);
     setUnionsOpen(true);
@@ -657,6 +734,17 @@ export function GenogramSpatialView({
     ? describeRoute(activeRoute, nameById, unionById.get(activeRoute.unionId ?? ""))
     : undefined;
   const expandedUnion = shownUnions.find(({ id }) => id === chosenUnion);
+  const routeMemberIds = activeRoute
+    ? (activeRoute.childIds ?? unionById.get(activeRoute.unionId ?? "")?.partners ?? [])
+    : [];
+  const contextChildren =
+    activeRoute?.edge.type === "pedigree"
+      ? (activeRoute.childIds ?? [])
+      : expandedUnion
+        ? display.routes
+            .filter(({ unionId, edge }) => unionId === expandedUnion.id && edge.type === "pedigree")
+            .flatMap(({ childIds }) => childIds ?? [])
+        : [];
   const highlightedUnion = expandedUnion?.id ?? activeRoute?.unionId;
   const routeIsActive = (route: SpatialRoute) =>
     parentagePreview
@@ -667,7 +755,9 @@ export function GenogramSpatialView({
           ? route.id === activeRoute.id
           : route.highlighted;
   const routeIsMuted = (route: SpatialRoute) =>
-    parentagePreview || ((activeRoute || expandedUnion) && !routeIsActive(route))
+    parentagePreview ||
+    ((activeRoute || expandedUnion) && !routeIsActive(route)) ||
+    (highlightedBranch && route.branch !== highlightedBranch && !routeIsActive(route))
       ? true
       : undefined;
   const routeClass = (route: SpatialRoute) =>
@@ -761,6 +851,83 @@ export function GenogramSpatialView({
           {positionMode ? "Arraste a pessoa para os lados" : separateLinks ? bridgeStatus : ""}
         </span>
       </div>
+      {(activeRouteDescription || expandedUnion) && (
+        <section className="geno-spatial-link-context" aria-label="Vínculo em foco">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <strong>
+                {activeRouteDescription?.title ??
+                  expandedUnion?.partners
+                    .map((id) => nameById.get(id))
+                    .filter(Boolean)
+                    .join(" · ")}
+              </strong>
+              <p>{activeRouteDescription?.detail ?? expandedUnion?.label ?? "União"}</p>
+            </div>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              aria-label="Fechar vínculo em foco"
+              onClick={() => {
+                setChosenRoute(null);
+                setChosenUnion(null);
+              }}
+            >
+              <X className="size-4" aria-hidden />
+            </Button>
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {activeRoute && !separateLinks && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setSeparateLinks(true);
+                  if (frontal) rotate(0.24, 0.14);
+                }}
+              >
+                Separar cruzamentos
+              </Button>
+            )}
+            {unionMembers.find(({ id }) => routeMemberIds.includes(id)) && !expandedPersonId && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const member = unionMembers.find(({ id }) => routeMemberIds.includes(id));
+                  if (member) openUnions(member.id);
+                }}
+              >
+                Abrir uniões deste vínculo
+              </Button>
+            )}
+          </div>
+          {contextChildren.length > 0 && (
+            <ul>
+              {[...new Set(contextChildren)].map((id) => (
+                <li key={id}>
+                  <Button type="button" size="sm" variant="ghost" onClick={() => selectPerson(id)}>
+                    {nameById.get(id)}
+                  </Button>
+                  {onReviewParentage && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => onReviewParentage(id)}
+                    >
+                      Revisar filiação
+                    </Button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
       <div className="geno-spatial-workspace">
         <div
           ref={viewportRef}
@@ -963,6 +1130,13 @@ export function GenogramSpatialView({
                       aria-label={label}
                       data-reference={data.is_proband || undefined}
                       data-branch={person.branch}
+                      data-branch-muted={
+                        (!!highlightedBranch &&
+                          person.branch !== highlightedBranch &&
+                          !data.is_proband &&
+                          !parentageRole) ||
+                        undefined
+                      }
                       data-person-id={person.id}
                       data-generation={person.generation}
                       data-parentage-person={parentageRole}
@@ -972,7 +1146,10 @@ export function GenogramSpatialView({
                         selectPerson(person.id);
                       }}
                       onFocus={(event) => {
-                        if (event.currentTarget.matches(":focus-visible")) revealCard(person);
+                        if (event.currentTarget.matches(":focus-visible")) {
+                          revealCard(person);
+                          onFocusPerson?.(person.id);
+                        }
                       }}
                       onKeyDown={(event) => {
                         if (!positionMode || !["ArrowLeft", "ArrowRight"].includes(event.key))

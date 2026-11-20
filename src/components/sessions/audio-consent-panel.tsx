@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   AUDIO_CONSENT_SCOPE,
   AUDIO_CONSENT_SOURCE,
+  latestAudioDecision,
   type AudioConsentEvent,
   type AudioConsentScope,
   type AudioConsentSource,
@@ -26,23 +27,40 @@ export function AudioConsentPanel({
   loading,
   unavailable,
   refresh,
+  sessions,
+  initialSessionId,
 }: {
   clientId: string;
   events: AudioConsentEvent[];
   loading: boolean;
   unavailable: boolean;
   refresh: () => Promise<unknown>;
+  sessions: { id: string; label: string }[];
+  initialSessionId?: string;
 }) {
   const [change, setChange] = useState<{ scope: AudioConsentScope; granted: boolean }>();
   const [source, setSource] = useState<AudioConsentSource | "">("");
+  const [selectedSession, setSession] = useState<string>();
+  const sessionId =
+    selectedSession ??
+    (sessions.some((s) => s.id === initialSessionId) ? initialSessionId : "") ??
+    "";
+  const [termVersion, setVersion] = useState("");
+  const [reference, setReference] = useState("");
+  const activeEvents = sessionId
+    ? events.filter((event) => !event.session_id || event.session_id === sessionId)
+    : events;
   const save = useMutation({
     mutationFn: async () => {
       if (!change || !source) return;
-      const { error } = await supabase.rpc("record_audio_consent", {
+      const { error } = await supabase.rpc("record_audio_consent_details", {
         _client_id: clientId,
         _scope: change.scope,
         _granted: change.granted,
         _source: source,
+        ...(sessionId ? { _session_id: sessionId } : {}),
+        ...(termVersion.trim() ? { _term_version: termVersion.trim() } : {}),
+        ...(reference.trim() ? { _document_reference: reference.trim() } : {}),
       });
       if (error) throw error;
     },
@@ -50,17 +68,41 @@ export function AudioConsentPanel({
       await refresh();
       setChange(undefined);
       setSource("");
+      setVersion("");
+      setReference("");
     },
   });
 
   return (
-    <section className="space-y-4 rounded-sm border border-border bg-surface-document p-4 sm:p-5">
+    <section
+      id="audio-consents"
+      tabIndex={-1}
+      className="space-y-4 rounded-sm border border-border bg-surface-document p-4 sm:p-5"
+    >
       <div>
         <h3 className="text-base font-semibold text-primary">Autorizações de áudio</h3>
         <p className="mt-1 text-sm text-muted-foreground">
-          Registre a decisão do consultante para cada finalidade.
+          Registre a decisão do consultante para cada finalidade, no caso inteiro ou em uma sessão.
         </p>
       </div>
+      {sessions.length > 0 && (
+        <label className="grid max-w-md gap-1.5 text-sm font-medium">
+          Aplicação da decisão
+          <select
+            className="min-h-11 w-full rounded-md border border-input bg-card px-3 text-base"
+            value={sessionId}
+            disabled={!!change || save.isPending}
+            onChange={(e) => setSession(e.target.value)}
+          >
+            <option value="">Caso inteiro</option>
+            {sessions.map((session) => (
+              <option key={session.id} value={session.id}>
+                {session.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       {loading && (
         <p role="status" className="text-sm">
           Consultando autorizações…
@@ -78,7 +120,7 @@ export function AudioConsentPanel({
         <>
           <ul className="grid gap-3 lg:grid-cols-2">
             {(Object.keys(AUDIO_CONSENT_SCOPE) as AudioConsentScope[]).map((scope) => {
-              const latest = events.find((event) => event.scope === scope);
+              const latest = latestAudioDecision(events, scope, sessionId || undefined);
               return (
                 <li key={scope} className="space-y-2 rounded-sm border border-border p-3">
                   <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
@@ -97,6 +139,8 @@ export function AudioConsentPanel({
                       save.reset();
                       setChange({ scope, granted: !latest?.granted });
                       setSource("");
+                      setVersion("");
+                      setReference("");
                     }}
                   >
                     {latest?.granted ? "Revogar autorização" : "Registrar autorização"}
@@ -133,6 +177,34 @@ export function AudioConsentPanel({
                   ))}
                 </select>
               </label>
+              {!change.granted && (
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  {change.scope === "recording"
+                    ? "A revogação impede iniciar gravações e armazenar áudios pendentes neste escopo."
+                    : "A revogação impede novos envios para a IA neste escopo."}{" "}
+                  Os registros já guardados permanecem no dossiê.
+                </p>
+              )}
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="grid gap-1.5 text-sm">
+                  Versão do termo (opcional)
+                  <input
+                    className="min-h-11 min-w-0 rounded-md border border-input bg-card px-3 text-base"
+                    value={termVersion}
+                    maxLength={100}
+                    onChange={(e) => setVersion(e.target.value)}
+                  />
+                </label>
+                <label className="grid gap-1.5 text-sm">
+                  Referência do documento (opcional)
+                  <input
+                    className="min-h-11 min-w-0 rounded-md border border-input bg-card px-3 text-base"
+                    value={reference}
+                    maxLength={500}
+                    onChange={(e) => setReference(e.target.value)}
+                  />
+                </label>
+              </div>
               {save.isError && (
                 <p role="alert" className="text-sm text-destructive">
                   A decisão não foi registrada. Confira a conexão e tente novamente.
@@ -154,16 +226,26 @@ export function AudioConsentPanel({
               </div>
             </form>
           )}
-          {events.length > 0 && (
+          {activeEvents.length > 0 && (
             <details>
               <summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold">
-                Histórico de autorizações ({events.length})
+                Histórico de autorizações ({activeEvents.length})
               </summary>
               <ol className="space-y-2 border-t border-border pt-3 text-sm">
-                {events.map((event) => (
+                {activeEvents.map((event) => (
                   <li key={event.id}>
                     <strong>{AUDIO_CONSENT_SCOPE[event.scope as AudioConsentScope]}</strong>
                     <span className="ml-2 text-muted-foreground">{eventLabel(event)}</span>
+                    <p className="text-muted-foreground">
+                      {event.session_id
+                        ? (sessions.find((session) => session.id === event.session_id)?.label ??
+                          "Sessão anterior")
+                        : "Caso inteiro"}
+                      {event.term_version && ` · termo ${event.term_version}`}
+                    </p>
+                    {event.document_reference && (
+                      <p className="break-words">{event.document_reference}</p>
+                    )}
                   </li>
                 ))}
               </ol>

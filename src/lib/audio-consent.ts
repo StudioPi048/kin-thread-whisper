@@ -29,8 +29,22 @@ export async function readAudioConsents(db: SupabaseClient<Database>, clientId: 
   return data;
 }
 
-export function activeAudioConsent(events: AudioConsentEvent[], scope: AudioConsentScope) {
-  const latest = events.find((event) => event.scope === scope);
+export function latestAudioDecision(
+  events: AudioConsentEvent[],
+  scope: AudioConsentScope,
+  sessionId?: string,
+) {
+  return events.find(
+    (event) => event.scope === scope && (!event.session_id || event.session_id === sessionId),
+  );
+}
+
+export function activeAudioConsent(
+  events: AudioConsentEvent[],
+  scope: AudioConsentScope,
+  sessionId?: string,
+) {
+  const latest = latestAudioDecision(events, scope, sessionId);
   return latest?.granted ? latest : undefined;
 }
 
@@ -39,12 +53,18 @@ export async function requireAudioConsent(
   clientId: string,
   scope: AudioConsentScope,
   expectedGrant?: string,
+  sessionId?: string,
 ) {
-  const { data, error } = await db
+  const applicable = db
     .from("audio_consent_events")
     .select("*")
     .eq("client_id", clientId)
-    .eq("scope", scope)
+    .eq("scope", scope);
+  const { data, error } = await (
+    sessionId
+      ? applicable.or(`session_id.is.null,session_id.eq.${sessionId}`)
+      : applicable.is("session_id", null)
+  )
     .order("revision", { ascending: false })
     .limit(1)
     .maybeSingle();

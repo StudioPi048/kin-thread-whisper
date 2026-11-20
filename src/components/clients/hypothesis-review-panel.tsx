@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { History, Loader2, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
@@ -7,9 +8,10 @@ import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import type { DetectedPattern } from "@/lib/patterns";
+import type { DetectedPattern, EvidenceFact } from "@/lib/patterns";
 import {
   DECISION_LABEL,
+  compareReviewEvidence,
   evidenceFingerprint,
   evidenceSnapshot,
   isStale,
@@ -55,6 +57,7 @@ export function HypothesisReview({
   const rows = reviewsForPattern(q.data ?? [], hypothesisKey, pattern);
   const latest = rows[0] ?? null;
   const stale = isStale(latest, fp);
+  const diff = latest && stale ? compareReviewEvidence(latest, pattern) : null;
   const [draft, setDraft] = useState<{
     decision: ReviewDecision | "";
     note: string;
@@ -130,6 +133,29 @@ export function HypothesisReview({
         )}
       </div>
 
+      {diff && (
+        <details className="rounded-md border border-border p-3">
+          <summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold">
+            Ver o que mudou nas evidências
+          </summary>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <h4 className="text-sm font-semibold">Registros da revisão anterior</h4>
+              <EvidenceFacts facts={diff.previous} clientId={clientId} />
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold">Registros atuais</h4>
+              <EvidenceFacts facts={diff.current} clientId={clientId} />
+            </div>
+          </div>
+        </details>
+      )}
+      <details className="rounded-md border border-border px-3 pb-2">
+        <summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold">
+          Fontes e valores usados nesta hipótese
+        </summary>
+        <EvidenceFacts facts={pattern.facts} clientId={clientId} />
+      </details>
       <fieldset className="space-y-2">
         <legend className="text-[15px] font-semibold">Registrar revisão</legend>
         {needsDecision && (
@@ -207,6 +233,57 @@ export function HypothesisReview({
         </ol>
       )}
     </div>
+  );
+}
+
+const fieldNames: Record<EvidenceFact["field"], string> = {
+  birth_date: "Nascimento",
+  death_date: "Falecimento",
+  cause_of_death: "Causa registrada",
+  health_conditions: "Condição de saúde registrada",
+  occupation: "Profissão",
+  qualifier: "Natureza do vínculo",
+  start_date: "Início do vínculo",
+  end_date: "Fim do vínculo",
+};
+const precisionNames = {
+  day: "dia, mês e ano",
+  month: "mês e ano",
+  year: "só o ano",
+  unknown: "precisão desconhecida",
+};
+
+function EvidenceFacts({ facts, clientId }: { facts: EvidenceFact[]; clientId: string }) {
+  if (!facts.length)
+    return <p className="mt-2 text-sm text-muted-foreground">Nenhum registro nesta coluna.</p>;
+  return (
+    <ul className="mt-1 divide-y divide-border">
+      {facts.map((fact, index) => {
+        const personId = fact.source === "genogram_persons" ? fact.recordId : fact.personIds?.[0];
+        return (
+          <li className="py-2 text-sm" key={`${fact.recordId}-${fact.field}-${index}`}>
+            <p className="break-words">
+              <strong>{fieldNames[fact.field] ?? fact.field}</strong> · {fact.value}
+            </p>
+            {fact.precision && (
+              <p className="text-muted-foreground">{precisionNames[fact.precision]}</p>
+            )}
+            {personId && (
+              <Link
+                to="/app/clientes/$clientId"
+                params={{ clientId }}
+                search={{ tab: "genogram", person: personId }}
+                className="inline-flex min-h-11 items-center text-sm text-primary hover:underline"
+              >
+                {fact.source === "genogram_persons"
+                  ? "Abrir ficha no mapa"
+                  : "Abrir familiar vinculado"}
+              </Link>
+            )}
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 

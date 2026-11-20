@@ -15,7 +15,9 @@ export function hasFamilyRecordData(person: PersonRow) {
     person.full_name.trim() ||
     person.preferred_name?.trim() ||
     person.birth_date ||
+    person.birth_date_partial ||
     person.death_date ||
+    person.death_date_partial ||
     person.is_deceased ||
     person.cause_of_death?.trim() ||
     person.gestational_weeks?.trim() ||
@@ -77,6 +79,7 @@ export function invalidateCase(qc: QueryClient, clientId: string) {
       "client-genogram",
       "genogram-count",
       "client-genogram-count",
+      "genogram-gallery-preview",
     ].map((key) => qc.invalidateQueries({ queryKey: [key, clientId] })),
     qc.invalidateQueries({ queryKey: ["genograms-list"] }),
     qc.invalidateQueries({ queryKey: ["timelines-list"] }),

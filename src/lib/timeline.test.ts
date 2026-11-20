@@ -103,7 +103,14 @@ describe("linha do tempo do caso", () => {
       rows.every(({ record }) => record?.birth_date === null && record?.death_date === null),
     ).toBe(true);
     const events = buildCaseTimeline(
-      rows.map(({ record }) => p({ ...record, id: record!.full_name })),
+      rows.map(({ record }) =>
+        p({
+          ...record,
+          id: record!.full_name,
+          birth_date_partial: null,
+          death_date_partial: null,
+        }),
+      ),
     );
     expect(events.map(({ rawDate, precision }) => [rawDate, precision])).toEqual([
       ["1945", "year"],
@@ -114,6 +121,30 @@ describe("linha do tempo do caso", () => {
     expect(events.every(({ source }) => source.includes("Observações da importação"))).toBe(true);
     expect(buildTimelineScale(events)?.events).toHaveLength(3);
     expect(formatByPrecision(events[3].rawDate, events[3].precision)).toBe("29/02 (sem ano)");
+  });
+
+  it("representa um intervalo cadastrado e inclui o vínculo para os dois familiares", () => {
+    const people = [
+      p({ id: "a", full_name: "Pessoa A", birth_date_partial: "1968–1972" }),
+      p({ id: "b", full_name: "Pessoa B" }),
+    ];
+    const union = {
+      id: "union",
+      relationship_type: "union",
+      qualifier: "marriage",
+      from_person_id: "a",
+      to_person_id: "b",
+      start_date: "1991-01-20",
+    } as RelationshipRow;
+    const timeline = buildCaseTimeline(people, undefined, [union]);
+    const [birth] = filterTimeline(timeline, { decade: 1970 });
+    const scale = buildTimelineScale([birth], 1970);
+    expect(birth).toMatchObject({ rawDate: "1968–1972", precision: "range" });
+    expect(scale?.events[0]?.from).toBe(0);
+    expect(scale?.events[0]?.to).toBeGreaterThan(0);
+    expect(filterTimeline(timeline, { personId: "b", kind: "union" })).toMatchObject([
+      { personIds: ["a", "b"], personName: "Pessoa A e Pessoa B" },
+    ]);
   });
 
   it("mantém relatos sem data e deixa datas civis impossíveis fora do gráfico", () => {

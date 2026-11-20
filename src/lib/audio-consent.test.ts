@@ -10,6 +10,9 @@ const event = (patch: Partial<AudioConsentEvent> = {}): AudioConsentEvent => ({
   granted: true,
   source: "written",
   created_at: "2026-11-20T15:30:00Z",
+  session_id: null,
+  term_version: null,
+  document_reference: null,
   ...patch,
 });
 
@@ -25,10 +28,21 @@ describe("autorizações de áudio", () => {
     );
   });
 
+  it("considera a decisão mais recente aplicável à sessão e respeita revogação global", () => {
+    const base = event();
+    const target = event({ id: "local", revision: 2, session_id: "session-1", granted: false });
+    expect(activeAudioConsent([target, base], "recording", "session-1")).toBeUndefined();
+    expect(activeAudioConsent([target, base], "recording", "session-2")).toBe(base);
+    const renewed = event({ id: "renewed", revision: 3 });
+    expect(activeAudioConsent([renewed, target, base], "recording", "session-1")).toBe(renewed);
+  });
+
   it("exige confirmação nova no banco e não usa uma concessão antiga", async () => {
     const query = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
+      is: vi.fn().mockReturnThis(),
+      or: vi.fn().mockReturnThis(),
       order: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       maybeSingle: vi

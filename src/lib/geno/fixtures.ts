@@ -84,6 +84,40 @@ export function smallFamily(): SyntheticFamily {
   return { persons, rels, probandId: c.id };
 }
 
+/** Exercício público: a mãe do consultante tem duas uniões e uma filha em cada ramo. */
+export function practiceFamily(): SyntheticFamily {
+  const family = smallFamily();
+  const [, , carlos, mariana] = family.persons;
+  const companion = person("Companheiro da mãe", "Gilberto (fictício)", "M", {
+    birth_date: "1965-04-10",
+  });
+  const halfSister = person("Meia-irmã", "Sofia (fictícia)", "F", { birth_date: "2001-06-08" });
+  return {
+    probandId: family.probandId,
+    persons: [...family.persons, companion, halfSister],
+    rels: [
+      ...family.rels,
+      parentRel(mariana.id, halfSister.id),
+      parentRel(companion.id, halfSister.id),
+      {
+        ...parentRel(carlos.id, mariana.id),
+        relationship_type: "union",
+        qualifier: "marriage",
+        start_date: "1985-03-04",
+        end_date: "1996-07-14",
+        marriage_order: 1,
+      },
+      {
+        ...parentRel(companion.id, mariana.id),
+        relationship_type: "union",
+        qualifier: "marriage",
+        start_date: "2000-02-19",
+        marriage_order: 2,
+      },
+    ],
+  };
+}
+
 /** Família grande: cliente + 3 irmãos, pais, 4 avós, 8 bisavós, todos com filiação explícita. */
 export function largeFamily(): SyntheticFamily {
   seq = 0;
@@ -121,4 +155,69 @@ export function largeFamily(): SyntheticFamily {
     rels.push(parentRel(a.id, g.id), parentRel(b.id, g.id));
   });
   return { persons, rels, probandId: c.id };
+}
+
+/** Árvore de treinamento com a convenção do Instituto Liz, sem dados reais. */
+export function consultanteFamily(ancestorGenerations = 4): SyntheticFamily {
+  seq = 0;
+  const consultante = person("Consulente", "Consultante", "F", { birth_date: "1992-01-05" });
+  const brother = person("Irmão", "Irmão", "M");
+  const sister = person("Irmã", "Irmã", "F");
+  const paternalUncle = person("Tio paterno", "Tio paterno", "M");
+  const maternalUncle = person("Tio materno", "Tio materno", "M");
+  const persons: PersonRow[] = [consultante, brother, sister, paternalUncle, maternalUncle];
+  const rels: RelationshipRow[] = [];
+  const levels = [
+    ["Pai", "Mãe"],
+    ["Avô", "Avó"],
+    ["Bisavô", "Bisavó"],
+    ["Tataravô", "Tataravó"],
+  ];
+  let current = [consultante];
+  for (let level = 0; level < ancestorGenerations; level++) {
+    const next: PersonRow[] = [];
+    for (const [index, child] of current.entries()) {
+      const paternal = index < current.length / 2;
+      const side = paternal ? "paterno" : "materno";
+      const femaleSide = paternal ? "paterna" : "materna";
+      const [maleLabel, femaleLabel] = levels[level] ?? ["Antepassado", "Antepassada"];
+      const title = (label: string, gender: "M" | "F") => {
+        if (level === 0) return label;
+        const branch = gender === "M" ? side : femaleSide;
+        return level === 1
+          ? `${label} ${branch}`
+          : `${label} ${branch} (${gender === "M" ? "pai" : "mãe"} de ${child.full_name})`;
+      };
+      const father = person(
+        level === 0 ? "Pai" : title(maleLabel, "M"),
+        title(maleLabel, "M"),
+        "M",
+      );
+      const mother = person(
+        level === 0 ? "Mãe" : title(femaleLabel, "F"),
+        title(femaleLabel, "F"),
+        "F",
+      );
+      const children =
+        level === 0
+          ? [consultante, brother, sister]
+          : level === 1
+            ? [child, index === 0 ? paternalUncle : maternalUncle]
+            : [child];
+      persons.push(father, mother);
+      next.push(father, mother);
+      rels.push({
+        ...parentRel(father.id, mother.id),
+        id: `syn-union-${father.id}-${mother.id}`,
+        relationship_type: "union",
+        qualifier: "marriage",
+      });
+      for (const member of children) {
+        rels.push({ ...parentRel(father.id, member.id), qualifier: "biological" });
+        rels.push({ ...parentRel(mother.id, member.id), qualifier: "biological" });
+      }
+    }
+    current = next;
+  }
+  return { persons, rels, probandId: consultante.id };
 }

@@ -41,6 +41,49 @@
   display: none;
 }
 
+.geno-spatial-link-context {
+  position: absolute;
+  z-index: 8;
+  inset-inline-end: 10px;
+  top: 110px;
+  max-height: 48%;
+  width: min(310px, calc(100% - 20px));
+  overflow: auto;
+  padding: 9px;
+  border: 1px solid var(--border);
+  border-inline-start: 3px solid var(--forest);
+  border-radius: 8px;
+  background: var(--card);
+  font-size: 0.875rem;
+}
+
+.geno-spatial-link-context strong {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.geno-spatial-link-context p {
+  margin-bottom: 4px;
+  color: var(--muted-foreground);
+}
+
+.geno-spatial-link-context li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  border-top: 1px solid var(--border);
+}
+
+.geno-spatial-link-context li button {
+  min-height: 44px;
+  height: auto;
+  white-space: normal;
+}
+
+.geno-spatial-person[data-branch-muted]:not([aria-pressed="true"]):not(:focus-visible):not(:hover) {
+  opacity: 0.48;
+}
+
 .geno-spatial-viewport {
   position: relative;
   flex: 1;

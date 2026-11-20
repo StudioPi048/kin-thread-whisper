@@ -1,6 +1,7 @@
-import { deleteClientDossier } from "@/lib/delete-client-dossier";
+import { deleteClientDossier, pendingDossierDeletionsKey } from "@/lib/delete-client-dossier";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { readPref, writePref } from "@/lib/recent-activity";
+import { readClientListPreferences, writePref } from "@/lib/recent-activity";
+import { foldSearch } from "@/lib/client-index";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -41,6 +42,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { ClientFormDialog } from "@/components/clients/client-form-dialog";
 import { calcAge } from "@/lib/clients";
@@ -50,6 +52,20 @@ import type { PatternItem } from "@/components/ui/dossier-card";
 import type { Database } from "@/integrations/supabase/types";
 
 type ClientRow = Database["public"]["Tables"]["clients"]["Row"];
+type ClientSummary = Pick<
+  ClientRow,
+  | "id"
+  | "full_name"
+  | "preferred_name"
+  | "birth_date"
+  | "birthplace"
+  | "email"
+  | "phone"
+  | "presenting_complaint"
+  | "consent_given_at"
+  | "tags"
+  | "status"
+>;
 
 export const Route = createFileRoute("/_authenticated/app/clientes/")({
   component: ClientesIndex,
@@ -103,24 +119,42 @@ function ClientesIndex() {
   const { user } = Route.useRouteContext();
   const navigate = Route.useNavigate();
   const qc = useQueryClient();
-  // Filtros/busca/visualização persistentes por usuário (lista operacional por padrão)
+  // Visualização e aba são preferências. A busca fica somente nesta tela.
   const [tab, setTab] = useState<"active" | "archived">("active");
   const [query, setQuery] = useState("");
   const [viewMode, setViewMode] = useState<"cards" | "list">("list");
-  const [prefsLoaded, setPrefsLoaded] = useState(false);
+  const [prefsLoadedFor, setPrefsLoadedFor] = useState<string | null>(null);
   useEffect(() => {
-    const p = readPref(user.id, "clients-filters", { tab: "active", query: "", viewMode: "list" });
-    setTab(p.tab === "archived" ? "archived" : "active");
-    setQuery(typeof p.query === "string" ? p.query : "");
-    setViewMode(p.viewMode === "cards" ? "cards" : "list");
-    setPrefsLoaded(true);
+    const preferences = readClientListPreferences(user.id);
+    setTab(preferences.tab);
+    setQuery("");
+    setViewMode(preferences.viewMode);
+    setPrefsLoadedFor(user.id);
   }, [user.id]);
   useEffect(() => {
-    if (prefsLoaded) writePref(user.id, "clients-filters", { tab, query, viewMode });
-  }, [prefsLoaded, user.id, tab, query, viewMode]);
+    if (prefsLoadedFor === user.id) writePref(user.id, "clients-filters", { tab, viewMode });
+  }, [prefsLoadedFor, user.id, tab, viewMode]);
   const [creating, setCreating] = useState(false);
-  const [editing, setEditing] = useState<ClientRow | null>(null);
-  const [deleting, setDeleting] = useState<ClientRow | null>(null);
+  const [editing, setEditing] = useState<ClientSummary | null>(null);
+  const [deleting, setDeleting] = useState<ClientSummary | null>(null);
+  const editQuery = useQuery({
+    queryKey: ["client-edit", user.id, editing?.id],
+    enabled: !!editing,
+    staleTime: 0,
+    gcTime: 0,
+    queryFn: async () => {
+      if (!editing) throw new Error("Escolha um dossiê para editar.");
+      const { data, error } = await supabase
+        .from("clients")
+        .select("*")
+        .eq("id", editing.id)
+        .eq("professional_id", user.id)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) throw new Error("O dossiê está indisponível.");
+      return data;
+    },
+  });
 
   const {
     data: clients = [],
@@ -128,11 +162,14 @@ function ClientesIndex() {
     isError,
     refetch,
   } = useQuery({
-    queryKey: ["clients", tab],
+    queryKey: ["clients", user.id, tab],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clients")
-        .select("*")
+        .select(
+          "id, full_name, preferred_name, birth_date, birthplace, email, phone, presenting_complaint, consent_given_at, tags, status",
+        )
+        .eq("professional_id", user.id)
         .eq("status", tab)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -141,7 +178,7 @@ function ClientesIndex() {
   });
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = foldSearch(query);
     if (!q) return clients;
     return clients.filter((c) => {
       const hay = [
@@ -151,39 +188,57 @@ function ClientesIndex() {
         c.birthplace,
         c.phone,
         c.presenting_complaint,
-        c.clinical_notes,
         (c.tags ?? []).join(" "),
       ]
         .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return hay.includes(q);
+        .join(" ");
+      return foldSearch(hay).includes(q);
     });
   }, [clients, query]);
 
   const setStatus = useMutation({
     mutationFn: async (input: { id: string; status: "active" | "archived" }) => {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("clients")
         .update({ status: input.status })
-        .eq("id", input.id);
+        .eq("id", input.id)
+        .eq("professional_id", user.id)
+        .select("id")
+        .maybeSingle();
       if (error) throw error;
+      if (!data) throw new Error("Não foi possível alterar o status do dossiê.");
     },
     onSuccess: (_d, v) => {
       qc.invalidateQueries({ queryKey: ["clients"] });
+      qc.invalidateQueries({ queryKey: ["all-clients-search"] });
+      qc.invalidateQueries({ queryKey: ["genograms-list"] });
       toast.success(v.status === "archived" ? "Dossiê arquivado." : "Dossiê reativado.");
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
 
   const remove = useMutation({
-    mutationFn: async (id: string) => {
-      await deleteClientDossier(id, user.id);
-    },
-    onSuccess: () => {
+    mutationFn: deleteClientDossier,
+    onSuccess: (result) => {
       qc.invalidateQueries({ queryKey: ["clients"] });
       qc.invalidateQueries({ queryKey: ["all-clients-search"] });
-      toast.success("Dossiê removido permanentemente.");
+      qc.invalidateQueries({ queryKey: ["genograms-list"] });
+      qc.invalidateQueries({ queryKey: ["timelines-list"] });
+      qc.invalidateQueries({ queryKey: pendingDossierDeletionsKey(user.id) });
+      if (result === "media_pending") {
+        toast.warning("Dossiê removido. Retome a limpeza de arquivos em Configurações.", {
+          action: {
+            label: "Abrir configurações",
+            onClick: () =>
+              void navigate({
+                to: "/app/configuracoes",
+                hash: "exclusoes",
+              }),
+          },
+        });
+      } else {
+        toast.success("Dossiê e arquivos removidos.");
+      }
       setDeleting(null);
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
@@ -471,13 +526,17 @@ function ClientesIndex() {
                                   </>
                                 )}
                               </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                className="text-destructive focus:text-destructive"
-                                onClick={() => setDeleting(c)}
-                              >
-                                <Trash2 className="size-[13px]" /> Excluir
-                              </DropdownMenuItem>
+                              {c.status === "archived" && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    className="text-destructive focus:text-destructive"
+                                    onClick={() => setDeleting(c)}
+                                  >
+                                    <Trash2 className="size-[13px]" /> Excluir
+                                  </DropdownMenuItem>
+                                </>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </td>
@@ -504,12 +563,37 @@ function ClientesIndex() {
           })
         }
       />
-      <ClientFormDialog
-        open={Boolean(editing)}
-        onOpenChange={(o) => !o && setEditing(null)}
-        professionalId={user.id}
-        editing={editing}
-      />
+      {editing && editQuery.data && (
+        <ClientFormDialog
+          open
+          onOpenChange={(o) => !o && setEditing(null)}
+          professionalId={user.id}
+          editing={editQuery.data}
+        />
+      )}
+      {editing && !editQuery.data && (
+        <Dialog open onOpenChange={(o) => !o && setEditing(null)}>
+          <DialogContent>
+            <DialogTitle>Editar dossiê</DialogTitle>
+            {editQuery.isError ? (
+              <div role="alert" className="space-y-3 text-sm">
+                <p>Não foi possível carregar o dossiê.</p>
+                <Button
+                  variant="outline"
+                  className="min-h-11"
+                  onClick={() => void editQuery.refetch()}
+                >
+                  Tentar novamente
+                </Button>
+              </div>
+            ) : (
+              <p role="status" className="text-sm">
+                Carregando dossiê…
+              </p>
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
 
       <AlertDialog
         open={Boolean(deleting)}
@@ -522,7 +606,8 @@ function ClientesIndex() {
             </AlertDialogTitle>
             <AlertDialogDescription>
               Você vai excluir permanentemente o dossiê de <strong>{deleting?.full_name}</strong>,
-              incluindo mapa, planilha, notas, sessões, áudios e foto do perfil.
+              incluindo mapa, planilha, notas, sessões, áudios e foto do perfil. Se a limpeza de
+              áudios ou fotos for interrompida, termine em Configurações.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

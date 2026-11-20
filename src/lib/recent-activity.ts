@@ -11,7 +11,13 @@ const MAX = 8;
 const key = (userId: string) => `genealiz:visits:${userId}`;
 
 type Store = Pick<Storage, "getItem" | "setItem">;
-const store = (): Store | null => (typeof window === "undefined" ? null : window.localStorage);
+function store(): Store | null {
+  try {
+    return typeof window === "undefined" ? null : window.localStorage;
+  } catch {
+    return null;
+  }
+}
 
 export function readVisits(userId: string, s: Store | null = store()): Visit[] {
   if (!s || !userId) return [];
@@ -75,6 +81,34 @@ export function writePref(userId: string, name: string, value: unknown) {
     s.setItem(prefKey(userId, name), JSON.stringify(value));
   } catch {
     /* ignore */
+  }
+}
+
+export type ClientListPreferences = {
+  tab: "active" | "archived";
+  viewMode: "list" | "cards";
+};
+
+export function readClientListPreferences(
+  userId: string,
+  s: Store | null = store(),
+): ClientListPreferences {
+  const fallback: ClientListPreferences = { tab: "active", viewMode: "list" };
+  if (!s || !userId) return fallback;
+  try {
+    const k = prefKey(userId, "clients-filters");
+    const previous = JSON.parse(s.getItem(k) ?? "null");
+    if (!previous || typeof previous !== "object" || Array.isArray(previous)) return fallback;
+    const preferences: ClientListPreferences = {
+      tab: previous.tab === "archived" ? "archived" : "active",
+      viewMode: previous.viewMode === "cards" ? "cards" : "list",
+    };
+    // Rewrite the original key to remove search text saved by earlier versions.
+    const serialized = JSON.stringify(preferences);
+    if (serialized !== JSON.stringify(previous)) s.setItem(k, serialized);
+    return preferences;
+  } catch {
+    return fallback;
   }
 }
 

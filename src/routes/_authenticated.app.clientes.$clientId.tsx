@@ -22,6 +22,11 @@ const IntakeForm = lazy(() =>
 const SessionsPanel = lazy(() =>
   import("@/components/sessions/sessions-panel").then((m) => ({ default: m.SessionsPanel })),
 );
+const DossierReportDialog = lazy(() =>
+  import("@/components/clients/dossier-report-dialog").then((m) => ({
+    default: m.DossierReportDialog,
+  })),
+);
 
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -74,7 +79,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { deleteClientDossier } from "@/lib/delete-client-dossier";
+import { deleteClientDossier, pendingDossierDeletionsKey } from "@/lib/delete-client-dossier";
 import { supabase } from "@/integrations/supabase/client";
 import { ClientFormDialog } from "@/components/clients/client-form-dialog";
 import { ClinicalIntelligencePanel } from "@/components/clients/clinical-intelligence-panel";
@@ -121,9 +126,21 @@ export const Route = createFileRoute("/_authenticated/app/clientes/$clientId")({
     agendaDate?: string;
     person?: string;
     session?: string;
+    review?: "parentage";
+    focus?: "audio-consent";
+    event?: string;
+    question?: string;
   } => {
     const tab = search.tab as string | undefined;
     return {
+      ...(search.review === "parentage" ? { review: "parentage" as const } : {}),
+      ...(search.focus === "audio-consent" ? { focus: "audio-consent" as const } : {}),
+      ...(typeof search.question === "string" && /^[a-z_]{1,100}$/.test(search.question)
+        ? { question: search.question }
+        : {}),
+      ...(typeof search.event === "string" && /^[a-z0-9-]{1,80}$/i.test(search.event)
+        ? { event: search.event }
+        : {}),
       ...(typeof search.agendaDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(search.agendaDate)
         ? { agendaDate: search.agendaDate }
         : {}),
@@ -149,12 +166,17 @@ function ClientDossierPage() {
     agendaDate,
     person: focusPerson,
     session: focusedSessionId,
+    review,
+    focus,
+    event: focusEvent,
+    question: focusQuestion,
   } = Route.useSearch();
   const { user } = Route.useRouteContext();
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [mapFocus, setMapFocus] = useState<{ clientId: string; personId: string }>();
   const rememberMapFocus = useCallback(
@@ -191,7 +213,16 @@ function ClientDossierPage() {
   const goToTab = (next: DossierTab) => {
     void navigate({
       from: Route.fullPath,
-      search: (prev) => ({ ...prev, tab: next, person: undefined }),
+      search: (prev) => ({
+        ...prev,
+        tab: next,
+        person: undefined,
+        review: undefined,
+        focus: undefined,
+        event: undefined,
+        question: undefined,
+        session: next === "sessions" ? prev.session : undefined,
+      }),
       replace: true,
     });
   };
@@ -259,7 +290,7 @@ function ClientDossierPage() {
     [intelQ.data],
   );
   const gaps = useMemo(
-    () => (intelQ.data ? informationGaps(intelQ.data.persons) : []),
+    () => (intelQ.data ? informationGaps(intelQ.data.persons, intelQ.data.relationships) : []),
     [intelQ.data],
   );
 
@@ -310,13 +341,23 @@ function ClientDossierPage() {
     mutationFn: async () => {
       if (!client) return;
       const next = client.status === "active" ? "archived" : "active";
-      const { error } = await supabase.from("clients").update({ status: next }).eq("id", client.id);
+      const { data, error } = await supabase
+        .from("clients")
+        .update({ status: next })
+        .eq("id", client.id)
+        .eq("professional_id", user.id)
+        .select("id")
+        .maybeSingle();
       if (error) throw error;
+      if (!data) throw new Error("Não foi possível alterar o status do dossiê.");
       return next;
     },
     onSuccess: (next) => {
       qc.invalidateQueries({ queryKey: ["clients"] });
       qc.invalidateQueries({ queryKey: ["client", clientId] });
+      qc.invalidateQueries({ queryKey: ["all-clients-search"] });
+      qc.invalidateQueries({ queryKey: ["genograms-list"] });
+      qc.invalidateQueries({ queryKey: ["timelines-list"] });
       toast.success(next === "archived" ? "Dossiê arquivado." : "Dossiê reativado.");
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
@@ -336,15 +377,21 @@ function ClientDossierPage() {
   });
 
   const remove = useMutation({
-    mutationFn: async () => {
-      await deleteClientDossier(clientId, user.id);
-    },
-    onSuccess: () => {
+    mutationFn: () => deleteClientDossier(clientId),
+    onSuccess: (result) => {
       setDeleting(false);
       qc.invalidateQueries({ queryKey: ["clients"] });
       qc.invalidateQueries({ queryKey: ["all-clients-search"] });
-      toast.success("Dossiê removido.");
-      navigate({ to: "/app/clientes" });
+      qc.invalidateQueries({ queryKey: ["genograms-list"] });
+      qc.invalidateQueries({ queryKey: ["timelines-list"] });
+      qc.invalidateQueries({ queryKey: pendingDossierDeletionsKey(user.id) });
+      if (result === "media_pending") {
+        toast.warning("Dossiê removido. Termine a limpeza de arquivos em Configurações.");
+        navigate({ to: "/app/configuracoes", hash: "exclusoes" });
+      } else {
+        toast.success("Dossiê e arquivos removidos.");
+        navigate({ to: "/app/clientes" });
+      }
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
@@ -509,7 +556,17 @@ function ClientDossierPage() {
         }
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <LibraryCasePanel />
+            <LibraryCasePanel
+              reference={
+                activeTab === "genogram"
+                  ? "manual-genossociograma"
+                  : activeTab === "timeline" || activeTab === "patterns"
+                    ? "manual-cronologia"
+                    : activeTab === "intake" || activeTab === "clan"
+                      ? "manual-investigacao"
+                      : undefined
+              }
+            />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="min-h-11" aria-label="Mais ações do dossiê">
@@ -529,6 +586,9 @@ function ClientDossierPage() {
                   <Download className="size-4" aria-hidden />
                   {exportCase.isPending ? "Exportando…" : "Exportar dossiê em JSON"}
                 </DropdownMenuItem>
+                <DropdownMenuItem className="min-h-11" onSelect={() => setReportOpen(true)}>
+                  <Download className="size-4" aria-hidden /> Preparar relatório PDF
+                </DropdownMenuItem>
                 <DropdownMenuItem
                   className="min-h-11"
                   disabled={toggleArchive.isPending}
@@ -541,9 +601,11 @@ function ClientDossierPage() {
                   )}
                   {client.status === "active" ? "Arquivar dossiê" : "Reativar dossiê"}
                 </DropdownMenuItem>
-                <DropdownMenuItem className="min-h-11" onSelect={() => setDeleting(true)}>
-                  <Trash2 className="size-4" aria-hidden /> Excluir dossiê
-                </DropdownMenuItem>
+                {client.status === "archived" && (
+                  <DropdownMenuItem className="min-h-11" onSelect={() => setDeleting(true)}>
+                    <Trash2 className="size-4" aria-hidden /> Excluir dossiê
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -819,6 +881,7 @@ function ClientDossierPage() {
                     key={client.id}
                     clientId={client.id}
                     focusPersonId={focusPerson}
+                    reviewParentagePersonId={review === "parentage" ? focusPerson : undefined}
                     resumePersonId={mapFocus?.clientId === clientId ? mapFocus.personId : undefined}
                     onFocusPerson={rememberMapFocus}
                     onOpenSpreadsheet={() => goToTab("clan")}
@@ -828,7 +891,11 @@ function ClientDossierPage() {
 
               <TabsContent value="timeline">
                 <TabSuspense>
-                  <ClientTimeline clientId={client.id} />
+                  <ClientTimeline
+                    key={`${client.id}:${focusEvent ?? ""}`}
+                    clientId={client.id}
+                    focusEvent={focusEvent}
+                  />
                 </TabSuspense>
               </TabsContent>
 
@@ -840,7 +907,11 @@ function ClientDossierPage() {
 
               <TabsContent value="intake">
                 <TabSuspense>
-                  <IntakeForm clientId={client.id} professionalId={user.id} />
+                  <IntakeForm
+                    clientId={client.id}
+                    professionalId={user.id}
+                    focusQuestion={focusQuestion}
+                  />
                 </TabSuspense>
               </TabsContent>
 
@@ -849,6 +920,19 @@ function ClientDossierPage() {
                   <ClanSpreadsheet
                     clientId={client.id}
                     onOpenGenogram={() => goToTab("genogram")}
+                    focusPersonId={focusPerson}
+                    onReviewParentage={(personId) =>
+                      void navigate({
+                        from: Route.fullPath,
+                        search: (prev) => ({
+                          ...prev,
+                          tab: "genogram",
+                          person: personId,
+                          review: "parentage",
+                          event: undefined,
+                        }),
+                      })
+                    }
                   />
                 </TabSuspense>
               </TabsContent>
@@ -860,6 +944,7 @@ function ClientDossierPage() {
                     clientId={client.id}
                     clientName={display}
                     focusedSessionId={focusedSessionId}
+                    focusConsent={focus === "audio-consent"}
                   />
                 </TabSuspense>
               </TabsContent>
@@ -877,6 +962,22 @@ function ClientDossierPage() {
         professionalId={user.id}
         editing={client}
       />
+      {reportOpen && (
+        <Suspense
+          fallback={
+            <span className="sr-only" role="status">
+              Carregando opções do relatório…
+            </span>
+          }
+        >
+          <DossierReportDialog
+            key={clientId}
+            clientId={clientId}
+            userId={user.id}
+            onClose={() => setReportOpen(false)}
+          />
+        </Suspense>
+      )}
 
       <AlertDialog open={deleting} onOpenChange={(open) => !remove.isPending && setDeleting(open)}>
         <AlertDialogContent>
@@ -886,7 +987,8 @@ function ClientDossierPage() {
             </AlertDialogTitle>
             <AlertDialogDescription>
               Você vai excluir permanentemente o dossiê de <strong>{client.full_name}</strong>,
-              incluindo mapa, planilha, notas, sessões, áudios e foto do perfil.
+              incluindo mapa, planilha, notas, sessões, áudios e foto do perfil. Se a limpeza de
+              arquivos for interrompida, termine em Configurações.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

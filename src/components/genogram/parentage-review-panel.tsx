@@ -1,5 +1,5 @@
-import { useEffect, useId, useRef } from "react";
-import { Crosshair, Link2, X } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
+import { Crosshair, Link2, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { relationshipQualifiers } from "@/lib/genogram";
 import {
@@ -22,13 +22,28 @@ export type ParentageDraft = {
   expected: ParentageVersion[];
   current: (ReviewParent & { notes?: string | null })[];
   proposed: [ReviewParent, ReviewParent];
+  pendingParent?: ReviewParent;
   suggestedIds: string[];
   source: ParentageSource;
   note: string;
 };
 
-export const parentagePersonName = (person?: PersonOption) =>
+const parentagePersonName = (person?: PersonOption) =>
   person?.full_name?.trim() || person?.preferred_name?.trim() || "Pessoa sem nome";
+
+const foldName = (value: string) =>
+  value.toLocaleLowerCase("pt-BR").normalize("NFD").replace(/\p{M}/gu, "");
+
+function parentageOptionLabel(person: PersonOption) {
+  const name = parentagePersonName(person);
+  return [
+    name,
+    person.relationship_to_proband !== name ? person.relationship_to_proband : null,
+    person.birth_date?.slice(0, 4),
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
 
 type ReviewSource = { source: ParentageSource; note: string | null };
 
@@ -59,6 +74,7 @@ export function ParentageReviewPanel({
 }) {
   const headingId = useId();
   const heading = useRef<HTMLHeadingElement>(null);
+  const [queries, setQueries] = useState(["", ""]);
   const child = people.find((person) => person.id === draft.childId);
   const proposedIds = new Set(draft.proposed.map(({ personId }) => personId).filter(Boolean));
   const removed = draft.current.filter((parent) => !proposedIds.has(parent.personId));
@@ -73,7 +89,12 @@ export function ParentageReviewPanel({
   function editSlot(slot: number, change: Partial<ReviewParent>) {
     const proposed: ParentageDraft["proposed"] = [...draft.proposed];
     proposed[slot] = { ...proposed[slot], ...change };
-    onChange({ ...draft, proposed });
+    onChange({
+      ...draft,
+      proposed,
+      pendingParent:
+        change.personId === draft.pendingParent?.personId ? undefined : draft.pendingParent,
+    });
   }
 
   return (
@@ -151,8 +172,50 @@ export function ParentageReviewPanel({
                 />
                 Filiação proposta
               </h3>
+              {draft.pendingParent && (
+                <div className="geno-parentage-candidate">
+                  <p>
+                    <strong>{parentName(draft.pendingParent.personId)}</strong> foi indicado para a
+                    filiação. Escolha quem será substituído.
+                  </p>
+                  {[0, 1].map((slot) => (
+                    <Button
+                      key={slot}
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="min-h-11 whitespace-normal text-left"
+                      onClick={() => editSlot(slot, draft.pendingParent!)}
+                    >
+                      Substituir {parentName(draft.proposed[slot].personId)}
+                    </Button>
+                  ))}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => onChange({ ...draft, pendingParent: undefined })}
+                  >
+                    Retirar proposta
+                  </Button>
+                </div>
+              )}
               {draft.proposed.map((parent, slot) => (
                 <div key={slot} className="geno-parentage-slot">
+                  <label className="geno-parentage-search">
+                    <span className="sr-only">Buscar genitor {slot + 1}</span>
+                    <Search className="size-4" aria-hidden />
+                    <input
+                      value={queries[slot]}
+                      placeholder="Buscar nome, parentesco ou ano"
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setQueries((current) =>
+                          current.map((query, index) => (index === slot ? value : query)),
+                        );
+                      }}
+                    />
+                  </label>
                   <label>
                     Genitor {slot + 1}
                     <select
@@ -165,19 +228,21 @@ export function ParentageReviewPanel({
                     >
                       <option value="">Sem genitor neste campo</option>
                       {people
-                        .filter((p) => p.id !== draft.childId)
+                        .filter(
+                          (person) =>
+                            person.id !== draft.childId &&
+                            (person.id === parent.personId ||
+                              foldName(parentageOptionLabel(person)).includes(
+                                foldName(queries[slot].trim()),
+                              )),
+                        )
                         .map((person) => (
                           <option
                             key={person.id}
                             value={person.id}
                             disabled={draft.proposed[1 - slot].personId === person.id}
                           >
-                            {parentagePersonName(person)}
-                            {person.relationship_to_proband &&
-                            person.relationship_to_proband !== parentagePersonName(person)
-                              ? ` · ${person.relationship_to_proband}`
-                              : ""}
-                            {person.birth_date ? ` · ${person.birth_date.slice(0, 4)}` : ""}
+                            {parentageOptionLabel(person)}
                           </option>
                         ))}
                     </select>

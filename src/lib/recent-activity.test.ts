@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { readVisits, recordVisit, onboardingSteps } from "./recent-activity";
+import {
+  readVisits,
+  recordVisit,
+  onboardingSteps,
+  readClientListPreferences,
+  prefKey,
+} from "./recent-activity";
 
 const mem = () => {
   const m = new Map<string, string>();
@@ -39,4 +45,20 @@ describe("onboarding com dados reais", () => {
     expect(r.done).toBe(2);
     expect(r.total).toBe(4);
   });
+});
+
+it("migra preferências de clientes sem recuperar texto legado da busca", () => {
+  const storage = mem();
+  const key = prefKey("u1", "clients-filters");
+  storage.setItem(
+    key,
+    JSON.stringify({ tab: "archived", viewMode: "cards", query: "texto antigo" }),
+  );
+  storage.setItem(
+    prefKey("u2", "clients-filters"),
+    JSON.stringify({ tab: "active", viewMode: "list" }),
+  );
+  expect(readClientListPreferences("u1", storage)).toEqual({ tab: "archived", viewMode: "cards" });
+  expect(JSON.parse(storage.getItem(key)!)).toEqual({ tab: "archived", viewMode: "cards" });
+  expect(readClientListPreferences("u2", storage)).toEqual({ tab: "active", viewMode: "list" });
 });
