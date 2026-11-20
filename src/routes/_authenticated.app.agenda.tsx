@@ -77,11 +77,12 @@ function AgendaPage() {
   const changeSize = view === "week" ? 7 : 1;
 
   return (
-    <>
+    <div className="archive-agenda-page">
       <DocumentHeader
         breadcrumb="Agenda"
         title={date === today ? "Agenda de hoje" : "Agenda"}
         subtitle={<span className="capitalize">{dateLabel}</span>}
+        illustration={<img src="/assets/genealiz/acervo/relogio.webp" alt="" decoding="async" />}
         actions={
           <Button className="min-h-11" onClick={() => setSchedule({})}>
             <CalendarPlus className="size-4" aria-hidden /> Agendar atendimento
@@ -257,7 +258,7 @@ function AgendaPage() {
           onClose={() => setSchedule(null)}
         />
       )}
-    </>
+    </div>
   );
 }
 

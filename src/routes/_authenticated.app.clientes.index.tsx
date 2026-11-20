@@ -212,8 +212,16 @@ function ClientesIndex() {
 
   return (
     <div className="container-liz work-clients">
-      <header className="work-desk-heading">
+      <header className="work-desk-heading work-client-heading">
         <h1>Dossiês clínicos</h1>
+        <img
+          src="/assets/genealiz/acervo/raizes.webp"
+          className="work-client-heading-image"
+          alt=""
+          width={500}
+          height={500}
+          decoding="async"
+        />
         <Button variant="forest" onClick={() => setCreating(true)}>
           <Plus aria-hidden /> Novo cliente
         </Button>

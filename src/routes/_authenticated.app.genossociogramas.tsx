@@ -173,11 +173,12 @@ function GenogramsPage() {
   const clients = gallery.data?.clients ?? [];
 
   return (
-    <div>
+    <div className="archive-map-index-page">
       <DocumentHeader
         breadcrumb="Genossociogramas"
         title="Genossociogramas"
         subtitle="Abra as árvores ativas e retome a última pessoa que você consultou."
+        illustration={<img src="/assets/genealiz/acervo/raizes.webp" alt="" decoding="async" />}
       />
       <div className="container-liz space-y-6 py-2">
         <div className="relative max-w-sm">

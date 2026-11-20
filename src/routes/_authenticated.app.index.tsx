@@ -221,80 +221,68 @@ function AppHome() {
 
       <div className="work-desk-columns">
         <section aria-labelledby="next-h" className="work-desk-agenda">
-          <div className="work-next" data-empty={(!upcomingQ.isLoading && !next) || undefined}>
-            <h2 id="next-h">Próximo atendimento</h2>
-            {upcomingQ.isLoading ? (
-              <div role="status" className="work-next-loading">
-                <p>Carregando agenda…</p>
-                <div className="work-skeleton" aria-hidden />
-              </div>
-            ) : upcomingQ.isError ? (
-              <ErrorRow
-                msg="Não foi possível carregar a agenda."
-                onRetry={() => upcomingQ.refetch()}
-              />
-            ) : next && nextDate ? (
-              <div className="work-next-details">
-                <time dateTime={next.session_date}>
-                  <strong>{timeInTz(nextDate, tz)}</strong>
-                  <span>
-                    {nextDate.toLocaleDateString("pt-BR", {
-                      weekday: "long",
-                      day: "numeric",
-                      month: "short",
-                    })}
-                  </span>
-                </time>
-                <div className="work-next-client">
-                  <p className="work-next-name">
-                    {next.clients?.preferred_name ||
-                      next.clients?.full_name ||
-                      nameOf(next.client_id)}
-                  </p>
-                  <p>
-                    {next.title || "Atendimento"}
-                    {nextDuration !== null && ` · ${formatDurationMinutes(nextDuration)}`}
-                  </p>
-                  <Link
-                    to="/app/clientes/$clientId"
-                    params={{ clientId: next.client_id }}
-                    search={{ tab: "sessions", session: next.id }}
-                    className="work-next-link"
-                  >
-                    Abrir atendimento <ArrowRight size={17} aria-hidden />
-                  </Link>
+          <div className="work-next">
+            <div className="work-next-content">
+              <h2 id="next-h">Próximo atendimento</h2>
+              {upcomingQ.isLoading ? (
+                <div role="status" className="work-next-loading">
+                  <p>Carregando agenda…</p>
+                  <div className="work-skeleton" aria-hidden />
                 </div>
-              </div>
-            ) : (
-              <p className="work-next-empty">Nenhum atendimento futuro agendado.</p>
-            )}
-          </div>
-
-          {(upcomingQ.data?.length ?? 0) > 1 && (
-            <div className="work-upcoming">
-              <h3>Em seguida</h3>
-              <ul className="work-desk-ledger">
-                {upcomingQ.data?.slice(1, 4).map((session) => (
-                  <li key={session.id}>
+              ) : upcomingQ.isError ? (
+                <ErrorRow
+                  msg="Não foi possível carregar a agenda."
+                  onRetry={() => upcomingQ.refetch()}
+                />
+              ) : next && nextDate ? (
+                <div className="work-next-details">
+                  <time dateTime={next.session_date}>
+                    <strong>{timeInTz(nextDate, tz)}</strong>
+                    <span>
+                      {nextDate.toLocaleDateString("pt-BR", {
+                        weekday: "long",
+                        day: "numeric",
+                        month: "short",
+                      })}
+                    </span>
+                  </time>
+                  <div className="work-next-client">
+                    <p className="work-next-name">
+                      {next.clients?.preferred_name ||
+                        next.clients?.full_name ||
+                        nameOf(next.client_id)}
+                    </p>
+                    <p>
+                      {next.title || "Atendimento"}
+                      {nextDuration !== null && ` · ${formatDurationMinutes(nextDuration)}`}
+                    </p>
                     <Link
                       to="/app/clientes/$clientId"
-                      params={{ clientId: session.client_id }}
-                      search={{ tab: "sessions", session: session.id }}
-                      className="work-desk-row work-desk-appointment"
+                      params={{ clientId: next.client_id }}
+                      search={{ tab: "sessions", session: next.id }}
+                      className="work-next-link"
                     >
-                      <time dateTime={session.session_date}>{fmtTime(session.session_date)}</time>
-                      <span>
-                        {session.clients?.preferred_name ||
-                          session.clients?.full_name ||
-                          nameOf(session.client_id)}
-                      </span>
-                      <ArrowRight size={17} aria-hidden />
+                      Abrir atendimento <ArrowRight size={17} aria-hidden />
                     </Link>
-                  </li>
-                ))}
-              </ul>
+                  </div>
+                </div>
+              ) : (
+                <p className="work-next-empty">Nenhum atendimento futuro agendado.</p>
+              )}
             </div>
-          )}
+            <div className="work-next-art">
+              <img
+                src="/assets/genealiz/acervo/mesa-arquivo.webp"
+                srcSet="/assets/genealiz/acervo/mesa-arquivo-560.webp 560w, /assets/genealiz/acervo/mesa-arquivo.webp 1180w"
+                sizes="(min-width: 1680px) 640px, (min-width: 1024px) calc(49vw - 9rem), (min-width: 630px) 48vw, 100vw"
+                alt=""
+                width={1180}
+                height={787}
+                fetchPriority="high"
+                decoding="async"
+              />
+            </div>
+          </div>
         </section>
 
         <aside className="work-desk-secondary" aria-labelledby="resume-h">
@@ -354,127 +342,156 @@ function AppHome() {
             <ArrowRight size={17} aria-hidden />
           </Link>
         </aside>
-        <section aria-labelledby="pend-h" className="work-desk-section work-desk-review">
-          <h2 id="pend-h">Pendências</h2>
-          <div className="work-desk-pending">
-            <section aria-labelledby="pending-records">
-              <h3 id="pending-records">Registros de sessão</h3>
-              {pendingRecordsQ.isError ? (
-                <ErrorRow
-                  msg="Não foi possível carregar os registros."
-                  onRetry={() => pendingRecordsQ.refetch()}
-                />
-              ) : pendingRecordsQ.isLoading ? (
-                <p className="work-desk-muted" role="status">
-                  Carregando registros…
-                </p>
-              ) : pendingRecordsQ.data?.records.length ? (
-                <ul className="work-desk-ledger">
-                  {pendingRecordsQ.data.records.map((record) => (
-                    <li key={record.id}>
-                      <Link
-                        to="/app/clientes/$clientId"
-                        params={{ clientId: record.client_id }}
-                        search={{ tab: "sessions", session: record.id }}
-                        className="work-desk-row"
-                      >
-                        <span>
-                          <strong>{nameOf(record.client_id)}</strong>
-                          <time dateTime={record.session_date}>{fmtTime(record.session_date)}</time>
-                        </span>
-                        <ArrowRight size={17} aria-hidden />
-                      </Link>
-                    </li>
-                  ))}
-                  {pendingRecordsQ.data.count > pendingRecordsQ.data.records.length && (
-                    <li>
-                      <Link to="/app/agenda" className="work-desk-text-link">
-                        Ver todos os {pendingRecordsQ.data.count} registros{" "}
-                        <ArrowRight size={17} aria-hidden />
-                      </Link>
-                    </li>
-                  )}
-                </ul>
-              ) : (
-                <p className="work-desk-muted">Nenhum registro de sessão pendente.</p>
-              )}
+        <div className="work-desk-review">
+          {(upcomingQ.data?.length ?? 0) > 1 && (
+            <section className="work-upcoming" aria-labelledby="work-upcoming-heading">
+              <h2 id="work-upcoming-heading">Em seguida</h2>
+              <ul className="work-desk-ledger">
+                {upcomingQ.data?.slice(1, 4).map((session) => (
+                  <li key={session.id}>
+                    <Link
+                      to="/app/clientes/$clientId"
+                      params={{ clientId: session.client_id }}
+                      search={{ tab: "sessions", session: session.id }}
+                      className="work-desk-row work-desk-appointment"
+                    >
+                      <time dateTime={session.session_date}>{fmtTime(session.session_date)}</time>
+                      <span>
+                        {session.clients?.preferred_name ||
+                          session.clients?.full_name ||
+                          nameOf(session.client_id)}
+                      </span>
+                      <ArrowRight size={17} aria-hidden />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </section>
-            <section aria-labelledby="pending-consents">
-              <h3 id="pending-consents">Consentimentos gerais</h3>
-              {clientsQ.isError ? (
-                <ErrorRow
-                  msg="Não foi possível conferir os consentimentos."
-                  onRetry={() => clientsQ.refetch()}
-                />
-              ) : clientsQ.isLoading ? (
-                <p className="work-desk-muted" role="status">
-                  Conferindo casos…
-                </p>
-              ) : pendingGeneral.length ? (
-                <ul className="work-desk-ledger">
-                  {pendingGeneral.slice(0, 3).map((client) => (
-                    <li key={client.id}>
-                      <Link
-                        to="/app/clientes/$clientId"
-                        params={{ clientId: client.id }}
-                        search={{ tab: "overview" }}
-                        className="work-desk-row"
-                      >
-                        <span>{nameOf(client.id)}</span>
-                        <ArrowRight size={17} aria-hidden />
-                      </Link>
-                    </li>
-                  ))}
-                  {pendingGeneral.length > 3 && (
-                    <li>
-                      <Link to="/app/clientes" className="work-desk-text-link">
-                        Conferir outros casos <ArrowRight size={17} aria-hidden />
-                      </Link>
-                    </li>
-                  )}
-                </ul>
-              ) : (
-                <p className="work-desk-muted">
-                  {clients.length > 0
-                    ? "Registrados nos casos ativos."
-                    : "Nenhum caso ativo para conferir."}
-                </p>
-              )}
-            </section>
-            {next && (
-              <section aria-labelledby="pending-audio">
-                <h3 id="pending-audio">Áudio do próximo atendimento</h3>
-                {consentQ.isError ? (
+          )}
+          <section aria-labelledby="pend-h" className="work-desk-section work-desk-pending-panel">
+            <h2 id="pend-h">Pendências</h2>
+            <div className="work-desk-pending">
+              <section aria-labelledby="pending-records">
+                <h3 id="pending-records">Registros de sessão</h3>
+                {pendingRecordsQ.isError ? (
                   <ErrorRow
-                    msg="Autorizações de áudio indisponíveis."
-                    onRetry={() => consentQ.refetch()}
+                    msg="Não foi possível carregar os registros."
+                    onRetry={() => pendingRecordsQ.refetch()}
                   />
-                ) : consentQ.isLoading ? (
+                ) : pendingRecordsQ.isLoading ? (
                   <p className="work-desk-muted" role="status">
-                    Conferindo autorizações…
+                    Carregando registros…
                   </p>
+                ) : pendingRecordsQ.data?.records.length ? (
+                  <ul className="work-desk-ledger">
+                    {pendingRecordsQ.data.records.map((record) => (
+                      <li key={record.id}>
+                        <Link
+                          to="/app/clientes/$clientId"
+                          params={{ clientId: record.client_id }}
+                          search={{ tab: "sessions", session: record.id }}
+                          className="work-desk-row"
+                        >
+                          <span>
+                            <strong>{nameOf(record.client_id)}</strong>
+                            <time dateTime={record.session_date}>
+                              {fmtTime(record.session_date)}
+                            </time>
+                          </span>
+                          <ArrowRight size={17} aria-hidden />
+                        </Link>
+                      </li>
+                    ))}
+                    {pendingRecordsQ.data.count > pendingRecordsQ.data.records.length && (
+                      <li>
+                        <Link to="/app/agenda" className="work-desk-text-link">
+                          Ver todos os {pendingRecordsQ.data.count} registros{" "}
+                          <ArrowRight size={17} aria-hidden />
+                        </Link>
+                      </li>
+                    )}
+                  </ul>
                 ) : (
-                  <Link
-                    to="/app/clientes/$clientId"
-                    params={{ clientId: next.client_id }}
-                    search={{ tab: "sessions", session: next.id, focus: "audio-consent" }}
-                    className="work-desk-row"
-                  >
-                    <span>
-                      <span>
-                        Gravação {nextRecording ? "autorizada" : "sem autorização vigente"}
-                      </span>
-                      <span>
-                        Processamento {nextProcessing ? "autorizado" : "sem autorização vigente"}
-                      </span>
-                    </span>
-                    <ArrowRight size={17} aria-hidden />
-                  </Link>
+                  <p className="work-desk-muted">Nenhum registro de sessão pendente.</p>
                 )}
               </section>
-            )}
-          </div>
-        </section>
+              <section aria-labelledby="pending-consents">
+                <h3 id="pending-consents">Consentimentos gerais</h3>
+                {clientsQ.isError ? (
+                  <ErrorRow
+                    msg="Não foi possível conferir os consentimentos."
+                    onRetry={() => clientsQ.refetch()}
+                  />
+                ) : clientsQ.isLoading ? (
+                  <p className="work-desk-muted" role="status">
+                    Conferindo casos…
+                  </p>
+                ) : pendingGeneral.length ? (
+                  <ul className="work-desk-ledger">
+                    {pendingGeneral.slice(0, 3).map((client) => (
+                      <li key={client.id}>
+                        <Link
+                          to="/app/clientes/$clientId"
+                          params={{ clientId: client.id }}
+                          search={{ tab: "overview" }}
+                          className="work-desk-row"
+                        >
+                          <span>{nameOf(client.id)}</span>
+                          <ArrowRight size={17} aria-hidden />
+                        </Link>
+                      </li>
+                    ))}
+                    {pendingGeneral.length > 3 && (
+                      <li>
+                        <Link to="/app/clientes" className="work-desk-text-link">
+                          Conferir outros casos <ArrowRight size={17} aria-hidden />
+                        </Link>
+                      </li>
+                    )}
+                  </ul>
+                ) : (
+                  <p className="work-desk-muted">
+                    {clients.length > 0
+                      ? "Registrados nos casos ativos."
+                      : "Nenhum caso ativo para conferir."}
+                  </p>
+                )}
+              </section>
+              {next && (
+                <section aria-labelledby="pending-audio">
+                  <h3 id="pending-audio">Áudio do próximo atendimento</h3>
+                  {consentQ.isError ? (
+                    <ErrorRow
+                      msg="Autorizações de áudio indisponíveis."
+                      onRetry={() => consentQ.refetch()}
+                    />
+                  ) : consentQ.isLoading ? (
+                    <p className="work-desk-muted" role="status">
+                      Conferindo autorizações…
+                    </p>
+                  ) : (
+                    <Link
+                      to="/app/clientes/$clientId"
+                      params={{ clientId: next.client_id }}
+                      search={{ tab: "sessions", session: next.id, focus: "audio-consent" }}
+                      className="work-desk-row"
+                    >
+                      <span>
+                        <span>
+                          Gravação {nextRecording ? "autorizada" : "sem autorização vigente"}
+                        </span>
+                        <span>
+                          Processamento {nextProcessing ? "autorizado" : "sem autorização vigente"}
+                        </span>
+                      </span>
+                      <ArrowRight size={17} aria-hidden />
+                    </Link>
+                  )}
+                </section>
+              )}
+            </div>
+          </section>
+        </div>
       </div>
 
       {showOnb && (

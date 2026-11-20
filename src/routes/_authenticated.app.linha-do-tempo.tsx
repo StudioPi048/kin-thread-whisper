@@ -36,11 +36,12 @@ function TimelinesPage() {
   const rows = cases.data?.slice(0, PAGE_SIZE) ?? [];
 
   return (
-    <div>
+    <div className="archive-timeline-index-page">
       <DocumentHeader
         breadcrumb="Linha do tempo"
         title="Linha do tempo"
         subtitle="Abra a cronologia do caso para consultar acontecimentos e suas fontes."
+        illustration={<img src="/assets/genealiz/acervo/relogio.webp" alt="" decoding="async" />}
       />
       <div className="container-liz space-y-5 py-2">
         <div className="flex flex-wrap items-end gap-3">

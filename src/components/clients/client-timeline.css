@@ -1,11 +1,17 @@
 .case-timeline {
+  --timeline-paper: color-mix(in oklab, var(--gold-muted) 55%, var(--archive-doc));
+  --timeline-applied: color-mix(in oklab, var(--gold-muted) 60%, var(--archive-old));
   color: var(--ink);
 }
 
 .case-timeline-empty {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.8rem 1.35rem;
   padding: 1.35rem;
   border-block: 1px solid var(--border);
-  background: var(--archive-doc);
+  background: color-mix(in oklab, var(--gold-muted) 55%, var(--archive-doc));
 }
 
 .case-timeline-filters {
@@ -15,7 +21,7 @@
   gap: 0.65rem 0.75rem;
   padding: 0.8rem 1.05rem;
   border-block: 1px solid var(--border);
-  background: var(--archive-doc);
+  background: var(--timeline-paper);
 }
 
 .case-timeline-filters > div {
@@ -72,6 +78,7 @@
 .case-timeline-list h2 {
   padding: 0.85rem 0.95rem;
   color: var(--forest);
+  background: var(--timeline-paper);
 }
 
 .case-timeline-entries {
@@ -102,11 +109,11 @@
 }
 
 .case-timeline-row[aria-pressed="true"] {
-  background: var(--forest-mist);
+  background: var(--timeline-applied);
 }
 
 .case-timeline-row[aria-pressed="true"] .case-timeline-row-date {
-  color: var(--forest);
+  color: var(--bronze);
 }
 
 .case-timeline-row:focus-visible,
@@ -188,8 +195,23 @@
   justify-content: space-between;
   gap: 0.5rem 1rem;
   padding: 0.8rem 1.05rem;
-  background: var(--forest);
+  background: color-mix(in oklab, var(--terracotta) 47%, var(--ink));
   color: var(--archive-doc);
+}
+
+.case-timeline-overview-title {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.case-timeline-watch {
+  width: 4.5rem;
+  height: 4.5rem;
+  flex: none;
+  object-fit: contain;
+  pointer-events: none;
 }
 
 .case-timeline-range {
@@ -209,7 +231,7 @@
 .case-timeline-overview-header .case-timeline-compare:hover,
 .case-timeline-overview-header .case-timeline-compare[aria-pressed="true"] {
   background: var(--gold-soft);
-  color: var(--forest);
+  color: var(--ink);
 }
 
 .case-timeline-overview-header .case-timeline-compare:focus-visible {
@@ -220,7 +242,7 @@
 .case-timeline-figure {
   margin: 0;
   padding: 1.1rem 1.2rem 0.8rem;
-  background: var(--forest-mist);
+  background: var(--timeline-paper);
 }
 
 .case-timeline-figure figcaption,
@@ -283,7 +305,7 @@
   max-width: 100%;
   margin: 0 0 0 -0.2rem;
   padding: 0.18rem 0.22rem;
-  background: var(--forest-mist);
+  background: var(--timeline-paper);
 }
 
 .case-timeline-track {
@@ -480,6 +502,11 @@
   .case-timeline-overview-header,
   .case-timeline-overview-detail {
     padding-inline: 0.7rem;
+  }
+
+  .case-timeline-watch {
+    width: 3.25rem;
+    height: 3.25rem;
   }
 }
 

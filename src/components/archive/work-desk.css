@@ -48,7 +48,7 @@
 .work-desk-columns {
   display: grid;
   grid-template:
-    "agenda dossier" auto
+    "agenda agenda" auto
     "review dossier" 1fr
     / minmax(0, 1.72fr) minmax(16rem, 1fr);
   gap: 1.75rem 1.5rem;
@@ -67,17 +67,35 @@
 
 .work-next {
   display: grid;
-  align-content: start;
-  gap: 1.2rem;
-  min-height: 13.25rem;
-  padding: 1.55rem 1.7rem;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.94fr);
+  min-height: 16.5rem;
   background: var(--forest);
-  color: var(--archive);
+  color: var(--ivory);
+  box-shadow: 0 8px 23px color-mix(in srgb, var(--ink) 12%, transparent);
 }
 
-.work-next[data-empty] {
-  min-height: 8.5rem;
-  gap: 0.65rem;
+.work-next-content {
+  display: grid;
+  min-width: 0;
+  align-content: center;
+  gap: 1.2rem;
+  padding: clamp(1.3rem, 3.75cqi, 2.75rem);
+}
+
+.work-next-art {
+  position: relative;
+  overflow: hidden;
+  border-inline-start: 1px solid var(--gold);
+}
+
+.work-next-art img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 55% 52%;
 }
 
 .work-next h2,
@@ -90,7 +108,8 @@
 }
 
 .work-next h2 {
-  color: var(--archive);
+  color: var(--ivory);
+  font-size: 1.35rem;
 }
 
 .work-next-details {
@@ -135,7 +154,7 @@
 
 .work-next-client .work-next-name {
   margin-bottom: 0.2rem;
-  color: var(--archive);
+  color: var(--ivory);
   font-size: 1.35rem;
   font-weight: 650;
   line-height: 1.2;
@@ -155,7 +174,7 @@
 }
 
 .work-next-link:hover {
-  color: var(--archive);
+  color: var(--ivory);
 }
 
 .work-next-link:focus-visible {
@@ -174,14 +193,14 @@
 }
 
 .work-next .work-desk-error {
-  color: var(--archive);
+  color: var(--ivory);
 }
 
 .work-upcoming {
-  padding: 1.25rem 0 0;
+  margin-bottom: 1.25rem;
 }
 
-.work-upcoming h3,
+.work-upcoming h2,
 .work-desk-pending h3 {
   margin: 0 0 0.5rem;
   color: var(--ink);
@@ -190,8 +209,10 @@
   line-height: 1.3;
 }
 
-.work-upcoming h3 {
-  padding-inline: 0.75rem;
+.work-upcoming h2 {
+  margin-bottom: 0.8rem;
+  color: var(--forest);
+  font-size: 1.05rem;
 }
 
 .work-desk-ledger {
@@ -260,7 +281,8 @@
   grid-area: dossier;
   padding: 1.35rem 1.15rem 0;
   border: 1px solid var(--border);
-  background: var(--archive-doc);
+  border-top-color: var(--gold);
+  background: color-mix(in srgb, var(--gold-muted) 55%, var(--archive-doc));
 }
 
 .work-desk-section h2,
@@ -274,6 +296,9 @@
 
 .work-desk-review {
   grid-area: review;
+}
+
+.work-desk-pending-panel {
   border-top: 1px solid var(--border);
   padding-top: 1.25rem;
 }
@@ -303,6 +328,7 @@
   margin: 0.5rem -1.15rem 0;
   border-top: 1px solid var(--border);
   padding: 0.85rem 1.15rem;
+  background: color-mix(in srgb, var(--gold-muted) 78%, var(--archive-doc));
   font-size: 0.875rem;
   font-weight: 650;
 }
@@ -416,6 +442,36 @@
   border-color: var(--forest-soft);
   background: var(--forest-mist);
   color: var(--forest);
+}
+
+.work-client-heading {
+  display: grid;
+  grid-template: "title roots action" / minmax(0, 1fr) minmax(6.5rem, 0.62fr) auto;
+  align-items: center;
+  min-height: 10rem;
+  margin-bottom: 1.4rem;
+  border-block: 1px solid var(--border);
+  padding: 0.8rem clamp(1rem, 2.9cqi, 2rem);
+  background: color-mix(in srgb, var(--gold-muted) 65%, var(--archive-doc));
+}
+
+.work-client-heading h1 {
+  grid-area: title;
+}
+
+.work-client-heading > button {
+  grid-area: action;
+  justify-self: start;
+}
+
+.work-client-heading-image {
+  grid-area: roots;
+  place-self: center;
+  width: 100%;
+  max-width: 13rem;
+  height: 8rem;
+  object-fit: contain;
+  mix-blend-mode: multiply;
 }
 
 .work-clients-controls,
@@ -552,7 +608,7 @@
 }
 
 .work-client-ledger thead {
-  background: var(--archive-old);
+  background: color-mix(in srgb, var(--forest-mist) 78%, var(--archive-old));
 }
 
 .work-client-ledger thead th {
@@ -637,7 +693,7 @@
   place-items: center;
   inline-size: 2.45rem;
   block-size: 2.45rem;
-  background: var(--forest-mist);
+  background: var(--gold-muted);
   color: var(--forest);
 }
 
@@ -785,6 +841,10 @@
     font-size: 3.15rem;
   }
 
+  .work-next {
+    min-height: 13rem;
+  }
+
   .work-clients-controls {
     flex-direction: column;
     align-items: stretch;
@@ -804,6 +864,23 @@
   }
 }
 
+@container (max-width: 37rem) {
+  .work-next {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+  }
+
+  .work-next-art {
+    height: clamp(7rem, 36cqi, 10rem);
+    border-inline-start: none;
+    border-block-start: 1px solid var(--gold);
+  }
+
+  .work-next-art img {
+    object-position: 55% 56%;
+  }
+}
+
 @container (max-width: 29rem) {
   .work-desk-heading {
     align-items: start;
@@ -818,9 +895,8 @@
     font-size: 2.85rem;
   }
 
-  .work-next {
-    min-height: 10rem;
-    padding: 1.25rem 1rem;
+  .work-next-content {
+    padding: 1.2rem;
   }
 
   .work-next-details {
@@ -842,6 +918,25 @@
 
   .work-desk-pending {
     grid-template-columns: 1fr;
+  }
+
+  .work-client-heading {
+    grid-template:
+      "title roots" auto
+      "action roots" auto
+      / minmax(0, 1fr) minmax(4.25rem, 0.38fr);
+    align-items: center;
+    gap: 0.7rem 0.25rem;
+    min-height: 0;
+    padding-block: 1.15rem;
+  }
+
+  .work-client-heading h1 {
+    font-size: 2.7rem;
+  }
+
+  .work-client-heading-image {
+    height: 6.6rem;
   }
 
   .work-client-ledger th,

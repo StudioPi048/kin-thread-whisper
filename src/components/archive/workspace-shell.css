@@ -1,5 +1,25 @@
 .workspace-shell {
   --workspace-rail: 14rem;
+  --archive: var(--workspace-linen);
+  --archive-doc: var(--workspace-sheet);
+  --archive-old: var(--workspace-manila);
+  --forest-mist: var(--workspace-sage);
+  --border: var(--workspace-rule);
+  --input: var(--workspace-rule);
+  --ink-soft: var(--workspace-ink-soft);
+  --warm-gray: var(--workspace-ink-soft);
+  --background: var(--archive);
+  --card: var(--archive-doc);
+  --secondary: var(--archive-old);
+  --muted: var(--archive-old);
+  --muted-foreground: var(--warm-gray);
+  --accent: var(--forest-mist);
+  --surface-archive: var(--archive);
+  --surface-document: var(--archive-doc);
+  --surface-dossier: var(--archive-doc);
+  --surface-manuscript: var(--archive-old);
+  --surface-folder: var(--forest-mist);
+  --material-border: var(--border);
   display: grid;
   grid-template-columns: var(--workspace-rail) minmax(0, 1fr);
   min-height: 100dvh;
@@ -16,9 +36,9 @@
   height: 100dvh;
   display: flex;
   flex-direction: column;
-  background: var(--ivory);
-  color: var(--forest);
-  border-inline-end: 1px solid var(--border);
+  background: var(--workspace-rail-ink);
+  color: var(--workspace-rail-text);
+  border-inline-end: 1px solid var(--workspace-rail-rule);
 }
 
 .workspace-brand-row {
@@ -28,7 +48,7 @@
   justify-content: space-between;
   gap: 0.25rem;
   padding: 0.75rem 0.75rem 0.75rem 1.25rem;
-  border-block-end: 1px solid var(--border);
+  border-block-end: 1px solid var(--workspace-rail-rule);
 }
 
 .workspace-brand-row > a,
@@ -68,10 +88,23 @@
 }
 
 .workspace-icon:hover,
-.workspace-nav-link:hover,
 .workspace-account:hover {
   background: var(--forest-mist);
   color: var(--forest);
+}
+
+.workspace-sidebar .workspace-icon,
+.workspace-sidebar .workspace-nav-link {
+  color: var(--workspace-rail-text);
+}
+
+.workspace-sidebar :is(.workspace-icon, .workspace-nav-link):hover {
+  background: var(--workspace-rail-rule);
+}
+
+.workspace-sidebar :focus-visible,
+.workspace-mobile-nav :focus-visible {
+  outline-color: var(--gold-soft);
 }
 
 .workspace-nav {
@@ -84,13 +117,13 @@
 }
 
 .workspace-nav-group + .workspace-nav-group {
-  border-block-start: 1px solid var(--border);
+  border-block-start: 1px solid var(--workspace-rail-rule);
   padding-top: 0.8rem;
 }
 
 .workspace-nav-label {
   margin: 0 0 0.28rem 0.55rem;
-  color: var(--ink-soft);
+  color: var(--workspace-rail-muted);
   font-size: 0.875rem;
   font-weight: 650;
 }
@@ -112,15 +145,26 @@
   flex: none;
 }
 
-.workspace-nav-link[aria-current="page"] {
-  background: var(--forest);
-  color: var(--ivory);
+.workspace-sidebar .workspace-nav-link[aria-current="page"] {
+  background: var(--gold-muted);
+  color: var(--workspace-rail-ink);
   font-weight: 600;
 }
 
 .workspace-sidebar-footer {
   padding: 0.5rem 0.85rem 0.7rem;
-  border-block-start: 1px solid var(--border);
+  border-block-start: 1px solid var(--workspace-rail-rule);
+}
+
+@media (min-width: 1024px) and (min-height: 850px) {
+  .workspace-shell:not([data-collapsed]) .workspace-sidebar-footer::before {
+    display: block;
+    height: 5.8rem;
+    margin-block: 0.25rem 0.6rem;
+    background: url("/assets/genealiz/acervo/raizes.webp") center / 6.4rem auto no-repeat;
+    opacity: 0.85;
+    content: "";
+  }
 }
 
 .workspace-shell[data-collapsed] .workspace-brand-row {
@@ -272,7 +316,9 @@
 }
 
 .workspace-more {
+  border-color: var(--workspace-rule);
   padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  background: var(--workspace-sheet);
 }
 
 @media (max-width: 1023px) {
@@ -323,7 +369,7 @@
     padding: 0.2rem 0.5rem 0.2rem 1rem;
     border: 0;
     border-block-start: 1px solid var(--border);
-    background: var(--ivory);
+    background: var(--archive-doc);
   }
 
   .workspace-content {
@@ -337,10 +383,10 @@
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 0.2rem;
-    border-block-start: 1px solid var(--input);
+    border-block-start: 1px solid var(--workspace-rail-rule);
     padding: 0.35rem 0.5rem calc(0.35rem + env(safe-area-inset-bottom));
-    background: var(--archive-doc);
-    color: var(--ink-soft);
+    background: var(--workspace-rail-ink);
+    color: var(--workspace-rail-text);
   }
 
   .workspace-mobile-nav a,
@@ -356,7 +402,7 @@
   }
 
   .workspace-mobile-nav [aria-current="page"] {
-    background: var(--forest);
-    color: var(--ivory);
+    background: var(--gold-muted);
+    color: var(--workspace-rail-ink);
   }
 }

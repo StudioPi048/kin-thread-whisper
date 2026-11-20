@@ -144,6 +144,18 @@
   --ink-soft: #59665e;
   --cream: #f6f6f4;
 
+  /* Materiais da área logada. A capa pública usa a paleta de arquivo acima. */
+  --workspace-linen: #eee3d0;
+  --workspace-sheet: #fbf4e7;
+  --workspace-manila: #e9d9bd;
+  --workspace-sage: #e0e7d1;
+  --workspace-rule: #d4c3a9;
+  --workspace-ink-soft: #4e5c50;
+  --workspace-rail-ink: #263b2c;
+  --workspace-rail-text: #f4ebd8;
+  --workspace-rail-muted: #d0dac4;
+  --workspace-rail-rule: #52644b;
+
   --clinical-critical: #8b3a3a;
   --clinical-warning: #8a6407;
   --clinical-positive: #36534b;

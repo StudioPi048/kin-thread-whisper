@@ -18,13 +18,19 @@ A capa apresenta o acesso à conta e uma prévia do dossiê de uma família fict
 
 ## Área de trabalho
 
-- Navegação clara em três grupos, com o verde concentrado na área ativa. A busca global e o último ponto de trabalho ficam no cabeçalho. No celular, as quatro seções principais ficam ao alcance do polegar e o restante abre em Mais.
+- Navegação em verde de mata, com a seção ativa em dourado pálido, organizada em três grupos. A busca global e o último ponto de trabalho ficam no cabeçalho. No celular, as quatro seções principais ficam ao alcance do polegar e o restante abre em Mais.
 - A Mesa começa pelo próximo atendimento e mantém o retorno aos dossiês e as pendências acessíveis. Índices de clientes, árvores e cronologias usam linhas com ações legíveis. As prévias das árvores carregam quando abertas.
 - O dossiê organiza a identificação, os atalhos e as seções em duas faixas. O mapa usa controles dedicados para edição e câmera, com a ficha de filiação ao lado e uma gaveta em telas pequenas. Anamnese, sessões e evidências apresentam os registros em blocos delimitados por linhas.
 
+## Acervo ilustrado da aplicação
+
+- A Mesa associa o próximo atendimento a uma fotografia de um livro de arquivo com um ramo prensado. O enquadramento deixa as ações no painel adjacente.
+- A gravura de raízes acompanha dossiês e árvores. O relógio de bolso acompanha datas e cronologias, os livros marcam a Biblioteca e as chaves ficam na entrada das Evidências. São peças ilustrativas criadas para o Genealiz, servidas em WebP, com transparência preservada onde a arte é isolada.
+- A aplicação usa linho quente para o fundo, papel creme para leitura, manilha e sálvia para agrupamento. As imagens ficam em espaços próprios das capas e cabeçalhos. O campo de edição usa uma superfície lisa e deixa nomes e vínculos em primeiro plano.
+
 ## Cores
 - **Verde profundo (`forest`, `forest-mid`)**: orientação — navegação, botão principal, foco, seleção.
-- **Superfícies neutras (`archive`, `archive-doc` branco, `archive-old`)**: área de trabalho clara, sem textura, pergaminho, gradiente ou brilho decorativo.
+- **Superfícies de leitura**: a capa pública usa os neutros de arquivo. A área autenticada usa `workspace-linen`, `workspace-sheet`, `workspace-manila` e `workspace-sage`, declarados com os demais tokens em `src/styles.css` e aplicados em `workspace-shell.css`.
 - **Bronze/dourado (`bronze`, `gold`)**: poucos destaques. `gold` só sobre fundo verde; sobre branco use `bronze`.
 - **Estados**: `clinical-critical` (erro/destrutivo), `clinical-warning` (atenção). Nunca usar cor como único sinal.
 

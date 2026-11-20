@@ -97,36 +97,39 @@ function BibliotecaPage() {
     if (selected) titleRef.current?.focus();
   }, [selected]);
   return (
-    <div className="pb-14">
+    <div className="archive-library-page pb-14">
       <DocumentHeader
         title="Biblioteca"
         subtitle="Consulte autores, obras, conceitos e materiais do acervo."
-      />
-      <div className="container-liz archive-library-search">
-        <div className="relative">
-          <Search className="absolute left-4 top-3.5 size-4 text-muted-foreground" />
-          <input
-            ref={searchRef}
-            aria-label="Buscar na biblioteca"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Buscar conceito, autor, obra ou termo"
-            className="h-11 w-full rounded-md border border-input bg-background pl-11 pr-4 text-[15px] placeholder:text-muted-foreground"
-          />
+        illustration={<img src="/assets/genealiz/acervo/livros.webp" alt="" decoding="async" />}
+      >
+        <div className="archive-library-search">
+          <div className="relative">
+            <Search className="absolute left-4 top-3.5 size-4 text-muted-foreground" aria-hidden />
+            <input
+              ref={searchRef}
+              type="search"
+              aria-label="Buscar na biblioteca"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Buscar conceito, autor, obra ou termo"
+              className="h-11 w-full rounded-md border border-input bg-background pl-11 pr-4 text-[15px] placeholder:text-muted-foreground"
+            />
+          </div>
+          {lastItem && !selected && (
+            <button
+              type="button"
+              onClick={(event) => {
+                openerRef.current = event.currentTarget;
+                setSelected(lastItem);
+              }}
+              className="archive-library-resume mt-2 inline-flex min-h-11 items-center gap-2 text-[15px] font-semibold underline-offset-4 hover:underline"
+            >
+              Voltar ao último trecho: {lastItem.title}
+            </button>
+          )}
         </div>
-        {lastItem && !selected && (
-          <button
-            type="button"
-            onClick={(event) => {
-              openerRef.current = event.currentTarget;
-              setSelected(lastItem);
-            }}
-            className="mt-3 inline-flex min-h-11 items-center gap-2 text-[15px] font-semibold text-forest underline-offset-4 hover:underline"
-          >
-            Voltar ao último trecho: {lastItem.title}
-          </button>
-        )}
-      </div>
+      </DocumentHeader>
       <div className="container-liz archive-library-layout">
         <aside className="archive-library-index">
           <nav aria-label="Categorias da biblioteca">

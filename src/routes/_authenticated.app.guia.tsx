@@ -135,7 +135,7 @@ const TASKS: Task[] = [
 
 function GuiaPage() {
   return (
-    <div className="pb-16">
+    <div className="archive-guide-page pb-16">
       <DocumentHeader
         title="Guia de tarefas"
         subtitle="O que fazer, passo a passo, em cada etapa do atendimento."
@@ -158,6 +158,12 @@ function GuiaPage() {
           >
             Abrir exercício <ArrowRight size={16} aria-hidden />
           </Link>
+          <img
+            className="archive-guide-art"
+            src="/assets/genealiz/acervo/raizes.webp"
+            alt=""
+            decoding="async"
+          />
         </div>
       </section>
       <div className="container-liz grid gap-10 lg:grid-cols-[220px_minmax(0,760px)]">

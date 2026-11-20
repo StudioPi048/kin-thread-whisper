@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { CalendarClock, ListFilter, MapPin, RefreshCw } from "lucide-react";
+import { ListFilter, MapPin, RefreshCw } from "lucide-react";
 
 import { clinicalIntelQuery, getMappablePersons } from "@/lib/clinical-intel";
 import { buildLogicalGraph } from "@/lib/geno/build";
@@ -39,6 +39,7 @@ const KIND_LABEL: Record<TimelineKind, string> = {
   union: "Uniões e separações",
 };
 const KINDS: TimelineKind[] = ["birth", "death", "union", "event"];
+const WATCH_ART = "/assets/genealiz/acervo/relogio.webp";
 const BRANCH_LABEL: Record<TimelineBranch, string> = {
   paternal: "Paterno",
   maternal: "Materno",
@@ -163,18 +164,20 @@ export function ClientTimeline({ clientId, focusEvent }: Props) {
   if (all.length === 0)
     return (
       <div className="case-timeline-empty">
-        <CalendarClock className="size-6 text-forest" aria-hidden />
-        <h2 className="mt-3 text-lg font-semibold text-primary">
-          Ainda não há registros na linha do tempo
-        </h2>
-        <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
-          Abra a planilha para preencher datas ou a ficha de um familiar para registrar um evento.
-        </p>
-        <Button asChild variant="outline" className="mt-4 min-h-11">
-          <Link to="/app/clientes/$clientId" params={{ clientId }} search={{ tab: "clan" }}>
-            Abrir planilha do clã
-          </Link>
-        </Button>
+        <img className="case-timeline-watch" src={WATCH_ART} alt="" width={500} height={387} />
+        <div>
+          <h2 className="text-lg font-semibold text-primary">
+            Ainda não há registros na linha do tempo
+          </h2>
+          <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
+            Abra a planilha para preencher datas ou a ficha de um familiar para registrar um evento.
+          </p>
+          <Button asChild variant="outline" className="mt-4 min-h-11">
+            <Link to="/app/clientes/$clientId" params={{ clientId }} search={{ tab: "clan" }}>
+              Abrir planilha do clã
+            </Link>
+          </Button>
+        </div>
       </div>
     );
 
@@ -517,15 +520,25 @@ function TimelineOverview({
   return (
     <section className="case-timeline-overview" aria-labelledby="case-timeline-overview-title">
       <header className="case-timeline-overview-header">
-        <div>
-          <h2 id="case-timeline-overview-title">Panorama cronológico</h2>
-          {scale && (
-            <p className="case-timeline-range">
-              {scale.fromYear === scale.toYear
-                ? scale.fromYear
-                : `${scale.fromYear} – ${scale.toYear}`}
-            </p>
-          )}
+        <div className="case-timeline-overview-title">
+          <img
+            className="case-timeline-watch"
+            src={WATCH_ART}
+            alt=""
+            width={500}
+            height={387}
+            decoding="async"
+          />
+          <div>
+            <h2 id="case-timeline-overview-title">Panorama cronológico</h2>
+            {scale && (
+              <p className="case-timeline-range">
+                {scale.fromYear === scale.toYear
+                  ? scale.fromYear
+                  : `${scale.fromYear} – ${scale.toYear}`}
+              </p>
+            )}
+          </div>
         </div>
         {scale && onCompareBranches && (
           <Button

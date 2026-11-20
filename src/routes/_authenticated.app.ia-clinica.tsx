@@ -91,11 +91,12 @@ function IaClinicaPage() {
   }, [showHyp]);
 
   return (
-    <div className="flex min-h-[calc(100dvh-72px)] flex-col">
+    <div className="archive-evidence-page flex min-h-[calc(100dvh-72px)] flex-col">
       <DocumentHeader
         breadcrumb={<Link to="/app">Mesa de trabalho</Link>}
         title="Evidências e hipóteses"
         subtitle="Selecione um caso. As hipóteses vêm apenas do que está registrado no genossociograma."
+        illustration={<img src="/assets/genealiz/acervo/chaves.webp" alt="" decoding="async" />}
       />
       <div className="container-liz archive-evidence-layout">
         <section aria-label="Selecionar caso" className="archive-evidence-controls space-y-2">

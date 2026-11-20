@@ -586,6 +586,14 @@ function ClientDossierPage() {
                 )}
               </div>
             </div>
+            <img
+              className="dossier-root-art"
+              src="/assets/genealiz/acervo/raizes.webp"
+              alt=""
+              width={500}
+              height={500}
+              decoding="async"
+            />
             <div className="dossier-next-session">
               {nextSession ? (
                 <Link

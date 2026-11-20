@@ -32,6 +32,23 @@
   font-size: 0.9375rem;
 }
 
+.archive-map-index-page .archive-document-header {
+  --archive-art-ratio: 1.25;
+}
+
+.archive-timeline-index-page .archive-document-header {
+  background: var(--archive-old);
+}
+
+:is(.archive-map-index-page, .archive-timeline-index-page)
+  .archive-document-header
+  > .container-liz {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(7rem, 16vw, 13rem);
+  align-items: center;
+  gap: clamp(1rem, 3vw, 2.5rem);
+}
+
 @media (max-width: 767px) {
   .archive-document-header .atlas-page-heading {
     align-items: start;
@@ -39,5 +56,18 @@
 
   .archive-document-header .atlas-title {
     font-size: 2.6rem;
+  }
+}
+
+@media (max-width: 470px) {
+  :is(.archive-map-index-page, .archive-timeline-index-page)
+    .archive-document-header
+    > .container-liz {
+    grid-template-columns: minmax(0, 1fr) clamp(4rem, 20vw, 5.75rem);
+    gap: 0.35rem;
+  }
+
+  :is(.archive-map-index-page, .archive-timeline-index-page) .archive-title {
+    font-size: 2.15rem;
   }
 }

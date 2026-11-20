@@ -179,7 +179,7 @@ function AuthenticatedLayout() {
       <aside className="workspace-sidebar">
         <div className="workspace-brand-row">
           <Link to="/app" aria-label="GENEALIZ — Mesa de trabalho">
-            <GenealizWordmark variant={isCollapsed ? "symbol" : "horizontal"} />
+            <GenealizWordmark tone="dark" variant={isCollapsed ? "symbol" : "horizontal"} />
           </Link>
           <button
             type="button"
