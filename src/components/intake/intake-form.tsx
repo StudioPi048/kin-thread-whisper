@@ -81,10 +81,11 @@ function CaseIntakeForm({ clientId, professionalId, focusQuestion }: Props) {
   );
   const [search, setSearch] = useState("");
   const [finding, setFinding] = useState<IntakeFinding>();
-  const [focusRequest, setFocusRequest] = useState<{ field: keyof ClientIntake } | undefined>(
+  const [focusRequest, setFocusRequest] = useState<{ field?: keyof ClientIntake } | undefined>(
     linkedField ? { field: linkedField } : undefined,
   );
   const formRef = useRef<HTMLDivElement>(null);
+  const sectionTitleRef = useRef<HTMLHeadingElement>(null);
   const [pending, setPending] = useState<IntakeEdits>({});
   const revision = useRef(0);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
@@ -111,9 +112,15 @@ function CaseIntakeForm({ clientId, professionalId, focusQuestion }: Props) {
 
   useEffect(() => {
     if (!focusRequest) return;
-    const field = formRef.current?.querySelector(`[data-intake-field="${focusRequest.field}"]`);
-    const input = field?.querySelector<HTMLElement>("input, textarea, select");
-    input?.focus();
+    const field = focusRequest.field
+      ? formRef.current?.querySelector<HTMLElement>(`[data-intake-field="${focusRequest.field}"]`)
+      : undefined;
+    const control = field?.querySelector<HTMLElement>(
+      "input, textarea, select, button[role=combobox]",
+    );
+    const target = field ?? sectionTitleRef.current;
+    target?.scrollIntoView({ block: "nearest" });
+    (control ?? target)?.focus({ preventScroll: true });
   }, [focusRequest, intakeQuery.isLoading]);
 
   const save = useMutation({
@@ -202,7 +209,7 @@ function CaseIntakeForm({ clientId, professionalId, focusQuestion }: Props) {
     setMode("full");
     setSection(next);
     setSearch("");
-    if (field) setFocusRequest({ field });
+    setFocusRequest({ field });
   };
   const lastQuestion = intake?.last_field_edited
     ? (Object.keys(INTAKE_QUESTION_LABELS).find((field) => field === intake.last_field_edited) as
@@ -307,6 +314,39 @@ function CaseIntakeForm({ clientId, professionalId, focusQuestion }: Props) {
           </div>
         )}
       </div>
+      <div className="sticky top-[76px] z-20 flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-md border border-border bg-card px-3 py-2">
+        <p role="status" className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          {save.isPending ? (
+            <>
+              <Loader2 aria-hidden className="size-4 shrink-0 animate-spin" /> Salvando anamnese…
+            </>
+          ) : save.isError ? (
+            <span className="text-clinical-critical">
+              Falha ao salvar. As respostas continuam aqui.
+            </span>
+          ) : hasPending ? (
+            <span className="text-clinical-warning">Alterações pendentes</span>
+          ) : savedAt ? (
+            <>
+              <CheckCircle2 aria-hidden className="size-4 shrink-0 text-clinical-positive" />
+              Anamnese salva às{" "}
+              {savedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+            </>
+          ) : (
+            <>Salvamento automático ativo</>
+          )}
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          className="min-h-11"
+          onClick={() => void queue.flush().catch(() => {})}
+          disabled={save.isPending || !hasPending}
+        >
+          <Save aria-hidden className="size-4" />
+          {save.isError ? "Tentar salvar de novo" : "Salvar agora"}
+        </Button>
+      </div>
       <IntakeContext.Provider
         value={{
           draft,
@@ -333,29 +373,6 @@ function CaseIntakeForm({ clientId, professionalId, focusQuestion }: Props) {
                 aria-label="Preenchimento total"
                 className="mt-3 h-1.5"
               />
-              <p
-                role="status"
-                className="mt-3 flex items-center gap-1.5 text-sm text-muted-foreground"
-              >
-                {save.isPending ? (
-                  <>
-                    <Loader2 aria-hidden className="size-3 animate-spin" /> Salvando…
-                  </>
-                ) : save.isError ? (
-                  <span className="text-clinical-critical">
-                    Não foi possível salvar. O texto continua aqui.
-                  </span>
-                ) : hasPending ? (
-                  <span className="text-clinical-warning">Alterações pendentes</span>
-                ) : savedAt ? (
-                  <>
-                    <CheckCircle2 aria-hidden className="size-3 text-clinical-positive" /> Salvo às{" "}
-                    {savedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                  </>
-                ) : (
-                  <>Salvamento automático ativo</>
-                )}
-              </p>
             </div>
 
             {mode === "full" && (
@@ -410,7 +427,11 @@ function CaseIntakeForm({ clientId, professionalId, focusQuestion }: Props) {
           {/* Content */}
           <div className="min-w-0 space-y-6">
             <header className="min-w-0 space-y-3">
-              <h2 className="text-balance font-serif text-2xl text-primary">
+              <h2
+                ref={sectionTitleRef}
+                tabIndex={-1}
+                className="scroll-mt-44 text-balance font-serif text-2xl text-primary"
+              >
                 {mode === "brief"
                   ? "Pontos de partida"
                   : INTAKE_SECTIONS.find((s) => s.id === section)?.label}
@@ -443,16 +464,6 @@ function CaseIntakeForm({ clientId, professionalId, focusQuestion }: Props) {
                     {sectionCompletion}% desta seção
                   </span>
                 )}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="min-h-11 sm:ml-auto"
-                  onClick={() => void queue.flush().catch(() => {})}
-                  disabled={save.isPending || !hasPending}
-                >
-                  <Save aria-hidden className="size-4" />{" "}
-                  {save.isError ? "Tentar salvar de novo" : "Salvar agora"}
-                </Button>
               </div>
             </header>
 
@@ -541,7 +552,7 @@ function Field({
   field?: keyof ClientIntake;
 }) {
   return (
-    <div className="space-y-1.5 scroll-mt-5" data-intake-field={field}>
+    <div className="space-y-1.5 scroll-mt-44" data-intake-field={field} tabIndex={-1}>
       <div className="flex items-center justify-between gap-2">
         <Label htmlFor={id} className="text-[15px] text-foreground">
           {label}
@@ -587,12 +598,14 @@ function AnswerMetadata({ field, label }: { field: keyof ClientIntake; label: st
   const control = "min-h-11 min-w-0 rounded-md border border-input bg-card px-3 text-base";
   return (
     <details className="text-sm text-muted-foreground">
-      <summary
-        className="min-h-11 cursor-pointer py-3 font-medium"
-        aria-label={`Fonte e situação · ${label}`}
-      >
-        Fonte e situação
-        {status ? ` · ${statuses.find(([key]) => key === status)?.[1] ?? status}` : ""}
+      <summary className="min-h-11 cursor-pointer py-3 font-medium">
+        {[
+          source ? (sources.find(([key]) => key === source)?.[1] ?? source) : "Fonte sem registro",
+          status ? (statuses.find(([key]) => key === status)?.[1] ?? status) : null,
+        ]
+          .filter(Boolean)
+          .join(" · ")}
+        <span className="sr-only"> · {label}</span>
       </summary>
       <div className="grid gap-3 rounded-md border border-border p-3 sm:grid-cols-2">
         <label className="grid min-w-0 gap-1.5">

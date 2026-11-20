@@ -1,28 +1,23 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { readPref, writePref } from "@/lib/recent-activity";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Search, BookOpen, ChevronRight, Copy, Link2 } from "lucide-react";
-import { EDITORIAL_SOURCE, buildLibraryItems } from "@/components/library/catalog";
-import { searchLibrary } from "@/lib/library-search";
 import {
-  LETICIA,
-  LETICIA_WORKS,
-  Entry,
-  AUTHORS,
+  EDITORIAL_SOURCE,
+  buildLibraryItems,
+  type Entry,
   THEMES,
-  ESSENTIAL_BOOKS,
-  QUOTES,
   GLOSSARY,
-  PROTOCOLS,
-  LibraryItem,
+  type LibraryItem,
   categories,
 } from "@/components/library/catalog";
-import { motion, AnimatePresence } from "framer-motion";
+import { relatedLibraryItem, searchLibrary } from "@/lib/library-search";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { DocumentHeader } from "@/components/ui/document-header";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/app/biblioteca")({
@@ -50,15 +45,20 @@ export const Route = createFileRoute("/_authenticated/app/biblioteca")({
 function BibliotecaPage() {
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("Todos");
+  const openerRef = useRef<HTMLButtonElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
   const { item: itemKey } = Route.useSearch();
   const navigate = Route.useNavigate();
   const { user } = Route.useRouteContext();
   const [lastKey, setLastKey] = useState<string | null>(null);
   useEffect(() => setLastKey(readPref<string | null>(user.id, "library-last", null)), [user.id]);
   const {
-    data: entries = [],
+    data: entries,
     isLoading,
     isError,
+    isFetching,
+    refetch,
   } = useQuery({
     queryKey: ["library-entries"],
     queryFn: async () => {
@@ -70,7 +70,7 @@ function BibliotecaPage() {
       return data as Entry[];
     },
   });
-  const items = useMemo(() => buildLibraryItems(entries), [entries]);
+  const items = useMemo(() => buildLibraryItems(entries ?? []), [entries]);
   const shown = searchLibrary(items, q, category);
   // Trecho aberto vive na URL (?item=ID) — dá para voltar a ele; só o ID é lembrado.
   const selected = itemKey ? (items.find((x) => x.key === itemKey) ?? null) : null;
@@ -82,6 +82,20 @@ function BibliotecaPage() {
     navigate({ search: x ? { item: x.key } : {}, replace: !x });
   };
   const lastItem = lastKey ? items.find((x) => x.key === lastKey) : undefined;
+  const openRelatedTerm = (term: string) => {
+    const related = relatedLibraryItem(items, term);
+    if (related) {
+      setSelected(related);
+      return;
+    }
+    openerRef.current = null;
+    setQ(term);
+    setCategory("Todos");
+    setSelected(null);
+  };
+  useEffect(() => {
+    if (selected) titleRef.current?.focus();
+  }, [selected]);
   return (
     <div className="pb-14">
       <DocumentHeader
@@ -93,6 +107,7 @@ function BibliotecaPage() {
         <div className="relative">
           <Search className="absolute left-4 top-3.5 size-4 text-muted-foreground" />
           <input
+            ref={searchRef}
             aria-label="Buscar na biblioteca"
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -103,7 +118,10 @@ function BibliotecaPage() {
         {lastItem && !selected && (
           <button
             type="button"
-            onClick={() => setSelected(lastItem)}
+            onClick={(event) => {
+              openerRef.current = event.currentTarget;
+              setSelected(lastItem);
+            }}
             className="mt-3 inline-flex min-h-11 items-center gap-2 text-[15px] font-semibold text-forest underline-offset-4 hover:underline"
           >
             Voltar ao último trecho: {lastItem.title}
@@ -150,15 +168,34 @@ function BibliotecaPage() {
             <h2 className="font-serif text-3xl font-semibold">{category}</h2>
             <span className="text-xs text-muted-foreground">{shown.length} resultados</span>
           </div>
-          {isLoading && category === "Meu acervo" && <div className="skeleton h-32" />}
-          {isError && (
-            <p role="alert" className="text-sm text-destructive mb-4">
-              Não foi possível carregar seu acervo. Atualize a página para tentar novamente.
+          {isLoading && category === "Meu acervo" && (
+            <p role="status" className="text-sm text-muted-foreground">
+              Carregando seu acervo…
             </p>
+          )}
+          {isError && (
+            <div className="mb-4 flex flex-wrap items-center gap-2 text-sm text-destructive">
+              <p role="alert">Não foi possível carregar seu acervo.</p>
+              <Button
+                variant="link"
+                className="min-h-11"
+                disabled={isFetching}
+                onClick={() => void refetch()}
+              >
+                {isFetching ? "Carregando…" : "Tentar novamente"}
+              </Button>
+            </div>
           )}
           <div className="atlas-library-list">
             {shown.map((x) => (
-              <button key={x.key} onClick={() => setSelected(x)} className="atlas-library-item">
+              <button
+                key={x.key}
+                onClick={(event) => {
+                  openerRef.current = event.currentTarget;
+                  setSelected(x);
+                }}
+                className="atlas-library-item"
+              >
                 <BookOpen size={20} strokeWidth={1.4} />
                 <div>
                   <span className="text-xs text-muted-foreground">{x.category}</span>
@@ -170,7 +207,7 @@ function BibliotecaPage() {
               </button>
             ))}
           </div>
-          {!shown.length && !isLoading && (
+          {!shown.length && !isLoading && !(isError && category === "Meu acervo") && (
             <div className="atlas-empty">
               <Search size={28} />
               <h2>Nenhum resultado encontrado</h2>
@@ -210,14 +247,30 @@ function BibliotecaPage() {
         </div>
       )}
       <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
-        <SheetContent side="right" className="w-full sm:max-w-[520px] overflow-y-auto p-0">
+        <SheetContent
+          side="right"
+          className="w-full sm:max-w-[520px] overflow-y-auto p-0"
+          aria-describedby={undefined}
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            titleRef.current?.focus();
+          }}
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            (openerRef.current?.isConnected ? openerRef.current : searchRef.current)?.focus();
+          }}
+        >
           {selected?.term ? (
-            <GlossaryDetail item={selected.term} />
+            <GlossaryDetail item={selected.term} titleRef={titleRef} onRelated={openRelatedTerm} />
           ) : (
             selected && (
               <>
                 <SheetHeader className="bg-forest text-white p-8">
-                  <SheetTitle className="font-serif text-3xl text-white">
+                  <SheetTitle
+                    ref={titleRef}
+                    tabIndex={-1}
+                    className="font-serif text-3xl text-white"
+                  >
                     {selected.title}
                   </SheetTitle>
                   <p className="text-sm text-white/85">{selected.meta}</p>
@@ -271,22 +324,24 @@ function BibliotecaPage() {
   );
 }
 
-function GlossaryDetail({ item }: { item: (typeof GLOSSARY)[number] }) {
-  const Icon = item.icon;
+function GlossaryDetail({
+  item,
+  titleRef,
+  onRelated,
+}: {
+  item: (typeof GLOSSARY)[number];
+  titleRef: React.RefObject<HTMLHeadingElement | null>;
+  onRelated: (term: string) => void;
+}) {
   return (
     <div>
       <div className="block-forest p-8 relative overflow-hidden">
-        <span className="section-number absolute -right-4 -bottom-8 opacity-[0.06] text-white select-none">
-          {item.term.charAt(0)}
-        </span>
-        <SheetHeader className="relative z-10 space-y-4 p-0">
-          <div className="flex size-12 items-center justify-center rounded-xl bg-white/10 backdrop-blur-sm text-gold">
-            <Icon className="size-6" />
-          </div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-gold">
-            Verbete clínico
-          </p>
-          <SheetTitle className="font-serif text-3xl font-bold italic text-white leading-tight text-left">
+        <SheetHeader className="space-y-3 p-0">
+          <SheetTitle
+            ref={titleRef}
+            tabIndex={-1}
+            className="font-serif text-3xl font-bold text-white leading-tight text-left"
+          >
             {item.term}
           </SheetTitle>
           <p className="text-[14px] leading-relaxed text-white/80 text-left">{item.short}</p>
@@ -317,12 +372,15 @@ function GlossaryDetail({ item }: { item: (typeof GLOSSARY)[number] }) {
         <DetailBlock label="Conceitos relacionados">
           <div className="flex flex-wrap gap-2">
             {item.related.map((r) => (
-              <span
+              <Button
+                type="button"
                 key={r}
-                className="inline-flex items-center gap-1 rounded-md border border-forest/15 bg-white px-2.5 py-1 text-[12px] font-medium text-forest hover:bg-forest hover:text-white transition-colors cursor-pointer"
+                variant="outline"
+                className="min-h-11 h-auto whitespace-normal"
+                onClick={() => onRelated(r)}
               >
-                <Link2 className="size-3" /> {r}
-              </span>
+                <Link2 className="size-4" aria-hidden /> {r}
+              </Button>
             ))}
           </div>
         </DetailBlock>
@@ -345,7 +403,7 @@ function GlossaryDetail({ item }: { item: (typeof GLOSSARY)[number] }) {
 function DetailBlock({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-forest mb-2">{label}</p>
+      <h3 className="mb-2 text-sm font-semibold text-ink">{label}</h3>
       {children}
     </div>
   );

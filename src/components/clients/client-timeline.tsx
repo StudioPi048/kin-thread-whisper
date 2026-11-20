@@ -26,7 +26,7 @@ interface Props {
 
 const GEN_LABEL = (g: number) =>
   g === 0
-    ? "Geração 0 · cliente e irmãos"
+    ? "Geração 0 · consultante e irmãos"
     : g === 1
       ? "Geração 1 · pais e tios"
       : g === 2
@@ -39,6 +39,11 @@ const KIND_LABEL: Record<TimelineKind, string> = {
   union: "Uniões e separações",
 };
 const KINDS: TimelineKind[] = ["birth", "death", "union", "event"];
+const BRANCH_LABEL: Record<TimelineBranch, string> = {
+  paternal: "Paterno",
+  maternal: "Materno",
+  other: "Outros ou compartilhados",
+};
 
 export function ClientTimeline({ clientId, focusEvent }: Props) {
   const q = useQuery(clinicalIntelQuery(clientId));
@@ -46,6 +51,7 @@ export function ClientTimeline({ clientId, focusEvent }: Props) {
   const [filter, setFilter] = useState<TimelineFilter>({});
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [compareBranches, setCompareBranches] = useState(false);
+  const [view, setView] = useState<"chart" | "list" | null>(null);
   const [selection, setSelection] = useState<string | null>(focusEvent ?? null);
   const all = useMemo(() => {
     if (!q.data) return [];
@@ -128,23 +134,28 @@ export function ClientTimeline({ clientId, focusEvent }: Props) {
   );
   const hasNoGen = all.some((i) => i.generation === null);
 
-  if (q.isLoading)
+  if (!q.data && !q.isError)
     return (
       <div
-        className="h-40 animate-pulse rounded-lg bg-muted/30"
-        aria-label="Carregando linha do tempo"
-      />
+        className="rounded-lg border border-border bg-card p-5 text-sm text-muted-foreground"
+        role="status"
+      >
+        Carregando linha do tempo…
+      </div>
     );
 
-  if (q.isError)
+  if (q.isError && (!q.data || all.length === 0))
     return (
-      <div
-        role="alert"
-        className="rounded-md border border-destructive/40 bg-destructive/5 p-6 text-[15px]"
-      >
-        Não foi possível carregar a linha do tempo.
-        <Button variant="outline" size="sm" className="ml-3 min-h-11" onClick={() => q.refetch()}>
-          <RefreshCw className="mr-1.5 size-4" /> Tentar de novo
+      <div className="rounded-md border border-destructive/40 bg-destructive/5 p-6 text-[15px]">
+        <p role="alert">Não foi possível carregar a linha do tempo.</p>
+        <Button
+          variant="outline"
+          className="mt-3 min-h-11"
+          disabled={q.isFetching}
+          onClick={() => void q.refetch()}
+        >
+          <RefreshCw className="size-4" aria-hidden />
+          {q.isFetching ? "Carregando…" : "Tentar novamente"}
         </Button>
       </div>
     );
@@ -169,17 +180,34 @@ export function ClientTimeline({ clientId, focusEvent }: Props) {
 
   const selectClass =
     "h-11 min-w-0 rounded-md border border-input bg-card px-3 text-sm text-foreground";
-  const hasFilter = !!(
-    filter.personId ||
-    filter.generation !== undefined ||
-    filter.kind ||
-    filter.branch ||
-    filter.decade !== undefined
-  );
+  const activeView = view ?? (scale ? "chart" : "list");
+  const activeFilters = [
+    filter.personId &&
+      (people.find(([id]) => id === filter.personId)?.[1] ?? "Familiar indisponível"),
+    filter.generation === "none"
+      ? "Vínculo não informado"
+      : filter.generation !== undefined && GEN_LABEL(filter.generation),
+    filter.kind && KIND_LABEL[filter.kind],
+    filter.branch && BRANCH_LABEL[filter.branch],
+    filter.decade !== undefined && `${filter.decade}–${filter.decade + 9}`,
+  ].filter(Boolean);
 
   return (
     <div className="case-timeline">
-      <div className="mb-3 flex items-center justify-between gap-2 sm:hidden">
+      {q.isError && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 text-sm text-destructive">
+          <p role="alert">Não foi possível atualizar a linha do tempo.</p>
+          <Button
+            variant="link"
+            className="min-h-11"
+            disabled={q.isFetching}
+            onClick={() => void q.refetch()}
+          >
+            {q.isFetching ? "Carregando…" : "Tentar novamente"}
+          </Button>
+        </div>
+      )}
+      <div className="mb-3 flex flex-wrap items-center gap-2 sm:hidden">
         <Button
           type="button"
           variant="outline"
@@ -188,11 +216,9 @@ export function ClientTimeline({ clientId, focusEvent }: Props) {
           aria-expanded={filtersOpen}
           onClick={() => setFiltersOpen((open) => !open)}
         >
-          <ListFilter size={16} aria-hidden /> {hasFilter ? "Filtros ativos" : "Filtros"}
+          <ListFilter size={16} aria-hidden /> Filtros{" "}
+          {activeFilters.length > 0 && `(${activeFilters.length})`}
         </Button>
-        <p className="text-[14px] text-muted-foreground" role="status">
-          {items.length} de {all.length} registros
-        </p>
       </div>
       <div
         id="timeline-filters"
@@ -275,9 +301,11 @@ export function ClientTimeline({ clientId, focusEvent }: Props) {
             }
           >
             <option value="">Todos</option>
-            <option value="paternal">Paterno</option>
-            <option value="maternal">Materno</option>
-            <option value="other">Outros ou compartilhados</option>
+            {Object.entries(BRANCH_LABEL).map(([key, label]) => (
+              <option key={key} value={key}>
+                {label}
+              </option>
+            ))}
           </select>
         </div>
         <div>
@@ -298,14 +326,25 @@ export function ClientTimeline({ clientId, focusEvent }: Props) {
             ))}
           </select>
         </div>
-        {hasFilter && (
-          <Button variant="ghost" className="min-h-11" onClick={() => setFilter({})}>
-            Limpar filtros
-          </Button>
-        )}
-        <p className="case-timeline-count hidden sm:block" role="status">
+      </div>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-x-3 text-sm text-muted-foreground">
+        <p role="status">
           {items.length} de {all.length} registros
         </p>
+        {activeFilters.length > 0 && (
+          <div className="flex flex-wrap items-center gap-x-2">
+            <ul aria-label="Filtros ativos" className="flex flex-wrap gap-1.5">
+              {activeFilters.map((filter, i) => (
+                <li key={i} className="rounded-md bg-archive-old px-2 py-1">
+                  {filter}
+                </li>
+              ))}
+            </ul>
+            <Button variant="link" className="min-h-11 px-1" onClick={() => setFilter({})}>
+              Limpar filtros
+            </Button>
+          </div>
+        )}
       </div>
 
       {!selected ? (
@@ -313,7 +352,31 @@ export function ClientTimeline({ clientId, focusEvent }: Props) {
           Nenhum registro com esses filtros.
         </p>
       ) : (
-        <div className="case-timeline-layout">
+        <div className="case-timeline-layout" data-view={activeView}>
+          <div
+            className="case-timeline-view-switch"
+            role="group"
+            aria-label="Modo da linha do tempo"
+          >
+            <Button
+              type="button"
+              variant={activeView === "list" ? "secondary" : "outline"}
+              className="min-h-11"
+              aria-pressed={activeView === "list"}
+              onClick={() => setView("list")}
+            >
+              Lista
+            </Button>
+            <Button
+              type="button"
+              variant={activeView === "chart" ? "secondary" : "outline"}
+              className="min-h-11"
+              aria-pressed={activeView === "chart"}
+              onClick={() => setView("chart")}
+            >
+              Gráfico
+            </Button>
+          </div>
           <section className="case-timeline-list" aria-labelledby="case-timeline-list-title">
             <h3 id="case-timeline-list-title">Cronologia</h3>
             {dated.length > 0 && (
@@ -390,8 +453,8 @@ function TimelineList({
             <span className="case-timeline-row-entry">
               <TimelineMark kind={item.kind} />
               <span>
-                <strong>{item.personName}</strong>
-                <span className="case-timeline-row-person">{item.label}</span>
+                <strong>{item.label}</strong>
+                <span className="case-timeline-row-person">{item.personName}</span>
               </span>
             </span>
           </button>

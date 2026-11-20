@@ -1,5 +1,5 @@
 /**
- * Motor de padrões v1 — Psicogenealogia.
+ * Comparação de registros do genossociograma.
  *
  * Detectores puros (client-side). Recebem a lista de pessoas do
  * genossociograma e retornam padrões repetitivos: doença, causa de morte,
@@ -137,7 +137,7 @@ export function detectPatterns(
         title: `Falecimento por volta dos ${seed.age} anos`,
         description: `${cluster.length} pessoas do sistema faleceram entre ${Math.min(
           ...ages,
-        )} e ${Math.max(...ages)} anos. Investigar síndrome de aniversário e lealdades invisíveis.`,
+        )} e ${Math.max(...ages)} anos, segundo as datas registradas.`,
         severity: "attention",
         personIds: cluster.map((c) => c.p.id),
         facts: cluster.flatMap((c) => c.facts),
@@ -161,7 +161,7 @@ export function detectPatterns(
               id: `cause_${key}`,
               type: "shared_cause_of_death" as const,
               title: `Causa de morte repetida: ${group[0].cause_of_death}`,
-              description: `${group.length} membros faleceram com a mesma causa. Padrão somático transgeracional a explorar.`,
+              description: `${group.length} pessoas têm a mesma causa de falecimento registrada.`,
               severity: "critical" as PatternSeverity,
               personIds: group.map((p) => p.id),
               facts: group.flatMap((p) => [
@@ -195,7 +195,7 @@ export function detectPatterns(
         id: `health_${key}`,
         type: "shared_health_condition",
         title: `Condição de saúde recorrente: ${entry.label}`,
-        description: `${entry.ids.size} membros compartilham "${entry.label}". Considerar herança sistêmica além da genética.`,
+        description: `${entry.ids.size} pessoas têm a condição “${entry.label}” registrada.`,
         severity: "attention",
         personIds: [...entry.ids],
         facts: entry.facts,
@@ -215,7 +215,7 @@ export function detectPatterns(
               id: `occ_${key}`,
               type: "shared_occupation" as const,
               title: `Profissão repetida: ${group[0].occupation}`,
-              description: `${group.length} pessoas exercem/exerceram ${group[0].occupation}. Missão ou lealdade familiar possível.`,
+              description: `${group.length} pessoas têm a mesma ocupação registrada.`,
               severity: "info" as PatternSeverity,
               personIds: group.map((p) => p.id),
               facts: group.map((p) => personFact(p.id, "occupation", p.occupation!)),
@@ -241,9 +241,8 @@ export function detectPatterns(
     patterns.push({
       id: "ruptures_cluster",
       type: "relationship_ruptures",
-      title: `${ruptures.length} rupturas emocionais no sistema`,
-      description:
-        "Concentração de rupturas / conflitos ativos. Mapear exclusões sistêmicas e restaurações necessárias.",
+      title: `${ruptures.length} vínculos com ruptura ou conflito`,
+      description: "Os vínculos emocionais abaixo têm registro de ruptura ou conflito.",
       severity: "critical",
       personIds: [...involved],
       facts: ruptures.flatMap((r) => {
@@ -314,7 +313,7 @@ export function detectPatterns(
       id,
       type: "anniversary_syndrome",
       title: `Data ${formatMd(hit.dayMonth)} se repete no sistema`,
-      description: `${hit.comparisons.join(" ")} Possível síndrome de aniversário.`,
+      description: hit.comparisons.join(" "),
       severity: "attention",
       personIds: [hit.aId, hit.bId],
       facts: [...new Set(hit.facts)],
@@ -365,6 +364,6 @@ export const severityStyles: Record<
   critical: {
     badge: "bg-destructive/15 text-destructive",
     ring: "border-destructive/40",
-    label: "Crítico",
+    label: "Revisão prioritária",
   },
 };

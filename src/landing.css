@@ -1,0 +1,368 @@
+.genealiz-public {
+  --public-side: clamp(1rem, 5.3vw, 5.5rem);
+  --public-space: clamp(3.5rem, 7vw, 7rem);
+  background: color-mix(in oklab, var(--archive) 82%, var(--gold-muted));
+  color: var(--ink);
+}
+
+.public-wrap {
+  width: min(100% - var(--public-side) * 2, 88rem);
+  margin-inline: auto;
+}
+
+.public-masthead {
+  border-bottom: 1px solid var(--border);
+}
+
+.public-masthead .public-wrap,
+.public-footer .public-wrap {
+  display: flex;
+  min-height: 4.9rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.public-masthead nav,
+.public-footer nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: clamp(0.5rem, 2.5vw, 2.4rem);
+}
+
+.public-masthead nav a,
+.public-footer nav a,
+.public-brand {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+}
+
+.public-masthead nav a,
+.public-footer nav a {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.public-signin {
+  gap: 0.55rem;
+  padding-inline: 0.85rem;
+  border: 1px solid var(--input);
+  border-radius: 5px;
+}
+
+.public-masthead nav a:hover,
+.public-footer nav a:hover {
+  color: var(--bronze);
+  text-decoration: underline;
+  text-underline-offset: 0.22em;
+}
+
+.public-intro {
+  display: grid;
+  grid-template-columns: minmax(0, 0.94fr) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(2rem, 5.1vw, 6rem);
+  padding-block: clamp(2rem, 5.2vw, 5.5rem);
+}
+
+.public-intro h1,
+.public-section-heading h2,
+.public-practice h2,
+.public-method h2 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-weight: 600;
+  line-height: 0.95;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+
+.public-intro h1 {
+  color: var(--forest);
+  font-size: clamp(2.55rem, 5.25vw, 6rem);
+  text-wrap: initial;
+}
+
+.public-intro h1 span,
+.public-intro h1 em {
+  display: block;
+}
+
+.public-intro h1 em {
+  color: var(--bronze);
+  font-weight: 400;
+}
+
+.public-intro-copy p,
+.public-section-heading p,
+.public-method p {
+  max-width: 42ch;
+  margin-top: 1.55rem;
+  color: var(--ink-soft);
+  font-size: clamp(1rem, 1.35vw, 1.16rem);
+  line-height: 1.64;
+}
+
+.public-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 1.5rem;
+  row-gap: 0.5rem;
+  margin-top: 1.8rem;
+}
+
+.public-button,
+.public-text-link {
+  display: inline-flex;
+  min-height: 2.9rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  width: fit-content;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.public-button {
+  border: 1px solid var(--forest);
+  border-radius: 5px;
+  padding-inline: 1rem;
+  background: var(--forest);
+  color: var(--ivory);
+  transition: background-color 150ms;
+}
+
+.public-button:hover:not(:disabled) {
+  background: var(--forest-mid);
+}
+
+.public-button:disabled {
+  cursor: wait;
+  opacity: 0.77;
+}
+
+.public-text-link {
+  text-decoration: underline;
+  text-underline-offset: 0.24em;
+}
+
+.public-text-link:hover {
+  color: var(--bronze);
+}
+
+.public-intro-photo {
+  min-width: 0;
+  margin: 0;
+}
+
+.public-intro-photo img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 5 / 4;
+  object-fit: cover;
+  object-position: 89% 55%;
+}
+
+.public-intro-photo figcaption {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.15rem 1rem;
+  min-height: 2.7rem;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  color: var(--ink-soft);
+  font-size: 0.875rem;
+}
+
+.public-intro-photo figcaption span:first-child {
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.public-case {
+  scroll-margin-top: 1rem;
+  padding-block: var(--public-space);
+  background: var(--forest-mist);
+}
+
+.public-section-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.75fr);
+  align-items: end;
+  gap: clamp(0.7rem, 3vw, 2.3rem);
+  margin-bottom: 1.75rem;
+}
+
+.public-section-heading h2,
+.public-practice h2,
+.public-method h2 {
+  font-size: clamp(2.45rem, 4.85vw, 4.85rem);
+}
+
+.public-section-heading h2 {
+  text-wrap: initial;
+}
+
+.public-section-heading h2:focus-visible {
+  outline-offset: 6px;
+}
+
+.public-section-heading p {
+  margin: 0;
+}
+
+.public-case-launch {
+  display: flex;
+  min-height: 4.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem 1rem;
+  border-top: 1px solid var(--input);
+  padding-top: 1rem;
+}
+
+.public-case-launch p {
+  flex-basis: 100%;
+}
+
+.public-case-launch span {
+  color: var(--ink-soft);
+  font-size: 0.875rem;
+}
+
+.public-practice {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1fr);
+  gap: clamp(1.2rem, 5.5vw, 5rem);
+  padding-block: var(--public-space);
+}
+
+.public-practice h2 {
+  max-width: 16ch;
+  color: var(--forest);
+  text-wrap: initial;
+}
+
+.public-practice-list {
+  list-style: none;
+  padding: 0;
+}
+
+.public-practice-list li {
+  border-top: 1px solid var(--border);
+  padding: 1.02rem 0 1.35rem;
+}
+
+.public-practice-list h3 {
+  margin: 0 0 0.38rem;
+  color: var(--forest);
+  font-family: var(--font-serif);
+  font-size: clamp(1.5rem, 2.7vw, 2.1rem);
+  font-weight: 600;
+  line-height: 1.07;
+}
+
+.public-practice-list p {
+  max-width: 52ch;
+  color: var(--ink-soft);
+  line-height: 1.65;
+}
+
+.public-method {
+  background: var(--forest);
+  color: var(--cream);
+}
+
+.public-method .public-wrap {
+  display: grid;
+  grid-template-columns: minmax(7.8rem, 0.36fr) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(1.4rem, 5.3vw, 5rem);
+  max-width: 60rem;
+  padding-block: clamp(2.5rem, 5.3vw, 5rem);
+}
+
+.public-method img {
+  display: block;
+  width: min(100%, 14rem);
+  height: auto;
+  justify-self: center;
+}
+
+.public-method h2 {
+  max-width: 18ch;
+  text-wrap: initial;
+}
+
+.public-method p {
+  color: var(--forest-mist);
+  margin-block: 1rem;
+}
+
+.public-method .public-text-link:hover {
+  color: var(--gold-soft);
+}
+
+.public-footer .public-wrap {
+  flex-wrap: wrap;
+  padding-block: 1.15rem;
+}
+
+.public-footer p {
+  margin-right: auto;
+  color: var(--ink-soft);
+  font-size: 0.875rem;
+}
+
+@media (max-width: 760px) {
+  .public-masthead .public-wrap {
+    min-height: 4rem;
+  }
+
+  .public-masthead .public-nav-detail {
+    display: none;
+  }
+
+  .public-intro,
+  .public-section-heading,
+  .public-practice {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .public-intro {
+    gap: 1.65rem;
+    padding-top: 2.5rem;
+  }
+
+  .public-intro h1 {
+    font-size: clamp(2.32rem, 9.8vw, 4.7rem);
+  }
+
+  .public-intro-copy p {
+    margin-top: 1.2rem;
+  }
+
+  .public-actions {
+    margin-top: 1.1rem;
+  }
+
+  .public-intro-photo img {
+    aspect-ratio: 4 / 3;
+    object-position: right center;
+  }
+
+  .public-method .public-wrap {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .public-method img {
+    width: min(45%, 9rem);
+    justify-self: start;
+  }
+}

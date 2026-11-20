@@ -24,21 +24,10 @@
   }
 }
 
-.case-timeline-filters label,
-.case-timeline-count {
+.case-timeline-filters label {
   color: var(--ink-soft);
   font-size: 0.875rem;
-}
-
-.case-timeline-filters label {
   font-weight: 600;
-}
-
-.case-timeline-count {
-  margin-inline-start: auto;
-  align-self: end;
-  padding-block-end: 0.6rem;
-  font-variant-numeric: tabular-nums;
 }
 
 .case-timeline-layout {
@@ -405,6 +394,10 @@
   display: none;
 }
 
+.case-timeline-view-switch {
+  display: none;
+}
+
 @media (max-width: 63.99rem) {
   .case-timeline-layout {
     grid-template-columns: minmax(0, 1fr);
@@ -412,17 +405,21 @@
 
   .case-timeline-overview {
     position: static;
-    grid-row: 1;
+  }
+
+  .case-timeline-view-switch {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .case-timeline-layout[data-view="chart"] .case-timeline-list,
+  .case-timeline-layout[data-view="list"] .case-timeline-overview {
+    display: none;
   }
 
   .case-timeline-row-detail {
     display: block;
     padding-inline: 0.65rem;
-  }
-
-  .case-timeline-overview-detail .case-timeline-detail footer,
-  .case-timeline-overview-detail .case-timeline-detail-meta {
-    display: none;
   }
 }
 

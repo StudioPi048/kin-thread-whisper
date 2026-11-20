@@ -77,10 +77,13 @@ export function AudioConsentPanel({
     <section
       id="audio-consents"
       tabIndex={-1}
-      className="space-y-4 rounded-sm border border-border bg-surface-document p-4 sm:p-5"
+      aria-labelledby="audio-consents-title"
+      className="scroll-mt-24 space-y-4 rounded-sm border border-border bg-surface-document p-4 sm:p-5"
     >
       <div>
-        <h3 className="text-base font-semibold text-primary">Autorizações de áudio</h3>
+        <h3 id="audio-consents-title" className="text-base font-semibold text-primary">
+          Autorizações de áudio
+        </h3>
         <p className="mt-1 text-sm text-muted-foreground">
           Registre a decisão do consultante para cada finalidade, no caso inteiro ou em uma sessão.
         </p>

@@ -46,7 +46,7 @@ const TAB_LABEL: Record<string, string> = {
   genogram: "Genossociograma",
   clan: "Planilha do clã",
   timeline: "Linha do tempo",
-  patterns: "Padrões",
+  patterns: "Evidências",
   intake: "Anamnese",
   sessions: "Sessões",
 };
@@ -265,8 +265,11 @@ function AppHome() {
         </section>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <section aria-labelledby="next-h" className={`${card} space-y-3`}>
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+        <section
+          aria-labelledby="next-h"
+          className="space-y-3 rounded-xl border border-input bg-forest-mist p-4 sm:p-5"
+        >
           <h2 id="next-h" className={`${h2} flex items-center gap-2`}>
             <CalendarClock className="size-5 text-primary" aria-hidden /> Próximo atendimento
           </h2>
@@ -285,9 +288,9 @@ function AppHome() {
                 to="/app/clientes/$clientId"
                 params={{ clientId: next.client_id }}
                 search={{ tab: "sessions", session: next.id }}
-                className="block rounded-lg border border-border p-3 hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="block rounded-md bg-forest p-4 text-primary-foreground hover:bg-forest-mid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >
-                <span className="block text-[20px] font-semibold tabular-nums">
+                <span className="block text-xl font-semibold tabular-nums">
                   {fmtTime(next.session_date)}
                 </span>
                 <span className="block text-[15px] font-medium">
@@ -295,9 +298,12 @@ function AppHome() {
                     next.clients?.full_name ||
                     nameOf(next.client_id)}
                 </span>
-                <span className="block text-[14px] text-muted-foreground">
+                <span className="block text-sm text-forest-mist">
                   {nextDuration !== null && `${formatDurationMinutes(nextDuration)} · `}
                   {next.title || "Atendimento"}
+                </span>
+                <span className="mt-3 flex items-center gap-1.5 text-sm font-semibold">
+                  Abrir atendimento <ArrowRight className="size-4" aria-hidden />
                 </span>
               </Link>
               {(upcomingQ.data ?? [])
@@ -327,11 +333,55 @@ function AppHome() {
           </Link>
         </section>
 
-        <section aria-labelledby="pend-h" className={`${card} space-y-3`}>
+        <section aria-labelledby="resume-h" className={`${card} space-y-3`}>
+          <h2 id="resume-h" className={`${h2} flex items-center gap-2`}>
+            <Network className="size-5 text-primary" aria-hidden /> Retomar caso
+          </h2>
+          {clientsQ.isLoading ? (
+            <p role="status" className="text-[15px] text-muted-foreground">
+              Carregando…
+            </p>
+          ) : clientsQ.isError ? (
+            <ErrorRow
+              msg="Não foi possível carregar os casos."
+              onRetry={() => clientsQ.refetch()}
+            />
+          ) : resumable.length === 0 ? (
+            <p className="text-[15px] text-muted-foreground">
+              Os casos que você abrir aparecem aqui, na aba em que parou.
+            </p>
+          ) : (
+            <ul className="space-y-1">
+              {resumable.map((v) => (
+                <li key={v.clientId}>
+                  <Link
+                    to="/app/clientes/$clientId"
+                    params={{ clientId: v.clientId }}
+                    search={{ tab: (TAB_LABEL[v.tab] ? v.tab : "overview") as "overview" }}
+                    className="flex min-h-11 items-center justify-between gap-2 rounded-md px-2 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <span className="truncate text-[15px] font-medium">{nameOf(v.clientId)}</span>
+                    <span className="shrink-0 text-[14px] text-muted-foreground">
+                      {TAB_LABEL[v.tab] ?? "Visão geral"} ·{" "}
+                      {new Date(v.at).toLocaleDateString("pt-BR")}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+          <Link
+            to="/app/clientes"
+            className="inline-flex min-h-11 items-center gap-1 text-[15px] font-medium text-primary underline-offset-4 hover:underline"
+          >
+            Todos os clientes <ArrowRight className="size-4" aria-hidden />
+          </Link>
+        </section>
+        <section aria-labelledby="pend-h" className={`${card} space-y-4 lg:col-span-2`}>
           <h2 id="pend-h" className={`${h2} flex items-center gap-2`}>
             <ClipboardCheck className="size-5 text-primary" aria-hidden /> Pendências
           </h2>
-          <div className="space-y-3">
+          <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
             <div>
               <h3 className="text-sm font-semibold">Registros de sessão</h3>
               {pendingRecordsQ.isError ? (
@@ -448,46 +498,6 @@ function AppHome() {
             )}
           </div>
         </section>
-
-        <section aria-labelledby="resume-h" className={`${card} space-y-3`}>
-          <h2 id="resume-h" className={`${h2} flex items-center gap-2`}>
-            <Network className="size-5 text-primary" aria-hidden /> Retomar
-          </h2>
-          {clientsQ.isLoading ? (
-            <p role="status" className="text-[15px] text-muted-foreground">
-              Carregando…
-            </p>
-          ) : resumable.length === 0 ? (
-            <p className="text-[15px] text-muted-foreground">
-              Os casos que você abrir aparecem aqui, na aba em que parou.
-            </p>
-          ) : (
-            <ul className="space-y-1">
-              {resumable.map((v) => (
-                <li key={v.clientId}>
-                  <Link
-                    to="/app/clientes/$clientId"
-                    params={{ clientId: v.clientId }}
-                    search={{ tab: (TAB_LABEL[v.tab] ? v.tab : "overview") as "overview" }}
-                    className="flex min-h-11 items-center justify-between gap-2 rounded-md px-2 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <span className="truncate text-[15px] font-medium">{nameOf(v.clientId)}</span>
-                    <span className="shrink-0 text-[14px] text-muted-foreground">
-                      {TAB_LABEL[v.tab] ?? "Visão geral"} ·{" "}
-                      {new Date(v.at).toLocaleDateString("pt-BR")}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-          <Link
-            to="/app/clientes"
-            className="inline-flex min-h-11 items-center gap-1 text-[15px] font-medium text-primary underline-offset-4 hover:underline"
-          >
-            Todos os clientes <ArrowRight className="size-4" aria-hidden />
-          </Link>
-        </section>
       </div>
 
       {!clientsQ.isLoading && !clientsQ.isError && clients.length === 0 && (
@@ -501,18 +511,9 @@ function AppHome() {
 
       <Link
         to="/app/biblioteca"
-        className="flex items-center gap-4 overflow-hidden rounded-xl border border-border bg-card hover:border-primary"
+        className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-forest hover:underline"
       >
-        <img
-          src="/assets/genealiz/archive-library.jpg"
-          alt="Acervo de estudo ilustrativo"
-          loading="lazy"
-          className="h-24 w-32 shrink-0 object-cover sm:w-48"
-        />
-        <span className="py-3 pr-4 text-[15px]">
-          <strong className="block font-serif text-[20px]">Biblioteca</strong>
-          Conceitos, autores e leituras para consultar.
-        </span>
+        Consultar a Biblioteca <ArrowRight className="size-4" aria-hidden />
       </Link>
     </div>
   );

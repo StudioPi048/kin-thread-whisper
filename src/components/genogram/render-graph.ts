@@ -64,7 +64,9 @@ export function buildRenderGraph(
         death_date: person.row.death_date,
         is_deceased: person.row.is_deceased,
         is_proband: person.row.is_proband,
-        relationship_to_proband: person.row.relationship_to_proband,
+        relationship_to_proband: person.row.is_proband
+          ? "Consultante"
+          : person.row.relationship_to_proband,
         notes: person.row.notes,
         generation: person.generation,
         lane: person.lane,

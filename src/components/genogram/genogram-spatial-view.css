@@ -51,7 +51,6 @@
   overflow: auto;
   padding: 9px;
   border: 1px solid var(--border);
-  border-inline-start: 3px solid var(--forest);
   border-radius: 8px;
   background: var(--card);
   font-size: 0.875rem;
@@ -711,8 +710,8 @@
   }
 
   .geno-spatial-features button {
-    padding-inline: 7px;
-    font-size: 12px;
+    padding-inline: 8px;
+    font-size: 0.875rem;
   }
 
   .geno-spatial-features button svg {
@@ -732,7 +731,7 @@
     justify-content: flex-start;
     gap: 5px 9px;
     padding: 4px 6px;
-    font-size: 11px;
+    font-size: 0.875rem;
   }
 
   .geno-spatial-names {

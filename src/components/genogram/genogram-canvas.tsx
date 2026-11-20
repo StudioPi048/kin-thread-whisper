@@ -57,6 +57,7 @@ import {
   Minimize2,
   Crosshair,
   Box,
+  Focus,
   Ellipsis,
   GitBranch,
   Search,
@@ -835,10 +836,10 @@ function GenogramCanvasInner({
   );
 
   const locatePerson = useCallback(
-    (id: string) => {
+    (id: string, revealInspector = true) => {
       setFocusedPersonId(id);
       setReaderPersonId(id);
-      setPanelOpen(true);
+      if (revealInspector) setPanelOpen(true);
       setFocusRequest({ personId: id });
       const reduced =
         window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
@@ -1869,6 +1870,18 @@ function GenogramCanvasInner({
           {directParents.length ? "Revisar filiação" : "Definir filiação"}
         </Button>
         <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="mt-2 min-h-11"
+          onClick={() => {
+            locatePerson(focusedPerson.id, false);
+            setMobileSheetOpen(false);
+          }}
+        >
+          <Focus className="size-4" aria-hidden /> Focar no mapa
+        </Button>
+        <Button
           size="sm"
           variant="ghost"
           className="mt-2 min-h-11"
@@ -2066,7 +2079,7 @@ function GenogramCanvasInner({
         isFullscreen && "geno-editor-expanded",
       )}
     >
-      <div className="atlas-map-workspace [min-height:0]">
+      <div className="atlas-map-workspace geno-editor-workspace [min-height:0]">
         <div className="geno-editor-toolbar" aria-label="Ferramentas do genossociograma">
           <div className="geno-editor-modes" role="group" aria-label="Modo de visualização">
             <Button
@@ -2088,55 +2101,77 @@ function GenogramCanvasInner({
             </Button>
           </div>
 
-          <Button
-            size="sm"
-            variant={connection ? "forest" : "outline"}
-            className="geno-editor-connect"
-            aria-label="Conectar"
-            aria-pressed={!!connection}
-            disabled={qualifiedCount < 2}
-            onClick={() => (connection ? setConnection(null) : startConnection())}
-          >
-            <Link2 className="size-4" aria-hidden /> <span>Conectar</span>
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="hidden md:inline-flex"
-            aria-label="Adicionar pessoa"
-            onClick={addPerson}
-          >
-            <UserPlus className="size-4" aria-hidden /> Pessoa
-          </Button>
+          <div className="geno-editor-edit" role="group" aria-label="Editar o mapa">
+            <Button
+              size="sm"
+              variant={connection ? "forest" : "outline"}
+              className="geno-editor-connect"
+              aria-label="Conectar"
+              aria-pressed={!!connection}
+              disabled={qualifiedCount < 2}
+              onClick={() => (connection ? setConnection(null) : startConnection())}
+            >
+              <Link2 className="size-4" aria-hidden /> <span>Conectar</span>
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="geno-editor-add-person"
+              aria-label="Adicionar pessoa"
+              onClick={addPerson}
+            >
+              <UserPlus className="size-4" aria-hidden /> Pessoa
+            </Button>
+          </div>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            className="hidden xl:inline-flex"
-            disabled={
-              !qualifiedCount ||
-              isLayoutFixed ||
-              saveLayout.isPending ||
-              !!organizationProposal ||
-              !!parentageDraft
-            }
-            onClick={organizeLayout}
-            title="Reorganizar por filiação"
-          >
-            <RotateCcw className="size-4" /> {mapBranch ? "Organizar ramo" : "Organizar"}
-          </Button>
+          <div className="geno-editor-navigation">
+            <div className="geno-editor-find">
+              <label htmlFor="geno-locate" className="sr-only">
+                Localizar familiar
+              </label>
+              <Search className="size-4 shrink-0" aria-hidden />
+              <select
+                id="geno-locate"
+                value=""
+                onChange={(event) => {
+                  const id = event.currentTarget.value;
+                  if (!id) return;
+                  if (connection) activatePerson(id);
+                  else locatePerson(id);
+                }}
+              >
+                <option value="">
+                  {connection ? "Escolher familiar…" : "Localizar familiar…"}
+                </option>
+                {persons
+                  .filter((person) => mappedIds.has(person.id))
+                  .map((person) => {
+                    const name = person.full_name?.trim() || personName(person);
+                    const role = person.is_proband ? "Consultante" : person.relationship_to_proband;
+                    return (
+                      <option key={person.id} value={person.id}>
+                        {name}
+                        {role && role !== name ? " · " + role : ""}
+                        {person.birth_date ? " · " + person.birth_date.slice(0, 4) : ""}
+                      </option>
+                    );
+                  })}
+              </select>
+            </div>
+            {onOpenSpreadsheet && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="shrink-0 md:hidden"
+                onClick={onOpenSpreadsheet}
+              >
+                <Table2 className="size-4" aria-hidden /> Planilha
+              </Button>
+            )}
+          </div>
 
           <div className="geno-editor-tools">
-            <Button
-              size="icon"
-              variant="ghost"
-              aria-label="Localizar consultante"
-              title="Localizar consultante"
-              disabled={!probandId}
-              onClick={() => probandId && locatePerson(probandId)}
-            >
-              <Crosshair className="size-4" />
-            </Button>
             <Button
               size="icon"
               variant="ghost"
@@ -2177,7 +2212,6 @@ function GenogramCanvasInner({
                 <div className="geno-editor-menu" aria-label="Opções do mapa">
                   <Button
                     variant="ghost"
-                    className="md:hidden"
                     onClick={() => {
                       setToolsOpen(false);
                       addPerson();
@@ -2194,6 +2228,26 @@ function GenogramCanvasInner({
                     }}
                   >
                     <PanelRightOpen className="size-4" aria-hidden /> Abrir ficha
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    disabled={!focusedPerson}
+                    onClick={() => {
+                      setToolsOpen(false);
+                      if (focusedPerson) locatePerson(focusedPerson.id, false);
+                    }}
+                  >
+                    <Focus className="size-4" aria-hidden /> Focar pessoa selecionada
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    disabled={!probandId}
+                    onClick={() => {
+                      setToolsOpen(false);
+                      if (probandId) locatePerson(probandId, false);
+                    }}
+                  >
+                    <Crosshair className="size-4" aria-hidden /> Localizar consultante
                   </Button>
                   <Button
                     variant="ghost"
@@ -2310,54 +2364,6 @@ function GenogramCanvasInner({
                 </div>
               </PopoverContent>
             </Popover>
-          </div>
-
-          <div className="geno-editor-navigation">
-            <div className="geno-editor-find">
-              <label htmlFor="geno-locate" className="sr-only">
-                Localizar familiar
-              </label>
-              <Search className="size-4 shrink-0" aria-hidden />
-              <select
-                id="geno-locate"
-                value=""
-                onChange={(event) => {
-                  const id = event.currentTarget.value;
-                  if (!id) return;
-                  if (connection) activatePerson(id);
-                  else locatePerson(id);
-                }}
-              >
-                <option value="">
-                  {connection ? "Escolher familiar…" : "Localizar familiar…"}
-                </option>
-                {persons
-                  .filter((person) => mappedIds.has(person.id))
-                  .map((person) => {
-                    const name = person.full_name?.trim() || personName(person);
-                    return (
-                      <option key={person.id} value={person.id}>
-                        {name}
-                        {person.relationship_to_proband && person.relationship_to_proband !== name
-                          ? " · " + person.relationship_to_proband
-                          : ""}
-                        {person.birth_date ? " · " + person.birth_date.slice(0, 4) : ""}
-                      </option>
-                    );
-                  })}
-              </select>
-            </div>
-            {onOpenSpreadsheet && (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="shrink-0 md:hidden"
-                onClick={onOpenSpreadsheet}
-              >
-                <Table2 className="size-4" aria-hidden /> Planilha
-              </Button>
-            )}
           </div>
         </div>
 
@@ -2534,7 +2540,7 @@ function GenogramCanvasInner({
                   {legendFlags.feminino && <p>Círculo · feminino</p>}
                   {legendFlags.outro && <p>Losango · não binário ou desconhecido</p>}
                   {legendFlags.aborto && <p>Triângulo · perda gestacional</p>}
-                  {legendFlags.falecido && <p>Traço no símbolo · falecimento</p>}
+                  {legendFlags.falecido && <p>Traço horizontal superior · falecimento</p>}
                   <p>Linha contínua · filiação biológica</p>
                   <p>Linha pontilhada em bronze · filiação sugerida</p>
                   <p>Linha tracejada · confira a natureza do vínculo na ficha</p>
@@ -2551,6 +2557,18 @@ function GenogramCanvasInner({
                 onLocate={locatePerson}
                 onFit={fitAllPeople}
               />
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="geno-editor-fit"
+                aria-label="Árvore inteira"
+                title="Enquadrar a árvore inteira"
+                onClick={fitAllPeople}
+              >
+                <Maximize2 className="size-4" aria-hidden />
+                <span>Árvore inteira</span>
+              </Button>
               <Button
                 size="icon"
                 variant={mapReading ? "forest" : "outline"}

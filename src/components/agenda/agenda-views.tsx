@@ -2,7 +2,7 @@ import { useId, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { CalendarClock, Clock, ExternalLink, Loader2, RefreshCw } from "lucide-react";
+import { CalendarClock, ChevronDown, Clock, ExternalLink, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -135,24 +135,23 @@ function CancellationDialog({ session, onClose }: { session: Appointment; onClos
   );
 }
 
+function appointmentDestination(session: Appointment) {
+  return {
+    to: "/app/clientes/$clientId" as const,
+    params: { clientId: session.clientId },
+    search: {
+      tab: "sessions" as const,
+      session: session.id,
+      from: "agenda" as const,
+      agendaDate: session.dateKey,
+    },
+  };
+}
+
 function AppointmentActions({ session }: { session: Appointment }) {
   const [dialog, setDialog] = useState<"move" | "cancel" | null>(null);
   return (
     <div className="flex flex-wrap gap-2">
-      <Button asChild size="sm" className="h-auto min-h-11 whitespace-normal">
-        <Link
-          to="/app/clientes/$clientId"
-          params={{ clientId: session.clientId }}
-          search={{
-            tab: "sessions",
-            session: session.id,
-            from: "agenda",
-            agendaDate: session.dateKey,
-          }}
-        >
-          <ExternalLink className="size-4" aria-hidden /> Abrir atendimento
-        </Link>
-      </Button>
       {session.clinicalStatus === "scheduled" && (
         <>
           <Button
@@ -203,26 +202,38 @@ export function DayList({
           const canceled = session.clinicalStatus === "canceled";
           return (
             <li key={session.id} className="py-1.5">
-              <button
-                type="button"
-                className="flex min-h-11 w-full flex-wrap items-center gap-x-3 gap-y-1 rounded-md px-2 text-left hover:bg-secondary focus-visible:outline-2 focus-visible:outline-ring"
-                aria-expanded={expanded}
-                aria-controls={"day-" + session.id}
-                onClick={() => setOpen(expanded ? null : session.id)}
-              >
-                <span
-                  className={
-                    "font-semibold tabular-nums " +
-                    (canceled ? "text-muted-foreground line-through" : "text-primary")
-                  }
+              <div className="flex items-center gap-1">
+                <Link
+                  {...appointmentDestination(session)}
+                  className="flex min-h-11 min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 rounded-md px-2 text-left hover:bg-secondary focus-visible:outline-2 focus-visible:outline-ring"
                 >
-                  {session.start}
-                </span>
-                <span className="min-w-0 flex-1 break-words font-semibold text-foreground">
-                  {session.patient}
-                </span>
-                <StatusPill status={session.clinicalStatus} />
-              </button>
+                  <span
+                    className={
+                      "font-semibold tabular-nums " +
+                      (canceled ? "text-muted-foreground line-through" : "text-primary")
+                    }
+                  >
+                    {session.start}
+                  </span>
+                  <span className="min-w-0 flex-1 break-words font-semibold text-foreground">
+                    {session.patient}
+                  </span>
+                  <StatusPill status={session.clinicalStatus} />
+                  <ExternalLink className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                </Link>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="size-11 shrink-0"
+                  aria-label={`Detalhes do atendimento de ${session.patient}`}
+                  aria-expanded={expanded}
+                  aria-controls={expanded ? "day-" + session.id : undefined}
+                  onClick={() => setOpen(expanded ? null : session.id)}
+                >
+                  <ChevronDown className={expanded ? "size-4 rotate-180" : "size-4"} aria-hidden />
+                </Button>
+              </div>
               {expanded && (
                 <div id={"day-" + session.id} className="space-y-3 px-2 pb-2 pt-1 text-sm">
                   <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-muted-foreground">
@@ -601,8 +612,9 @@ export function WeekView({
           <div
             key={day}
             className={
-              "surface min-w-0 space-y-2 rounded-xl border p-3 " +
-              (day === dateKey ? "border-forest" : "border-border")
+              "min-w-0 space-y-2 rounded-lg border p-3 " +
+              (day === dateKey ? "border-forest bg-forest-mist" : "border-border") +
+              (list.length ? " bg-card" : "")
             }
           >
             <button
@@ -627,14 +639,22 @@ export function WeekView({
                       {slot.start}
                       {slot.end && " – " + slot.end}
                     </p>
-                    <p className="my-1 break-words font-semibold">{slot.patient}</p>
+                    <Link
+                      {...appointmentDestination(slot)}
+                      className="flex min-h-11 items-center gap-1.5 break-words font-semibold text-forest hover:underline"
+                    >
+                      <span className="min-w-0">{slot.patient}</span>
+                      <ExternalLink className="size-3.5 shrink-0" aria-hidden />
+                    </Link>
                     <StatusPill status={slot.clinicalStatus} />
-                    <details className="mt-1">
-                      <summary className="min-h-11 cursor-pointer content-center text-sm font-semibold text-forest">
-                        Ações
-                      </summary>
-                      <AppointmentActions session={slot} />
-                    </details>
+                    {slot.clinicalStatus === "scheduled" && (
+                      <details className="mt-1">
+                        <summary className="min-h-11 cursor-pointer content-center text-sm font-semibold text-forest">
+                          Ações
+                        </summary>
+                        <AppointmentActions session={slot} />
+                      </details>
+                    )}
                   </li>
                 ))}
               </ul>

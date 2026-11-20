@@ -13,13 +13,13 @@ import { Toaster } from "sonner";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { supabase } from "@/integrations/supabase/client";
-import { GenealogicalMark } from "@/components/ui/narrative-connector";
+import { GenealizWordmark } from "@/components/genealiz-wordmark";
 
 function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <p className="text-sm uppercase tracking-[0.3em] text-material-bronze">GENEALIZ</p>
+        <GenealizWordmark />
         <h1 className="mt-6 font-serif text-7xl text-primary">404</h1>
         <h2 className="mt-4 font-serif text-2xl text-foreground">
           Esta página não consta no arquivo
@@ -27,9 +27,6 @@ function NotFoundComponent() {
         <p className="mt-2 text-sm text-muted-foreground">
           O endereço que você procura não existe ou foi movido.
         </p>
-        <div className="mt-6 flex justify-center">
-          <GenealogicalMark size={28} opacity={0.25} />
-        </div>
         <div className="mt-8">
           <Link
             to="/"
@@ -53,14 +50,11 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <p className="text-sm uppercase tracking-[0.3em] text-material-bronze">GENEALIZ</p>
+        <GenealizWordmark />
         <h1 className="mt-6 font-serif text-3xl text-foreground">Esta página não carregou</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          O erro foi do nosso lado, não do seu. Tente novamente — se persistir, volte ao início.
+          Tente carregar de novo. Se o problema continuar, volte ao início.
         </p>
-        <div className="mt-6 flex justify-center">
-          <GenealogicalMark size={28} opacity={0.25} />
-        </div>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <button
             onClick={() => {
@@ -103,7 +97,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      { rel: "icon", href: "/favicon.png", type: "image/png" },
+      { rel: "icon", href: "/favicon.png", type: "image/png", sizes: "64x64" },
+      { rel: "icon", href: "/favicon.svg", type: "image/svg+xml", sizes: "any" },
     ],
   }),
   shellComponent: RootShell,
@@ -119,13 +114,6 @@ function RootShell({ children }: { children: ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <span
-          hidden
-          dangerouslySetInnerHTML={{
-            __html:
-              "<!-- THESIS: GENEALIZ brings each family relationship into a legible professional workspace. OWN-WORLD: family atlas, navy navigation and diagram field, amber selection, clear contextual records. STORY: find a client, explore their map, inspect a person, continue the session. FIRST VIEWPORT: persistent labeled navigation, search, pale title and tabs, dominant relational canvas with a light inspector. FORM: notation-diagram-systems-star-atlas; seed 4227ed4d. FINISH: flat precise lines, restrained serif headings, readable Inter controls, responsive context, no decorative clinical inference. -->",
-          }}
-        />
         {children}
         <Scripts />
       </body>

@@ -84,17 +84,31 @@ export function smallFamily(): SyntheticFamily {
   return { persons, rels, probandId: c.id };
 }
 
-/** Exercício público: a mãe do consultante tem duas uniões e uma filha em cada ramo. */
+/** Exercício público: duas uniões da mãe, com as filhas ligadas à união correspondente. */
 export function practiceFamily(): SyntheticFamily {
   const family = smallFamily();
   const [, , carlos, mariana] = family.persons;
-  const companion = person("Companheiro da mãe", "Gilberto (fictício)", "M", {
+  const names = [
+    "Helena Andrade Nogueira",
+    "Lia Andrade Nogueira",
+    "Carlos Augusto Nogueira",
+    "Mariana Beatriz Andrade",
+    "Antônio José Nogueira",
+    "Rosa Maria Teixeira",
+  ];
+  const companion = person("Companheiro da mãe", "Gilberto Henrique Lima", "M", {
     birth_date: "1965-04-10",
   });
-  const halfSister = person("Meia-irmã", "Sofia (fictícia)", "F", { birth_date: "2001-06-08" });
+  const halfSister = person("Meia-irmã", "Sofia Andrade Lima", "F", {
+    birth_date: "2001-06-08",
+  });
   return {
     probandId: family.probandId,
-    persons: [...family.persons, companion, halfSister],
+    persons: [
+      ...family.persons.map((p, index) => ({ ...p, full_name: names[index] })),
+      companion,
+      halfSister,
+    ],
     rels: [
       ...family.rels,
       parentRel(mariana.id, halfSister.id),

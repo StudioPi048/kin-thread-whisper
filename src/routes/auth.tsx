@@ -17,7 +17,6 @@ const searchSchema = z.object({
   redirect: z.unknown().optional().transform(workspaceDestination),
 });
 const newPassword = z.string().min(8, "Mínimo de 8 caracteres").max(72);
-const emptyImage = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 
 /** Erros comuns do Supabase traduzidos com instrução de próximo passo. */
 function friendlyAuthError(err: unknown): string {
@@ -229,38 +228,29 @@ function AuthPage() {
   }
 
   return (
-    <div className="grid min-h-screen md:grid-cols-[1fr_1fr]">
+    <div className="grid min-h-screen md:grid-cols-[minmax(0,0.86fr)_minmax(0,1fr)]">
       <aside className="atlas-auth-aside">
-        <Link to="/" aria-label="GENEALIZ — Início">
-          <GenealizWordmark />
+        <Link to="/" aria-label="Genealiz — início" className="w-fit">
+          <GenealizWordmark tone="dark" />
         </Link>
-        <div>
-          <h2 className="font-serif text-5xl leading-tight font-medium">
-            Cada pessoa faz parte
-            <br />
-            de uma história maior.
+        <div className="max-w-md">
+          <h2 className="font-serif text-[clamp(2.6rem,4.8vw,5.5rem)] leading-[0.95] font-semibold">
+            Seu espaço de trabalho em psicogenealogia.
           </h2>
-          <p className="mt-5 text-sm leading-7 text-slate-300 max-w-md">
-            Seu espaço de trabalho para organizar relações familiares e acompanhar cada atendimento.
+          <p className="mt-5 max-w-sm text-base leading-relaxed text-forest-mist">
+            Genossociograma, cronologia e atendimentos reunidos no dossiê de cada consultante.
           </p>
-          <picture>
-            <source media="(min-width: 768px)" srcSet="/assets/genealiz/archive-hero-768.webp" />
-            <img
-              className="gv-auth-image"
-              src={emptyImage}
-              width={1536}
-              height={1024}
-              alt="Fotografias de um arquivo familiar ilustrativo"
-            />
-          </picture>
         </div>
-        <p className="text-xs text-slate-300">GENEALIZ · Psicogenealogia</p>
+        <p className="text-sm text-forest-mist">Instituto Liz</p>
       </aside>
 
-      {/* ── PAINEL DIREITO — Formulário ──────────────────── */}
       <main className="flex items-center justify-center bg-background p-6 md:p-14">
         <div className="w-full max-w-md">
-          <Link to="/" className="mb-10 block md:hidden" aria-label="GENEALIZ — início">
+          <Link
+            to="/"
+            className="mb-8 inline-flex min-h-11 items-center md:hidden"
+            aria-label="Genealiz — início"
+          >
             <GenealizWordmark />
           </Link>
           {/* Header */}
@@ -276,7 +266,7 @@ function AuthPage() {
             </h1>
             <p className="mt-2 text-[15px] text-muted-foreground">
               {mode === "signin"
-                ? "Bem-vinda de volta. Seus casos aguardam."
+                ? "Acesse seus dossiês e atendimentos."
                 : mode === "signup"
                   ? "Crie seu espaço de trabalho em psicogenealogia."
                   : mode === "recover"

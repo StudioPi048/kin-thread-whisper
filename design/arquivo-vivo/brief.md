@@ -23,3 +23,9 @@ Home com fotografia dominante e composição de texto sobre área escura; narrat
 
 ## Aceitação
 Dados/ações existentes preservados, responsivo, contraste, nomes legíveis, nenhum dado privado em imagem pública, sem promessas clínicas novas. Build e smoke no navegador antes de sync. Revisão no Lovable autenticado do Chrome, sem publicação automática solicitada.
+
+## Capa, exercício e marca — 20/11/2026
+
+Pietro escolheu o selo circular com árvore e pediu sua aplicação. A capa apresenta a atividade principal do Genealiz e abre o exercício diretamente. O enquadramento fotográfico da abertura reaproveita uma composição ilustrativa existente. A seção do Instituto usa a capa do Manual já empregada no site de Letícia. O layout usa texto sobre fundo claro, a foto em uma coluna própria e a demonstração completa na seção seguinte. O exercício usa uma só família fictícia e as mesmas rotas nas vistas frontal e espacial.
+
+A referência de produto é a convenção do próprio Instituto, com leitura do consultante e dos irmãos de sangue para as gerações ancestrais. O exercício mostra como as duas uniões de Mariana se relacionam com filhos diferentes e permite revisar, testar e reverter um vínculo. A aplicação da marca preserva as formas do anexo. A fonte e os critérios de vetorização estão em `genealiz-signature.svg.asset.json`.

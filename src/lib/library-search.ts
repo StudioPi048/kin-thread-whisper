@@ -15,6 +15,22 @@ type Searchable = {
   term?: { full?: string; authors?: string[]; related?: string[]; books?: string[] };
 };
 
+export function relatedLibraryItem<T extends Searchable & { key: string }>(
+  items: T[],
+  term: string,
+): T | undefined {
+  const query = normalize(term);
+  if (!query) return undefined;
+  if (query === "genossociograma") {
+    return items.find((item) => item.key === "manual-genossociograma");
+  }
+  const concepts = items.filter((item) => item.term);
+  return (
+    concepts.find((item) => normalize(item.title) === query) ??
+    concepts.find((item) => normalize(item.title).startsWith(`${query} `))
+  );
+}
+
 export function searchLibrary<T extends Searchable>(
   items: T[],
   q: string,

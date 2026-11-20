@@ -1,0 +1,23 @@
+{
+  "name": "GENEALIZ — Selo Escultural",
+  "approvedOn": "2026-11-20",
+  "source": {
+    "workspacePath": "genealiz-logo-2026-11-20/rodada-02/04-selo-escultural.png",
+    "size": [1254, 1254],
+    "sha256": "0f9d02301fc7db45e89481baf313e337ecb6fac92db27ecc30f2e656fd37d75a",
+    "approvedUploadSha256": "a0b24e0a56f1f9098ffc5e4277107ebeed1592b89357ab80a1d9e8527b81cfca",
+    "matchesApprovedUploadPixelForPixel": true
+  },
+  "vectorization": {
+    "method": "Contorno interpolado a 50% de cobertura e simplificado com tolerância de 0,31 px no original.",
+    "stackedViewBox": [276, 198, 704, 817],
+    "symbolViewBox": [299, 198, 656, 677],
+    "letteringViewBox": [276, 932, 704, 83],
+    "silhouetteIntersectionOverUnion": 0.9951355
+  },
+  "variants": {
+    "stacked": "genealiz-signature.svg",
+    "horizontal": ["genealiz-symbol.svg", "genealiz-lettering.svg"],
+    "favicon": ["/favicon.svg", "/favicon.png"]
+  }
+}

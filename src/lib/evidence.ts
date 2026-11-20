@@ -1,6 +1,6 @@
 /**
  * Evidências → hipóteses provisórias.
- * Fonte única para Mesa, Dossiê e IA Clínica: SEMPRE derivado de detectPatterns()
+ * Fonte única para Mesa, Dossiê e revisão de evidências: derivado de detectPatterns()
  * sobre os dados reais do caso. Sem padrões detectados → nenhuma hipótese.
  * Nunca atribui causalidade nem confiança numérica.
  */
@@ -32,7 +32,7 @@ const TEMPLATES: Partial<
       "Datas de eventos se repetem entre gerações. Vale investigar se a queixa atual oscila perto dessas datas.",
     questions: [
       "Quais são as datas registradas de cada evento?",
-      "O cliente percebe alguma relação com essas datas?",
+      "A pessoa consultante percebe alguma relação com essas datas?",
     ],
   },
   shared_cause_of_death: {
@@ -53,17 +53,20 @@ const TEMPLATES: Partial<
     description: "Familiares faleceram em idades próximas.",
     questions: [
       "As datas de nascimento e falecimento estão confirmadas?",
-      "Como o cliente vê essa informação?",
+      "Como a pessoa consultante vê essa informação?",
     ],
   },
   shared_occupation: {
     title: "Repetição profissional",
     description: "A mesma ocupação aparece em mais de um familiar.",
-    questions: ["Como cada familiar chegou a essa profissão?", "O que o cliente sabe sobre isso?"],
+    questions: [
+      "Como cada familiar chegou a essa profissão?",
+      "O que a pessoa consultante sabe sobre isso?",
+    ],
   },
   relationship_ruptures: {
     title: "Rupturas repetidas de vínculo",
-    description: "Há várias separações/rupturas registradas.",
+    description: "Há registros de ruptura ou conflito em mais de um vínculo emocional.",
     questions: ["Em que contexto cada ruptura aconteceu?", "Há datas a completar?"],
   },
 };
@@ -99,7 +102,7 @@ export function evidenceForCase(persons: PersonRow[], relationships: Relationshi
   return { patterns, hypotheses: buildHypotheses(patterns, persons) };
 }
 
-/** Lacunas reais (campos faltantes) — sem inventar; usada no dossiê e no copiloto. */
+/** Campos faltantes e filiações a investigar no dossiê. */
 export function informationGaps(
   persons: PersonRow[],
   relationships?: RelationshipRow[],

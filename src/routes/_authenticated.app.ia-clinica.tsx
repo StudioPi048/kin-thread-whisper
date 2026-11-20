@@ -1,13 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Brain, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { DocumentHeader } from "@/components/ui/document-header";
 import { evidenceForCase } from "@/lib/evidence";
 import { clinicalIntelQuery } from "@/lib/clinical-intel";
 import { readVisits } from "@/lib/recent-activity";
+import { EvidenceSources } from "@/components/clients/evidence-sources";
 import {
   HypothesisReview,
   HypothesisReviewArchive,
@@ -48,20 +49,21 @@ function IaClinicaPage() {
   }, [user.id]);
 
   const clientsQ = useQuery({
-    queryKey: ["ia-clinica-clients"],
+    queryKey: ["clients", "evidence", user.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clients")
-        .select("id, full_name, preferred_name")
-        .eq("status", "active")
+        .select("id, full_name, preferred_name, status")
+        .eq("professional_id", user.id)
         .order("full_name");
       if (error) throw error;
       return data ?? [];
     },
   });
 
-  const clientId = (clientsQ.data ?? []).find((client) => client.id === caseId)?.id ?? "";
-  const recentCase = (clientsQ.data ?? []).find((client) => client.id === recentId);
+  const clients = clientsQ.data ?? [];
+  const clientId = clients.find((client) => client.id === caseId)?.id ?? "";
+  const recentCase = clients.find((client) => client.id === recentId);
   // Mesma queryFn/formato do dossiê (lib/clinical-intel) → cache compatível
   const caseQ = useQuery(clinicalIntelQuery(clientId));
   const [panel, setPanel] = useState({ clientId: "", selected: new Set<string>(), showHyp: false });
@@ -78,44 +80,64 @@ function IaClinicaPage() {
     setPanel({ clientId, selected: next, showHyp: false });
   };
 
-  const ev = caseQ.data ? evidenceForCase(caseQ.data.persons, caseQ.data.relationships) : null;
+  const evidenceData = caseQ.data;
+  const ev = evidenceData
+    ? evidenceForCase(evidenceData.persons, evidenceData.relationships)
+    : null;
   const hyps = ev && showHyp ? ev.hypotheses.filter((h) => selected.has(h.patternId)) : [];
+  const hypothesisHeadingRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (showHyp) hypothesisHeadingRef.current?.focus();
+  }, [showHyp]);
 
   return (
     <div className="flex min-h-[calc(100dvh-72px)] flex-col">
       <DocumentHeader
-        breadcrumb="Inteligência Clínica"
+        breadcrumb={<Link to="/app">Mesa de trabalho</Link>}
         title="Evidências e hipóteses"
         subtitle="Selecione um caso. As hipóteses vêm apenas do que está registrado no genossociograma."
       />
       <div className="mx-auto w-full max-w-4xl space-y-6 p-4 sm:p-6">
         <div className="space-y-2">
-          <label htmlFor="ia-case" className="text-[15px] font-semibold text-foreground">
-            Caso
-          </label>
           {clientsQ.isError ? (
-            <div role="alert" className="flex items-center gap-3 text-[15px] text-destructive">
-              Não foi possível carregar os casos.
-              <Button variant="outline" size="sm" onClick={() => clientsQ.refetch()}>
-                <RefreshCw className="size-4" /> Tentar de novo
+            <div className="flex flex-wrap items-center gap-3 text-[15px] text-destructive">
+              <span role="alert">Não foi possível carregar os casos.</span>
+              <Button
+                variant="outline"
+                className="min-h-11"
+                disabled={clientsQ.isFetching}
+                onClick={() => void clientsQ.refetch()}
+              >
+                <RefreshCw className="size-4" aria-hidden />
+                {clientsQ.isFetching ? "Carregando…" : "Tentar novamente"}
               </Button>
             </div>
+          ) : !clientsQ.data ? (
+            <p role="status" className="text-[15px] text-muted-foreground">
+              Carregando casos…
+            </p>
+          ) : clients.length === 0 ? (
+            <p className="text-[15px] text-muted-foreground">Nenhum dossiê cadastrado.</p>
           ) : (
-            <select
-              id="ia-case"
-              value={clientId}
-              onChange={(e) => changeCase(e.target.value)}
-              className="h-11 w-full rounded-md border border-input bg-background px-3 text-[15px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <option value="">
-                {clientsQ.isLoading ? "Carregando…" : "Escolha um caso ativo"}
-              </option>
-              {(clientsQ.data ?? []).map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.full_name || c.preferred_name}
-                </option>
-              ))}
-            </select>
+            <>
+              <label htmlFor="ia-case" className="block text-[15px] font-semibold text-foreground">
+                Caso
+              </label>
+              <select
+                id="ia-case"
+                value={clientId}
+                onChange={(e) => changeCase(e.target.value)}
+                className="h-11 w-full rounded-md border border-input bg-background px-3 text-[15px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="">Escolha um dossiê</option>
+                {clients.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.full_name || c.preferred_name}
+                    {c.status === "archived" ? " (arquivado)" : ""}
+                  </option>
+                ))}
+              </select>
+            </>
           )}
           {!clientId && recentCase && (
             <Button
@@ -128,24 +150,32 @@ function IaClinicaPage() {
           )}
         </div>
 
-        {!clientId && (
+        {caseId && !clientId && clientsQ.isSuccess && (
           <p className="text-[15px] text-muted-foreground">
-            Nenhum caso selecionado. Sem caso, não há evidências nem hipóteses.
+            O caso solicitado está indisponível. Selecione outro dossiê para continuar.
           </p>
         )}
-        {clientId && caseQ.isLoading && (
-          <p className="text-[15px] text-muted-foreground">Analisando…</p>
+        {clientId && caseQ.isPending && (
+          <p role="status" className="text-[15px] text-muted-foreground">
+            Carregando registros familiares…
+          </p>
         )}
         {clientId && caseQ.isError && (
-          <div role="alert" className="flex items-center gap-3 text-[15px] text-destructive">
-            Falha ao ler o caso.
-            <Button variant="outline" size="sm" onClick={() => caseQ.refetch()}>
-              <RefreshCw className="size-4" /> Tentar de novo
+          <div className="flex flex-wrap items-center gap-3 text-[15px] text-destructive">
+            <span role="alert">Não foi possível carregar as evidências do caso.</span>
+            <Button
+              variant="outline"
+              className="min-h-11"
+              disabled={caseQ.isFetching}
+              onClick={() => void caseQ.refetch()}
+            >
+              <RefreshCw className="size-4" aria-hidden />
+              {caseQ.isFetching ? "Carregando…" : "Tentar novamente"}
             </Button>
           </div>
         )}
 
-        {ev && (
+        {ev && evidenceData && (
           <>
             <section aria-labelledby="ev-h" className="space-y-3">
               <h2 id="ev-h" className="text-lg font-semibold text-foreground">
@@ -153,27 +183,32 @@ function IaClinicaPage() {
               </h2>
               {ev.patterns.length === 0 ? (
                 <p className="text-[15px] text-muted-foreground">
-                  Nenhuma repetição detectada com os dados atuais ({caseQ.data!.persons.length}{" "}
-                  familiares). Sem evidência, nenhuma hipótese é sugerida.
+                  A leitura do genossociograma não encontrou repetições nos registros atuais.
                 </p>
               ) : (
                 <ul className="space-y-2">
-                  {ev.patterns.map((p) => (
+                  {ev.patterns.map((pattern) => (
                     <li
-                      key={p.id}
-                      className="rounded-lg border border-border bg-card p-3 text-[15px]"
+                      key={pattern.id}
+                      className="space-y-2 rounded-lg border border-border bg-card px-4 pt-3 text-[15px]"
                     >
                       <label className="flex min-h-11 cursor-pointer items-start gap-3">
                         <input
                           type="checkbox"
                           className="mt-1 size-5 accent-[var(--color-primary)]"
-                          checked={selected.has(p.id)}
-                          onChange={() => toggle(p.id)}
+                          checked={selected.has(pattern.id)}
+                          onChange={() => toggle(pattern.id)}
                         />
                         <span>
-                          <strong>{p.title}</strong> — {p.description}
+                          <strong className="block">{pattern.title}</strong>
+                          {pattern.description}
                         </span>
                       </label>
+                      <EvidenceSources
+                        clientId={clientId}
+                        pattern={pattern}
+                        persons={evidenceData.persons}
+                      />
                     </li>
                   ))}
                 </ul>
@@ -186,16 +221,24 @@ function IaClinicaPage() {
                 disabled={selected.size === 0}
                 onClick={() => setPanel({ clientId, selected, showHyp: true })}
               >
-                Gerar hipóteses a partir de {selected.size} evidência(s) selecionada(s)
+                Ver hipóteses{" "}
+                {selected.size > 0 && (
+                  <span>
+                    · {selected.size}{" "}
+                    {selected.size === 1 ? "evidência selecionada" : "evidências selecionadas"}
+                  </span>
+                )}
               </Button>
             )}
             {hyps.length > 0 && (
               <section aria-labelledby="hy-h" className="space-y-3">
                 <h2
                   id="hy-h"
-                  className="flex items-center gap-2 text-lg font-semibold text-foreground"
+                  ref={hypothesisHeadingRef}
+                  tabIndex={-1}
+                  className="text-lg font-semibold text-foreground"
                 >
-                  <Brain className="size-5" aria-hidden /> Hipóteses provisórias
+                  Hipóteses provisórias
                 </h2>
                 {hyps.map((h) => (
                   <article
@@ -205,13 +248,13 @@ function IaClinicaPage() {
                     <h3 className="text-[16px] font-semibold">{h.title}</h3>
                     <p className="text-[15px]">{h.description}</p>
                     <p className="text-[15px]">
-                      <strong>Fontes:</strong> {h.sources.join(", ")}
+                      <strong>Familiares mencionados</strong> · {h.sources.join(", ")}
                     </p>
                     <p className="text-[14px] text-muted-foreground">
-                      <strong>Limites:</strong> {h.limits}
+                      <strong>Limites</strong> · {h.limits}
                     </p>
                     <div className="text-[15px]">
-                      <strong>Perguntas para a sessão:</strong>
+                      <strong>Perguntas para a sessão</strong>
                       <ul className="ml-5 list-disc">
                         {h.questions.map((q) => (
                           <li key={q}>{q}</li>
@@ -237,9 +280,10 @@ function IaClinicaPage() {
             <Link
               to="/app/clientes/$clientId"
               params={{ clientId }}
+              search={{ tab: "patterns" }}
               className="inline-flex min-h-11 items-center text-[15px] font-medium text-primary underline underline-offset-4"
             >
-              Abrir o caso
+              Voltar às evidências do dossiê
             </Link>
           </>
         )}

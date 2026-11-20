@@ -1,150 +1,93 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { AlertCircle, RefreshCw, Sparkles, Activity } from "lucide-react";
-import { motion } from "framer-motion";
-
 import { clinicalIntelQuery } from "@/lib/clinical-intel";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { detectPatterns, severityStyles, type DetectedPattern } from "@/lib/patterns";
+import { detectPatterns, severityStyles } from "@/lib/patterns";
+import { EvidenceSources } from "./evidence-sources";
 
-interface Props {
-  clientId: string;
-}
-
-export function PatternsPanel({ clientId }: Props) {
-  const { data, isLoading, refetch, isFetching } = useQuery(clinicalIntelQuery(clientId));
-
-  const patterns = useMemo(() => {
-    if (!data) return [] as DetectedPattern[];
-    return detectPatterns(data.persons, data.relationships);
-  }, [data]);
-
-  const nameById = useMemo(() => {
-    const m = new Map<string, string>();
-    (data?.persons ?? []).forEach((p) => m.set(p.id, p.preferred_name || p.full_name));
-    return m;
-  }, [data]);
-
-  if (isLoading) {
-    return <div className="h-40 animate-pulse rounded-lg bg-muted/30" />;
-  }
+export function PatternsPanel({ clientId }: { clientId: string }) {
+  const query = useQuery(clinicalIntelQuery(clientId));
+  const patterns = useMemo(
+    () => (query.data ? detectPatterns(query.data.persons, query.data.relationships) : []),
+    [query.data],
+  );
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-wrap items-start justify-between gap-6">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <Activity className="size-4 text-gold" />
-            <p className="text-[14px] uppercase tracking-[0.2em] font-bold text-muted-foreground">
-              Motor de Padrões v1
-            </p>
-          </div>
-          <h3 className="font-serif text-3xl font-bold text-primary">Repetições detectadas</h3>
-          <p className="mt-2 text-[14px] text-muted-foreground max-w-xl leading-relaxed">
-            Leitura automática do genossociograma através de inteligência heurística. Sempre uma
-            hipótese clínica — nunca uma conclusão definitiva.
+    <section className="max-w-4xl space-y-5" aria-labelledby="case-evidence-title">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="max-w-xl">
+          <h2 id="case-evidence-title" className="text-xl font-semibold text-ink">
+            Evidências no mapa
+          </h2>
+          <p className="mt-2 text-[15px] leading-relaxed text-ink-soft">
+            A leitura automática compara os registros do genossociograma. Confira as fontes antes de
+            formular uma hipótese.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        {query.data && patterns.length > 0 && (
           <Button asChild className="min-h-11">
             <Link to="/app/ia-clinica" search={{ caseId: clientId }}>
-              Revisar evidências deste caso
+              Revisar hipóteses deste caso
             </Link>
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refetch()}
-            disabled={isFetching}
-            className="shrink-0 font-bold"
-          >
-            <RefreshCw className={`size-4 mr-2 ${isFetching ? "animate-spin" : ""}`} />
-            Recalcular Análise
-          </Button>
-        </div>
+        )}
       </div>
 
-      {patterns.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="rounded-sm border border-dashed border-border bg-forest-soft/40 p-16 text-center"
-        >
-          <Sparkles className="mx-auto size-10 text-forest opacity-60" />
-          <p className="mt-4 font-serif text-2xl font-bold text-primary">
-            Nenhum padrão detectado ainda
+      {query.isError ? (
+        <div className="rounded-md border border-destructive/40 bg-card p-4">
+          <p role="alert" className="text-[15px] text-destructive">
+            Não foi possível atualizar as evidências.
           </p>
-          <p className="mx-auto mt-2 max-w-md text-[14px] leading-relaxed text-muted-foreground">
-            Alimente a árvore genealógica. Adicione ocupações, causas de morte, idades e condições
-            de saúde. O motor cruzará os dados automaticamente.
+          <Button
+            variant="link"
+            className="min-h-11 px-0"
+            disabled={query.isFetching}
+            onClick={() => void query.refetch()}
+          >
+            {query.isFetching ? "Carregando…" : "Tentar novamente"}
+          </Button>
+        </div>
+      ) : !query.data ? (
+        <p role="status" className="text-[15px] text-ink-soft">
+          Carregando evidências…
+        </p>
+      ) : patterns.length === 0 ? (
+        <div className="rounded-md border border-border bg-card p-5">
+          <p className="font-semibold text-ink">Nenhuma repetição nos registros atuais</p>
+          <p className="mt-1 text-[15px] text-ink-soft">
+            Complete datas, ocupações e outras informações conhecidas na planilha do clã.
           </p>
-        </motion.div>
-      ) : (
-        <motion.ul
-          className="grid gap-4 md:grid-cols-2"
-          initial="hidden"
-          animate="visible"
-          variants={{
-            hidden: { opacity: 0 },
-            visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
-          }}
-        >
-          {patterns.map((p) => {
-            const isHigh = p.severity === "critical";
-            const borderAccent = isHigh ? "accent-bar-forest" : "accent-bar-forest";
-            const badgeClass = isHigh ? "bg-forest text-white" : "bg-forest text-white";
+          <Button asChild variant="link" className="min-h-11 px-0">
+            <Link to="/app/clientes/$clientId" params={{ clientId }} search={{ tab: "clan" }}>
+              Abrir planilha
+            </Link>
+          </Button>
+        </div>
+      ) : null}
 
-            return (
-              <motion.li
-                key={p.id}
-                variants={{
-                  hidden: { opacity: 0, scale: 0.96 },
-                  visible: {
-                    opacity: 1,
-                    scale: 1,
-                    transition: { type: "spring", stiffness: 300, damping: 24 },
-                  },
-                }}
-                className={`rounded-sm border border-border bg-white p-6 shadow-sm hover:shadow-md transition-shadow ${borderAccent}`}
-              >
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <h4 className="font-serif text-xl font-bold text-primary leading-tight">
-                      {p.title}
-                    </h4>
-                    <Badge
-                      className={`${badgeClass} border-0 uppercase tracking-[0.1em] text-[14px] font-bold shrink-0`}
-                    >
-                      <AlertCircle className="size-3 mr-1" /> Nível {p.severity}
-                    </Badge>
-                  </div>
-                  <p className="text-[14px] leading-relaxed text-foreground/80 font-serif">
-                    {p.description}
-                  </p>
-                  {p.personIds.length > 0 && (
-                    <div className="mt-2 pt-4 border-t border-border/50 flex flex-wrap gap-2 items-center">
-                      <span className="text-[14px] font-bold uppercase tracking-[0.1em] text-muted-foreground mr-1">
-                        Membros afetados:
-                      </span>
-                      {p.personIds.map((id) => (
-                        <Badge
-                          key={id}
-                          variant="secondary"
-                          className="font-semibold text-[16px] bg-background border border-border"
-                        >
-                          {nameById.get(id) ?? "—"}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </motion.li>
-            );
-          })}
-        </motion.ul>
+      {query.data && patterns.length > 0 && (
+        <ul className="divide-y divide-border rounded-xl border border-border bg-card px-5">
+          {patterns.map((pattern) => (
+            <li key={pattern.id} className="space-y-2 py-4">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <h3 className="text-[16px] font-semibold text-ink">{pattern.title}</h3>
+                <span
+                  className={`text-sm font-medium ${pattern.severity === "info" ? "text-ink-soft" : "text-clinical-warning"}`}
+                >
+                  {severityStyles[pattern.severity].label}
+                </span>
+              </div>
+              <p className="text-[15px] leading-relaxed text-ink-soft">{pattern.description}</p>
+              <EvidenceSources
+                clientId={clientId}
+                pattern={pattern}
+                persons={query.data!.persons}
+              />
+            </li>
+          ))}
+        </ul>
       )}
-    </div>
+    </section>
   );
 }

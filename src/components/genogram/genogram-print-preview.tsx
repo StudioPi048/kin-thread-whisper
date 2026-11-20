@@ -199,8 +199,8 @@ function PrintSheet({
       </svg>
       <p className="geno-print-legend">
         Quadrado · masculino. Círculo · feminino. Losango · outro ou desconhecido. Triângulo · perda
-        gestacional. Traço no símbolo · falecimento. Linha contínua · filiação biológica. Linha
-        pontilhada · confira a natureza do vínculo na ficha.
+        gestacional. Traço horizontal superior · falecimento. Linha contínua · filiação biológica.
+        Linha pontilhada · confira a natureza do vínculo na ficha.
       </p>
     </section>
   );

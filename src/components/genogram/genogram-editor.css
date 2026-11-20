@@ -1,3 +1,7 @@
+.geno-editor-workspace {
+  container-type: inline-size;
+}
+
 .geno-editor-toolbar {
   position: relative;
   z-index: 12;
@@ -13,12 +17,13 @@
 }
 
 .geno-editor-toolbar button {
-  min-height: 40px;
-  min-width: 40px;
+  min-height: 44px;
+  min-width: 44px;
 }
 
 .geno-editor-modes,
-.geno-editor-tools {
+.geno-editor-tools,
+.geno-editor-edit {
   display: inline-flex;
   align-items: center;
   gap: 2px;
@@ -35,9 +40,20 @@
   margin-left: auto;
 }
 
+.geno-editor-edit {
+  gap: 6px;
+  border-inline-end: 1px solid var(--border);
+  padding-inline-end: 8px;
+}
+
+.geno-editor-fit {
+  white-space: nowrap;
+}
+
 .geno-editor-navigation {
   display: flex;
-  flex: 0 1 320px;
+  flex: 1 1 174px;
+  max-width: 320px;
   align-items: center;
   gap: 6px;
   min-width: 130px;
@@ -57,7 +73,7 @@
 .geno-editor-find select {
   width: 100%;
   min-width: 0;
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 8px;
   border: 1px solid var(--input);
   border-radius: 6px;
@@ -243,7 +259,6 @@
   max-width: min(350px, calc(100% - 26px));
   padding: 9px 6px 9px 13px;
   border: 1px solid var(--input);
-  border-inline-start: 4px solid var(--forest);
   border-radius: 8px;
   background: var(--card);
   color: var(--ink);
@@ -354,7 +369,7 @@
 }
 
 .atlas-genogram:not(.geno-editor-expanded) .atlas-map-stage {
-  min-height: clamp(450px, 58dvh, 780px);
+  min-height: clamp(450px, 65dvh, 840px);
 }
 
 @media (max-width: 767px) {
@@ -377,11 +392,12 @@
   }
 
   .geno-editor-tools {
-    margin-left: 0;
+    margin-left: auto;
   }
 
-  .geno-editor-tools > button:first-child {
-    display: none;
+  .geno-editor-edit {
+    border-inline-end: 0;
+    padding-inline-end: 0;
   }
 
   .geno-editor-find {
@@ -392,7 +408,9 @@
   }
 
   .geno-editor-navigation {
-    flex-basis: 100%;
+    order: 1;
+    flex: 1 1 100%;
+    max-width: none;
   }
 
   .geno-editor-find > svg {
@@ -424,6 +442,13 @@
 
   .atlas-genogram:not(.geno-editor-expanded) .atlas-map-stage {
     min-height: 420px;
+  }
+}
+
+@container (max-width: 660px) {
+  .geno-editor-add-person,
+  .geno-editor-fit > span {
+    display: none;
   }
 }
 

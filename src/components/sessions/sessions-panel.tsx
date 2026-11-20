@@ -17,6 +17,8 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Mic,
+  Pause,
+  Play,
   Square,
   Loader2,
   Trash2,
@@ -211,6 +213,7 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
   };
 
   const [recording, setRecording] = useState(false);
+  const [paused, setPaused] = useState(false);
   const [starting, setStarting] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [uploading, setUploading] = useState(false);
@@ -225,6 +228,23 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
   const grantFor = (scope: "recording" | "external_processing", sessionId?: string) =>
     !consentQuery.isError ? activeAudioConsent(events, scope, sessionId) : undefined;
   const recordingGrant = grantFor("recording", targetId || undefined);
+  const canUploadPending =
+    pendingAudio &&
+    grantFor("recording", pendingAudio.existingSession ? pendingAudio.sessionId : undefined)?.id ===
+      pendingAudio.recordingGrantId;
+  const recordingStatus = starting
+    ? "Confirmando a autorização e o acesso ao microfone."
+    : recording
+      ? paused
+        ? "Gravação pausada."
+        : "Gravação em andamento."
+      : consentQuery.isPending
+        ? "Consultando autorização para gravar."
+        : consentQuery.isError
+          ? "Autorização indisponível. Confira o registro de autorizações."
+          : recordingGrant
+            ? "Gravação autorizada para esta seleção."
+            : "Esta seleção precisa de autorização para gravar.";
   const [processingTarget, setProcessingTarget] = useState<string>();
   const processingGrant = processingTarget
     ? grantFor("external_processing", processingTarget)
@@ -238,15 +258,16 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
 
   const refreshSessions = () => invalidateSessionViews(qc, clientId);
 
-  const clearRecorder = useCallback((discard: boolean) => {
+  const clearRecorder = useCallback(() => {
     const recorder = mediaRecorderRef.current;
     mediaRecorderRef.current = null;
     activeGrantRef.current = null;
     if (recorder) {
-      if (discard) {
-        recorder.ondataavailable = null;
-        recorder.onstop = null;
-      }
+      recorder.ondataavailable = null;
+      recorder.onpause = null;
+      recorder.onresume = null;
+      recorder.onerror = null;
+      recorder.onstop = null;
       if (recorder.state !== "inactive") recorder.stop();
       recorder.stream.getTracks().forEach((track) => track.stop());
     }
@@ -254,14 +275,17 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
       window.clearInterval(timerRef.current);
       timerRef.current = null;
     }
-    if (mountedRef.current) setRecording(false);
+    if (mountedRef.current) {
+      setRecording(false);
+      setPaused(false);
+    }
   }, []);
 
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
-      clearRecorder(true);
+      clearRecorder();
     };
   }, [clearRecorder]);
 
@@ -273,7 +297,7 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
       (consentQuery.isError ||
         grant.id !== activeAudioConsent(consentQuery.data ?? [], "recording", grant.sessionId)?.id)
     ) {
-      clearRecorder(true);
+      clearRecorder();
       setOperationError("Gravação interrompida. Confirme a autorização antes de gravar novamente.");
     }
   }, [consentQuery.data, consentQuery.isError, clearRecorder]);
@@ -281,16 +305,23 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
   const scrollTarget = manualFocusId ?? focusedSessionId;
   const visibleTarget = sessions.find((session) => session.id === scrollTarget)?.id;
   useEffect(() => {
-    if (!visibleTarget || focusConsent || preparing?.id === visibleTarget) return;
-    document.getElementById(`session-${visibleTarget}`)?.scrollIntoView({ block: "nearest" });
-  }, [visibleTarget, focusConsent, preparing?.id]);
+    if (!visibleTarget || (!manualFocusId && focusConsent) || preparing?.id === visibleTarget)
+      return;
+    const target = document.getElementById(
+      manualFocusId ? `notes-${visibleTarget}` : `session-${visibleTarget}`,
+    );
+    target?.scrollIntoView({ block: "nearest" });
+    target?.focus({ preventScroll: true });
+  }, [visibleTarget, manualFocusId, focusConsent, preparing?.id]);
 
-  useEffect(() => {
-    if (!focusConsent) return;
+  const focusAudioConsent = useCallback(() => {
     const section = document.getElementById("audio-consents");
     section?.scrollIntoView({ block: "start" });
     section?.focus({ preventScroll: true });
-  }, [focusConsent]);
+  }, []);
+  useEffect(() => {
+    if (focusConsent) focusAudioConsent();
+  }, [focusConsent, focusAudioConsent]);
 
   const startRecording = async () => {
     if (startLock.current || mediaRecorderRef.current || pendingAudioRef.current || !recordingGrant)
@@ -324,18 +355,32 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
         MediaRecorder.isTypeSupported(type),
       );
       const recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
-      const startedAt = Date.now();
+      const startedAt = performance.now();
+      let pausedAt: number | undefined;
+      let timePaused = 0;
+      const recordedSeconds = () =>
+        Math.floor(((pausedAt ?? performance.now()) - startedAt - timePaused) / 1000);
       const parts: Blob[] = [];
+      recorder.onpause = () => {
+        pausedAt = performance.now();
+        setElapsed(recordedSeconds());
+        setPaused(true);
+      };
+      recorder.onresume = () => {
+        if (pausedAt !== undefined) timePaused += performance.now() - pausedAt;
+        pausedAt = undefined;
+        setPaused(false);
+      };
       recorder.ondataavailable = ({ data }) => {
         if (data.size) parts.push(data);
       };
       recorder.onerror = () => {
-        clearRecorder(true);
+        clearRecorder();
         setOperationError("O microfone foi interrompido. Inicie outra gravação.");
       };
       recorder.onstop = () => {
         if (!mountedRef.current) return;
-        clearRecorder(false);
+        clearRecorder();
         const blob = new Blob(parts, { type: recorder.mimeType || parts[0]?.type });
         if (!blob.size) {
           setOperationError("A gravação ficou vazia. Inicie outra gravação.");
@@ -343,7 +388,7 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
         }
         updatePending({
           blob,
-          seconds: Math.floor((Date.now() - startedAt) / 1000),
+          seconds: recordedSeconds(),
           sessionId: targetId || crypto.randomUUID(),
           existingSession: !!targetId,
           recordingGrantId: recordingGrant.id,
@@ -356,10 +401,7 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
       activeGrantRef.current = { id: recordingGrant.id, sessionId: targetId || undefined };
       setElapsed(0);
       setRecording(true);
-      timerRef.current = window.setInterval(
-        () => setElapsed(Math.floor((Date.now() - startedAt) / 1000)),
-        1000,
-      );
+      timerRef.current = window.setInterval(() => setElapsed(recordedSeconds()), 1000);
     } catch (error) {
       if (mountedRef.current) {
         setOperationError(
@@ -476,7 +518,7 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
 
   const discardAudio = async () => {
     if (audioLock.current) throw new Error("Aguarde o envio terminar.");
-    clearRecorder(true);
+    clearRecorder();
     const audio = pendingAudioRef.current;
     if (audio?.path) {
       audioLock.current = true;
@@ -659,9 +701,6 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h3 className="font-serif text-2xl font-bold text-primary">Registro de sessão</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Faça anotações ou grave um relato com autorização.
-            </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button
@@ -677,44 +716,83 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
             </Button>
           </div>
         </div>
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="block min-w-0 text-sm font-medium">
-            Sessão para o áudio
-            <select
-              className="mt-1 block min-h-11 max-w-full rounded-sm border border-input bg-background p-2"
-              value={targetId}
-              onChange={(event) => setRecordingTarget(event.target.value)}
-              disabled={starting || recording || uploading || !!pendingAudio}
-            >
-              <option value="">Nova sessão</option>
-              {targets.map((session) => (
-                <option key={session.id} value={session.id}>
-                  {format(new Date(session.session_date), "dd/MM/yyyy HH:mm")} ·{" "}
-                  {session.title ?? "Sessão"}
-                </option>
-              ))}
-            </select>
-          </label>
-          {recording ? (
-            <Button
-              className="min-h-11"
-              variant="destructive"
-              onClick={() => {
-                const recorder = mediaRecorderRef.current;
-                if (recorder?.state === "recording") recorder.stop();
-              }}
-            >
-              <Square className="mr-2 size-4" /> Parar gravação · {formatDuration(elapsed)}
-            </Button>
-          ) : (
-            <Button
-              className="min-h-11"
-              onClick={() => void startRecording()}
-              disabled={!recordingGrant || starting || uploading || !!pendingAudio}
-            >
-              <Mic className="mr-2 size-4" />
-              {starting ? "Confirmando autorização…" : "Iniciar gravação"}
-            </Button>
+        <div className="border-t border-border pt-4">
+          <h4 className="mb-2 text-base font-semibold text-primary">Gravação de áudio</h4>
+          <p className="mb-3 max-w-prose text-sm text-muted-foreground">
+            Guarde o áudio no dossiê. O envio para transcrição é uma etapa posterior, com
+            autorização própria.
+          </p>
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="block min-w-0 max-w-full text-sm font-medium">
+              Sessão para o áudio
+              <select
+                className="mt-1 block min-h-11 max-w-full rounded-sm border border-input bg-background p-2"
+                value={targetId}
+                onChange={(event) => setRecordingTarget(event.target.value)}
+                disabled={starting || recording || uploading || !!pendingAudio}
+              >
+                <option value="">Nova sessão</option>
+                {targets.map((session) => (
+                  <option key={session.id} value={session.id}>
+                    {format(new Date(session.session_date), "dd/MM/yyyy HH:mm")} ·{" "}
+                    {session.title ?? "Sessão"}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {recording ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  className="min-h-11"
+                  variant="outline"
+                  onClick={() => {
+                    const recorder = mediaRecorderRef.current;
+                    if (recorder?.state === "paused") recorder.resume();
+                    else if (recorder?.state === "recording") recorder.pause();
+                  }}
+                >
+                  {paused ? (
+                    <Play className="size-4" aria-hidden />
+                  ) : (
+                    <Pause className="size-4" aria-hidden />
+                  )}
+                  {paused ? "Retomar" : "Pausar"}
+                </Button>
+                <Button
+                  className="min-h-11"
+                  variant="destructive"
+                  onClick={() => {
+                    const recorder = mediaRecorderRef.current;
+                    if (recorder && recorder.state !== "inactive") recorder.stop();
+                  }}
+                >
+                  <Square className="size-4" aria-hidden /> Finalizar gravação
+                </Button>
+                <span className="text-sm tabular-nums">{formatDuration(elapsed)}</span>
+              </div>
+            ) : (
+              <Button
+                className="min-h-11"
+                onClick={() => void startRecording()}
+                disabled={!recordingGrant || starting || uploading || !!pendingAudio}
+                aria-describedby={!pendingAudio ? "audio-capture-status" : undefined}
+              >
+                <Mic className="size-4" aria-hidden />
+                {starting ? "Preparando gravação…" : "Iniciar gravação"}
+              </Button>
+            )}
+          </div>
+          {!pendingAudio && (
+            <div className="mt-2 flex flex-wrap items-center gap-x-3">
+              <p id="audio-capture-status" role="status" className="text-sm text-muted-foreground">
+                {recordingStatus}
+              </p>
+              {!recordingGrant && !consentQuery.isPending && (
+                <Button variant="link" className="min-h-11 px-0" onClick={focusAudioConsent}>
+                  Ver autorizações de áudio
+                </Button>
+              )}
+            </div>
           )}
         </div>
         {operationError && (
@@ -725,19 +803,17 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
         {pendingAudio && (
           <div className="space-y-3 border-t border-border pt-3">
             <p role="status" className="text-sm text-muted-foreground">
-              Gravação pronta · {formatDuration(pendingAudio.seconds)}. Guarde o áudio antes de sair
-              da página.
+              {uploading
+                ? "Enviando o áudio para o dossiê…"
+                : `Áudio por guardar · ${formatDuration(pendingAudio.seconds)}`}
+              {!uploading &&
+                !canUploadPending &&
+                " · É necessária a autorização usada na gravação."}
             </p>
             <div className="flex flex-wrap gap-2">
               <Button
                 className="min-h-11"
-                disabled={
-                  uploading ||
-                  grantFor(
-                    "recording",
-                    pendingAudio.existingSession ? pendingAudio.sessionId : undefined,
-                  )?.id !== pendingAudio.recordingGrantId
-                }
+                disabled={uploading || !canUploadPending}
                 onClick={() => void uploadAudio(pendingAudio).catch(() => {})}
               >
                 {uploading ? "Enviando áudio…" : "Guardar áudio no dossiê"}
@@ -894,7 +970,9 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
                 onDiscardUpload={() => clearOrphanUpload.mutate(s)}
                 discardingUpload={clearOrphanUpload.isPending}
                 showDiscardUpload={pendingAudio?.sessionId !== s.id}
-                canProcess={!!grantFor("external_processing", s.id) && !reprocess.isPending}
+                processingAuthorized={!!grantFor("external_processing", s.id)}
+                processingBusy={reprocess.isPending}
+                onOpenConsent={focusAudioConsent}
                 recordingAuthorization={events.find(({ id }) => id === s.recording_consent_id)}
                 processingAuthorization={events.find(({ id }) => id === s.processing_consent_id)}
                 reprocessing={reprocess.isPending && reprocess.variables === s.id}
@@ -915,7 +993,9 @@ function SessionCard({
   onDiscardUpload,
   discardingUpload,
   showDiscardUpload,
-  canProcess,
+  processingAuthorized,
+  processingBusy,
+  onOpenConsent,
   reprocessing,
   recordingAuthorization,
   processingAuthorization,
@@ -927,7 +1007,9 @@ function SessionCard({
   onDiscardUpload: () => void;
   discardingUpload: boolean;
   showDiscardUpload: boolean;
-  canProcess: boolean;
+  processingAuthorized: boolean;
+  processingBusy: boolean;
+  onOpenConsent: () => void;
   reprocessing: boolean;
   recordingAuthorization?: ReturnType<typeof activeAudioConsent>;
   processingAuthorization?: ReturnType<typeof activeAudioConsent>;
@@ -1021,6 +1103,12 @@ function SessionCard({
   }, [note]);
 
   const isProcessing = audio === "processing";
+  const audioLabel =
+    session.status === "transcribing" && isProcessing
+      ? "Transcrevendo áudio"
+      : session.status === "structuring" && isProcessing
+        ? "Preparando texto para revisão"
+        : AUDIO_LABEL[audio];
   const canRetry = canRetryAudioProcessing(
     session.status,
     session.processing_started_at,
@@ -1033,6 +1121,8 @@ function SessionCard({
   return (
     <article
       id={`session-${session.id}`}
+      tabIndex={-1}
+      aria-labelledby={`session-title-${session.id}`}
       className="scroll-mt-24 rounded-sm border border-border bg-surface-document shadow-sm overflow-hidden accent-bar-forest"
     >
       <div className="border-b border-border/40 bg-background/50 px-6 py-4 flex flex-wrap items-start justify-between gap-4">
@@ -1042,7 +1132,10 @@ function SessionCard({
               locale: ptBR,
             })}
           </p>
-          <h4 className="font-serif text-2xl font-bold text-primary">
+          <h4
+            id={`session-title-${session.id}`}
+            className="font-serif text-2xl font-bold text-primary"
+          >
             {session.title ?? "Sessão"}
           </h4>
           {session.audio_path && (
@@ -1076,24 +1169,27 @@ function SessionCard({
                 ))}
             </select>
           </div>
-          <Badge
-            variant="outline"
-            className="text-[13px] font-semibold"
-            aria-label={`Áudio: ${AUDIO_LABEL[audio]}`}
-          >
+          <Badge variant="outline" className="text-[13px] font-semibold" role="status">
             {isProcessing && <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />}
-            Áudio: {AUDIO_LABEL[audio]}
+            {audioLabel}
           </Badge>
           <div className="flex items-center gap-1 border-l border-border/60 pl-3">
             {canRetry && session.audio_path && (
               <Button
                 variant="outline"
                 onClick={onReprocess}
-                disabled={!canProcess || reprocessing}
+                disabled={!processingAuthorized || processingBusy}
+                aria-describedby={
+                  !processingAuthorized ? `processing-consent-${session.id}` : undefined
+                }
                 className="min-h-11"
               >
                 <AudioLines className="mr-2 size-4" aria-hidden />
-                {isProcessing ? "Retomar processamento" : "Processar áudio com IA"}
+                {reprocessing
+                  ? "Enviando para processamento…"
+                  : isProcessing
+                    ? "Retomar processamento"
+                    : "Processar áudio com IA"}
               </Button>
             )}
             <Button
@@ -1109,7 +1205,17 @@ function SessionCard({
         </div>
       </div>
 
-      <div className="p-6 space-y-6">
+      <div className="space-y-6 p-4 sm:p-6">
+        {canRetry && session.audio_path && !processingAuthorized && (
+          <div className="flex flex-wrap items-center gap-x-3">
+            <p id={`processing-consent-${session.id}`} className="text-sm text-muted-foreground">
+              O processamento exige autorização para envio à IA.
+            </p>
+            <Button variant="link" className="min-h-11 px-0" onClick={onOpenConsent}>
+              Ver autorizações de áudio
+            </Button>
+          </div>
+        )}
         {(recordingAuthorization || processingAuthorization) && (
           <details className="text-sm">
             <summary className="min-h-11 cursor-pointer py-3 font-medium text-primary">
@@ -1174,13 +1280,16 @@ function SessionCard({
         {/* Notas da profissional — independentes do áudio */}
         <div className="space-y-2">
           <label htmlFor={notesId} className="text-[15px] font-semibold text-primary">
-            Notas da sessão
+            Notas manuais
           </label>
+          <p id={`${notesId}-help`} className="text-sm text-muted-foreground">
+            Salve suas anotações para registrá-las no dossiê.
+          </p>
           <Textarea
             id={notesId}
+            aria-describedby={`${notesId}-help ${notesId}-status`}
             value={draft.text}
             onChange={(e) => dispatch({ type: "edit", text: e.target.value })}
-            placeholder="Registro da profissional. Fica separado do texto gerado pelo áudio."
             className="min-h-[140px] text-[16px] leading-relaxed"
           />
           <div className="flex flex-wrap items-center gap-3 text-[14px]">
@@ -1197,18 +1306,19 @@ function SessionCard({
               {draft.phase === "error" ? "Tentar salvar de novo" : "Salvar notas"}
             </Button>
             <span
+              id={`${notesId}-status`}
               role="status"
               className={draft.phase === "error" ? "text-destructive" : "text-muted-foreground"}
             >
               {draft.phase === "error"
-                ? `Não salvo: ${draft.error}. O texto continua aqui.`
+                ? "Falha ao salvar as notas. O texto continua aqui."
                 : draft.phase === "saving"
-                  ? "Salvando…"
+                  ? "Salvando notas…"
                   : dirty
-                    ? "Alterações não salvas"
+                    ? "Notas com alterações pendentes"
                     : draft.saved
-                      ? "Salvo"
-                      : ""}
+                      ? "Notas salvas no dossiê"
+                      : "Sem notas salvas"}
             </span>
           </div>
         </div>

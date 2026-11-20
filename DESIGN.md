@@ -11,10 +11,10 @@ Direção única e vigente. A direção "Atlas" (azul/âmbar) foi rejeitada; seu
 
 ## Fonte da verdade
 - Tokens: **um único bloco `:root`** em `src/styles.css`. Não criar segundo `:root` nem overrides por hex; usar `var(--token)` / utilitários (`bg-forest`, `text-ink`, `border-border`).
-- Fotografia familiar (`public/assets/genealiz/*`) e logo/wordmark são preservados.
+- A marca vigente é a árvore circular escolhida por Pietro. Os traços do símbolo e do lettering vêm do mesmo PNG aprovado. Use `GenealizWordmark` em bronze sobre fundo claro e em dourado claro sobre verde. A versão vertical conserva a composição original. O favicon usa o símbolo.
 
-## Revisão da capa pública — 02/11/2026
-Pietro rejeitou o diagrama SVG de exemplo: linhas atravessavam nomes e a composição era inadequada para a capa. `GenogramDemo` foi removido; não recolocar uma variação reduzida. A seção pública usa detalhe da fotografia de arquivo existente. O mapa operacional continua na plataforma, sujeito às invariantes abaixo. A nova seção fotográfica ainda não tem aprovação estética do usuário registrada.
+## Capa pública e demonstração
+A capa apresenta a finalidade da plataforma, uma única fotografia ilustrativa de arquivo e um acesso direto ao caso fictício. A próxima seção inclui o exercício editável, com a mesma família em 2D, 3D e cronologia. O visitante pode revisar uma filiação e desfazer, editar um nome e ajustar posições na própria geração. O estado do exercício fica em memória. A capa do Manual da Psicogenealogia vem do acervo editorial já usado no site de Letícia Baccin.
 
 ## Cores
 - **Verde profundo (`forest`, `forest-mid`)**: orientação — navegação, botão principal, foco, seleção.

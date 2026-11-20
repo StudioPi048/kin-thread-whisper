@@ -24,25 +24,19 @@ import {
   Calendar,
   Network,
   History,
-  Sparkles,
+  ClipboardList,
   Search,
   ChevronLeft,
   ChevronRight,
   BookOpen,
   MoreHorizontal,
 } from "lucide-react";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { GenealizWordmark } from "@/components/genealiz-wordmark";
-import {
-  CommandDialog,
-  CommandEmpty,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
+import { CommandDialog, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -67,7 +61,7 @@ const nav = [
     to: "/app/ia-clinica",
     label: "Evidências e hipóteses",
     shortLabel: "Evidências",
-    icon: Sparkles,
+    icon: ClipboardList,
   },
   { to: "/app/guia", label: "Guia", shortLabel: "Guia", icon: BookOpen },
   { to: "/app/configuracoes", label: "Configurações", shortLabel: "Ajustes", icon: Settings },
@@ -88,6 +82,8 @@ function AuthenticatedLayout() {
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const searchTriggerRef = useRef<HTMLButtonElement>(null);
+  const searchReturnFocus = useRef<HTMLElement | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeSearch, setActiveSearch] = useState("");
   const [isMoreOpen, setIsMoreOpen] = useState(false);
@@ -100,14 +96,17 @@ function AuthenticatedLayout() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k" && !e.repeat) {
         e.preventDefault();
-        setIsSearchOpen((prev) => !prev);
+        if (!isSearchOpen && document.activeElement instanceof HTMLElement) {
+          searchReturnFocus.current = document.activeElement;
+        }
+        setIsSearchOpen(!isSearchOpen);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [isSearchOpen]);
 
   // Fecha a gaveta "Mais" ao trocar de rota
   useEffect(() => {
@@ -167,7 +166,7 @@ function AuthenticatedLayout() {
       <aside className="atlas-sidebar">
         <div className="atlas-brand-row">
           <Link to="/app" aria-label="GENEALIZ — Mesa de trabalho">
-            {isCollapsed ? <span className="font-serif text-3xl">G</span> : <GenealizWordmark />}
+            <GenealizWordmark tone="dark" variant={isCollapsed ? "symbol" : "horizontal"} />
           </Link>
           <button
             className="atlas-icon-button"
@@ -193,7 +192,6 @@ function AuthenticatedLayout() {
           ))}
         </nav>
         <div className="atlas-sidebar-footer">
-          {!isCollapsed && <span className="text-xs">Uma história. Muitas relações.</span>}
           <button
             className="atlas-icon-button"
             onClick={handleSignOut}
@@ -209,9 +207,14 @@ function AuthenticatedLayout() {
             <GenealizWordmark />
           </Link>
           <button
+            ref={searchTriggerRef}
             className="atlas-search"
-            onClick={() => setIsSearchOpen(true)}
+            onClick={() => {
+              searchReturnFocus.current = searchTriggerRef.current;
+              setIsSearchOpen(true);
+            }}
             aria-label="Buscar clientes ou páginas"
+            aria-keyshortcuts="Meta+K Control+K"
           >
             <Search size={18} />
             <span>Buscar clientes ou páginas...</span>
@@ -274,7 +277,19 @@ function AuthenticatedLayout() {
           </button>
         </SheetContent>
       </Sheet>
-      <CommandDialog open={isSearchOpen} onOpenChange={setIsSearchOpen} shouldFilter={false}>
+      <CommandDialog
+        open={isSearchOpen}
+        onOpenChange={setIsSearchOpen}
+        shouldFilter={false}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          const target = searchReturnFocus.current;
+          (target?.isConnected && target !== document.body
+            ? target
+            : searchTriggerRef.current
+          )?.focus();
+        }}
+      >
         <CommandInput
           value={searchQuery}
           onValueChange={setSearchQuery}
@@ -282,15 +297,23 @@ function AuthenticatedLayout() {
           placeholder="Buscar clientes ou páginas..."
         />
         <CommandList>
-          {isSearchReady && clientSearch.isSuccess && !clientSearch.data.clients.length && (
-            <CommandEmpty>Nenhum cliente ou página encontrado.</CommandEmpty>
-          )}
-          {(!isSearchReady || clientSearch.isFetching) && (
-            <p role="status" className="px-3 py-2 text-sm text-muted-foreground">
-              Buscando clientes…
-            </p>
-          )}
-          {isSearchReady && clientSearch.isError && (
+          {isSearchOpen &&
+            isSearchReady &&
+            clientSearch.isSuccess &&
+            !clientSearch.isFetching &&
+            !searchResults.length &&
+            !pages.length && (
+              <p role="status" className="px-3 py-6 text-center text-sm text-muted-foreground">
+                Nenhum cliente ou página encontrado.
+              </p>
+            )}
+          {isSearchOpen &&
+            (!isSearchReady || clientSearch.isPending || clientSearch.isFetching) && (
+              <p role="status" className="px-3 py-2 text-sm text-muted-foreground">
+                Buscando clientes…
+              </p>
+            )}
+          {isSearchOpen && isSearchReady && clientSearch.isError && !clientSearch.isFetching && (
             <>
               <p role="alert" className="px-3 py-2 text-sm text-destructive">
                 Não foi possível buscar os clientes.

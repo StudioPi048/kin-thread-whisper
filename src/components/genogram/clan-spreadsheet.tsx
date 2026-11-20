@@ -15,6 +15,7 @@ import {
   Plus,
   Trash2,
   Download,
+  FileSpreadsheet,
   Table2,
   Upload,
   Sparkles,
@@ -65,12 +66,17 @@ import {
   parseClanVitalDate,
   planClanWorkbook,
 } from "@/lib/clan-workbook";
-import { ClanSheetSelect, ClanWorkbookPreview } from "./clan-workbook-preview";
+import { ClanImportRow, ClanSheetSelect, ClanWorkbookPreview } from "./clan-workbook-preview";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -159,6 +165,8 @@ export function ClanSpreadsheet({
   const qc = useQueryClient();
   const [drafts, setDrafts] = useState<Record<string, Partial<Person>>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileMenuRef = useRef<HTMLButtonElement>(null);
+  const importTitleRef = useRef<HTMLHeadingElement>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
   const [newPersonId, setNewPersonId] = useState<string | null>(null);
@@ -568,6 +576,37 @@ export function ClanSpreadsheet({
     [analysis, importDuplicates],
   );
   const hasRegisteredLinks = !!relationships?.length;
+  const previewRows = useMemo(
+    () =>
+      [...analysis]
+        .sort(
+          (left, right) =>
+            Number(right.status === "error" || right.status === "duplicate") -
+              Number(left.status === "error" || left.status === "duplicate") ||
+            left.line - right.line,
+        )
+        .slice(0, 200),
+    [analysis],
+  );
+  const importSummary = workbookPreview
+    ? [
+        `${workbookPreview.people.filter((row) => row.state === "include").length} a incluir`,
+        `${workbookPreview.people.filter((row) => row.state === "update").length} a atualizar`,
+        `${workbookPreview.plan.links.length} ${workbookPreview.plan.links.length === 1 ? "vínculo novo" : "vínculos novos"}`,
+        `${workbookPreview.plan.parentages.length} ${workbookPreview.plan.parentages.length === 1 ? "filiação a registrar" : "filiações a registrar"}`,
+      ].join(" · ")
+    : `${toImport.length} ${toImport.length === 1 ? "linha selecionada" : "linhas selecionadas"} · ${analysis.filter((row) => row.status === "error").length} com erro`;
+  const importBlock = workbookPreview
+    ? workbookPreview.blocking
+      ? "Resolva as correspondências e os erros de pessoas ou vínculos."
+      : !workbookPreview.actionable
+        ? "Nenhuma alteração para gravar."
+        : null
+    : importReplace && hasRegisteredLinks
+      ? "Desmarque a substituição para preservar os vínculos."
+      : toImport.length === 0
+        ? "Nenhuma linha válida selecionada."
+        : null;
   const importGraph = useMemo(() => {
     if (!importPreview) return null;
     const original = importReplace ? (persons ?? []).filter((p) => p.is_proband) : (persons ?? []);
@@ -803,38 +842,45 @@ export function ClanSpreadsheet({
             ref={fileInputRef}
             onChange={importFile}
           />
-          <Button
-            variant="outline"
-            className="min-h-11"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isImporting || isChangingRows || isError}
-          >
-            {isImporting ? (
-              <Loader2 className="size-4 mr-2 animate-spin" />
-            ) : (
-              <Upload className="size-4 mr-2" />
-            )}
-            Importar CSV/XLSX
-          </Button>
-          <Button
-            variant="outline"
-            className="min-h-11"
-            onClick={() => void exportWorkbook()}
-            disabled={rows.length === 0}
-          >
-            <Download className="size-4 mr-2" /> Exportar Excel
-          </Button>
-          <Button
-            variant="ghost"
-            className="min-h-11"
-            onClick={exportCsv}
-            disabled={rows.length === 0}
-          >
-            CSV
-          </Button>
-          <Button variant="ghost" className="min-h-11" onClick={() => void exportWorkbook(true)}>
-            Modelo Excel
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button ref={fileMenuRef} variant="outline" className="min-h-11">
+                {isImporting ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : (
+                  <FileSpreadsheet className="size-4" aria-hidden />
+                )}
+                {isImporting ? "Lendo arquivo…" : "Arquivo"}
+                <ChevronDown className="size-4" aria-hidden />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                className="min-h-11"
+                disabled={isImporting || isChangingRows || isError}
+                onSelect={() => fileInputRef.current?.click()}
+              >
+                <Upload className="size-4" aria-hidden /> Importar CSV/XLSX
+              </DropdownMenuItem>
+              <DropdownMenuItem className="min-h-11" onSelect={() => void exportWorkbook(true)}>
+                <FileSpreadsheet className="size-4" aria-hidden /> Baixar modelo Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="min-h-11"
+                disabled={rows.length === 0}
+                onSelect={() => void exportWorkbook()}
+              >
+                <Download className="size-4" aria-hidden /> Exportar Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="min-h-11"
+                disabled={rows.length === 0}
+                onSelect={exportCsv}
+              >
+                <Download className="size-4" aria-hidden /> Exportar CSV
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button
             className="min-h-11"
             onClick={() => addPerson.mutate(undefined)}
@@ -977,7 +1023,11 @@ export function ClanSpreadsheet({
                             onChange={
                               r.is_proband ? undefined : (v) => scheduleSave(r.id, { full_name: v })
                             }
-                            title={r.is_proband ? "Edite o nome no cadastro do dossiê." : undefined}
+                            title={
+                              r.is_proband
+                                ? `${r.full_name} · Edite no cadastro do dossiê.`
+                                : r.full_name
+                            }
                             ariaLabel={`Nome da linha ${i + 1}`}
                           />
                         </td>
@@ -1299,216 +1349,229 @@ export function ClanSpreadsheet({
         open={!!importPreview}
         onOpenChange={(o) => !o && !confirmImport.isPending && setImportPreview(null)}
       >
-        <DialogContent className="max-h-[90dvh] max-w-4xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Prévia da importação</DialogTitle>
+        <DialogContent
+          className="flex max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] max-w-3xl flex-col gap-0 overflow-hidden p-0"
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            importTitleRef.current?.focus();
+          }}
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            fileMenuRef.current?.focus();
+          }}
+        >
+          <DialogHeader className="shrink-0 border-b border-border px-4 py-4 pr-10 text-left sm:px-6">
+            <DialogTitle ref={importTitleRef} tabIndex={-1} className="outline-none">
+              Prévia da importação
+            </DialogTitle>
             <DialogDescription>
               {structuredImport
                 ? "Revise as pessoas e os vínculos que serão gravados no dossiê."
                 : "Confira as colunas e as sugestões. A planilha com IDs também permite importar vínculos."}
             </DialogDescription>
           </DialogHeader>
-          {importPreview && importPreview.sheets.length > 1 && (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <ClanSheetSelect
-                label="Aba de pessoas"
-                sheets={importPreview.sheets.filter(
-                  (sheet) => sheet.header.length && !isClanLinksSheet(sheet),
-                )}
-                value={importPreview.people.name}
-                disabled={confirmImport.isPending}
-                onChange={(name) => {
-                  const people = importPreview.sheets.find((sheet) => sheet.name === name);
-                  if (!people) return;
-                  setIdentityChoices({});
-                  setImportReplace(false);
-                  setReplaceParentage(false);
-                  setImportPreview({ ...importPreview, people, mapping: autoMap(people.header) });
-                }}
-              />
-              {structuredImport && (
+          <div className="min-h-0 space-y-4 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6">
+            {importPreview && importPreview.sheets.length > 1 && (
+              <div className="grid gap-3 sm:grid-cols-2">
                 <ClanSheetSelect
-                  label="Aba de vínculos"
-                  optional
-                  sheets={importPreview.sheets.filter(isClanLinksSheet)}
-                  value={importPreview.linkSheet}
+                  label="Aba de pessoas"
+                  sheets={importPreview.sheets.filter(
+                    (sheet) => sheet.header.length && !isClanLinksSheet(sheet),
+                  )}
+                  value={importPreview.people.name}
                   disabled={confirmImport.isPending}
-                  onChange={(linkSheet) => {
+                  onChange={(name) => {
+                    const people = importPreview.sheets.find((sheet) => sheet.name === name);
+                    if (!people) return;
+                    setIdentityChoices({});
+                    setImportReplace(false);
                     setReplaceParentage(false);
-                    setImportPreview({ ...importPreview, linkSheet });
+                    setImportPreview({ ...importPreview, people, mapping: autoMap(people.header) });
                   }}
                 />
-              )}
-            </div>
-          )}
-          {workbookPreview && (
-            <ClanWorkbookPreview
-              preview={workbookPreview}
-              choices={identityChoices}
-              onChoice={(key, value) =>
-                setIdentityChoices((previous) => ({ ...previous, [key]: value }))
-              }
-              allowReplacement={replaceParentage}
-              onAllowReplacement={setReplaceParentage}
-              canReplace={!!selectedLinkSheet?.rows.length && hasRegisteredLinks}
-              pending={confirmImport.isPending}
-              onTemplate={() => void exportWorkbook(true)}
-            />
-          )}
-          {importPreview && !structuredImport && (
-            <div className="space-y-4 text-[15px]">
-              <fieldset className="grid gap-2 sm:grid-cols-3" disabled={confirmImport.isPending}>
-                <legend className="mb-2 font-semibold">Colunas do arquivo</legend>
-                {IMPORT_FIELDS.map((f) => (
-                  <label key={f.key} className="flex flex-col gap-1 text-[14px]">
-                    {f.label}
-                    <select
-                      className="h-11 rounded-md border border-input bg-background px-2"
-                      value={importPreview.mapping[f.key] ?? ""}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setImportPreview((p) =>
-                          p
-                            ? {
-                                ...p,
-                                mapping: {
-                                  ...p.mapping,
-                                  [f.key]: v === "" ? undefined : Number(v),
-                                },
-                              }
-                            : p,
-                        );
-                      }}
-                    >
-                      <option value="">— não importar —</option>
-                      {importPreview.people.header.map((h, i) => (
-                        <option key={i} value={i}>
-                          {h || `Coluna ${i + 1}`}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                ))}
-              </fieldset>
-              <p role="status">
-                <strong>{analysis.filter((r) => r.status === "ok").length}</strong> válidas ·{" "}
-                <strong>{analysis.filter((r) => r.status === "duplicate").length}</strong> possíveis
-                duplicidades ·{" "}
-                <strong>{analysis.filter((r) => r.status === "error").length}</strong> com erro ·{" "}
-                {analysis.filter((r) => r.status === "skip").length} ignoradas
-              </p>
-              <div className="max-h-72 overflow-auto rounded-md border border-border">
-                <table className="w-full text-[14px]">
-                  <thead className="sticky top-0 bg-muted">
-                    <tr>
-                      <th className="px-2 py-1 text-left">Linha</th>
-                      <th className="px-2 py-1 text-left">Nome</th>
-                      <th className="px-2 py-1 text-left">Parentesco</th>
-                      <th className="px-2 py-1 text-left">Filiação prevista</th>
-                      <th className="px-2 py-1 text-left">Situação</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {analysis.slice(0, 200).map((r) => {
-                      const id = `import:${r.line}`;
+                {structuredImport && (
+                  <ClanSheetSelect
+                    label="Aba de vínculos"
+                    optional
+                    sheets={importPreview.sheets.filter(isClanLinksSheet)}
+                    value={importPreview.linkSheet}
+                    disabled={confirmImport.isPending}
+                    onChange={(linkSheet) => {
+                      setReplaceParentage(false);
+                      setImportPreview({ ...importPreview, linkSheet });
+                    }}
+                  />
+                )}
+              </div>
+            )}
+            {workbookPreview && (
+              <ClanWorkbookPreview
+                preview={workbookPreview}
+                choices={identityChoices}
+                onChoice={(key, value) =>
+                  setIdentityChoices((previous) => ({ ...previous, [key]: value }))
+                }
+                allowReplacement={replaceParentage}
+                onAllowReplacement={setReplaceParentage}
+                canReplace={!!selectedLinkSheet?.rows.length && hasRegisteredLinks}
+                pending={confirmImport.isPending}
+                onTemplate={() => void exportWorkbook(true)}
+              />
+            )}
+            {importPreview && !structuredImport && (
+              <div className="space-y-4 text-[15px]">
+                <fieldset
+                  className="grid min-w-0 gap-2 sm:grid-cols-2 lg:grid-cols-3"
+                  disabled={confirmImport.isPending}
+                >
+                  <legend className="mb-2 font-semibold">Colunas do arquivo</legend>
+                  {IMPORT_FIELDS.map((f) => (
+                    <label key={f.key} className="flex min-w-0 flex-col gap-1 text-sm">
+                      {f.label}
+                      <select
+                        className="h-11 min-w-0 rounded-md border border-input bg-background px-2"
+                        value={importPreview.mapping[f.key] ?? ""}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setImportPreview((p) =>
+                            p
+                              ? {
+                                  ...p,
+                                  mapping: {
+                                    ...p.mapping,
+                                    [f.key]: v === "" ? undefined : Number(v),
+                                  },
+                                }
+                              : p,
+                          );
+                        }}
+                      >
+                        <option value="">— não importar —</option>
+                        {importPreview.people.header.map((h, i) => (
+                          <option key={i} value={i}>
+                            {h || `Coluna ${i + 1}`}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ))}
+                </fieldset>
+                <section aria-labelledby="clan-import-csv-rows">
+                  <h3 id="clan-import-csv-rows" className="mb-2 font-semibold">
+                    Linhas do arquivo
+                  </h3>
+                  {analysis.length > previewRows.length && (
+                    <p className="mb-2 text-sm text-muted-foreground">
+                      Exibindo {previewRows.length} de {analysis.length} linhas, com erros e
+                      possíveis duplicidades no início.
+                    </p>
+                  )}
+                  <ul className="divide-y divide-border rounded-md border border-border">
+                    {previewRows.map((row) => {
+                      const id = `import:${row.line}`;
                       const inPreview = importGraph?.persons.has(id);
-                      const previewNames =
+                      const parents =
                         importGraph && inPreview ? parentSummary(importGraph, id).names : [];
                       return (
-                        <tr key={r.line} className="border-t border-border align-top">
-                          <td className="px-2 py-1 tabular-nums">{r.line}</td>
-                          <td className="px-2 py-1">{r.record?.full_name ?? "—"}</td>
-                          <td className="px-2 py-1">{r.record?.relationship_to_proband ?? "—"}</td>
-                          <td className="px-2 py-1">
-                            {previewNames.length > 0
-                              ? `Sugestão: ${previewNames.join(" · ")}`
-                              : inPreview
-                                ? "Sem pais identificados"
-                                : "—"}
-                          </td>
-                          <td
-                            className={`px-2 py-1 ${r.status === "error" ? "text-destructive" : ""}`}
-                          >
+                        <ClanImportRow
+                          key={row.line}
+                          line={row.line}
+                          name={row.record?.full_name ?? ""}
+                          metadata={row.record?.relationship_to_proband ?? undefined}
+                          status={
                             {
-                              {
-                                ok: "Ok",
-                                error: "Erro",
-                                duplicate: "Duplicidade?",
-                                skip: "Ignorada",
-                              }[r.status]
-                            }
-                            {r.messages.length > 0 && (
-                              <span className="block text-[13px]">{r.messages.join("; ")}</span>
-                            )}
-                          </td>
-                        </tr>
+                              ok: "Válida",
+                              error: "Com erro",
+                              duplicate: "Possível duplicidade",
+                              skip: "Ignorada",
+                            }[row.status]
+                          }
+                          attention={row.status === "error"}
+                        >
+                          {row.messages.length > 0 && (
+                            <p className="text-muted-foreground">{row.messages.join(" · ")}</p>
+                          )}
+                          {inPreview && (
+                            <p className="text-muted-foreground">
+                              {parents.length > 0
+                                ? `Filiação sugerida · ${parents.join(" · ")}`
+                                : "Sem pais identificados"}
+                            </p>
+                          )}
+                        </ClanImportRow>
                       );
                     })}
-                  </tbody>
-                </table>
-              </div>
-              <label className="flex min-h-11 items-center gap-2">
-                <input
-                  type="checkbox"
-                  className="size-5"
-                  checked={importDuplicates}
-                  disabled={confirmImport.isPending}
-                  onChange={(e) => setImportDuplicates(e.target.checked)}
-                />
-                Importar também as possíveis duplicidades
-              </label>
-              {hasRelatives &&
-                (hasRegisteredLinks && !importReplace ? (
-                  <p className="text-[14px] text-clinical-warning">
-                    Esta família tem vínculos registrados. Adicione as linhas do arquivo ou edite a
-                    planilha atual para preservar as conexões.
+                  </ul>
+                </section>
+                <label className="flex min-h-11 items-center gap-2">
+                  <input
+                    type="checkbox"
+                    className="size-5"
+                    checked={importDuplicates}
+                    disabled={confirmImport.isPending}
+                    onChange={(e) => setImportDuplicates(e.target.checked)}
+                  />
+                  Importar também as possíveis duplicidades
+                </label>
+                {hasRelatives &&
+                  (hasRegisteredLinks && !importReplace ? (
+                    <p className="text-[14px] text-clinical-warning">
+                      Esta família tem vínculos registrados. Adicione as linhas do arquivo ou edite
+                      a planilha atual para preservar as conexões.
+                    </p>
+                  ) : (
+                    <label className="flex min-h-11 items-center gap-2">
+                      <input
+                        type="checkbox"
+                        className="size-5"
+                        checked={importReplace}
+                        disabled={confirmImport.isPending}
+                        onChange={(e) => setImportReplace(e.target.checked)}
+                      />
+                      Substituir os familiares atuais e manter o cadastro do consulente
+                    </label>
+                  ))}
+                {hasRegisteredLinks && importReplace && (
+                  <p role="alert" className="text-[14px] text-clinical-warning">
+                    Há vínculos registrados. Desmarque a opção de substituir para manter as
+                    conexões.
                   </p>
-                ) : (
-                  <label className="flex min-h-11 items-center gap-2">
-                    <input
-                      type="checkbox"
-                      className="size-5"
-                      checked={importReplace}
-                      disabled={confirmImport.isPending}
-                      onChange={(e) => setImportReplace(e.target.checked)}
-                    />
-                    Substituir os familiares atuais e manter o cadastro do consulente
-                  </label>
-                ))}
-              {hasRegisteredLinks && importReplace && (
-                <p role="alert" className="text-[14px] text-clinical-warning">
-                  Há vínculos registrados. Desmarque a opção de substituir para manter as conexões.
-                </p>
-              )}
+                )}
+              </div>
+            )}
+          </div>
+          <footer className="shrink-0 border-t border-border bg-card px-4 py-3 sm:px-6">
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+              <div className="space-y-1 text-sm" role="status">
+                <p className="font-semibold text-ink">{importSummary}</p>
+                {importBlock && <p className="text-muted-foreground">{importBlock}</p>}
+              </div>
+              <div className="flex flex-wrap justify-end gap-2">
+                <Button
+                  variant="outline"
+                  className="min-h-11"
+                  disabled={confirmImport.isPending}
+                  onClick={() => setImportPreview(null)}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  className="min-h-11"
+                  variant={importReplace ? "destructive" : "default"}
+                  disabled={confirmImport.isPending || Boolean(importBlock)}
+                  onClick={() => confirmImport.mutate()}
+                >
+                  {confirmImport.isPending
+                    ? "Gravando…"
+                    : workbookPreview
+                      ? "Gravar alterações"
+                      : importReplace
+                        ? "Substituir e importar"
+                        : "Importar linhas"}
+                </Button>
+              </div>
             </div>
-          )}
-          <DialogFooter>
-            <Button
-              variant="outline"
-              className="min-h-11"
-              disabled={confirmImport.isPending}
-              onClick={() => setImportPreview(null)}
-            >
-              Cancelar
-            </Button>
-            <Button
-              className="min-h-11"
-              variant={importReplace ? "destructive" : "default"}
-              disabled={
-                confirmImport.isPending ||
-                (workbookPreview
-                  ? workbookPreview.blocking || !workbookPreview.actionable
-                  : toImport.length === 0 || (importReplace && hasRegisteredLinks))
-              }
-              onClick={() => confirmImport.mutate()}
-            >
-              {confirmImport.isPending
-                ? "Gravando…"
-                : workbookPreview
-                  ? "Gravar alterações"
-                  : `${importReplace ? "Substituir e importar" : "Importar"} ${toImport.length} linha(s)`}
-            </Button>
-          </DialogFooter>
+          </footer>
         </DialogContent>
       </Dialog>
     </div>

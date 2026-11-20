@@ -28,17 +28,23 @@ interface CommandDialogProps extends DialogProps {
   title?: string;
   /** Repassado ao cmdk — desligue para filtrar os itens manualmente. */
   shouldFilter?: boolean;
+  onCloseAutoFocus?: React.ComponentPropsWithoutRef<typeof DialogContent>["onCloseAutoFocus"];
 }
 
 const CommandDialog = ({
   children,
   title = "Busca rápida",
   shouldFilter,
+  onCloseAutoFocus,
   ...props
 }: CommandDialogProps) => {
   return (
     <Dialog {...props}>
-      <DialogContent className="overflow-hidden p-0">
+      <DialogContent
+        className="overflow-hidden p-0"
+        aria-describedby={undefined}
+        onCloseAutoFocus={onCloseAutoFocus}
+      >
         <DialogTitle className="sr-only">{title}</DialogTitle>
         <Command
           shouldFilter={shouldFilter}

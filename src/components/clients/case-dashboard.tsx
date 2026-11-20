@@ -1,117 +1,115 @@
+import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
 import { clinicalIntelQuery, getMappablePersons } from "@/lib/clinical-intel";
 import { detectPatterns } from "@/lib/patterns";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 
-interface Props {
-  clientId: string;
-}
+export function CaseDashboard({ clientId }: { clientId: string }) {
+  const intel = useQuery(clinicalIntelQuery(clientId));
 
-export function CaseDashboard({ clientId }: Props) {
-  const { data: intel } = useQuery(clinicalIntelQuery(clientId));
-  const { data } = useQuery({
-    queryKey: ["case-dashboard", clientId],
-    queryFn: async () => {
-      const sessions = await supabase
-        .from("clinical_sessions")
-        .select("id", { count: "exact", head: true })
-        .eq("client_id", clientId);
-      if (sessions.error) throw sessions.error;
-      return sessions.count ?? 0;
+  const persons = intel.data
+    ? getMappablePersons(intel.data.persons, intel.data.relationships)
+    : [];
+  const female = persons.filter((person) =>
+    ["feminino", "female"].includes(person.gender ?? ""),
+  ).length;
+  const male = persons.filter((person) =>
+    ["masculino", "male"].includes(person.gender ?? ""),
+  ).length;
+  const composition = [
+    { label: "Feminino", value: female, color: "bg-forest" },
+    { label: "Masculino", value: male, color: "bg-forest-soft" },
+    {
+      label: "Outro ou não informado",
+      value: persons.length - female - male,
+      color: "bg-archive-old",
     },
-  });
-
-  if (data === undefined || !intel) return null;
-
-  const sessions = data;
-  const relationships = intel.relationships.length;
-  const persons = getMappablePersons(intel.persons, intel.relationships);
-  const patterns = detectPatterns(persons, intel.relationships).length;
-  // "feminino"/"masculino" é o que o formulário principal de pessoa grava;
-  // "female"/"male" só aparece em pessoas criadas via planilha/importação.
-  const female = persons.filter((p) => p.gender === "feminino" || p.gender === "female").length;
-  const male = persons.filter((p) => p.gender === "masculino" || p.gender === "male").length;
-  const unknown = persons.length - (female + male);
-
-  const deceased = persons.filter((p) => p.is_deceased).length;
-  const withDisease = persons.filter((p) => (p.health_conditions ?? []).length > 0).length;
-  const withCause = persons.filter((p) => p.cause_of_death && p.cause_of_death.trim()).length;
-
-  const pieData = [
-    { name: "Mulheres", value: female, color: "oklch(0.65 0.20 295)" }, // Forest
-    { name: "Homens", value: male, color: "oklch(0.25 0.10 295)" }, // Forest mid
   ];
-  if (unknown > 0)
-    pieData.push({ name: "Outros/S/N", value: unknown, color: "oklch(0.95 0.03 295)" });
+  const stats = intel.data
+    ? [
+        { label: "Pessoas no mapa", value: persons.length },
+        { label: "Vínculos", value: intel.data.relationships.length },
+        {
+          label: "Padrões detectados",
+          value: detectPatterns(persons, intel.data.relationships).length,
+        },
+        {
+          label: "Falecimentos",
+          value: persons.filter(
+            (person) => person.is_deceased || person.death_date || person.death_date_partial,
+          ).length,
+        },
+        {
+          label: "Pessoas com condições de saúde registradas",
+          value: persons.filter((person) => person.health_conditions?.length).length,
+        },
+      ]
+    : [];
 
   return (
-    <div className="rounded-[1rem] glass-card shadow-sm accent-bar-forest overflow-hidden hover-lift">
-      <div className="border-b border-border/50 px-4 py-3 flex items-center justify-between">
-        <h3 className="text-[14px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-          Estatísticas do Clã
-        </h3>
-      </div>
-
-      {persons.length > 0 && (
-        <div className="p-4 border-b border-border/40">
-          <p className="text-[14px] font-semibold text-muted-foreground mb-4 uppercase tracking-[0.1em]">
-            Composição de Gênero
-          </p>
-          <div className="h-[140px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={30}
-                  outerRadius={60}
-                  paddingAngle={2}
-                  dataKey="value"
-                  stroke="none"
-                >
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    borderRadius: "2px",
-                    border: "1px solid var(--color-border)",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-                    fontSize: "12px",
-                    fontFamily: "var(--font-sans)",
-                    fontWeight: 500,
-                  }}
-                  itemStyle={{ color: "var(--color-forest)" }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+    <section className="rounded-xl border border-border bg-card p-5">
+      <h3 className="text-[15px] font-semibold text-ink">Composição do mapa</h3>
+      {intel.isError ? (
+        <div className="mt-3 text-sm text-destructive">
+          <p role="alert">Não foi possível atualizar a composição.</p>
+          <Button
+            variant="link"
+            className="min-h-11 px-0"
+            disabled={intel.isFetching}
+            onClick={() => void intel.refetch()}
+          >
+            {intel.isFetching ? "Carregando…" : "Tentar novamente"}
+          </Button>
         </div>
+      ) : (
+        !intel.data && (
+          <p role="status" className="mt-3 text-sm text-muted-foreground">
+            Carregando familiares e vínculos…
+          </p>
+        )
       )}
-
-      <div className="grid grid-cols-2 gap-px bg-border/40">
-        <Stat label="Pessoas no clã" value={persons.length} />
-        <Stat label="Vínculos" value={relationships} />
-        <Stat label="Padrões" value={patterns} />
-        <Stat label="Falecidos" value={deceased} />
-        <Stat label="Doenças" value={withDisease} full />
-      </div>
-    </div>
-  );
-}
-
-function Stat({ label, value, full }: { label: string; value: number; full?: boolean }) {
-  return (
-    <div
-      className={`bg-surface-document/60 backdrop-blur-sm p-4 transition-colors hover:bg-surface-document/90 ${full ? "col-span-2" : ""}`}
-    >
-      <p className="text-[14px] font-bold text-muted-foreground uppercase tracking-[0.05em]">
-        {label}
-      </p>
-      <p className="mt-1 font-serif text-2xl font-bold text-primary">{value}</p>
-    </div>
+      {intel.data && (
+        <>
+          <dl className="mt-3 divide-y divide-border">
+            {stats.map(({ label, value }) => (
+              <div key={label} className="flex justify-between gap-3 py-2 text-sm">
+                <dt className="text-ink-soft">{label}</dt>
+                <dd className="shrink-0 font-semibold tabular-nums text-ink">{value}</dd>
+              </div>
+            ))}
+          </dl>
+          {persons.length > 0 && (
+            <div className="mt-3 border-t border-border pt-4">
+              <h4 className="mb-2 text-sm font-semibold text-ink">Gênero registrado</h4>
+              <div
+                className="flex h-2 overflow-hidden rounded-full border border-border"
+                aria-hidden
+              >
+                {composition
+                  .filter(({ value }) => value > 0)
+                  .map(({ label, value, color }) => (
+                    <span
+                      key={label}
+                      className={color}
+                      style={{ width: `${(value / persons.length) * 100}%` }}
+                    />
+                  ))}
+              </div>
+              <ul className="mt-2 space-y-1">
+                {composition.map(({ label, value, color }) => (
+                  <li key={label} className="flex items-center gap-2 text-sm text-ink-soft">
+                    <span
+                      className={`size-2.5 shrink-0 rounded-full border border-border ${color}`}
+                      aria-hidden
+                    />
+                    <span>{label}</span>
+                    <span className="ml-auto font-semibold tabular-nums text-ink">{value}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </>
+      )}
+    </section>
   );
 }
