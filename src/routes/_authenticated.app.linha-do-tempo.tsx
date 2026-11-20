@@ -18,12 +18,9 @@ import { DocumentHeader } from "@/components/ui/document-header";
 import { ArchiveEmptyState } from "@/components/ui/archive-empty-state";
 import { Button } from "@/components/ui/button";
 import { buildLogicalGraph, validateGraph } from "@/lib/geno/build";
-import {
-  buildTimeline,
-  detectPatterns,
-  type PersonRow,
-  type RelationshipRow,
-} from "@/lib/patterns";
+import { getMappablePersons } from "@/lib/clinical-intel";
+import { detectPatterns, type PersonRow, type RelationshipRow } from "@/lib/patterns";
+import { buildCaseTimeline } from "@/lib/timeline";
 
 export const Route = createFileRoute("/_authenticated/app/linha-do-tempo")({
   component: TimelinesPage,
@@ -62,11 +59,11 @@ function TimelinesPage() {
       }
 
       return (clientRows ?? []).map((c) => {
-        const persons = personsByClient.get(c.id) ?? [];
         const rels = relsByClient.get(c.id) ?? [];
+        const persons = getMappablePersons(personsByClient.get(c.id) ?? [], rels);
         const proband = persons.find((p) => p.is_proband);
         const graph = buildLogicalGraph({ persons, rels, probandId: proband?.id });
-        const milestones = buildTimeline(persons).length;
+        const milestones = buildCaseTimeline(persons, graph).length;
         const patternsCount = detectPatterns(persons, rels).length;
         const consistent = validateGraph(graph).ok;
 

@@ -1,8 +1,7 @@
 import { useUnsaved } from "@/components/unsaved/unsaved-guard";
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, Save, Trash2, CheckCircle2 } from "lucide-react";
-import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,9 +17,9 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
+import { KeyedDebounce } from "@/lib/unsaved";
 import {
   INTAKE_SECTIONS,
-  SECTION_FIELDS,
   calculateCompletion,
   sectionCompletion as calcSectionCompletion,
   INTAKE_UNKNOWN,
@@ -32,114 +31,121 @@ import {
   type TattooEntry,
   type WorkEntry,
 } from "@/lib/intake";
+import {
+  acknowledgeIntakeEdits,
+  captureIntakeEdits,
+  intakePatch,
+  persistIntakeEdits,
+  type IntakeEdits,
+  type IntakeFields,
+} from "./intake-save";
 
 type Props = { clientId: string; professionalId: string };
 
 const AUTOSAVE_MS = 1200;
 
-export function IntakeForm({ clientId, professionalId }: Props) {
+export function IntakeForm(props: Props) {
+  return <CaseIntakeForm key={`${props.professionalId}:${props.clientId}`} {...props} />;
+}
+
+function CaseIntakeForm({ clientId, professionalId }: Props) {
   const qc = useQueryClient();
   const [section, setSection] = useState<IntakeSectionId>("opening");
-  const [draft, setDraft] = useState<Partial<ClientIntake>>({});
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [pending, setPending] = useState<IntakeEdits>({});
+  const revision = useRef(0);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
-
-  const { data: intake, isLoading } = useQuery({
-    queryKey: ["client-intake", clientId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("client_intakes")
-        .select("*")
-        .eq("client_id", clientId)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  useEffect(() => {
-    if (intake) setDraft(intake);
-  }, [intake]);
+  const queryKey = ["client-intake", professionalId, clientId] as const;
+  const readIntake = async () => {
+    const { data, error } = await supabase
+      .from("client_intakes")
+      .select("*")
+      .eq("client_id", clientId)
+      .eq("professional_id", professionalId)
+      .maybeSingle();
+    if (error) throw error;
+    return data;
+  };
+  const intakeQuery = useQuery({ queryKey, queryFn: readIntake });
+  const intake = intakeQuery.data;
+  const draft = useMemo(() => ({ ...intake, ...intakePatch(intake, pending) }), [intake, pending]);
+  const hasPending = Object.keys(pending).length > 0;
 
   const save = useMutation({
-    mutationFn: async (patch: Partial<ClientIntake>) => {
-      const payload = {
-        client_id: clientId,
-        professional_id: professionalId,
-        ...draft,
-        ...patch,
-        last_section_edited: section,
-        completion_percentage: calculateCompletion({ ...draft, ...patch }),
-      };
-      const { data, error } = await supabase
-        .from("client_intakes")
-        .upsert(payload, { onConflict: "client_id" })
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (data) => {
+    mutationFn: (edits: IntakeEdits) =>
+      persistIntakeEdits(
+        {
+          read: readIntake,
+          insert: async (patch) => {
+            const { data, error } = await supabase
+              .from("client_intakes")
+              .insert({ ...patch, client_id: clientId, professional_id: professionalId })
+              .select()
+              .single();
+            if (error?.code === "23505") return null;
+            if (error) throw error;
+            return data;
+          },
+          update: async (patch, previous) => {
+            const { data, error } = await supabase
+              .from("client_intakes")
+              .update(patch)
+              .eq("client_id", clientId)
+              .eq("professional_id", professionalId)
+              .eq("updated_at", previous.updated_at)
+              .select()
+              .maybeSingle();
+            if (error) throw error;
+            return data;
+          },
+        },
+        edits,
+      ),
+    onSuccess: async (data, edits) => {
+      // A read started before the write could otherwise restore the older cache.
+      await qc.cancelQueries({ queryKey, exact: true });
+      qc.setQueryData<ClientIntake | null>(queryKey, (cached) =>
+        cached && cached.updated_at > data.updated_at ? cached : data,
+      );
+      setPending((current) => acknowledgeIntakeEdits(current, edits));
       setSavedAt(new Date());
-      qc.setQueryData(["client-intake", clientId], data);
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao salvar"),
   });
+  const mutate = useRef(save.mutateAsync);
+  mutate.current = save.mutateAsync;
+  const [queue] = useState(
+    () =>
+      new KeyedDebounce<IntakeEdits>(
+        async (_, edits) => void (await mutate.current(edits)),
+        AUTOSAVE_MS,
+      ),
+  );
 
-  const scheduleSave = useCallback(() => {
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => {
-      timer.current = null;
-      save.mutate({});
-    }, AUTOSAVE_MS);
-  }, [save]);
-
-  // Sair da aba/página com autosave pendente passa pelo guard (salvar/ficar/descartar)
   useUnsaved(`intake:${clientId}`, {
     label: "Anamnese",
-    isDirty: () => !!timer.current || save.isPending || save.isError,
-    save: async () => {
-      if (timer.current) clearTimeout(timer.current);
-      timer.current = null;
-      await save.mutateAsync({});
-    },
+    isDirty: () => queue.hasPending(),
+    save: () => queue.flush(),
     discard: () => {
-      if (timer.current) clearTimeout(timer.current);
-      timer.current = null;
+      queue.discard();
+      setPending({});
       save.reset();
-      if (intake) setDraft(intake);
     },
   });
+  useEffect(() => () => queue.discard(), [queue]);
 
-  const update = useCallback(
-    (patch: Partial<ClientIntake>) => {
-      setDraft((prev) => ({ ...prev, ...patch }));
-      scheduleSave();
-    },
-    [scheduleSave],
-  );
+  const update = (patch: Parameters<typeof captureIntakeEdits>[0]) => {
+    const edits = captureIntakeEdits(
+      { ...patch, last_section_edited: section },
+      ++revision.current,
+    );
+    setPending((current) => ({ ...current, ...edits }));
+    queue.push("intake", edits);
+  };
 
-  useEffect(
-    () => () => {
-      if (timer.current) clearTimeout(timer.current);
-    },
-    [],
-  );
+  const completion = calculateCompletion(draft);
+  const { filled, total } = calcSectionCompletion(draft, section);
+  const sectionCompletion = Math.round((filled / total) * 100);
 
-  const completion = useMemo(() => calculateCompletion(draft), [draft]);
-  const sectionCompletion = useMemo(() => {
-    const fields = SECTION_FIELDS[section];
-    const filled = fields.filter((f) => {
-      const v = draft[f];
-      if (v === null || v === undefined) return false;
-      if (typeof v === "string") return v.trim().length > 0;
-      if (Array.isArray(v)) return v.length > 0;
-      return true;
-    }).length;
-    return Math.round((filled / fields.length) * 100);
-  }, [draft, section]);
-
-  if (isLoading) {
+  if (intakeQuery.isLoading) {
     return (
       <div className="flex items-center justify-center py-16 text-muted-foreground">
         <Loader2 className="mr-2 size-4 animate-spin" /> Carregando anamnese…
@@ -147,38 +153,71 @@ export function IntakeForm({ clientId, professionalId }: Props) {
     );
   }
 
+  if (intakeQuery.isError && intake === undefined) {
+    return (
+      <div
+        role="alert"
+        className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card p-4"
+      >
+        <p className="text-clinical-critical">Não foi possível carregar a anamnese.</p>
+        <Button variant="outline" className="min-h-11" onClick={() => void intakeQuery.refetch()}>
+          Tentar de novo
+        </Button>
+      </div>
+    );
+  }
+
   return (
-    <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
+    <div className="grid min-w-0 gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
       {/* Sidebar */}
       <aside className="space-y-4">
         <div className="rounded-lg border border-border bg-card p-4">
-          <p className="text-[14px] font-medium uppercase tracking-[0.28em] text-gold">
-            Preenchimento total
-          </p>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="font-serif text-3xl text-primary">{completion}%</span>
+          <div className="flex flex-wrap items-baseline justify-between gap-x-2 text-sm">
+            <p className="font-semibold text-primary">Preenchimento total</p>
+            <span className="font-semibold tabular-nums text-primary">{completion}%</span>
           </div>
-          <Progress value={completion} className="mt-3 h-1.5" />
-          <p className="mt-3 flex items-center gap-1.5 text-sm text-muted-foreground">
+          <Progress value={completion} aria-label="Preenchimento total" className="mt-3 h-1.5" />
+          <p role="status" className="mt-3 flex items-center gap-1.5 text-sm text-muted-foreground">
             {save.isPending ? (
               <>
-                <Loader2 className="size-3 animate-spin" /> Salvando…
+                <Loader2 aria-hidden className="size-3 animate-spin" /> Salvando…
               </>
+            ) : save.isError ? (
+              <span className="text-clinical-critical">
+                Não foi possível salvar. O texto continua aqui.
+              </span>
+            ) : hasPending ? (
+              <span className="text-clinical-warning">Alterações pendentes</span>
             ) : savedAt ? (
               <>
-                <CheckCircle2 className="size-3 text-emerald-700" /> Salvo às{" "}
-                {savedAt.toLocaleTimeString("pt-BR")}
+                <CheckCircle2 aria-hidden className="size-3 text-clinical-positive" /> Salvo às{" "}
+                {savedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
               </>
             ) : (
               <>Salvamento automático ativo</>
             )}
           </p>
-          <p className="mt-1 text-[13px] text-muted-foreground">
-            Percentual = campos respondidos (inclui "Não se sabe") ÷ todos os campos.
-          </p>
         </div>
 
-        <nav className="rounded-lg border border-border bg-card p-2">
+        <label className="grid min-w-0 gap-1.5 text-sm font-medium text-foreground lg:hidden">
+          Seção da anamnese
+          <select
+            className="min-h-11 w-full min-w-0 rounded-md border border-input bg-card px-3 text-base"
+            value={section}
+            onChange={(event) => setSection(event.target.value as IntakeSectionId)}
+          >
+            {INTAKE_SECTIONS.map(({ id, label }) => (
+              <option key={id} value={id}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <nav
+          aria-label="Seções da anamnese"
+          className="hidden rounded-lg border border-border bg-card p-2 lg:block"
+        >
           {INTAKE_SECTIONS.map((s) => {
             const sc = calcSectionCompletion(draft, s.id);
             return (
@@ -187,7 +226,7 @@ export function IntakeForm({ clientId, professionalId }: Props) {
                 type="button"
                 aria-current={section === s.id ? "step" : undefined}
                 onClick={() => setSection(s.id)}
-                className={`block w-full rounded-md px-3 py-2 text-left text-sm transition ${
+                className={`block min-h-11 w-full rounded-md px-3 py-2 text-left text-sm transition ${
                   section === s.id
                     ? "bg-accent text-accent-foreground font-medium"
                     : "text-foreground hover:bg-accent"
@@ -195,7 +234,7 @@ export function IntakeForm({ clientId, professionalId }: Props) {
               >
                 <span className="flex items-center justify-between gap-2">
                   <span>{s.label}</span>
-                  <span className="text-[13px] tabular-nums text-muted-foreground">
+                  <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
                     {sc.filled}/{sc.total}
                   </span>
                 </span>
@@ -207,31 +246,19 @@ export function IntakeForm({ clientId, professionalId }: Props) {
 
       {/* Content */}
       <div className="min-w-0 space-y-6">
-        <header className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-[14px] font-medium uppercase tracking-[0.28em] text-gold">
-              Anamnese psicogenealógica
-            </p>
-            <h2 className="mt-1 font-serif text-2xl text-primary">
-              {INTAKE_SECTIONS.find((s) => s.id === section)?.label}
-            </h2>
-          </div>
-          <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-            <label className="flex items-center gap-2">
+        <header className="min-w-0 space-y-3">
+          <h2 className="text-balance font-serif text-2xl text-primary">
+            {INTAKE_SECTIONS.find((s) => s.id === section)?.label}
+          </h2>
+          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-3 text-sm sm:flex sm:flex-wrap">
+            <label className="col-span-2 grid min-w-0 gap-1.5 font-medium text-foreground">
               <span>Origem da informação</span>
               <select
-                className="min-h-11 rounded-md border border-input bg-background px-2 text-[14px] text-foreground"
+                className="min-h-11 w-full min-w-0 rounded-md border border-input bg-card px-3 text-base font-normal sm:w-auto sm:text-sm"
                 value={
                   ((draft.section_sources as Record<string, string> | null) ?? {})[section] ?? ""
                 }
-                onChange={(e) => {
-                  const cur = {
-                    ...((draft.section_sources as Record<string, string> | null) ?? {}),
-                  };
-                  if (e.target.value) cur[section] = e.target.value;
-                  else delete cur[section];
-                  update({ section_sources: cur as ClientIntake["section_sources"] });
-                }}
+                onChange={(event) => update({ [`source:${section}`]: event.target.value || null })}
               >
                 <option value="">Não registrada</option>
                 <option value="cliente">Relato do cliente</option>
@@ -241,19 +268,23 @@ export function IntakeForm({ clientId, professionalId }: Props) {
                 <option value="misto">Fontes mistas</option>
               </select>
             </label>
-            <span>{sectionCompletion}% desta seção</span>
+            <span className="self-center text-muted-foreground">
+              {sectionCompletion}% desta seção
+            </span>
             <Button
               size="sm"
               variant="outline"
-              onClick={() => save.mutate({})}
-              disabled={save.isPending}
+              className="min-h-11 sm:ml-auto"
+              onClick={() => void queue.flush().catch(() => {})}
+              disabled={save.isPending || !hasPending}
             >
-              <Save className="size-3.5" /> Salvar agora
+              <Save aria-hidden className="size-4" />{" "}
+              {save.isError ? "Tentar salvar de novo" : "Salvar agora"}
             </Button>
           </div>
         </header>
 
-        <div className="rounded-lg border border-border bg-card p-6">
+        <div className="min-w-0 rounded-lg border border-border bg-card p-4 sm:p-6">
           {section === "opening" && <SectionOpening draft={draft} update={update} />}
           {section === "personal" && <SectionPersonal draft={draft} update={update} />}
           {section === "relationships" && <SectionRelationships draft={draft} update={update} />}
@@ -275,7 +306,7 @@ export function IntakeForm({ clientId, professionalId }: Props) {
 
 type SectionProps = {
   draft: Partial<ClientIntake>;
-  update: (patch: Partial<ClientIntake>) => void;
+  update: (patch: IntakeFields) => void;
 };
 
 function Field({
@@ -304,7 +335,7 @@ function Field({
             type="button"
             onClick={onUnknown}
             aria-pressed={isUnknown}
-            className={`min-h-9 rounded-md px-2 text-[13px] underline-offset-2 hover:underline ${isUnknown ? "font-semibold text-primary" : "text-muted-foreground"}`}
+            className={`min-h-11 rounded-md px-2 text-sm underline-offset-2 hover:underline ${isUnknown ? "font-semibold text-primary" : "text-muted-foreground"}`}
           >
             {isUnknown ? "Marcado: desconhecido" : "Não se sabe"}
           </button>
@@ -729,9 +760,7 @@ function SectionOrigins({ draft, update }: SectionProps) {
       />
 
       <div className="mt-4 rounded-md border border-lilac-soft bg-lilac-soft/40 p-4">
-        <p className="text-[14px] font-medium uppercase tracking-[0.28em] text-gold mb-3">
-          Condições dos pais na gestação
-        </p>
+        <p className="mb-3 text-sm font-semibold text-bronze">Condições dos pais na gestação</p>
         <div className="grid gap-4 md:grid-cols-2">
           <AreaField
             label="Financeiro — mãe"
@@ -1150,9 +1179,7 @@ function SectionAdditional({ draft, update }: SectionProps) {
       </div>
 
       <div className="rounded-md border border-lilac-soft bg-lilac-soft/40 p-4">
-        <p className="text-[14px] font-medium uppercase tracking-[0.28em] text-gold mb-3">
-          Átomo social
-        </p>
+        <p className="mb-3 text-sm font-semibold text-bronze">Átomo social</p>
         <div className="grid gap-4 md:grid-cols-2">
           <AreaField
             label="Objeto marcante (nome e significado)"
@@ -1236,7 +1263,7 @@ function RepeatableList<T extends object>({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-[14px] font-medium uppercase tracking-[0.28em] text-gold">{title}</p>
+        <p className="text-sm font-semibold text-bronze">{title}</p>
         <Button size="sm" variant="outline" onClick={() => onChange([...items, { ...blank }])}>
           <Plus className="size-3.5" /> Adicionar
         </Button>

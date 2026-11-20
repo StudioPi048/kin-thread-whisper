@@ -1,3 +1,4 @@
+import { profileQuery } from "@/lib/profile";
 import { MotionConfig } from "framer-motion";
 import { usePreferences, useApplyPreferences } from "@/components/account/use-preferences";
 import { readVisits } from "@/lib/recent-activity";
@@ -67,6 +68,14 @@ const nav = [
 const mobilePrimary = nav.slice(0, 4);
 const mobileSecondary = nav.slice(4);
 
+function normalizeSearch(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLocaleLowerCase("pt-BR")
+    .trim();
+}
+
 function isNavActive(item: (typeof nav)[number], pathname: string) {
   return "exact" in item && item.exact ? pathname === item.to : pathname.startsWith(item.to);
 }
@@ -99,25 +108,14 @@ function AuthenticatedLayout() {
     setIsMoreOpen(false);
   }, [location.pathname]);
 
-  const { data: profile } = useQuery({
-    queryKey: ["profile", user.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("full_name, email, avatar_url")
-        .eq("id", user.id)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-  });
+  const { data: profile } = useQuery(profileQuery(user.id));
 
   const { data: searchClients = [] } = useQuery({
-    queryKey: ["all-clients-search"],
+    queryKey: ["all-clients-search", user.id],
     queryFn: async () => {
       const { data } = await supabase
         .from("clients")
-        .select("id, full_name, preferred_name, presenting_complaint, tags")
+        .select("id, full_name, preferred_name")
         .eq("status", "active");
       return data ?? [];
     },
@@ -126,19 +124,10 @@ function AuthenticatedLayout() {
 
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return searchClients;
-    const q = searchQuery.toLowerCase().trim();
-    return searchClients.filter((c) => {
-      const haystack = [
-        c.full_name,
-        c.preferred_name,
-        c.presenting_complaint,
-        (c.tags ?? []).join(" "),
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(q);
-    });
+    const query = normalizeSearch(searchQuery);
+    return searchClients.filter((client) =>
+      normalizeSearch(`${client.full_name} ${client.preferred_name ?? ""}`).includes(query),
+    );
   }, [searchClients, searchQuery]);
 
   async function handleSignOut() {
@@ -287,7 +276,7 @@ function AuthenticatedLayout() {
             .filter(
               (n) =>
                 !searchQuery.trim() ||
-                n.label.toLowerCase().includes(searchQuery.toLowerCase().trim()),
+                normalizeSearch(n.label).includes(normalizeSearch(searchQuery)),
             )
             .map((n) => (
               <CommandItem
@@ -322,22 +311,8 @@ function AuthenticatedLayout() {
               <span className="font-serif text-[15px] font-bold text-ink">
                 {c.preferred_name || c.full_name}
               </span>
-              {c.presenting_complaint && (
-                <span className="line-clamp-1 text-[13px] text-warm-gray">
-                  {c.presenting_complaint}
-                </span>
-              )}
-              {c.tags && c.tags.length > 0 && (
-                <span className="mt-1 flex flex-wrap gap-1.5">
-                  {c.tags.slice(0, 4).map((t) => (
-                    <span
-                      key={t}
-                      className="rounded bg-forest-mist px-1.5 py-px text-[9px] font-bold tracking-[0.08em] text-forest-soft uppercase"
-                    >
-                      {t}
-                    </span>
-                  ))}
-                </span>
+              {c.preferred_name && c.preferred_name !== c.full_name && (
+                <span className="text-sm text-muted-foreground">{c.full_name}</span>
               )}
             </CommandItem>
           ))}

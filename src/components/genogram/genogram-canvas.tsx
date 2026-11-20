@@ -61,6 +61,7 @@ import {
   Search,
   PanelRightClose,
   PanelRightOpen,
+  Table2,
 } from "lucide-react";
 import { personSymbol } from "./person-symbol";
 import { useUnsaved } from "@/components/unsaved/unsaved-guard";
@@ -77,8 +78,6 @@ import {
   constrainSnapshotY,
 } from "@/lib/geno/layout-history";
 import { toast } from "sonner";
-import { toPng } from "html-to-image";
-import { jsPDF } from "jspdf";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -460,6 +459,9 @@ interface CanvasProps {
   clientId: string;
   /** Familiar a selecionar e centralizar ao abrir (ex.: vindo da linha do tempo). */
   focusPersonId?: string;
+  resumePersonId?: string;
+  onOpenSpreadsheet?: () => void;
+  onFocusPerson?: (personId: string) => void;
 }
 
 export function GenogramCanvas(props: CanvasProps) {
@@ -651,7 +653,15 @@ function buildRenderGraph(
   return { graph, nodes, edges, warnings: [...extra, ...graph.warnings] };
 }
 
-function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
+function GenogramCanvasInner({
+  clientId,
+  focusPersonId: requestedPersonId,
+  resumePersonId,
+  onOpenSpreadsheet,
+  onFocusPerson,
+}: CanvasProps) {
+  const [initialResumeId] = useState(resumePersonId);
+  const focusPersonId = requestedPersonId ?? initialResumeId;
   const qc = useQueryClient();
 
   const familyQuery = useQuery(clinicalIntelQuery(clientId));
@@ -713,6 +723,9 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
   const [showSocialLinks, setShowSocialLinks] = useState(false);
   const [creatingPerson, setCreatingPerson] = useState(false);
   const [focusedPersonId, setFocusedPersonId] = useState<string | null>(null);
+  useEffect(() => {
+    if (focusedPersonId) onFocusPerson?.(focusedPersonId);
+  }, [focusedPersonId, onFocusPerson]);
   const [editingPerson, setEditingPerson] = useState<PersonRow | null>(null);
   const [quickRelative, setQuickRelative] = useState<QuickRelative | null>(null);
   const [relDialog, setRelDialog] = useState<{
@@ -832,6 +845,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
     }
     setIsExportingPdf(true);
     try {
+      const [{ toPng }, { jsPDF }] = await Promise.all([import("html-to-image"), import("jspdf")]);
       const bounds = getNodesBounds(nodes);
       const padding = 120;
       const imageWidth = Math.ceil(bounds.width) + padding * 2;
@@ -1140,6 +1154,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
         new Date(savedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
       );
       void qc.invalidateQueries({ queryKey: ["genogram", clientId] });
+      void qc.invalidateQueries({ queryKey: ["genograms-list"] });
     },
     onError: (e) =>
       toast.error(
@@ -1375,21 +1390,33 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
 
   const interactiveNodes = useMemo(
     () =>
-      positionedNodes.map((node) =>
-        node.type === "person"
-          ? {
-              ...node,
-              data: {
-                ...node.data,
-                connecting: connection !== null,
-                connectionOrigin: node.id === originId,
-                onChooseConnection: () => activatePerson(node.id),
-              },
-            }
-          : { ...node, connectable: false },
-      ),
+      positionedNodes.map((node): Node => {
+        if (node.type !== "person") return { ...node, connectable: false };
+        const data = node.data as PersonNodeData;
+        const name = data.full_name?.trim() || data.preferred_name?.trim() || "Pessoa sem nome";
+        return {
+          ...node,
+          ariaLabel: [
+            name,
+            data.relationship_to_proband === name ? null : data.relationship_to_proband,
+          ]
+            .filter(Boolean)
+            .join(" · "),
+          data: {
+            ...data,
+            connecting: connection !== null,
+            connectionOrigin: node.id === originId,
+            onChooseConnection: () => activatePerson(node.id),
+          },
+        };
+      }),
     [positionedNodes, connection, originId, activatePerson],
   );
+
+  function addPerson() {
+    setQuickRelative(null);
+    setCreatingPerson(true);
+  }
   const personPanel = focusedPerson ? (
     <>
       <header className="mb-4">
@@ -1618,23 +1645,22 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
           <Button
             size="sm"
             variant={connection ? "forest" : "outline"}
+            className="geno-editor-connect"
+            aria-label="Conectar"
             aria-pressed={!!connection}
             disabled={qualifiedCount < 2}
             onClick={() => (connection ? setConnection(null) : startConnection())}
           >
-            <Link2 className="size-4" aria-hidden /> Conectar
+            <Link2 className="size-4" aria-hidden /> <span>Conectar</span>
           </Button>
           <Button
             size="sm"
             variant="outline"
+            className="hidden md:inline-flex"
             aria-label="Adicionar pessoa"
-            onClick={() => {
-              setQuickRelative(null);
-              setCreatingPerson(true);
-            }}
+            onClick={addPerson}
           >
-            <UserPlus className="size-4" aria-hidden />{" "}
-            <span className="hidden sm:inline">Pessoa</span>
+            <UserPlus className="size-4" aria-hidden /> Pessoa
           </Button>
 
           <Button
@@ -1647,36 +1673,6 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
           >
             <RotateCcw className="size-4" /> Organizar
           </Button>
-
-          <div className="geno-editor-find">
-            <label htmlFor="geno-locate" className="sr-only">
-              Localizar familiar
-            </label>
-            <Search className="size-4 shrink-0" aria-hidden />
-            <select
-              id="geno-locate"
-              value=""
-              onChange={(event) => {
-                const id = event.currentTarget.value;
-                if (!id) return;
-                if (connection) activatePerson(id);
-                else locatePerson(id);
-              }}
-            >
-              <option value="">{connection ? "Escolher familiar…" : "Localizar familiar…"}</option>
-              {persons
-                .filter((person) => mappedIds.has(person.id))
-                .map((person) => (
-                  <option key={person.id} value={person.id}>
-                    {personName(person)}
-                    {person.relationship_to_proband &&
-                    person.relationship_to_proband !== personName(person)
-                      ? " · " + person.relationship_to_proband
-                      : ""}
-                  </option>
-                ))}
-            </select>
-          </div>
 
           <div className="geno-editor-tools">
             <Button
@@ -1701,14 +1697,13 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
             <Button
               size="icon"
               variant="ghost"
-              aria-label={isMobile ? "Abrir ficha" : panelOpen ? "Recolher ficha" : "Mostrar ficha"}
-              title={isMobile ? "Abrir ficha" : panelOpen ? "Recolher ficha" : "Mostrar ficha"}
-              aria-expanded={isMobile ? mobileSheetOpen : panelOpen}
-              onClick={() =>
-                isMobile ? setMobileSheetOpen(true) : setPanelOpen((current) => !current)
-              }
+              className="hidden md:inline-flex"
+              aria-label={panelOpen ? "Recolher ficha" : "Mostrar ficha"}
+              title={panelOpen ? "Recolher ficha" : "Mostrar ficha"}
+              aria-expanded={panelOpen}
+              onClick={() => setPanelOpen((current) => !current)}
             >
-              {panelOpen && !isMobile ? (
+              {panelOpen ? (
                 <PanelRightClose className="size-4" />
               ) : (
                 <PanelRightOpen className="size-4" />
@@ -1727,6 +1722,26 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
               </PopoverTrigger>
               <PopoverContent align="end" className="w-64 p-2">
                 <div className="geno-editor-menu" aria-label="Opções do mapa">
+                  <Button
+                    variant="ghost"
+                    className="md:hidden"
+                    onClick={() => {
+                      setToolsOpen(false);
+                      addPerson();
+                    }}
+                  >
+                    <UserPlus className="size-4" aria-hidden /> Adicionar pessoa
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="md:hidden"
+                    onClick={() => {
+                      setToolsOpen(false);
+                      setMobileSheetOpen(true);
+                    }}
+                  >
+                    <PanelRightOpen className="size-4" aria-hidden /> Abrir ficha
+                  </Button>
                   <Button
                     variant="ghost"
                     onClick={() => {
@@ -1842,6 +1857,53 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
               </PopoverContent>
             </Popover>
           </div>
+
+          <div className="geno-editor-navigation">
+            <div className="geno-editor-find">
+              <label htmlFor="geno-locate" className="sr-only">
+                Localizar familiar
+              </label>
+              <Search className="size-4 shrink-0" aria-hidden />
+              <select
+                id="geno-locate"
+                value=""
+                onChange={(event) => {
+                  const id = event.currentTarget.value;
+                  if (!id) return;
+                  if (connection) activatePerson(id);
+                  else locatePerson(id);
+                }}
+              >
+                <option value="">
+                  {connection ? "Escolher familiar…" : "Localizar familiar…"}
+                </option>
+                {persons
+                  .filter((person) => mappedIds.has(person.id))
+                  .map((person) => {
+                    const name = person.full_name?.trim() || personName(person);
+                    return (
+                      <option key={person.id} value={person.id}>
+                        {name}
+                        {person.relationship_to_proband && person.relationship_to_proband !== name
+                          ? " · " + person.relationship_to_proband
+                          : ""}
+                      </option>
+                    );
+                  })}
+              </select>
+            </div>
+            {onOpenSpreadsheet && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="shrink-0 md:hidden"
+                onClick={onOpenSpreadsheet}
+              >
+                <Table2 className="size-4" aria-hidden /> Planilha
+              </Button>
+            )}
+          </div>
         </div>
 
         {connection && (
@@ -1956,7 +2018,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
               </Button>
             </section>
           ) : familyQuery.isLoading || layoutQuery.isLoading ? (
-            <div className="flex h-full flex-col items-center justify-center gap-3">
+            <div className="flex h-full flex-col items-center justify-center gap-3" role="status">
               <div className="h-11 w-11 animate-spin rounded-full border-2 border-forest border-t-transparent" />
               <p className="text-[14px] text-muted-foreground">Carregando a árvore...</p>
             </div>
@@ -1972,6 +2034,20 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                 )}
                 aria-hidden={view === "3d"}
                 inert={view === "3d"}
+                onKeyDownCapture={(event) => {
+                  const target = event.target;
+                  if (
+                    !(target instanceof HTMLElement) ||
+                    !target.matches(".react-flow__node-person") ||
+                    !target.dataset.id ||
+                    event.repeat
+                  )
+                    return;
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    activatePerson(target.dataset.id);
+                  }
+                }}
               >
                 <ReactFlow
                   nodes={interactiveNodes}
@@ -2007,6 +2083,8 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                     style: { strokeWidth: 2, stroke: "var(--color-forest)" },
                   }}
                   ariaLabelConfig={{
+                    "node.a11yDescription.default":
+                      "Pressione Enter ou Espaço para abrir a ficha. Com a pessoa selecionada, use as setas esquerda e direita para ajustar a posição.",
                     "controls.zoomIn.ariaLabel": "Aproximar mapa",
                     "controls.zoomOut.ariaLabel": "Afastar mapa",
                     "controls.fitView.ariaLabel": "Enquadrar mapa",
@@ -2025,7 +2103,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                     style={{ opacity: 0.25 }}
                   />
                   <Controls
-                    className="overflow-hidden rounded-md"
+                    className="geno-editor-map-controls overflow-hidden rounded-md"
                     showInteractive={false}
                     fitViewOptions={{
                       nodes: nodes.filter((n) => n.type === "person"),

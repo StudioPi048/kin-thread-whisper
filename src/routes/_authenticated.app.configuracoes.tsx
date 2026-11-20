@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AccountPreferences, DataExport } from "@/components/account/account-sections";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { PROFILE_FIELDS, profileQuery } from "@/lib/profile";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -29,17 +30,7 @@ function ConfigPage() {
   const { user } = Route.useRouteContext();
   const queryClient = useQueryClient();
 
-  const { data: profile, isLoading } = useQuery({
-    queryKey: ["profile", user.id],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("full_name, email, formation, city, bio")
-        .eq("id", user.id)
-        .maybeSingle();
-      return data;
-    },
-  });
+  const { data: profile, isLoading, isError, refetch } = useQuery(profileQuery(user.id));
 
   const { data: roles } = useQuery({
     queryKey: ["roles", user.id],
@@ -49,48 +40,50 @@ function ConfigPage() {
     },
   });
 
-  const [fullName, setFullName] = useState("");
-  const [formation, setFormation] = useState("");
-  const [city, setCity] = useState("");
-  const [bio, setBio] = useState("");
-
-  useEffect(() => {
-    if (!profile) return;
-    setFullName(profile.full_name ?? "");
-    setFormation(profile.formation ?? "");
-    setCity(profile.city ?? "");
-    setBio(profile.bio ?? "");
-  }, [profile]);
+  type EditableField = "full_name" | "formation" | "city" | "bio";
+  const [edits, setEdits] = useState<Partial<Record<EditableField, string>>>({});
+  const valueOf = (field: EditableField) => edits[field] ?? profile?.[field] ?? "";
+  const edit = (field: EditableField, value: string) => {
+    setEdits((current) => {
+      const next = { ...current };
+      if (!mutation.isPending && value === (profile?.[field] ?? "")) delete next[field];
+      else next[field] = value;
+      return next;
+    });
+  };
 
   const mutation = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase
+    mutationFn: async (snapshot: typeof edits) => {
+      const patch: Partial<Record<EditableField, string | null>> = {};
+      for (const field of Object.keys(snapshot) as EditableField[]) {
+        patch[field] = snapshot[field]?.trim() || null;
+      }
+      const { data, error } = await supabase
         .from("profiles")
-        .update({
-          full_name: fullName.trim() || null,
-          formation: formation.trim() || null,
-          city: city.trim() || null,
-          bio: bio.trim() || null,
-        })
-        .eq("id", user.id);
-      if (error) throw error;
+        .update(patch)
+        .eq("id", user.id)
+        .select(PROFILE_FIELDS)
+        .maybeSingle();
+      if (error || !data) throw new Error("O servidor não confirmou a alteração.");
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data, snapshot) => {
+      queryClient.setQueryData(profileQuery(user.id).queryKey, data);
+      setEdits((current) => {
+        const next = { ...current };
+        for (const field of Object.keys(snapshot) as EditableField[]) {
+          if (next[field] === snapshot[field]) delete next[field];
+        }
+        return next;
+      });
+      void queryClient.invalidateQueries({ queryKey: profileQuery(user.id).queryKey });
       toast.success("Perfil atualizado.");
-      queryClient.invalidateQueries({ queryKey: ["profile", user.id] });
     },
-    onError: (e) =>
-      toast.error(
-        `${e instanceof Error ? e.message : "Erro ao salvar"}. Seus campos foram mantidos — tente de novo.`,
-      ),
+    onError: () => toast.error("As alterações do perfil continuam nesta página. Tente novamente."),
   });
 
-  const dirty =
-    !isLoading &&
-    (fullName !== (profile?.full_name ?? "") ||
-      formation !== (profile?.formation ?? "") ||
-      city !== (profile?.city ?? "") ||
-      bio !== (profile?.bio ?? ""));
+  const unavailable = isLoading || isError || !profile;
+  const dirty = Object.keys(edits).length > 0;
 
   return (
     <div className="min-h-screen bg-surface-archive">
@@ -104,21 +97,37 @@ function ConfigPage() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            mutation.mutate();
+            if (!unavailable && dirty && !mutation.isPending) mutation.mutate(edits);
           }}
           className="max-w-2xl space-y-6"
         >
           <div className="rounded-[14px] border border-material-border bg-surface-document p-6 shadow-surface sm:p-8">
             <h2 className="m-0 font-serif text-2xl text-ink">Perfil profissional</h2>
 
+            {isError && (
+              <div
+                className="mt-3 flex flex-wrap items-center gap-2 text-sm text-destructive"
+                role="alert"
+              >
+                Não foi possível carregar o perfil.
+                <Button
+                  className="min-h-11"
+                  type="button"
+                  variant="outline"
+                  onClick={() => void refetch()}
+                >
+                  Tentar novamente
+                </Button>
+              </div>
+            )}
             <div className="mt-5 space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="full_name">Nome</Label>
                 <Input
                   id="full_name"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  disabled={isLoading}
+                  value={valueOf("full_name")}
+                  onChange={(e) => edit("full_name", e.target.value)}
+                  disabled={unavailable}
                   placeholder="Seu nome completo"
                 />
               </div>
@@ -132,9 +141,9 @@ function ConfigPage() {
                 <Label htmlFor="formation">Formação</Label>
                 <Input
                   id="formation"
-                  value={formation}
-                  onChange={(e) => setFormation(e.target.value)}
-                  disabled={isLoading}
+                  value={valueOf("formation")}
+                  onChange={(e) => edit("formation", e.target.value)}
+                  disabled={unavailable}
                   placeholder="Ex: Psicóloga clínica, CRP 00/00000"
                 />
               </div>
@@ -143,9 +152,9 @@ function ConfigPage() {
                 <Label htmlFor="city">Cidade</Label>
                 <Input
                   id="city"
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  disabled={isLoading}
+                  value={valueOf("city")}
+                  onChange={(e) => edit("city", e.target.value)}
+                  disabled={unavailable}
                   placeholder="Cidade onde atende"
                 />
               </div>
@@ -154,9 +163,9 @@ function ConfigPage() {
                 <Label htmlFor="bio">Bio</Label>
                 <Textarea
                   id="bio"
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  disabled={isLoading}
+                  value={valueOf("bio")}
+                  onChange={(e) => edit("bio", e.target.value)}
+                  disabled={unavailable}
                   placeholder="Uma breve apresentação profissional"
                   className="min-h-[100px]"
                 />
@@ -165,13 +174,15 @@ function ConfigPage() {
               <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 border-t border-material-border/60 pt-3 text-sm">
                 <span className="text-warm-gray">Papel</span>
                 <span className="text-ink">
-                  {roles?.map((r) => r.role).join(", ") || "professional"}
+                  {roles
+                    ?.map((r) => (r.role === "admin" ? "Administração" : "Profissional"))
+                    .join(", ") || "—"}
                 </span>
               </div>
             </div>
 
             <div className="mt-6 flex justify-end">
-              <Button type="submit" disabled={!dirty || mutation.isPending}>
+              <Button type="submit" disabled={unavailable || !dirty || mutation.isPending}>
                 {mutation.isPending ? "Salvando…" : "Salvar alterações"}
               </Button>
             </div>

@@ -6,18 +6,36 @@
  * idade de morte, profissão, rupturas e síndrome de aniversário.
  */
 import type { Database } from "@/integrations/supabase/types";
+import { civilAge, civilDate } from "./civil-date";
 
 export type PersonRow = Database["public"]["Tables"]["genogram_persons"]["Row"];
 export type RelationshipRow = Database["public"]["Tables"]["genogram_relationships"]["Row"];
 
 export type LifeEvent = {
-  date: string; // YYYY-MM-DD
+  date: string; // ISO completo, parcial ou vazio
   description: string;
   type?: string;
   [key: string]: string | undefined;
 };
 
 export type PatternSeverity = "info" | "attention" | "critical";
+
+export type EvidenceFact = {
+  source: "genogram_persons" | "genogram_relationships";
+  recordId: string;
+  field:
+    | "birth_date"
+    | "death_date"
+    | "cause_of_death"
+    | "health_conditions"
+    | "occupation"
+    | "qualifier"
+    | "start_date"
+    | "end_date";
+  value: string;
+  precision?: "day" | "month" | "year" | "unknown";
+  personIds?: string[];
+};
 
 export interface DetectedPattern {
   id: string;
@@ -32,25 +50,9 @@ export interface DetectedPattern {
   description: string;
   severity: PatternSeverity;
   personIds: string[];
+  facts: EvidenceFact[];
+  legacyIds?: string[];
   details?: Record<string, unknown>;
-}
-
-export interface TimelineItem {
-  date: string;
-  year: number;
-  personId: string;
-  personName: string;
-  kind: "birth" | "death" | "event";
-  label: string;
-  meta?: string;
-}
-
-/* ---------- helpers ---------- */
-
-function yearOf(d?: string | null): number | null {
-  if (!d) return null;
-  const y = Number(d.slice(0, 4));
-  return Number.isFinite(y) ? y : null;
 }
 
 function normalize(s: string): string {
@@ -61,14 +63,12 @@ function normalize(s: string): string {
     .trim();
 }
 
-function ageAt(birth: string, ref: string): number | null {
-  const b = new Date(birth);
-  const r = new Date(ref);
-  if (Number.isNaN(b.getTime()) || Number.isNaN(r.getTime())) return null;
-  let age = r.getFullYear() - b.getFullYear();
-  const m = r.getMonth() - b.getMonth();
-  if (m < 0 || (m === 0 && r.getDate() < b.getDate())) age--;
-  return age;
+function personFact(personId: string, field: EvidenceFact["field"], value: string): EvidenceFact {
+  return { source: "genogram_persons", recordId: personId, field, value: value.trim() };
+}
+
+function dateFact(fact: EvidenceFact): EvidenceFact {
+  return { ...fact, precision: civilDate(fact.value)?.precision ?? "unknown" };
 }
 
 function personLabel(p: PersonRow): string {
@@ -83,61 +83,17 @@ export function personLifeEvents(p: PersonRow): LifeEvent[] {
     if (
       e &&
       typeof e === "object" &&
-      typeof (e as { date?: unknown }).date === "string" &&
       typeof (e as { description?: unknown }).description === "string"
     ) {
-      out.push(e as LifeEvent);
+      const event = e as LifeEvent;
+      out.push({
+        ...event,
+        date: typeof event.date === "string" ? event.date : "",
+        type: typeof event.type === "string" ? event.type : undefined,
+      });
     }
   }
   return out;
-}
-
-/* ---------- Timeline ---------- */
-
-export function buildTimeline(persons: PersonRow[]): TimelineItem[] {
-  const items: TimelineItem[] = [];
-  for (const p of persons) {
-    const name = personLabel(p);
-    if (p.birth_date) {
-      items.push({
-        date: p.birth_date,
-        year: yearOf(p.birth_date) ?? 0,
-        personId: p.id,
-        personName: name,
-        kind: "birth",
-        label: "Nascimento",
-      });
-    }
-    if (p.death_date) {
-      const age = p.birth_date && p.death_date ? ageAt(p.birth_date, p.death_date) : null;
-      items.push({
-        date: p.death_date,
-        year: yearOf(p.death_date) ?? 0,
-        personId: p.id,
-        personName: name,
-        kind: "death",
-        label: "Falecimento",
-        meta: [
-          age !== null ? `${age} anos` : null,
-          p.cause_of_death ? `causa: ${p.cause_of_death}` : null,
-        ]
-          .filter(Boolean)
-          .join(" · "),
-      });
-    }
-    for (const ev of personLifeEvents(p)) {
-      items.push({
-        date: ev.date,
-        year: yearOf(ev.date) ?? 0,
-        personId: p.id,
-        personName: name,
-        kind: "event",
-        label: ev.type || "Evento",
-        meta: ev.description,
-      });
-    }
-  }
-  return items.sort((a, b) => a.date.localeCompare(b.date));
 }
 
 /* ---------- Detectores ---------- */
@@ -147,13 +103,26 @@ export function detectPatterns(
   relationships: RelationshipRow[],
 ): DetectedPattern[] {
   const patterns: DetectedPattern[] = [];
+  const orderedPersons = [...persons].sort((a, b) => a.id.localeCompare(b.id, "en"));
 
   // 1) Mesma idade de falecimento (± 2 anos)
-  const deathAges = persons
-    .map((p) =>
-      p.birth_date && p.death_date ? { p, age: ageAt(p.birth_date, p.death_date) } : null,
-    )
-    .filter((x): x is { p: PersonRow; age: number } => !!x && x.age !== null);
+  const deathAges = orderedPersons
+    .flatMap((p) => {
+      if (!p.birth_date || !p.death_date) return [];
+      const age = civilAge(p.birth_date, p.death_date);
+      if (age === null) return [];
+      return [
+        {
+          p,
+          age,
+          facts: [
+            dateFact(personFact(p.id, "birth_date", p.birth_date)),
+            dateFact(personFact(p.id, "death_date", p.death_date)),
+          ],
+        },
+      ];
+    })
+    .sort((a, b) => a.age - b.age);
 
   const usedIds = new Set<string>();
   for (const seed of deathAges) {
@@ -171,6 +140,10 @@ export function detectPatterns(
         )} e ${Math.max(...ages)} anos. Investigar síndrome de aniversário e lealdades invisíveis.`,
         severity: "attention",
         personIds: cluster.map((c) => c.p.id),
+        facts: cluster.flatMap((c) => c.facts),
+        legacyIds: [
+          ...new Set(ages.filter((age) => age !== seed.age).map((age) => `death_age_${age}`)),
+        ],
         details: { ages },
       });
     }
@@ -179,7 +152,7 @@ export function detectPatterns(
   // 2) Mesma causa de morte
   patterns.push(
     ...groupBy(
-      persons.filter((p) => p.cause_of_death),
+      orderedPersons.filter((p) => p.cause_of_death?.trim()),
       (p) => normalize(p.cause_of_death!),
     ).flatMap(([key, group]) =>
       group.length >= 2
@@ -191,6 +164,10 @@ export function detectPatterns(
               description: `${group.length} membros faleceram com a mesma causa. Padrão somático transgeracional a explorar.`,
               severity: "critical" as PatternSeverity,
               personIds: group.map((p) => p.id),
+              facts: group.flatMap((p) => [
+                personFact(p.id, "cause_of_death", p.cause_of_death!),
+                ...(p.death_date ? [dateFact(personFact(p.id, "death_date", p.death_date))] : []),
+              ]),
             },
           ]
         : [],
@@ -198,13 +175,17 @@ export function detectPatterns(
   );
 
   // 3) Condição de saúde compartilhada
-  const conditionMap = new Map<string, { label: string; ids: Set<string> }>();
-  for (const p of persons) {
+  const conditionMap = new Map<
+    string,
+    { label: string; ids: Set<string>; facts: EvidenceFact[] }
+  >();
+  for (const p of orderedPersons) {
     for (const c of p.health_conditions ?? []) {
       const key = normalize(c);
       if (!key) continue;
-      const entry = conditionMap.get(key) ?? { label: c, ids: new Set() };
+      const entry = conditionMap.get(key) ?? { label: c.trim(), ids: new Set(), facts: [] };
       entry.ids.add(p.id);
+      entry.facts.push(personFact(p.id, "health_conditions", c));
       conditionMap.set(key, entry);
     }
   }
@@ -217,6 +198,7 @@ export function detectPatterns(
         description: `${entry.ids.size} membros compartilham "${entry.label}". Considerar herança sistêmica além da genética.`,
         severity: "attention",
         personIds: [...entry.ids],
+        facts: entry.facts,
       });
     }
   }
@@ -224,7 +206,7 @@ export function detectPatterns(
   // 4) Mesma profissão
   patterns.push(
     ...groupBy(
-      persons.filter((p) => p.occupation),
+      orderedPersons.filter((p) => p.occupation?.trim()),
       (p) => normalize(p.occupation!),
     ).flatMap(([key, group]) =>
       group.length >= 2
@@ -236,6 +218,7 @@ export function detectPatterns(
               description: `${group.length} pessoas exercem/exerceram ${group[0].occupation}. Missão ou lealdade familiar possível.`,
               severity: "info" as PatternSeverity,
               personIds: group.map((p) => p.id),
+              facts: group.map((p) => personFact(p.id, "occupation", p.occupation!)),
             },
           ]
         : [],
@@ -243,10 +226,12 @@ export function detectPatterns(
   );
 
   // 5) Rupturas emocionais concentradas
-  const ruptures = relationships.filter(
-    (r) =>
-      r.relationship_type === "emotional" && ["rupture", "conflict"].includes(r.qualifier ?? ""),
-  );
+  const ruptures = relationships
+    .filter(
+      (r) =>
+        r.relationship_type === "emotional" && ["rupture", "conflict"].includes(r.qualifier ?? ""),
+    )
+    .sort((a, b) => a.id.localeCompare(b.id, "en"));
   if (ruptures.length >= 2) {
     const involved = new Set<string>();
     ruptures.forEach((r) => {
@@ -261,69 +246,81 @@ export function detectPatterns(
         "Concentração de rupturas / conflitos ativos. Mapear exclusões sistêmicas e restaurações necessárias.",
       severity: "critical",
       personIds: [...involved],
+      facts: ruptures.flatMap((r) => {
+        const linkFact = {
+          source: "genogram_relationships",
+          recordId: r.id,
+          personIds: [r.from_person_id, r.to_person_id],
+        } satisfies Pick<EvidenceFact, "source" | "recordId" | "personIds">;
+        return [
+          { ...linkFact, field: "qualifier", value: r.qualifier! },
+          ...(r.start_date
+            ? [dateFact({ ...linkFact, field: "start_date", value: r.start_date })]
+            : []),
+          ...(r.end_date ? [dateFact({ ...linkFact, field: "end_date", value: r.end_date })] : []),
+        ];
+      }),
     });
   }
 
-  // 6) Síndrome de aniversário — evento em pessoa X que coincide (mesmo dia/mês)
-  // com nascimento ou morte de outra pessoa do sistema.
-  const anniversaryHits: {
-    a: PersonRow;
-    b: PersonRow;
-    aKind: string;
-    bKind: string;
-    date: string;
-  }[] = [];
-  const stamps: {
-    person: PersonRow;
-    date: string;
-    md: string;
-    kind: "birth" | "death";
-  }[] = [];
-  for (const p of persons) {
-    if (p.birth_date)
-      stamps.push({
-        person: p,
-        date: p.birth_date,
-        md: p.birth_date.slice(5, 10),
-        kind: "birth",
-      });
-    if (p.death_date)
-      stamps.push({
-        person: p,
-        date: p.death_date,
-        md: p.death_date.slice(5, 10),
-        kind: "death",
-      });
-  }
-  for (let i = 0; i < stamps.length; i++) {
-    for (let j = i + 1; j < stamps.length; j++) {
-      const a = stamps[i];
-      const b = stamps[j];
-      if (a.person.id === b.person.id) continue;
-      if (!a.md || a.md !== b.md) continue;
-      if (a.date === b.date) continue;
-      anniversaryHits.push({
-        a: a.person,
-        b: b.person,
-        aKind: a.kind,
-        bKind: b.kind,
-        date: a.md,
-      });
+  // 6) Coincidências entre datas civis de nascimento/falecimento com dia e mês registrados.
+  const stamps = orderedPersons.flatMap((person) =>
+    (["birth_date", "death_date"] as const).flatMap((field) => {
+      const date = civilDate(person[field]);
+      if (date?.precision !== "day") return [];
+      return [
+        {
+          person,
+          date: date.value,
+          dayMonth: date.value.slice(5),
+          field,
+          fact: dateFact(personFact(person.id, field, date.value)),
+        },
+      ];
+    }),
+  );
+  const anniversaryHits = new Map<
+    string,
+    {
+      aId: string;
+      bId: string;
+      dayMonth: string;
+      facts: EvidenceFact[];
+      comparisons: string[];
+    }
+  >();
+  for (const [, dates] of groupBy(stamps, (stamp) => stamp.dayMonth)) {
+    for (const [i, a] of dates.entries()) {
+      for (const b of dates.slice(i + 1)) {
+        if (a.person.id === b.person.id || a.date === b.date) continue;
+        const id = `anniv_${a.person.id}_${b.person.id}_${a.dayMonth}`;
+        const group = anniversaryHits.get(id) ?? {
+          aId: a.person.id,
+          bId: b.person.id,
+          dayMonth: a.dayMonth,
+          facts: [],
+          comparisons: [],
+        };
+        group.facts.push(a.fact, b.fact);
+        group.comparisons.push(
+          `${labelKind(a.field)} de ${personLabel(a.person)} (${formatStamp(a.date)}) coincide com ${labelKind(b.field)} de ${personLabel(b.person)} (${formatStamp(b.date)}).`,
+        );
+        anniversaryHits.set(id, group);
+      }
     }
   }
-  for (const hit of anniversaryHits) {
+  for (const [id, hit] of anniversaryHits) {
     patterns.push({
-      id: `anniv_${hit.a.id}_${hit.b.id}_${hit.date}`,
+      id,
       type: "anniversary_syndrome",
-      title: `Data ${formatMd(hit.date)} se repete no sistema`,
-      description: `${labelKind(hit.aKind)} de ${personLabel(hit.a)} coincide com ${labelKind(
-        hit.bKind,
-      )} de ${personLabel(hit.b)}. Possível síndrome de aniversário.`,
+      title: `Data ${formatMd(hit.dayMonth)} se repete no sistema`,
+      description: `${hit.comparisons.join(" ")} Possível síndrome de aniversário.`,
       severity: "attention",
-      personIds: [hit.a.id, hit.b.id],
+      personIds: [hit.aId, hit.bId],
+      facts: [...new Set(hit.facts)],
+      legacyIds: [`anniv_${hit.bId}_${hit.aId}_${hit.dayMonth}`],
     });
   }
-
   return patterns;
 }
 
@@ -338,8 +335,12 @@ function groupBy<T, K extends string>(arr: T[], keyFn: (t: T) => K): [K, T[]][] 
   return [...map.entries()];
 }
 
-function labelKind(k: string): string {
-  return k === "birth" ? "nascimento" : k === "death" ? "morte" : "evento";
+function labelKind(k: "birth_date" | "death_date"): string {
+  return k === "birth_date" ? "nascimento" : "falecimento";
+}
+
+function formatStamp(date: string): string {
+  return date.split("-").reverse().join("/");
 }
 
 function formatMd(md: string): string {

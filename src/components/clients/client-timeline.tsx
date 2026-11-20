@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { CalendarClock, MapPin, RefreshCw } from "lucide-react";
+import { CalendarClock, ListFilter, MapPin, RefreshCw } from "lucide-react";
 
-import { supabase } from "@/integrations/supabase/client";
+import { clinicalIntelQuery, getMappablePersons } from "@/lib/clinical-intel";
+import { buildLogicalGraph } from "@/lib/geno/build";
 import { Button } from "@/components/ui/button";
 import {
   buildCaseTimeline,
@@ -36,29 +37,24 @@ const KIND_LABEL: Record<TimelineKind, string> = {
 const KINDS: TimelineKind[] = ["birth", "death", "event"];
 
 export function ClientTimeline({ clientId }: Props) {
-  const q = useQuery({
-    queryKey: ["genogram", clientId, "timeline"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("genogram_persons")
-        .select("*")
-        .eq("client_id", clientId);
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
+  const q = useQuery(clinicalIntelQuery(clientId));
 
   const [filter, setFilter] = useState<TimelineFilter>({});
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [selection, setSelection] = useState<string | null>(null);
   const all = useMemo(() => {
-    const persons = q.data ?? [];
+    if (!q.data) return [];
+    const rels = q.data.relationships;
+    const persons = getMappablePersons(q.data.persons, rels);
+    const probandId = persons.find((person) => person.is_proband)?.id;
+    const graph = buildLogicalGraph({ persons, rels, probandId });
     const byId = new Map(persons.map((person) => [person.id, person]));
     const counts = new Map<string, number>();
     for (const person of persons) {
-      const name = person.preferred_name || person.full_name;
+      const name = person.full_name.trim() || person.preferred_name?.trim() || "Pessoa sem nome";
       counts.set(name, (counts.get(name) ?? 0) + 1);
     }
-    return buildCaseTimeline(persons).map((item) => {
+    return buildCaseTimeline(persons, graph).map((item) => {
       const person = byId.get(item.personId);
       if (!person || (counts.get(item.personName) ?? 0) < 2) return item;
       return {
@@ -140,7 +136,28 @@ export function ClientTimeline({ clientId }: Props) {
 
   return (
     <div className="case-timeline">
-      <div className="case-timeline-filters" role="group" aria-label="Filtros da linha do tempo">
+      <div className="mb-3 flex items-center justify-between gap-2 sm:hidden">
+        <Button
+          type="button"
+          variant="outline"
+          className="min-h-11"
+          aria-controls="timeline-filters"
+          aria-expanded={filtersOpen}
+          onClick={() => setFiltersOpen((open) => !open)}
+        >
+          <ListFilter size={16} aria-hidden /> {hasFilter ? "Filtros ativos" : "Filtros"}
+        </Button>
+        <p className="text-[14px] text-muted-foreground" role="status">
+          {items.length} de {all.length} registros
+        </p>
+      </div>
+      <div
+        id="timeline-filters"
+        className="case-timeline-filters"
+        data-open={filtersOpen}
+        role="group"
+        aria-label="Filtros da linha do tempo"
+      >
         <div>
           <label htmlFor="tl-person">Familiar</label>
           <select
@@ -206,7 +223,7 @@ export function ClientTimeline({ clientId }: Props) {
             Limpar filtros
           </Button>
         )}
-        <p className="case-timeline-count" role="status">
+        <p className="case-timeline-count hidden sm:block" role="status">
           {items.length} de {all.length} registros
         </p>
       </div>
@@ -231,15 +248,14 @@ export function ClientTimeline({ clientId }: Props) {
             {undated.length > 0 && (
               <div className="case-timeline-undated">
                 <h4>
-                  Sem data utilizável <span>{undated.length}</span>
+                  Fora do gráfico por falta de data ou ano <span>{undated.length}</span>
                 </h4>
                 <TimelineList
                   items={undated}
                   selected={selected}
                   clientId={clientId}
                   onSelect={setSelection}
-                  label="Registros sem data utilizável"
-                  undated
+                  label="Registros sem data ou ano para o gráfico"
                 />
               </div>
             )}
@@ -267,14 +283,12 @@ function TimelineList({
   clientId,
   onSelect,
   label,
-  undated = false,
 }: {
   items: CaseTimelineItem[];
   selected: CaseTimelineItem;
   clientId: string;
   onSelect: (key: string) => void;
   label: string;
-  undated?: boolean;
 }) {
   return (
     <ol className="case-timeline-entries" aria-label={label}>
@@ -287,7 +301,7 @@ function TimelineList({
             onClick={() => onSelect(item.key)}
           >
             <span className="case-timeline-row-date">
-              {undated ? "Sem data" : formatByPrecision(item.rawDate, item.precision)}
+              {formatByPrecision(item.rawDate, item.precision)}
             </span>
             <span className="case-timeline-row-entry">
               <TimelineMark kind={item.kind} />
@@ -420,10 +434,10 @@ function TimelineOverview({
           )}
         </figure>
       ) : (
-        <p className="case-timeline-graph-empty">Os registros sem data ficam na lista.</p>
+        <p className="case-timeline-graph-empty">Os registros sem data ou ano ficam na lista.</p>
       )}
       <div className="case-timeline-overview-detail">
-        <TimelineEventDetail item={selected} clientId={clientId} located={!!active} />
+        <TimelineEventDetail item={selected} clientId={clientId} />
       </div>
     </section>
   );
@@ -433,12 +447,10 @@ function TimelineEventDetail({
   item,
   clientId,
   inline = false,
-  located = true,
 }: {
   item: CaseTimelineItem;
   clientId: string;
   inline?: boolean;
-  located?: boolean;
 }) {
   return (
     <div className="case-timeline-detail">
@@ -448,7 +460,7 @@ function TimelineEventDetail({
             <strong>
               {item.label} · {item.personName}
             </strong>
-            <span>{formatByPrecision(item.rawDate, located ? item.precision : "unknown")}</span>
+            <span>{formatByPrecision(item.rawDate, item.precision)}</span>
           </div>
           {item.relationship && <span>{item.relationship}</span>}
         </div>

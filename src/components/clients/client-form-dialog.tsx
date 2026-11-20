@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import { invalidateCase } from "@/lib/clinical-intel";
 import {
   clientFormSchema,
   genderOptions,
@@ -39,6 +40,7 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   professionalId: string;
   editing?: ClientRow | null;
+  onCreated?: (clientId: string) => void;
 }
 
 const emptyValues: ClientFormValues = {
@@ -56,7 +58,13 @@ const emptyValues: ClientFormValues = {
   consent_notes: "",
 };
 
-export function ClientFormDialog({ open, onOpenChange, professionalId, editing }: Props) {
+export function ClientFormDialog({
+  open,
+  onOpenChange,
+  professionalId,
+  onCreated,
+  editing,
+}: Props) {
   const qc = useQueryClient();
   const [values, setValues] = useState<ClientFormValues>(emptyValues);
 
@@ -116,11 +124,17 @@ export function ClientFormDialog({ open, onOpenChange, professionalId, editing }
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["clients"] });
-      qc.invalidateQueries({ queryKey: ["client"] });
+    onSuccess: async (saved) => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["clients"] }),
+        qc.invalidateQueries({ queryKey: ["client", saved.id] }),
+        qc.invalidateQueries({ queryKey: ["mesa-clients"] }),
+        qc.invalidateQueries({ queryKey: ["case-strip-name", saved.id] }),
+        invalidateCase(qc, saved.id),
+      ]);
       toast.success(editing ? "Dossiê atualizado." : "Cliente cadastrado.");
       onOpenChange(false);
+      if (!editing) onCreated?.(saved.id);
     },
     onError: (err) => {
       toast.error(err instanceof Error ? err.message : "Erro ao salvar cliente");
@@ -259,7 +273,10 @@ export function ClientFormDialog({ open, onOpenChange, professionalId, editing }
           </section>
 
           <section className="rounded-lg border border-border bg-parchment/40 p-4">
-            <SectionLabel>Consentimento (LGPD)</SectionLabel>
+            <SectionLabel>Consentimento geral</SectionLabel>
+            <p className="text-sm text-muted-foreground">
+              As autorizações de gravação e processamento ficam na aba Sessões.
+            </p>
             <label className="mt-3 flex items-start gap-3">
               <Checkbox
                 id="consent_given"

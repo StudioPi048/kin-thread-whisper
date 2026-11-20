@@ -1,4 +1,5 @@
 import type { CaseTimelineItem, DatePrecision } from "./timeline";
+import { civilDate } from "./civil-date";
 
 const shortMonths = ["jan", "abr", "jul", "out"];
 
@@ -9,11 +10,12 @@ function dayStamp(year: number, month: number, date: number) {
 }
 
 function dateRange(value: string, precision: DatePrecision) {
-  const [year, month = 1, day = 1] = value.trim().split("-").map(Number);
-  if (year < 1 || month < 1 || month > 12 || day < 1 || day > 31) return null;
+  const date = civilDate(value);
+  if (!date || date.precision !== precision) return null;
+  const { year } = date;
+  const month = date.month ?? 1;
+  const day = date.day ?? 1;
   const begin = dayStamp(year, month - 1, day);
-  const date = new Date(begin);
-  if (date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null;
   const end =
     precision === "year"
       ? dayStamp(year + 1, 0, 1)
@@ -25,7 +27,7 @@ function dateRange(value: string, precision: DatePrecision) {
 
 export function buildTimelineScale(items: CaseTimelineItem[]) {
   const dated = items.flatMap((item) => {
-    if (!item.rawDate || item.precision === "unknown") return [];
+    if (!item.rawDate || item.year === null) return [];
     const range = dateRange(item.rawDate, item.precision);
     return range ? [{ item, ...range }] : [];
   });

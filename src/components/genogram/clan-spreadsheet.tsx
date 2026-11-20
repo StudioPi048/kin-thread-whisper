@@ -5,6 +5,7 @@ import {
   type ClinicalIntelData,
 } from "@/lib/clinical-intel";
 import { useUnsaved } from "@/components/unsaved/unsaved-guard";
+import { civilDate } from "@/lib/civil-date";
 import { KeyedDebounce } from "@/lib/unsaved";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import * as React from "react";
@@ -19,6 +20,7 @@ import {
   Upload,
   Sparkles,
   MapPin,
+  TreePine,
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
@@ -66,7 +68,7 @@ import {
 } from "@/components/ui/dialog";
 
 type Person = Tables<"genogram_persons">;
-type Props = { clientId: string };
+type Props = { clientId: string; onOpenGenogram?: () => void };
 
 const RELATIONSHIP_TEMPLATE = [
   "Irmã(o)",
@@ -135,7 +137,7 @@ function parentSummary(graph: LogicalGraph, personId: string) {
   return { parents, names };
 }
 
-export function ClanSpreadsheet({ clientId }: Props) {
+export function ClanSpreadsheet({ clientId, onOpenGenogram }: Props) {
   const qc = useQueryClient();
   const [drafts, setDrafts] = useState<Record<string, Partial<Person>>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -344,6 +346,23 @@ export function ClanSpreadsheet({ clientId }: Props) {
     queueRef.current!.push(id, patch);
   };
 
+  const saveVitalDate = (person: Person, field: "birth_date" | "death_date", value: string) => {
+    if (value && civilDate(value)?.precision !== "day") {
+      toast.error("Informe uma data completa válida.");
+      return;
+    }
+    const birth = field === "birth_date" ? value : person.birth_date;
+    const death = field === "death_date" ? value : person.death_date;
+    if (birth && death && death < birth) {
+      toast.error("O falecimento deve ser na data do nascimento ou depois.");
+      return;
+    }
+    scheduleSave(person.id, {
+      [field]: value || null,
+      ...(field === "death_date" && value ? { is_deceased: true } : {}),
+    });
+  };
+
   useUnsaved(`clan:${clientId}`, {
     label: "Planilha do clã",
     isDirty: () => !!queueRef.current?.hasPending(),
@@ -521,7 +540,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
         _rows: records as never,
         _replace: importReplace,
       });
-      if (error) throw error;
+      if (error) throw new Error(error.message);
       return data as number;
     },
     onSuccess: async (n) => {
@@ -648,6 +667,11 @@ export function ClanSpreadsheet({ clientId }: Props) {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {onOpenGenogram && (
+            <Button variant="outline" className="min-h-11 md:hidden" onClick={onOpenGenogram}>
+              <TreePine className="size-4" aria-hidden /> Ver genossociograma
+            </Button>
+          )}
           <input
             type="file"
             accept=".csv, .xlsx"
@@ -739,7 +763,7 @@ export function ClanSpreadsheet({ clientId }: Props) {
               Colunas de datas
             </label>
             <span className="text-[14px] text-muted-foreground" role="status">
-              {visibleRows.length} de {rows.length}
+              {visibleRows.length} de {rows.length} linhas · {graph.persons.size} no mapa
             </span>
             {pendingCount > 0 && (
               <Button
@@ -815,7 +839,10 @@ export function ClanSpreadsheet({ clientId }: Props) {
                           <CellInput
                             id={`clan-person-${r.id}`}
                             value={r.full_name ?? ""}
-                            onChange={(v) => scheduleSave(r.id, { full_name: v })}
+                            onChange={
+                              r.is_proband ? undefined : (v) => scheduleSave(r.id, { full_name: v })
+                            }
+                            title={r.is_proband ? "Edite o nome no cadastro do dossiê." : undefined}
                             ariaLabel={`Nome da linha ${i + 1}`}
                           />
                         </td>
@@ -881,7 +908,16 @@ export function ClanSpreadsheet({ clientId }: Props) {
                                 type="date"
                                 value={r.birth_date ?? ""}
                                 ariaLabel={`Nascimento da linha ${i + 1}`}
-                                onChange={(v) => scheduleSave(r.id, { birth_date: v || null })}
+                                onChange={
+                                  r.is_proband
+                                    ? undefined
+                                    : (v) => saveVitalDate(r, "birth_date", v)
+                                }
+                                title={
+                                  r.is_proband
+                                    ? "Edite o nascimento no cadastro do dossiê."
+                                    : undefined
+                                }
                               />
                             </Td>
                             <Td>
@@ -889,10 +925,13 @@ export function ClanSpreadsheet({ clientId }: Props) {
                                 type="date"
                                 value={r.death_date ?? ""}
                                 ariaLabel={`Falecimento da linha ${i + 1}`}
-                                onChange={(v) =>
-                                  scheduleSave(r.id, { death_date: v || null, is_deceased: !!v })
-                                }
+                                onChange={(v) => saveVitalDate(r, "death_date", v)}
                               />
+                              {r.is_deceased && !r.death_date && (
+                                <p className="px-2 pb-1 text-[14px] text-muted-foreground">
+                                  Falecimento sem data
+                                </p>
+                              )}
                             </Td>
                           </>
                         )}
@@ -990,6 +1029,18 @@ export function ClanSpreadsheet({ clientId }: Props) {
                                   }
                                 />
                               </DetailField>
+                              <label className="flex min-h-11 items-center gap-2 self-end text-[14px] font-medium">
+                                <input
+                                  type="checkbox"
+                                  className="size-4"
+                                  checked={r.is_deceased || Boolean(r.death_date)}
+                                  disabled={Boolean(r.death_date)}
+                                  onChange={(e) =>
+                                    scheduleSave(r.id, { is_deceased: e.target.checked })
+                                  }
+                                />
+                                Falecimento registrado
+                              </label>
                               <DetailField label="Observações" w="min-w-[260px] flex-1">
                                 <CellInput
                                   value={r.notes ?? ""}
@@ -1345,8 +1396,9 @@ function DetailField({
 function CellInput(props: {
   id?: string;
   ariaLabel?: string;
+  title?: string;
   value: string;
-  onChange: (v: string) => void;
+  onChange?: (v: string) => void;
   type?: string;
   placeholder?: string;
   list?: string;
@@ -1358,7 +1410,11 @@ function CellInput(props: {
       aria-label={props.ariaLabel}
       type={props.type ?? "text"}
       value={props.value}
-      onChange={(e) => props.onChange(e.target.value)}
+      title={props.title}
+      readOnly={!props.onChange}
+      onChange={(e) => {
+        if (!e.target.validity.badInput) props.onChange?.(e.target.value);
+      }}
       placeholder={props.placeholder}
       list={props.list}
       className={`w-full h-11 rounded-sm border-0 bg-transparent px-2 text-[16px] font-medium text-foreground outline-none ring-1 ring-transparent transition-all focus:bg-forest-soft/30 focus:ring-forest placeholder:text-muted-foreground/40 ${props.className ?? ""}`}

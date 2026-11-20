@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Brain, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,9 +7,18 @@ import { Button } from "@/components/ui/button";
 import { DocumentHeader } from "@/components/ui/document-header";
 import { evidenceForCase } from "@/lib/evidence";
 import { clinicalIntelQuery } from "@/lib/clinical-intel";
-import { HypothesisReview } from "@/components/clients/hypothesis-review-panel";
+import { readVisits } from "@/lib/recent-activity";
+import {
+  HypothesisReview,
+  HypothesisReviewArchive,
+} from "@/components/clients/hypothesis-review-panel";
 
 export const Route = createFileRoute("/_authenticated/app/ia-clinica")({
+  validateSearch: (search: Record<string, unknown>): { caseId?: string } =>
+    typeof search.caseId === "string" &&
+    /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(search.caseId)
+      ? { caseId: search.caseId }
+      : {},
   head: () => ({
     meta: [
       { title: "Evidências e hipóteses — GENEALIZ" },
@@ -30,7 +39,13 @@ export const Route = createFileRoute("/_authenticated/app/ia-clinica")({
 });
 
 function IaClinicaPage() {
-  const [clientId, setClientId] = useState<string>("");
+  const { caseId } = Route.useSearch();
+  const { user } = Route.useRouteContext();
+  const navigate = Route.useNavigate();
+  const [recentId, setRecentId] = useState("");
+  useEffect(() => {
+    setRecentId(readVisits(user.id)[0]?.clientId ?? "");
+  }, [user.id]);
 
   const clientsQ = useQuery({
     queryKey: ["ia-clinica-clients"],
@@ -45,23 +60,22 @@ function IaClinicaPage() {
     },
   });
 
+  const clientId = (clientsQ.data ?? []).find((client) => client.id === caseId)?.id ?? "";
+  const recentCase = (clientsQ.data ?? []).find((client) => client.id === recentId);
   // Mesma queryFn/formato do dossiê (lib/clinical-intel) → cache compatível
   const caseQ = useQuery(clinicalIntelQuery(clientId));
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [showHyp, setShowHyp] = useState(false);
+  const [panel, setPanel] = useState({ clientId: "", selected: new Set<string>(), showHyp: false });
+  const selected = panel.clientId === clientId ? panel.selected : new Set<string>();
+  const showHyp = panel.clientId === clientId && panel.showHyp;
   const changeCase = (id: string) => {
-    setClientId(id);
-    setSelected(new Set());
-    setShowHyp(false);
+    setPanel({ clientId: id, selected: new Set(), showHyp: false });
+    void navigate({ search: id ? { caseId: id } : {} });
   };
   const toggle = (id: string) => {
-    setShowHyp(false);
-    setSelected((prev) => {
-      const n = new Set(prev);
-      if (n.has(id)) n.delete(id);
-      else n.add(id);
-      return n;
-    });
+    const next = new Set(selected);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setPanel({ clientId, selected: next, showHyp: false });
   };
 
   const ev = caseQ.data ? evidenceForCase(caseQ.data.persons, caseQ.data.relationships) : null;
@@ -98,10 +112,19 @@ function IaClinicaPage() {
               </option>
               {(clientsQ.data ?? []).map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.preferred_name || c.full_name}
+                  {c.full_name || c.preferred_name}
                 </option>
               ))}
             </select>
+          )}
+          {!clientId && recentCase && (
+            <Button
+              variant="outline"
+              className="h-auto min-h-11 whitespace-normal text-left"
+              onClick={() => changeCase(recentCase.id)}
+            >
+              Usar caso atual · {recentCase.full_name || recentCase.preferred_name}
+            </Button>
           )}
         </div>
 
@@ -161,7 +184,7 @@ function IaClinicaPage() {
               <Button
                 className="min-h-11"
                 disabled={selected.size === 0}
-                onClick={() => setShowHyp(true)}
+                onClick={() => setPanel({ clientId, selected, showHyp: true })}
               >
                 Gerar hipóteses a partir de {selected.size} evidência(s) selecionada(s)
               </Button>
@@ -210,6 +233,7 @@ function IaClinicaPage() {
                 ))}
               </section>
             )}
+            <HypothesisReviewArchive clientId={clientId} patterns={ev.patterns} />
             <Link
               to="/app/clientes/$clientId"
               params={{ clientId }}

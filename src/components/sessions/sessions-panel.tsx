@@ -1,5 +1,14 @@
 import { useUnsaved } from "@/components/unsaved/unsaved-guard";
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -23,22 +32,48 @@ import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { processSessionAudio } from "@/lib/ai/session-processing.functions";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { AudioConsentPanel } from "./audio-consent-panel";
+import {
+  activeAudioConsent,
+  audioConsentsKey,
+  readAudioConsents,
+  requireAudioConsent,
+} from "@/lib/audio-consent";
 import {
   AUDIO_LABEL,
   CLINICAL_LABEL,
   audioStateOf,
   clinicalStatusOf,
   confirmReview,
+  invalidateSessionViews,
   isDirty,
   noteDraftInit,
   noteReducer,
   type ClinicalStatus,
 } from "@/lib/session-state";
 
+const ScheduleDialog = lazy(() =>
+  import("@/components/agenda/agenda-views").then(({ ScheduleDialog }) => ({
+    default: ScheduleDialog,
+  })),
+);
+
 interface Props {
   clientId: string;
+  clientName: string;
+  focusedSessionId?: string;
 }
 
 type Session = {
@@ -56,6 +91,42 @@ type Session = {
   ai_reviewed_at: string | null;
 };
 
+type CapturedAudio = {
+  sessionId: string;
+  existingSession: boolean;
+  recordingGrantId: string;
+  blob: Blob;
+  seconds: number;
+  fileId: string;
+  path?: string;
+};
+
+async function clearPendingUpload(sessionId: string, path: string) {
+  const { data, error } = await supabase
+    .from("clinical_sessions")
+    .update({ status: "discarding_upload" })
+    .eq("id", sessionId)
+    .eq("audio_path", path)
+    .in("status", ["awaiting_upload", "discarding_upload"])
+    .select("id")
+    .maybeSingle();
+  if (error || !data) throw new Error("O estado do envio mudou. Atualize a sessão.");
+  const { error: removal } = await supabase.storage.from("session-audio").remove([path]);
+  if (removal) throw new Error("O arquivo pendente não pôde ser removido. Tente novamente.");
+  const { error: update } = await supabase
+    .from("clinical_sessions")
+    .update({
+      audio_path: null,
+      duration_seconds: null,
+      recording_consent_id: null,
+      status: "ready",
+    })
+    .eq("id", sessionId)
+    .eq("audio_path", path)
+    .eq("status", "discarding_upload");
+  if (update) throw new Error("Não foi possível confirmar o descarte. Tente novamente.");
+}
+
 function formatDuration(sec: number | null | undefined): string {
   if (!sec) return "—";
   const m = Math.floor(sec / 60);
@@ -63,7 +134,7 @@ function formatDuration(sec: number | null | undefined): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-export function SessionsPanel({ clientId }: Props) {
+export function SessionsPanel({ clientId, clientName, focusedSessionId }: Props) {
   const qc = useQueryClient();
   const processFn = useServerFn(processSessionAudio);
 
@@ -97,186 +168,302 @@ export function SessionsPanel({ clientId }: Props) {
     return () => clearInterval(t);
   }, [sessions, clientId, qc]);
 
-  // ---- Proteção de saída: notas não salvas ----
-  const [, setDirtyIds] = useState<Set<string>>(new Set());
-  const setDirty = useCallback((id: string, dirty: boolean) => {
-    setDirtyIds((prev) => {
-      if (prev.has(id) === dirty) return prev;
-      const next = new Set(prev);
-      if (dirty) next.add(id);
-      else next.delete(id);
-      return next;
-    });
-  }, []);
-  const [pendingAudio, setPendingAudio] = useState<{
-    blob: Blob;
-    mime: string;
-    seconds: number;
-  } | null>(null);
-  const pendingAudioRef = useRef(pendingAudio);
-  pendingAudioRef.current = pendingAudio;
+  const consentQuery = useQuery({
+    queryKey: audioConsentsKey(clientId),
+    queryFn: () => readAudioConsents(supabase, clientId),
+    retry: false,
+    refetchInterval: 5000,
+  });
+  const events = consentQuery.data ?? [];
+  const recordingGrant = !consentQuery.isError && activeAudioConsent(events, "recording");
+  const processingGrant =
+    !consentQuery.isError && activeAudioConsent(events, "external_processing");
+  const [pendingAudio, setPendingAudio] = useState<CapturedAudio | null>(null);
+  const pendingAudioRef = useRef<CapturedAudio | null>(null);
+  const updatePending = (audio: CapturedAudio | null) => {
+    pendingAudioRef.current = audio;
+    setPendingAudio(audio);
+  };
 
-  // ---- Recorder state ----
   const [recording, setRecording] = useState(false);
+  const [starting, setStarting] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [uploading, setUploading] = useState(false);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const timerRef = useRef<number | null>(null);
-  const startedAtRef = useRef<number>(0);
-  const stopWaiterRef = useRef<(() => void) | null>(null);
-
-  // Gravação, envio e áudio não enviado entram no guard de saída do app
-  useUnsaved(`audio:${clientId}`, {
-    label: recording ? "Gravação em andamento" : "Áudio da sessão não enviado",
-    isDirty: () => recording || uploading || !!pendingAudioRef.current,
-    save: async () => {
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-        await new Promise<void>((resolve) => {
-          stopWaiterRef.current = resolve;
-          stopRecording();
-        });
-      } else if (pendingAudioRef.current) {
-        const p = pendingAudioRef.current;
-        await uploadAudio(p.blob, p.mime, p.seconds);
-      }
-      if (pendingAudioRef.current) throw new Error("o áudio não foi enviado");
-    },
-    discard: () => {
-      const mr = mediaRecorderRef.current;
-      if (mr) {
-        mr.ondataavailable = null;
-        mr.onstop = null;
-        if (mr.state !== "inactive") mr.stop();
-        mr.stream.getTracks().forEach((t) => t.stop());
-      }
-      mediaRecorderRef.current = null;
-      if (timerRef.current) window.clearInterval(timerRef.current);
-      timerRef.current = null;
-      chunksRef.current = [];
-      setRecording(false);
-      setPendingAudio(null);
-      pendingAudioRef.current = null;
-    },
-  });
-
-  useEffect(
-    () => () => {
-      mediaRecorderRef.current?.stream.getTracks().forEach((t) => t.stop());
-      if (timerRef.current) window.clearInterval(timerRef.current);
-    },
-    [],
+  const [operationError, setOperationError] = useState("");
+  const [scheduling, setScheduling] = useState(false);
+  const [manualFocusId, setManualFocusId] = useState<string>();
+  const [recordingTarget, setRecordingTarget] = useState(focusedSessionId ?? "");
+  const targets = sessions.filter(
+    (session) => !session.audio_path && clinicalStatusOf(session) !== "canceled",
   );
+  const targetId = targets.some((session) => session.id === recordingTarget) ? recordingTarget : "";
+  const [processingTarget, setProcessingTarget] = useState<string>();
+  const mountedRef = useRef(false);
+  const startLock = useRef(false);
+  const audioLock = useRef(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const activeGrantRef = useRef<string | null>(null);
+  const timerRef = useRef<number | null>(null);
+
+  const refreshSessions = () => invalidateSessionViews(qc, clientId);
+
+  const clearRecorder = useCallback((discard: boolean) => {
+    const recorder = mediaRecorderRef.current;
+    mediaRecorderRef.current = null;
+    activeGrantRef.current = null;
+    if (recorder) {
+      if (discard) {
+        recorder.ondataavailable = null;
+        recorder.onstop = null;
+      }
+      if (recorder.state !== "inactive") recorder.stop();
+      recorder.stream.getTracks().forEach((track) => track.stop());
+    }
+    if (timerRef.current !== null) {
+      window.clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    if (mountedRef.current) setRecording(false);
+  }, []);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      clearRecorder(true);
+    };
+  }, [clearRecorder]);
+
+  useEffect(() => {
+    if (
+      mediaRecorderRef.current &&
+      activeGrantRef.current !== (recordingGrant ? recordingGrant.id : null)
+    ) {
+      clearRecorder(true);
+      setOperationError("Gravação interrompida. Confirme a autorização antes de gravar novamente.");
+    }
+  }, [recordingGrant, clearRecorder]);
+
+  useEffect(() => {
+    const target = manualFocusId ?? focusedSessionId;
+    if (!target || !sessions.some(({ id }) => id === target)) return;
+    document.getElementById(`session-${target}`)?.scrollIntoView({ block: "nearest" });
+  }, [focusedSessionId, manualFocusId, sessions.length]);
 
   const startRecording = async () => {
+    if (startLock.current || mediaRecorderRef.current || pendingAudioRef.current || !recordingGrant)
+      return;
+    startLock.current = true;
+    setStarting(true);
+    setOperationError("");
+    let stream: MediaStream | undefined;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-        ? "audio/webm;codecs=opus"
-        : "audio/webm";
-      const mr = new MediaRecorder(stream, { mimeType: mime });
-      chunksRef.current = [];
-      mr.ondataavailable = (e) => e.data.size && chunksRef.current.push(e.data);
-      mr.onstop = () => {
-        void handleStop(mime).finally(() => {
-          stopWaiterRef.current?.();
-          stopWaiterRef.current = null;
+      await requireAudioConsent(supabase, clientId, "recording", recordingGrant.id);
+      if (!mountedRef.current) return;
+      if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+        throw new Error("O microfone não está disponível neste navegador.");
+      }
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      await requireAudioConsent(supabase, clientId, "recording", recordingGrant.id);
+      if (!mountedRef.current) return;
+      const mime = ["audio/webm;codecs=opus", "audio/mp4", "audio/webm"].find((type) =>
+        MediaRecorder.isTypeSupported(type),
+      );
+      const recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+      const startedAt = Date.now();
+      const parts: Blob[] = [];
+      recorder.ondataavailable = ({ data }) => {
+        if (data.size) parts.push(data);
+      };
+      recorder.onerror = () => {
+        clearRecorder(true);
+        setOperationError("O microfone foi interrompido. Inicie outra gravação.");
+      };
+      recorder.onstop = () => {
+        if (!mountedRef.current) return;
+        clearRecorder(false);
+        const blob = new Blob(parts, { type: recorder.mimeType || parts[0]?.type });
+        if (!blob.size) {
+          setOperationError("A gravação ficou vazia. Inicie outra gravação.");
+          return;
+        }
+        updatePending({
+          blob,
+          seconds: Math.floor((Date.now() - startedAt) / 1000),
+          sessionId: targetId || crypto.randomUUID(),
+          existingSession: !!targetId,
+          recordingGrantId: recordingGrant.id,
+          fileId: crypto.randomUUID(),
         });
       };
-      mr.start(1000);
-      mediaRecorderRef.current = mr;
-      startedAtRef.current = Date.now();
+      recorder.start(1000);
+      mediaRecorderRef.current = recorder;
+      stream = undefined;
+      activeGrantRef.current = recordingGrant.id;
       setElapsed(0);
       setRecording(true);
-      timerRef.current = window.setInterval(() => {
-        setElapsed(Math.floor((Date.now() - startedAtRef.current) / 1000));
-      }, 1000);
-    } catch (e) {
-      toast.error("Não foi possível acessar o microfone");
-      console.error(e);
+      timerRef.current = window.setInterval(
+        () => setElapsed(Math.floor((Date.now() - startedAt) / 1000)),
+        1000,
+      );
+    } catch (error) {
+      if (mountedRef.current) {
+        setOperationError(
+          error instanceof Error && error.name !== "NotAllowedError"
+            ? error.message
+            : "Permita o acesso ao microfone para iniciar a gravação.",
+        );
+        void consentQuery.refetch();
+      }
+    } finally {
+      stream?.getTracks().forEach((track) => track.stop());
+      startLock.current = false;
+      if (mountedRef.current) setStarting(false);
     }
   };
 
-  const stopRecording = () => {
-    const mr = mediaRecorderRef.current;
-    if (!mr) return;
-    mr.stop();
-    mr.stream.getTracks().forEach((t) => t.stop());
-    if (timerRef.current) window.clearInterval(timerRef.current);
-    setRecording(false);
-  };
-
-  const handleStop = async (mime: string) => {
-    const blob = new Blob(chunksRef.current, { type: mime });
-    const durationSeconds = Math.floor((Date.now() - startedAtRef.current) / 1000);
-    if (blob.size < 1024) {
-      toast.error("Gravação muito curta");
-      return;
-    }
-    await uploadAudio(blob, mime, durationSeconds);
-  };
-
-  // O áudio fica em memória até o envio ser confirmado; falha permite reenviar.
-  const uploadAudio = async (blob: Blob, mime: string, durationSeconds: number) => {
-    setPendingAudio({ blob, mime, seconds: durationSeconds });
-    pendingAudioRef.current = { blob, mime, seconds: durationSeconds };
+  // Reserve one attachment in the session before touching Storage. Retries use the same key.
+  const uploadAudio = async (audio: CapturedAudio) => {
+    if (audioLock.current) throw new Error("O áudio já está sendo enviado.");
+    audioLock.current = true;
     setUploading(true);
+    setOperationError("");
     try {
-      const { data: userRes } = await supabase.auth.getUser();
+      await requireAudioConsent(supabase, clientId, "recording", audio.recordingGrantId);
+      const { data: userRes, error: userError } = await supabase.auth.getUser();
       const uid = userRes.user?.id;
-      if (!uid) throw new Error("Sem sessão");
-      const sessionId = crypto.randomUUID();
-      const path = `${uid}/${clientId}/${sessionId}.webm`;
+      if (userError || !uid) throw new Error("Entre novamente para guardar o áudio.");
+      const extension = audio.blob.type.includes("mp4") ? "m4a" : "webm";
+      const path = `${uid}/${clientId}/${audio.sessionId}/${audio.fileId}.${extension}`;
+      audio.path = path;
 
-      const upload = await supabase.storage
-        .from("session-audio")
-        .upload(path, blob, { contentType: mime, upsert: false });
-      if (upload.error) throw upload.error;
-
-      const insert = await supabase
+      const { data: existing, error: readError } = await supabase
         .from("clinical_sessions")
-        .insert({
-          id: sessionId,
+        .select("id, audio_path, status")
+        .eq("id", audio.sessionId)
+        .eq("client_id", clientId)
+        .eq("user_id", uid)
+        .maybeSingle();
+      if (readError) throw new Error("Não foi possível consultar a sessão.");
+      if (existing?.audio_path && existing.audio_path !== path)
+        throw new Error("A sessão já tem outro áudio.");
+      if (existing?.status === "discarding_upload")
+        throw new Error("A remoção do arquivo pendente está em andamento.");
+      const attachment = {
+        audio_path: path,
+        duration_seconds: audio.seconds,
+        status: "awaiting_upload",
+        recording_consent_id: audio.recordingGrantId,
+      };
+      if (!existing) {
+        if (audio.existingSession) throw new Error("A sessão selecionada está indisponível.");
+        const { error } = await supabase.from("clinical_sessions").insert({
+          ...attachment,
+          id: audio.sessionId,
           client_id: clientId,
           user_id: uid,
-          audio_path: path,
-          duration_seconds: durationSeconds,
-          title: `Sessão de ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}`,
-          status: "draft",
+          title: "Relato da sessão",
           clinical_status: "pending_record",
-        })
-        .select()
-        .single();
-      if (insert.error) throw insert.error;
+        });
+        if (error) throw new Error("Não foi possível reservar o envio na sessão.");
+      } else if (!existing.audio_path) {
+        const { data, error } = await supabase
+          .from("clinical_sessions")
+          .update(attachment)
+          .eq("id", audio.sessionId)
+          .is("audio_path", null)
+          .select("id")
+          .maybeSingle();
+        if (error || !data) throw new Error("O áudio da sessão mudou. Confira antes de reenviar.");
+      }
+      if (existing?.status === "awaiting_upload" || existing?.audio_path !== path) {
+        const bucket = supabase.storage.from("session-audio");
+        const { error } = await bucket.upload(path, audio.blob, {
+          contentType: audio.blob.type,
+          upsert: false,
+        });
+        // A prior attempt may have written the object while the response was lost.
+        if (error) {
+          const info = await bucket.info(path);
+          if (info.error || !info.data) throw new Error("Falha no envio. Tente novamente.");
+        }
+        const { data, error: finishError } = await supabase
+          .from("clinical_sessions")
+          .update({ status: "draft", error_message: null })
+          .eq("id", audio.sessionId)
+          .eq("audio_path", path)
+          .eq("status", "awaiting_upload")
+          .select("id")
+          .maybeSingle();
+        if (finishError || !data)
+          throw new Error("O áudio foi enviado, mas falta confirmar na sessão.");
+      }
 
-      setPendingAudio(null);
-      pendingAudioRef.current = null;
-      qc.invalidateQueries({ queryKey: ["clinical_sessions", clientId] });
-      toast.success("Áudio salvo. Processando texto provisório…");
-
-      // Fire off processing (non-blocking)
-      processFn({ data: { sessionId } }).catch((err) => {
-        console.error(err);
-        toast.error(err instanceof Error ? err.message : "Falha ao processar áudio");
-        qc.invalidateQueries({ queryKey: ["clinical_sessions", clientId] });
-      });
-    } catch (e) {
-      toast.error(
-        `${e instanceof Error ? e.message : "Falha no envio"}. O áudio continua nesta página — use "Reenviar áudio".`,
+      updatePending(null);
+      void refreshSessions();
+      toast.success("Áudio guardado no dossiê.");
+    } catch (error) {
+      setOperationError(
+        error instanceof Error ? error.message : "Não foi possível guardar o áudio.",
       );
+      void refreshSessions();
+      throw error;
     } finally {
+      audioLock.current = false;
       setUploading(false);
     }
   };
 
-  const reprocess = useMutation({
-    mutationFn: async (sessionId: string) => {
-      // Novo texto gerado exige nova revisão humana.
-      await supabase.from("clinical_sessions").update({ ai_reviewed_at: null }).eq("id", sessionId);
-      await processFn({ data: { sessionId } });
+  const discardAudio = async () => {
+    if (audioLock.current) throw new Error("Aguarde o envio terminar.");
+    clearRecorder(true);
+    const audio = pendingAudioRef.current;
+    if (audio?.path) {
+      audioLock.current = true;
+      setUploading(true);
+      try {
+        const { data: row, error: readError } = await supabase
+          .from("clinical_sessions")
+          .select("status, audio_path")
+          .eq("id", audio.sessionId)
+          .maybeSingle();
+        if (readError) throw new Error("Não foi possível verificar o áudio pendente.");
+        if (
+          row?.audio_path === audio.path &&
+          (row.status === "awaiting_upload" || row.status === "discarding_upload")
+        ) {
+          await clearPendingUpload(audio.sessionId, audio.path);
+          void refreshSessions();
+        }
+      } finally {
+        setUploading(false);
+        audioLock.current = false;
+      }
+    }
+    updatePending(null);
+    setOperationError("");
+  };
+
+  useUnsaved(`audio:${clientId}`, {
+    label: recording || starting ? "Gravação em andamento" : "Áudio da sessão não enviado",
+    isDirty: () =>
+      startLock.current ||
+      !!mediaRecorderRef.current ||
+      audioLock.current ||
+      !!pendingAudioRef.current,
+    save: async () => {
+      if (startLock.current || mediaRecorderRef.current)
+        throw new Error("Finalize a gravação antes de guardar o áudio.");
+      if (pendingAudioRef.current) await uploadAudio(pendingAudioRef.current);
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["clinical_sessions", clientId] }),
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Falha ao reprocessar"),
+    discard: discardAudio,
+  });
+
+  const reprocess = useMutation({
+    mutationFn: (sessionId: string) => processFn({ data: { sessionId } }),
+    onSettled: () => void refreshSessions(),
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Falha ao processar áudio"),
   });
 
   const createManual = useMutation({
@@ -284,126 +471,218 @@ export function SessionsPanel({ clientId }: Props) {
       const { data: userRes } = await supabase.auth.getUser();
       const uid = userRes.user?.id;
       if (!uid) throw new Error("Sem sessão");
-      const { error } = await supabase.from("clinical_sessions").insert({
-        client_id: clientId,
-        user_id: uid,
-        title: `Sessão de ${format(new Date(), "dd/MM/yyyy", { locale: ptBR })}`,
-        status: "ready",
-        clinical_status: "pending_record",
-      });
-      if (error) throw error;
+      const { data, error } = await supabase
+        .from("clinical_sessions")
+        .insert({
+          client_id: clientId,
+          user_id: uid,
+          title: `Sessão de ${format(new Date(), "dd/MM/yyyy", { locale: ptBR })}`,
+          status: "ready",
+          clinical_status: "pending_record",
+        })
+        .select("id")
+        .maybeSingle();
+      if (error || !data) throw new Error("Não foi possível criar a sessão.");
+      return data.id;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["clinical_sessions", clientId] }),
+    onSuccess: async (id) => {
+      setManualFocusId(id);
+      await refreshSessions();
+    },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Falha ao criar registro"),
   });
 
+  const clearOrphanUpload = useMutation({
+    mutationFn: ({ id, audio_path }: Session) => {
+      if (!audio_path) throw new Error("A sessão não tem envio pendente.");
+      return clearPendingUpload(id, audio_path);
+    },
+    onSettled: () => void refreshSessions(),
+    onError: (error) => toast.error(error.message),
+  });
+
   const deleteSession = useMutation({
-    mutationFn: async (s: Session) => {
-      if (!window.confirm("Excluir esta sessão, suas notas e o áudio? Isso não pode ser desfeito."))
-        return;
-      if (s.audio_path) {
-        await supabase.storage.from("session-audio").remove([s.audio_path]);
+    mutationFn: async (session: Session) => {
+      if (session.audio_path) {
+        const { error } = await supabase.storage.from("session-audio").remove([session.audio_path]);
+        if (error)
+          throw new Error("Não foi possível remover o áudio. A sessão continua no dossiê.");
       }
-      const { error } = await supabase.from("clinical_sessions").delete().eq("id", s.id);
-      if (error) throw error;
+      const { data, error } = await supabase
+        .from("clinical_sessions")
+        .delete()
+        .eq("id", session.id)
+        .select("id")
+        .maybeSingle();
+      if (error || !data) {
+        throw new Error(
+          session.audio_path
+            ? "O áudio foi removido. A sessão continua no dossiê e pode ser excluída novamente."
+            : "Não foi possível remover a sessão.",
+        );
+      }
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["clinical_sessions", clientId] });
+      void refreshSessions();
       toast.success("Sessão removida");
     },
+    onError: (error) => toast.error(error.message),
   });
 
   return (
-    <div className="space-y-8">
-      {/* Recorder Panel - Editorial Style */}
-      <section className="rounded-sm border-2 border-forest bg-forest text-white shadow-lg relative overflow-hidden">
-        {/* Constelação familiar — textura de fundo do painel floresta */}
-        <img
-          src="/assets/renders/constelacao-floresta.jpg"
-          alt=""
-          aria-hidden
-          loading="lazy"
-          className="pointer-events-none absolute inset-0 size-full object-cover opacity-45 mix-blend-screen"
-        />
-        <div className="p-8 md:p-10 relative z-10 flex flex-col md:flex-row items-center gap-6 justify-between">
-          <div className="flex-1 text-center md:text-left">
-            <h3 className="font-serif text-3xl font-bold">Gravar Relato da Sessão</h3>
-            <p className="text-sm text-white/90 mt-2 max-w-xl leading-relaxed">
-              Grave suas observações logo após o término da sessão. A inteligência transcreverá e
-              extrairá automaticamente fatos, hipóteses sistêmicas e figuras mencionadas para o
-              prontuário.
+    <div className="space-y-6">
+      <section className="space-y-4 rounded-sm border border-border bg-surface-document p-4 sm:p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="font-serif text-2xl font-bold text-primary">Registro de sessão</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Faça anotações ou grave um relato com autorização.
             </p>
           </div>
-          <div className="shrink-0 flex items-center">
-            {recording ? (
-              <div className="flex items-center gap-4 bg-white/10 px-6 py-4 rounded-md border border-white/20">
-                <span className="inline-flex items-center gap-2 text-2xl font-mono font-bold text-forest-mid">
-                  <span className="h-3 w-3 rounded-full bg-destructive animate-pulse" />
-                  {formatDuration(elapsed)}
-                </span>
-                <Button
-                  onClick={stopRecording}
-                  variant="outline"
-                  className="bg-destructive border-transparent text-white hover:bg-destructive/90 transition-colors h-12 px-6"
-                >
-                  <Square className="h-4 w-4 mr-2" />
-                  Finalizar
-                </Button>
-              </div>
-            ) : (
-              <Button
-                onClick={startRecording}
-                disabled={uploading}
-                variant="hero"
-                className="h-14 px-8 text-[14px]"
-              >
-                {uploading ? (
-                  <Loader2 className="h-5 w-5 mr-3 animate-spin" />
-                ) : (
-                  <Mic className="h-5 w-5 mr-3" />
-                )}
-                {uploading ? "Enviando áudio…" : "Iniciar gravação"}
-              </Button>
-            )}
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              className="min-h-11"
+              onClick={() => createManual.mutate()}
+              disabled={createManual.isPending}
+            >
+              <Plus className="mr-2 size-4" /> Registrar sessão sem áudio
+            </Button>
+            <Button variant="outline" className="min-h-11" onClick={() => setScheduling(true)}>
+              Agendar sessão
+            </Button>
           </div>
         </div>
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="block min-w-0 text-sm font-medium">
+            Sessão para o áudio
+            <select
+              className="mt-1 block min-h-11 max-w-full rounded-sm border border-input bg-background p-2"
+              value={targetId}
+              onChange={(event) => setRecordingTarget(event.target.value)}
+              disabled={starting || recording || uploading || !!pendingAudio}
+            >
+              <option value="">Nova sessão</option>
+              {targets.map((session) => (
+                <option key={session.id} value={session.id}>
+                  {format(new Date(session.session_date), "dd/MM/yyyy HH:mm")} ·{" "}
+                  {session.title ?? "Sessão"}
+                </option>
+              ))}
+            </select>
+          </label>
+          {recording ? (
+            <Button
+              className="min-h-11"
+              variant="destructive"
+              onClick={() => {
+                const recorder = mediaRecorderRef.current;
+                if (recorder?.state === "recording") recorder.stop();
+              }}
+            >
+              <Square className="mr-2 size-4" /> Parar gravação · {formatDuration(elapsed)}
+            </Button>
+          ) : (
+            <Button
+              className="min-h-11"
+              onClick={() => void startRecording()}
+              disabled={!recordingGrant || starting || uploading || !!pendingAudio}
+            >
+              <Mic className="mr-2 size-4" />
+              {starting ? "Confirmando autorização…" : "Iniciar gravação"}
+            </Button>
+          )}
+        </div>
+        {operationError && (
+          <p role="alert" className="text-sm text-destructive">
+            {operationError}
+          </p>
+        )}
+        {pendingAudio && (
+          <div className="space-y-3 border-t border-border pt-3">
+            <p role="status" className="text-sm text-muted-foreground">
+              Gravação pronta · {formatDuration(pendingAudio.seconds)}. Guarde o áudio antes de sair
+              da página.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                className="min-h-11"
+                disabled={
+                  uploading ||
+                  !recordingGrant ||
+                  recordingGrant.id !== pendingAudio.recordingGrantId
+                }
+                onClick={() => void uploadAudio(pendingAudio).catch(() => {})}
+              >
+                {uploading ? "Enviando áudio…" : "Guardar áudio no dossiê"}
+              </Button>
+              <Button
+                variant="outline"
+                className="min-h-11"
+                disabled={uploading}
+                onClick={() =>
+                  void discardAudio().catch((error) => setOperationError(error.message))
+                }
+              >
+                Descartar gravação
+              </Button>
+            </div>
+          </div>
+        )}
       </section>
 
-      {/* History */}
-      {pendingAudio && !uploading && (
-        <div
-          role="alert"
-          className="flex flex-wrap items-center gap-3 rounded-md border border-destructive/40 bg-destructive/5 p-4 text-[15px]"
+      {scheduling && (
+        <Suspense
+          fallback={
+            <p role="status" className="text-sm">
+              Carregando agenda…
+            </p>
+          }
         >
-          <AlertCircle className="size-5 text-destructive" />
-          <span className="flex-1">
-            O áudio não foi enviado e continua guardado nesta página. Não feche a aba.
-          </span>
-          <Button
-            className="min-h-11"
-            onClick={() =>
-              void uploadAudio(pendingAudio.blob, pendingAudio.mime, pendingAudio.seconds)
-            }
-          >
-            <RefreshCw className="mr-2 size-4" /> Reenviar áudio
-          </Button>
-          <Button variant="ghost" className="min-h-11" onClick={() => setPendingAudio(null)}>
-            Descartar
-          </Button>
-        </div>
+          <ScheduleDialog
+            clientId={clientId}
+            clientName={clientName}
+            onClose={() => setScheduling(false)}
+          />
+        </Suspense>
       )}
+
+      <AudioConsentPanel
+        clientId={clientId}
+        events={events}
+        loading={consentQuery.isPending}
+        unavailable={consentQuery.isError}
+        refresh={() => consentQuery.refetch()}
+      />
+
+      <AlertDialog
+        open={!!processingTarget}
+        onOpenChange={(open) => !open && setProcessingTarget(undefined)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Enviar o áudio para processamento externo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Os serviços de IA via Lovable recebem o áudio e a transcrição para gerar texto
+              provisório. Suas notas manuais ficam no dossiê.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="min-h-11">Cancelar envio</AlertDialogCancel>
+            <AlertDialogAction
+              className="min-h-11"
+              disabled={!processingGrant || reprocess.isPending}
+              onClick={() => processingTarget && reprocess.mutate(processingTarget)}
+            >
+              Confirmar envio para IA
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-3">
           <h3 className="font-serif text-2xl font-bold text-primary">Histórico de Sessões</h3>
-          <Button
-            variant="outline"
-            className="min-h-11"
-            onClick={() => createManual.mutate()}
-            disabled={createManual.isPending}
-          >
-            <Plus className="mr-2 size-4" /> Registrar sessão sem áudio
-          </Button>
         </div>
 
         {isLoading && (
@@ -439,11 +718,10 @@ export function SessionsPanel({ clientId }: Props) {
               className="mx-auto w-[170px] mix-blend-darken [mask-image:radial-gradient(120%_120%_at_50%_45%,black_58%,transparent_90%)]"
             />
             <p className="mt-4 font-serif text-2xl font-bold text-primary">
-              Nenhuma sessão gravada
+              Nenhuma sessão registrada
             </p>
             <p className="mx-auto mt-2 max-w-md text-[14px] leading-relaxed text-muted-foreground">
-              Os registros de voz são transformados em anotações estruturadas automaticamente.
-              Experimente iniciar uma gravação.
+              Use o registro manual ou guarde um relato de áudio autorizado.
             </p>
           </motion.div>
         )}
@@ -472,9 +750,20 @@ export function SessionsPanel({ clientId }: Props) {
               <SessionCard
                 session={s}
                 clientId={clientId}
-                onDirtyChange={setDirty}
-                onReprocess={() => reprocess.mutate(s.id)}
-                onDelete={() => deleteSession.mutate(s)}
+                onReprocess={() => setProcessingTarget(s.id)}
+                onDelete={() => {
+                  if (
+                    window.confirm(
+                      "Excluir esta sessão, suas notas e o áudio? Isso não pode ser desfeito.",
+                    )
+                  ) {
+                    deleteSession.mutate(s);
+                  }
+                }}
+                onDiscardUpload={() => clearOrphanUpload.mutate(s)}
+                discardingUpload={clearOrphanUpload.isPending}
+                showDiscardUpload={pendingAudio?.sessionId !== s.id}
+                canProcess={!!processingGrant && !reprocess.isPending}
                 reprocessing={reprocess.isPending && reprocess.variables === s.id}
               />
             </motion.div>
@@ -488,16 +777,22 @@ export function SessionsPanel({ clientId }: Props) {
 function SessionCard({
   session,
   clientId,
-  onDirtyChange,
   onReprocess,
   onDelete,
+  onDiscardUpload,
+  discardingUpload,
+  showDiscardUpload,
+  canProcess,
   reprocessing,
 }: {
   session: Session;
   clientId: string;
-  onDirtyChange: (id: string, dirty: boolean) => void;
   onReprocess: () => void;
   onDelete: () => void;
+  onDiscardUpload: () => void;
+  discardingUpload: boolean;
+  showDiscardUpload: boolean;
+  canProcess: boolean;
   reprocessing: boolean;
 }) {
   const qc = useQueryClient();
@@ -513,10 +808,8 @@ function SessionCard({
     [session.manual_notes],
   );
   const dirty = isDirty(draft);
-  useEffect(() => onDirtyChange(session.id, dirty), [dirty, session.id, onDirtyChange]);
-  useEffect(() => () => onDirtyChange(session.id, false), [session.id, onDirtyChange]);
 
-  const refresh = () => qc.invalidateQueries({ queryKey: ["clinical_sessions", clientId] });
+  const refresh = () => invalidateSessionViews(qc, clientId);
 
   /** Lança erro se o banco não confirmou (o texto continua na tela). */
   const persistNotes = async () => {
@@ -596,7 +889,10 @@ function SessionCard({
   const clinicalId = `clinical-${session.id}`;
 
   return (
-    <article className="rounded-sm border border-border bg-surface-document shadow-sm overflow-hidden accent-bar-forest">
+    <article
+      id={`session-${session.id}`}
+      className="scroll-mt-24 rounded-sm border border-border bg-surface-document shadow-sm overflow-hidden accent-bar-forest"
+    >
       <div className="border-b border-border/40 bg-background/50 px-6 py-4 flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-[14px] font-semibold text-muted-foreground mb-1">
@@ -623,14 +919,19 @@ function SessionCard({
               id={clinicalId}
               className="h-11 rounded-md border border-input bg-background px-2 text-[14px]"
               value={clinical}
-              disabled={setClinical.isPending}
+              disabled={setClinical.isPending || clinical === "canceled"}
               onChange={(e) => setClinical.mutate(e.target.value as ClinicalStatus)}
             >
-              {(Object.keys(CLINICAL_LABEL) as ClinicalStatus[]).map((k) => (
-                <option key={k} value={k}>
-                  {CLINICAL_LABEL[k]}
-                </option>
-              ))}
+              {(Object.keys(CLINICAL_LABEL) as ClinicalStatus[])
+                .filter(
+                  (status) =>
+                    status === clinical || (status !== "scheduled" && status !== "canceled"),
+                )
+                .map((status) => (
+                  <option key={status} value={status}>
+                    {CLINICAL_LABEL[status]}
+                  </option>
+                ))}
             </select>
           </div>
           <Badge
@@ -644,14 +945,13 @@ function SessionCard({
           <div className="flex items-center gap-1 border-l border-border/60 pl-3">
             {(isError || session.status === "draft") && session.audio_path && (
               <Button
-                size="icon"
-                variant="ghost"
+                variant="outline"
                 onClick={onReprocess}
-                disabled={reprocessing}
-                aria-label="Reprocessar áudio"
-                className="min-h-11 min-w-11"
+                disabled={!canProcess || reprocessing}
+                className="min-h-11"
               >
-                <RefreshCw className={`h-4 w-4 ${reprocessing ? "animate-spin" : ""}`} />
+                <AudioLines className="mr-2 size-4" aria-hidden />
+                Processar áudio com IA
               </Button>
             )}
             <Button
@@ -668,6 +968,21 @@ function SessionCard({
       </div>
 
       <div className="p-6 space-y-6">
+        {audio === "waiting_upload" && showDiscardUpload && (
+          <div className="flex flex-wrap items-center gap-2 rounded-sm border border-border bg-background p-3 text-sm">
+            <p className="text-muted-foreground">
+              Envio de áudio incompleto. Você pode liberar a sessão para uma nova gravação.
+            </p>
+            <Button
+              variant="outline"
+              className="min-h-11"
+              onClick={onDiscardUpload}
+              disabled={discardingUpload}
+            >
+              {discardingUpload ? "Removendo…" : "Remover envio pendente"}
+            </Button>
+          </div>
+        )}
         {isError && (
           <div className="flex items-start gap-3 rounded-md border border-destructive/30 bg-destructive/5 p-4 text-[14px] text-destructive">
             <AlertCircle className="h-5 w-5 mt-0.5 shrink-0" />
@@ -740,7 +1055,7 @@ function SessionCard({
                   variant="outline"
                   className="min-h-11"
                   onClick={review}
-                  disabled={reviewState.pending}
+                  disabled={reviewState.pending || isProcessing}
                 >
                   {reviewState.pending && <Loader2 className="mr-2 size-4 animate-spin" />}
                   Li e revisei este texto

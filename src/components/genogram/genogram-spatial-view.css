@@ -529,6 +529,17 @@
   padding-left: 36px;
 }
 
+.geno-spatial-directory-modes {
+  display: flex;
+  gap: 6px;
+  margin: 0 12px 8px;
+}
+
+.geno-spatial-directory-modes button {
+  flex: 1;
+  min-height: 44px;
+}
+
 .geno-spatial-directory-list {
   flex: 1;
   overflow-y: auto;
@@ -553,7 +564,8 @@
 }
 
 .geno-spatial-directory-list button:hover,
-.geno-spatial-directory-list button[aria-current="true"] {
+.geno-spatial-directory-list button[aria-current="true"],
+.geno-spatial-directory-list button[aria-pressed="true"] {
   background: var(--forest-mist);
 }
 

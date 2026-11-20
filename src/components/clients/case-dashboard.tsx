@@ -1,4 +1,4 @@
-import { clinicalIntelQuery } from "@/lib/clinical-intel";
+import { clinicalIntelQuery, getMappablePersons } from "@/lib/clinical-intel";
 import { detectPatterns } from "@/lib/patterns";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,44 +8,26 @@ interface Props {
   clientId: string;
 }
 
-type Person = {
-  gender: string | null;
-  is_deceased: boolean;
-  health_conditions: string[];
-  cause_of_death: string | null;
-};
-
 export function CaseDashboard({ clientId }: Props) {
   const { data: intel } = useQuery(clinicalIntelQuery(clientId));
   const { data } = useQuery({
     queryKey: ["case-dashboard", clientId],
     queryFn: async () => {
-      const [persons, rels, sessions] = await Promise.all([
-        supabase
-          .from("genogram_persons")
-          .select("gender, is_deceased, health_conditions, cause_of_death")
-          .eq("client_id", clientId),
-        supabase
-          .from("genogram_relationships")
-          .select("id", { count: "exact", head: true })
-          .eq("client_id", clientId),
-        supabase
-          .from("clinical_sessions")
-          .select("id", { count: "exact", head: true })
-          .eq("client_id", clientId),
-      ]);
-      return {
-        persons: (persons.data ?? []) as Person[],
-        relationships: rels.count ?? 0,
-        sessions: sessions.count ?? 0,
-      };
+      const sessions = await supabase
+        .from("clinical_sessions")
+        .select("id", { count: "exact", head: true })
+        .eq("client_id", clientId);
+      if (sessions.error) throw sessions.error;
+      return sessions.count ?? 0;
     },
   });
 
-  if (!data) return null;
+  if (data === undefined || !intel) return null;
 
-  const { persons, relationships, sessions } = data;
-  const patterns = intel ? detectPatterns(intel.persons, intel.relationships).length : 0;
+  const sessions = data;
+  const relationships = intel.relationships.length;
+  const persons = getMappablePersons(intel.persons, intel.relationships);
+  const patterns = detectPatterns(persons, intel.relationships).length;
   // "feminino"/"masculino" é o que o formulário principal de pessoa grava;
   // "female"/"male" só aparece em pessoas criadas via planilha/importação.
   const female = persons.filter((p) => p.gender === "feminino" || p.gender === "female").length;

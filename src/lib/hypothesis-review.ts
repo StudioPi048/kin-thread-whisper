@@ -5,7 +5,8 @@
  * do caso mudarem, a revisão aparece como desatualizada em vez de valer para
  * evidências que ela nunca viu.
  */
-import type { DetectedPattern } from "@/lib/patterns";
+import type { Json } from "@/integrations/supabase/types";
+import type { DetectedPattern, EvidenceFact } from "@/lib/patterns";
 
 export type ReviewDecision = "accepted" | "contested" | "needs_data";
 
@@ -23,39 +24,80 @@ export type ReviewRow = {
   version: number;
   evidence_fingerprint: string;
   created_at: string;
+  hypothesis_title?: string;
+  evidence_snapshot?: Json;
 };
 
-function stable(v: unknown): string {
-  if (Array.isArray(v)) return `[${v.map(stable).join(",")}]`;
-  if (v && typeof v === "object")
-    return `{${Object.keys(v as object)
-      .sort()
-      .map((k) => `${k}:${stable((v as Record<string, unknown>)[k])}`)
-      .join(",")}}`;
-  return JSON.stringify(v ?? null);
+function canonicalFacts(facts: EvidenceFact[]) {
+  const encoded = new Map<string, EvidenceFact>();
+  for (const fact of facts) {
+    const key = JSON.stringify([
+      fact.source,
+      fact.recordId,
+      fact.field,
+      fact.value,
+      fact.precision ?? null,
+      fact.personIds ?? null,
+    ]);
+    encoded.set(key, fact);
+  }
+  return [...encoded.keys()].sort().map((key) => [key, encoded.get(key)!] as const);
 }
 
-/** Hash determinístico (FNV-1a 32 bits) do conteúdo da evidência. */
+const sortedPeople = (ids: string[]) => [...new Set(ids)].sort();
+
+/** FNV-1a de 64 bits sobre os fatos registrados, sem depender da ordem de leitura. */
 export function evidenceFingerprint(
-  p: Pick<DetectedPattern, "id" | "type" | "personIds" | "details">,
+  p: Pick<DetectedPattern, "type" | "personIds" | "facts">,
 ): string {
-  const s = stable({
+  const content = JSON.stringify([
+    p.type,
+    sortedPeople(p.personIds),
+    canonicalFacts(p.facts).map(([key]) => key),
+  ]);
+  let hash = 0xcbf29ce484222325n;
+  for (const byte of new TextEncoder().encode(content)) {
+    hash = BigInt.asUintN(64, (hash ^ BigInt(byte)) * 0x100000001b3n);
+  }
+  return `v2-${hash.toString(16).padStart(16, "0")}`;
+}
+
+/** Origem, tipo e valor de cada fato que a revisão realmente considerou. */
+export function evidenceSnapshot(p: DetectedPattern) {
+  return {
     id: p.id,
     type: p.type,
-    persons: [...p.personIds].sort(),
-    details: p.details ?? null,
-  });
-  let h = 0x811c9dc5;
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 0x01000193) >>> 0;
-  }
-  return `v1-${h.toString(16).padStart(8, "0")}`;
+    title: p.title,
+    personIds: sortedPeople(p.personIds),
+    facts: canonicalFacts(p.facts).map(([, fact]) => fact),
+  };
 }
 
-/** Snapshot mínimo da evidência (IDs, tipo, título) — sem nomes. */
-export function evidenceSnapshot(p: DetectedPattern) {
-  return { id: p.id, type: p.type, title: p.title, personIds: [...p.personIds].sort() };
+/** A chave antiga de uma coincidência pode usar a ordem inversa dos familiares. */
+export function reviewsForPattern(rows: ReviewRow[], key: string, pattern: DetectedPattern) {
+  const legacy = new Set(pattern.legacyIds?.map((id) => `h-${id}`));
+  const expectedPeople = JSON.stringify(sortedPeople(pattern.personIds));
+  return rows
+    .filter((row) => {
+      if (row.hypothesis_key === key) return true;
+      if (!legacy.has(row.hypothesis_key)) return false;
+      if (pattern.type === "anniversary_syndrome") return true;
+      const stored = Array.isArray(row.evidence_snapshot) ? row.evidence_snapshot : [];
+      // Uma chave antiga por idade pode ter sido usada para outro grupo.
+      return stored.some((snapshot) => {
+        if (!snapshot || Array.isArray(snapshot) || typeof snapshot !== "object") return false;
+        const ids = snapshot.personIds;
+        return (
+          Array.isArray(ids) &&
+          ids.every((id) => typeof id === "string") &&
+          JSON.stringify(sortedPeople(ids)) === expectedPeople
+        );
+      });
+    })
+    .sort((a, b) => {
+      if (a.hypothesis_key === b.hypothesis_key) return b.version - a.version;
+      return Date.parse(b.created_at) - Date.parse(a.created_at) || b.version - a.version;
+    });
 }
 
 export function latestReview(rows: ReviewRow[], key: string): ReviewRow | null {

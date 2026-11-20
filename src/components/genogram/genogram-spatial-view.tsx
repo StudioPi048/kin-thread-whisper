@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { formatDateBR } from "@/lib/genogram";
+import { formatDateBR, relationshipLabel, relationshipQualifiers } from "@/lib/genogram";
 import { cn } from "@/lib/utils";
 import type { PersonNodeData } from "./person-node";
 import { personSymbol } from "./person-symbol";
@@ -56,7 +56,43 @@ type Pointer = { x: number; y: number };
 type Layout = ReturnType<typeof buildSpatialLayout>;
 type ProjectedPerson = ReturnType<typeof projectSpatialLayout>["people"][number];
 type SpatialRoute = ReturnType<typeof projectSpatialLayout>["routes"][number];
+type ProjectedUnion = ReturnType<typeof projectSpatialLayout>["unions"][number];
 type MovePreview = { id: string; deltaX: number };
+
+function describeRoute(route: SpatialRoute, names: Map<string, string>, union?: ProjectedUnion) {
+  const displayNames = (ids: string[]) =>
+    ids
+      .map((id) => names.get(id))
+      .filter(Boolean)
+      .join(" · ");
+  const partners = union ? displayNames(union.partners) : "";
+  if (route.edge.type === "partner") {
+    return { title: partners, detail: union?.label || "União" };
+  }
+  if (route.edge.type === "pedigree") {
+    const kind = relationshipQualifiers.parent.find(({ value }) => value === route.parentKind);
+    const relation = route.suggested ? "Filiação sugerida" : "Filiação registrada";
+    return {
+      title: displayNames(route.childIds ?? []),
+      detail: [relation, kind?.label, partners].filter(Boolean).join(" · "),
+    };
+  }
+  const { relationshipType, qualifier } = route.edge.data ?? {};
+  return {
+    title: displayNames([route.edge.source, route.edge.target]),
+    detail:
+      typeof relationshipType === "string"
+        ? relationshipLabel(relationshipType, typeof qualifier === "string" ? qualifier : undefined)
+        : "Vínculo",
+  };
+}
+
+function sameRoute(a: SpatialRoute | undefined, b: SpatialRoute) {
+  return (
+    a?.id === b.id ||
+    (a?.edge.type === "partner" && b.edge.type === "partner" && a.unionId === b.unionId)
+  );
+}
 
 const FRONT_ANGLES = { yaw: 0, pitch: 0 };
 const MAX_ZOOM = 2.4;
@@ -245,6 +281,7 @@ export function GenogramSpatialView({
   const [chosenRoute, setChosenRoute] = useState<string | null>(null);
   const [chosenUnion, setChosenUnion] = useState<string | null>(null);
   const [directoryOpen, setDirectoryOpen] = useState(false);
+  const [directoryMode, setDirectoryMode] = useState<"people" | "links">("people");
   const [query, setQuery] = useState("");
   const layout = useMemo(() => buildSpatialLayout(nodes, edges), [nodes, edges]);
   const unionMembers = useMemo(() => {
@@ -545,6 +582,11 @@ export function GenogramSpatialView({
     }
   }
 
+  function closeDirectory() {
+    setDirectoryOpen(false);
+    directoryTrigger.current?.focus();
+  }
+
   function toggleUnions() {
     if (unionsOpen) {
       setUnionsOpen(false);
@@ -560,7 +602,14 @@ export function GenogramSpatialView({
   }
 
   function followRoute(route: SpatialRoute) {
-    setChosenRoute((current) => (current === route.id ? null : route.id));
+    setChosenRoute((current) =>
+      sameRoute(
+        display.routes.find(({ id }) => id === current),
+        route,
+      )
+        ? null
+        : route.id,
+    );
     setChosenUnion(null);
   }
 
@@ -579,7 +628,11 @@ export function GenogramSpatialView({
   const hasSuggestions = display.routes.some((route) => route.suggested);
   const shownUnions = display.unions.filter((union) => union.expanded);
   const nameById = new Map(names.map(({ person, name }) => [person.id, name]));
+  const unionById = new Map(display.unions.map((union) => [union.id, union]));
   const activeRoute = display.routes.find(({ id }) => id === chosenRoute);
+  const activeRouteDescription = activeRoute
+    ? describeRoute(activeRoute, nameById, unionById.get(activeRoute.unionId ?? ""))
+    : undefined;
   const expandedUnion = shownUnions.find(({ id }) => id === chosenUnion);
   const highlightedUnion = expandedUnion?.id ?? activeRoute?.unionId;
   const routeIsActive = (route: SpatialRoute) =>
@@ -606,9 +659,30 @@ export function GenogramSpatialView({
   const bridgeStatus = display.bridgeCount
     ? `${display.bridgeCount} ${display.bridgeCount === 1 ? "cruzamento separado" : "cruzamentos separados"}`
     : "Nenhum cruzamento entre os vínculos visíveis";
+  const partnerUnions = new Set<string>();
+  const listedRoutes =
+    directoryOpen && directoryMode === "links"
+      ? display.routes.flatMap((route) => {
+          if (route.edge.type === "partner" && route.unionId) {
+            if (partnerUnions.has(route.unionId)) return [];
+            partnerUnions.add(route.unionId);
+          }
+          const { title, detail } = describeRoute(
+            route,
+            nameById,
+            unionById.get(route.unionId ?? ""),
+          );
+          if (!foldText(`${title} ${detail}`).includes(foldText(query.trim()))) return [];
+          return [{ route, title, detail }];
+        })
+      : [];
 
   return (
     <section className="geno-spatial" aria-label="Visualização 3D do genossociograma">
+      <span className="sr-only" role="status">
+        {activeRouteDescription &&
+          `Vínculo destacado no mapa. ${activeRouteDescription.title}. ${activeRouteDescription.detail}.`}
+      </span>
       {(hasPaternal || hasMaternal || hasSuggestions) && (
         <div className="geno-spatial-context">
           <div className="geno-spatial-branches" aria-label="Traços do mapa">
@@ -846,26 +920,22 @@ export function GenogramSpatialView({
           <section
             id={directoryId}
             className="geno-spatial-directory"
-            aria-label="Pessoas no genossociograma"
+            aria-label="Índice do genossociograma"
             onKeyDown={(event) => {
               if (event.key === "Escape") {
                 event.stopPropagation();
-                setDirectoryOpen(false);
-                directoryTrigger.current?.focus();
+                closeDirectory();
               }
             }}
           >
             <header className="geno-spatial-directory-header">
-              <strong>Pessoas no mapa</strong>
+              <strong>Pessoas e vínculos</strong>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                aria-label="Fechar lista de pessoas"
-                onClick={() => {
-                  setDirectoryOpen(false);
-                  directoryTrigger.current?.focus();
-                }}
+                aria-label="Fechar índice"
+                onClick={closeDirectory}
               >
                 <X />
               </Button>
@@ -876,32 +946,81 @@ export function GenogramSpatialView({
                 ref={directoryInput}
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                aria-label="Buscar pessoa por nome ou parentesco"
-                placeholder="Nome ou parentesco"
+                aria-label={directoryMode === "people" ? "Buscar pessoa" : "Buscar vínculo"}
+                placeholder={directoryMode === "people" ? "Nome ou parentesco" : "Nome ou tipo"}
               />
             </div>
-            <ul className="geno-spatial-directory-list">
-              {namedPeople.map(({ person, name, relationship }) => (
-                <li key={person.id}>
-                  <button
-                    type="button"
-                    aria-current={person.id === selectedPersonId || undefined}
-                    onClick={() => {
-                      focusPerson(person);
-                      selectPerson(person.id);
-                      setDirectoryOpen(false);
-                      directoryTrigger.current?.focus();
-                    }}
-                  >
-                    <strong>{name}</strong>
-                    {relationship && <span>{relationship}</span>}
-                  </button>
-                </li>
+            <div
+              className="geno-spatial-directory-modes"
+              role="group"
+              aria-label="Mostrar no índice"
+            >
+              {(
+                [
+                  ["people", "Pessoas"],
+                  ["links", "Vínculos"],
+                ] as const
+              ).map(([mode, label]) => (
+                <Button
+                  key={mode}
+                  type="button"
+                  size="sm"
+                  variant={directoryMode === mode ? "forest" : "outline"}
+                  aria-pressed={directoryMode === mode}
+                  onClick={() => {
+                    setDirectoryMode(mode);
+                    setQuery("");
+                  }}
+                >
+                  {label}
+                </Button>
               ))}
-              {namedPeople.length === 0 && (
-                <li className="geno-spatial-directory-empty">Nenhuma pessoa encontrada.</li>
-              )}
-            </ul>
+            </div>
+            {directoryMode === "people" ? (
+              <ul className="geno-spatial-directory-list" aria-label="Pessoas">
+                {namedPeople.map(({ person, name, relationship }) => (
+                  <li key={person.id}>
+                    <button
+                      type="button"
+                      aria-current={person.id === selectedPersonId || undefined}
+                      onClick={() => {
+                        focusPerson(person);
+                        selectPerson(person.id);
+                        closeDirectory();
+                      }}
+                    >
+                      <strong>{name}</strong>
+                      {relationship && <span>{relationship}</span>}
+                    </button>
+                  </li>
+                ))}
+                {namedPeople.length === 0 && (
+                  <li className="geno-spatial-directory-empty">Nenhuma pessoa encontrada.</li>
+                )}
+              </ul>
+            ) : (
+              <ul className="geno-spatial-directory-list" aria-label="Vínculos no mapa">
+                {listedRoutes.map(({ route, title, detail }) => (
+                  <li key={route.id}>
+                    <button
+                      type="button"
+                      aria-pressed={sameRoute(activeRoute, route)}
+                      onClick={() => {
+                        setSeparateLinks(true);
+                        followRoute(route);
+                        closeDirectory();
+                      }}
+                    >
+                      <strong>{title}</strong>
+                      <span>{detail}</span>
+                    </button>
+                  </li>
+                ))}
+                {listedRoutes.length === 0 && (
+                  <li className="geno-spatial-directory-empty">Nenhum vínculo encontrado.</li>
+                )}
+              </ul>
+            )}
           </section>
         )}
         <div className="geno-spatial-deck">
@@ -969,12 +1088,12 @@ export function GenogramSpatialView({
               className="geno-spatial-names"
               aria-controls={directoryId}
               aria-expanded={directoryOpen}
-              aria-label="Ler nomes completos"
-              title="Ler nomes completos"
+              aria-label="Pessoas e vínculos"
+              title="Pessoas e vínculos"
               onClick={toggleDirectory}
             >
               <List />
-              <span>Nomes completos</span>
+              <span>Pessoas e vínculos</span>
             </Button>
           </div>
           <div className="geno-spatial-help">

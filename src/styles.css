@@ -867,9 +867,9 @@
     right: 0;
     display: flex;
     justify-content: space-around;
-    background: #17273a;
-    color: #c7d4e2;
-    border-top: 1px solid #405b76;
+    background: var(--sidebar);
+    color: var(--sidebar-foreground);
+    border-top: 1px solid var(--sidebar-border);
     padding: 9px 8px calc(8px + env(safe-area-inset-bottom));
   }
   .atlas-mobile-nav a,
@@ -880,10 +880,11 @@
     gap: 5px;
     padding: 5px;
     min-width: 54px;
+    min-height: 44px;
     font-size: 10px;
   }
   .atlas-mobile-nav [aria-current] {
-    color: #e7bf86;
+    color: var(--sidebar-primary-foreground);
   }
 }
 @media (max-width: 767px) {

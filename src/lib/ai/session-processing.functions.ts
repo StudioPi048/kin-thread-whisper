@@ -2,6 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+import { requireAudioConsent } from "@/lib/audio-consent";
+
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1";
 const TRANSCRIBE_MODEL = "openai/gpt-4o-mini-transcribe";
 const STRUCTURE_MODEL = "google/gemini-2.5-flash";
@@ -29,13 +31,16 @@ async function callGateway(path: string, init: RequestInit): Promise<Response> {
   if (!apiKey) throw new Error("LOVABLE_API_KEY não configurada");
   const headers = new Headers(init.headers);
   headers.set("Authorization", `Bearer ${apiKey}`);
-  const res = await fetch(`${AI_GATEWAY}${path}`, { ...init, headers });
+  const res = await fetch(`${AI_GATEWAY}${path}`, {
+    ...init,
+    headers,
+    signal: AbortSignal.timeout(120_000),
+  });
   if (!res.ok) {
-    const body = await res.text().catch(() => "");
     if (res.status === 429)
       throw new Error("Limite de uso da IA atingido. Tente novamente em instantes.");
     if (res.status === 402) throw new Error("Créditos de IA insuficientes na workspace.");
-    throw new Error(`AI gateway ${res.status}: ${body.slice(0, 300)}`);
+    throw new Error(`O serviço de processamento retornou um erro (${res.status}).`);
   }
   return res;
 }
@@ -48,7 +53,7 @@ export const processSessionAudio = createServerFn({ method: "POST" })
 
     const { data: session, error: sErr } = await supabase
       .from("clinical_sessions")
-      .select("id, audio_path, user_id")
+      .select("id, client_id, audio_path, user_id, status")
       .eq("id", data.sessionId)
       .maybeSingle();
     if (sErr) throw new Error(sErr.message);
@@ -56,10 +61,24 @@ export const processSessionAudio = createServerFn({ method: "POST" })
     if (session.user_id !== userId) throw new Error("Sem permissão");
     if (!session.audio_path) throw new Error("Sessão sem áudio");
 
-    await supabase
+    if (session.status !== "draft" && session.status !== "error") {
+      throw new Error("O áudio não está disponível para processamento.");
+    }
+
+    const consent = await requireAudioConsent(supabase, session.client_id, "external_processing");
+    const { data: claimed, error: claimError } = await supabase
       .from("clinical_sessions")
-      .update({ status: "transcribing", error_message: null })
-      .eq("id", session.id);
+      .update({
+        status: "transcribing",
+        error_message: null,
+        processing_consent_id: consent.id,
+      })
+      .eq("id", session.id)
+      .eq("status", session.status)
+      .eq("audio_path", session.audio_path)
+      .select("id")
+      .maybeSingle();
+    if (claimError || !claimed) throw new Error("O estado do áudio mudou. Atualize a sessão.");
 
     try {
       const { data: file, error: dlErr } = await supabase.storage
@@ -73,17 +92,20 @@ export const processSessionAudio = createServerFn({ method: "POST" })
       form.append("model", TRANSCRIBE_MODEL);
       form.append("language", "pt");
 
+      await requireAudioConsent(supabase, session.client_id, "external_processing", consent.id);
       const trRes = await callGateway("/audio/transcriptions", { method: "POST", body: form });
       const trJson = (await trRes.json()) as { text?: string };
       const transcript = (trJson.text ?? "").trim();
       if (!transcript) throw new Error("Transcrição vazia");
 
-      await supabase
+      const { error: transcriptError } = await supabase
         .from("clinical_sessions")
-        .update({ transcript, status: "structuring" })
+        .update({ status: "structuring" })
         .eq("id", session.id);
+      if (transcriptError) throw new Error("Falha ao atualizar o estado do processamento.");
 
       // Structure into JSON note
+      await requireAudioConsent(supabase, session.client_id, "external_processing", consent.id);
       const chatRes = await callGateway("/chat/completions", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -107,10 +129,16 @@ export const processSessionAudio = createServerFn({ method: "POST" })
         structured = { resumo: raw };
       }
 
-      await supabase
+      const { error: noteError } = await supabase
         .from("clinical_sessions")
-        .update({ structured_note: structured as never, status: "ready" })
+        .update({
+          transcript,
+          structured_note: structured as never,
+          ai_reviewed_at: null,
+          status: "ready",
+        })
         .eq("id", session.id);
+      if (noteError) throw new Error("Falha ao guardar o texto gerado.");
 
       return { ok: true as const };
     } catch (err) {

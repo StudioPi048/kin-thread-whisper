@@ -29,6 +29,12 @@ describe("evidências → hipóteses", () => {
           description: "d",
           severity: "info",
           personIds: ["A", "B"],
+          facts: ["A", "B"].map((recordId) => ({
+            source: "genogram_persons",
+            recordId,
+            field: "occupation",
+            value: "Médico",
+          })),
         },
       ],
       persons,

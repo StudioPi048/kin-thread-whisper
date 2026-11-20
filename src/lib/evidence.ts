@@ -71,11 +71,13 @@ const LIMITS =
   "Hipótese provisória baseada apenas no que está registrado. Coincidência não indica causa; valide na relação clínica e complete dados faltantes.";
 
 export function buildHypotheses(patterns: DetectedPattern[], persons: PersonRow[]): Hypothesis[] {
-  const nameOf = new Map(persons.map((p) => [p.id, p.preferred_name || p.full_name]));
+  const nameOf = new Map(
+    persons.map((p) => [p.id, p.full_name.trim() || p.preferred_name?.trim()]),
+  );
   const out: Hypothesis[] = [];
   for (const pt of patterns) {
     const t = TEMPLATES[pt.type];
-    if (!t) continue;
+    if (!t || pt.facts.length === 0) continue;
     const sources = pt.personIds.map((id) => nameOf.get(id)).filter((x): x is string => !!x);
     if (sources.length === 0) continue;
     out.push({

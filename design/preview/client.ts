@@ -117,7 +117,7 @@ export const sessions = [9, 11, 14].map((h, i) => {
   const date = new Date();
   date.setHours(h, 0, 0, 0);
   return {
-    id: `session-${i}`,
+    id: `20000000-0000-4000-8000-${String(i + 1).padStart(12, "0")}`,
     client_id: clients[i].id,
     user_id: uid,
     session_date: date.toISOString(),
@@ -136,6 +136,7 @@ const db: Record<string, any[]> = {
   genogram_persons: persons,
   genogram_relationships: rels,
   clinical_sessions: sessions,
+  audio_consent_events: [],
   profiles: [
     {
       id: uid,
@@ -184,8 +185,25 @@ class Query {
     this.filters.push((r) => r[k] == v);
     return this;
   }
+  not(k: string, op: string, v: any) {
+    this.filters.push((r) => (op === "is" && v === null ? r[k] != null : r[k] !== v));
+    return this;
+  }
   in(k: string, v: any[]) {
     this.filters.push((r) => v.includes(r[k]));
+    return this;
+  }
+  gt(k: string, v: any) {
+    this.filters.push((r) => r[k] > v);
+    return this;
+  }
+  or(expression: string) {
+    const terms = expression.split(",").map((condition) => condition.split("."));
+    this.filters.push((r) =>
+      terms.some(([key, op, value]) =>
+        op === "is" && value === "null" ? r[key] == null : r[key] === value,
+      ),
+    );
     return this;
   }
   gte(k: string, v: any) {
@@ -259,6 +277,7 @@ class Query {
         rows = (Array.isArray(this.payload) ? this.payload : [this.payload]).map((v: any) => ({
           id: crypto.randomUUID(),
           created_at: stamp,
+          ...(this.table === "clinical_sessions" ? { session_date: new Date().toISOString() } : {}),
           ...v,
         }));
         const remaining =
@@ -275,7 +294,13 @@ class Query {
       }
       if (this.ordering) {
         const { k, asc } = this.ordering;
-        rows.sort((a, b) => String(a[k]).localeCompare(String(b[k])) * (asc ? 1 : -1));
+        rows.sort((a, b) => {
+          const order =
+            typeof a[k] === "number" && typeof b[k] === "number"
+              ? a[k] - b[k]
+              : String(a[k]).localeCompare(String(b[k]));
+          return order * (asc ? 1 : -1);
+        });
       }
       rows = rows.slice(this.start, this.start + this.max);
       return Promise.resolve({
@@ -292,9 +317,24 @@ const disabled = async () => ({
   data: null,
   error: new Error("Recurso externo indisponível no preview local."),
 });
+const fixtureAudio = new Map<string, Blob>();
+
 export const supabase: any = {
   from: (table: string) => new Query(table),
-  rpc: disabled,
+  rpc: async (name: string, args: Record<string, unknown>) => {
+    if (name !== "record_audio_consent") return disabled();
+    db.audio_consent_events.push({
+      id: crypto.randomUUID(),
+      revision: db.audio_consent_events.length + 1,
+      client_id: args._client_id,
+      professional_id: uid,
+      scope: args._scope,
+      granted: args._granted,
+      source: args._source,
+      created_at: new Date().toISOString(),
+    });
+    return { data: null, error: null };
+  },
   auth: {
     getUser: async () => ({
       data: { user: { id: uid, email: "demo@example.invalid" } },
@@ -309,10 +349,23 @@ export const supabase: any = {
     updateUser: disabled,
   },
   storage: {
-    from: () => ({
+    from: (bucket: string) => ({
       createSignedUrl: async () => ({ data: { signedUrl: null }, error: null }),
-      upload: disabled,
-      remove: disabled,
+      upload: async (path: string, blob: Blob) => {
+        if (bucket !== "session-audio") return disabled();
+        if (fixtureAudio.has(path)) return { error: new Error("Arquivo já enviado.") };
+        fixtureAudio.set(path, blob);
+        return { data: { path }, error: null };
+      },
+      info: async (path: string) =>
+        bucket === "session-audio" && fixtureAudio.has(path)
+          ? { data: { name: path }, error: null }
+          : { data: null, error: new Error("Arquivo indisponível.") },
+      remove: async (paths: string[]) => {
+        if (bucket !== "session-audio") return disabled();
+        paths.forEach((path) => fixtureAudio.delete(path));
+        return { data: [], error: null };
+      },
     }),
   },
   functions: { invoke: disabled },

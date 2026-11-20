@@ -18,6 +18,12 @@
   max-width: min(16rem, 100%);
 }
 
+@media (max-width: 39.99rem) {
+  .case-timeline-filters[data-open="false"] {
+    display: none;
+  }
+}
+
 .case-timeline-filters label,
 .case-timeline-count {
   color: var(--ink-soft);

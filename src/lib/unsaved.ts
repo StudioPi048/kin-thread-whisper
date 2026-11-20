@@ -9,8 +9,8 @@ export interface UnsavedEntry {
   isDirty: () => boolean;
   /** Persiste; deve lançar erro se não confirmou (a edição é mantida). */
   save: () => Promise<void>;
-  /** Descarta em memória e libera recursos (timers, microfone). */
-  discard: () => void;
+  /** Descarta alterações e, quando necessário, confirma a limpeza no servidor. */
+  discard: () => void | Promise<void>;
 }
 
 export class UnsavedRegistry {
@@ -46,8 +46,8 @@ export class UnsavedRegistry {
     }
     return { ok: failed.length === 0, failed };
   }
-  discardAll() {
-    for (const [, e] of this.dirty()) e.discard();
+  async discardAll() {
+    for (const [, entry] of this.dirty()) await entry.discard();
   }
 }
 

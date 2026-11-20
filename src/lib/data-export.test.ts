@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { exportAccountData, type ExportPageReader } from "./data-export";
+import { exportAccountData, exportDossierData, type ExportPageReader } from "./data-export";
 
 describe("exportação pessoal", () => {
   it("pagina além de 1000 familiares e inclui as posições apenas dos layouts da conta", async () => {
@@ -38,5 +38,30 @@ describe("exportação pessoal", () => {
     }, "owner");
     expect(calls).toEqual(["profiles", "clients"]);
     expect(out.genogram_persons).toEqual([]);
+  });
+});
+
+describe("exportação de um dossiê", () => {
+  it("mantém parentescos por ID e rejeita exportação da conta errada", async () => {
+    const read: ExportPageReader = async ({ table, filter }) => {
+      if (table === "clients") return [{ id: "case", professional_id: "owner" }];
+      expect(filter.values).toEqual(["case"]);
+      if (table === "genogram_relationships") {
+        return [{ id: "link", client_id: "case", from_person_id: "child", to_person_id: "parent" }];
+      }
+      if (table === "audio_consent_events") {
+        return [{ id: "event", client_id: "case", granted: false }];
+      }
+      return [];
+    };
+
+    const out = await exportDossierData(read, "owner", "case");
+    expect(out).toMatchObject({
+      format: "genealiz.dossier",
+      format_version: 1,
+      genogram_relationships: [{ from_person_id: "child", to_person_id: "parent" }],
+      audio_consent_events: [{ granted: false }],
+    });
+    await expect(exportDossierData(read, "other", "case")).rejects.toThrow("indisponível");
   });
 });

@@ -1,3 +1,4 @@
+import { deleteClientDossier } from "@/lib/delete-client-dossier";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { readPref, writePref } from "@/lib/recent-activity";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -100,6 +101,7 @@ function patternsFromTags(tags: string[] | null): PatternItem[] {
 
 function ClientesIndex() {
   const { user } = Route.useRouteContext();
+  const navigate = Route.useNavigate();
   const qc = useQueryClient();
   // Filtros/busca/visualização persistentes por usuário (lista operacional por padrão)
   const [tab, setTab] = useState<"active" | "archived">("active");
@@ -176,11 +178,11 @@ function ClientesIndex() {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("clients").delete().eq("id", id);
-      if (error) throw error;
+      await deleteClientDossier(id, user.id);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["clients"] });
+      qc.invalidateQueries({ queryKey: ["all-clients-search"] });
       toast.success("Dossiê removido permanentemente.");
       setDeleting(null);
     },
@@ -490,7 +492,18 @@ function ClientesIndex() {
       </div>
 
       {/* ── DIALOGS ─────────────────────────────────────────── */}
-      <ClientFormDialog open={creating} onOpenChange={setCreating} professionalId={user.id} />
+      <ClientFormDialog
+        open={creating}
+        onOpenChange={setCreating}
+        professionalId={user.id}
+        onCreated={(clientId) =>
+          void navigate({
+            to: "/app/clientes/$clientId",
+            params: { clientId },
+            search: { tab: "overview" },
+          })
+        }
+      />
       <ClientFormDialog
         open={Boolean(editing)}
         onOpenChange={(o) => !o && setEditing(null)}
@@ -498,24 +511,31 @@ function ClientesIndex() {
         editing={editing}
       />
 
-      <AlertDialog open={Boolean(deleting)} onOpenChange={(o) => !o && setDeleting(null)}>
+      <AlertDialog
+        open={Boolean(deleting)}
+        onOpenChange={(o) => !o && !remove.isPending && setDeleting(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="font-serif text-ink">
               Excluir dossiê permanentemente?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação apaga <strong>{deleting?.full_name}</strong> e todos os dados clínicos
-              associados. Não pode ser desfeita. Considere arquivar antes de excluir.
+              Você vai excluir permanentemente o dossiê de <strong>{deleting?.full_name}</strong>,
+              incluindo mapa, planilha, notas, sessões, áudios e foto do perfil.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={remove.isPending}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => deleting && remove.mutate(deleting.id)}
+              disabled={remove.isPending}
+              onClick={(event) => {
+                event.preventDefault();
+                if (deleting) remove.mutate(deleting.id);
+              }}
               className="bg-clinical-critical text-white hover:bg-clinical-critical/90"
             >
-              Excluir definitivamente
+              {remove.isPending ? "Excluindo…" : "Excluir definitivamente"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

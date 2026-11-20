@@ -89,22 +89,26 @@ function BibliotecaPage() {
         title="Referências para o seu trabalho."
         subtitle="Consulte autores, obras, conceitos e materiais do acervo."
       />
-      <div className="container-liz">
-        <div className="gv-library-banner">
-          <img
-            src="/assets/genealiz/archive-library.jpg"
-            alt="Livros e fotografias, composição de acervo ilustrativa"
+      <div className="container-liz mb-5">
+        <div className="relative">
+          <Search className="absolute left-4 top-3.5 size-4 text-muted-foreground" />
+          <input
+            aria-label="Buscar na biblioteca"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Buscar conceito, autor, obra ou termo"
+            className="h-11 w-full rounded-md border border-input bg-background pl-11 pr-4 text-[15px] placeholder:text-muted-foreground"
           />
-          <div>
-            <p className="gv-category">Acervo de consulta</p>
-            <h2>
-              Conhecimento que
-              <br />
-              acompanha a prática.
-            </h2>
-            <p>Conceitos, autores e leituras para voltar sempre que precisar.</p>
-          </div>
         </div>
+        {lastItem && !selected && (
+          <button
+            type="button"
+            onClick={() => setSelected(lastItem)}
+            className="mt-3 inline-flex min-h-11 items-center gap-2 text-[15px] font-semibold text-forest underline-offset-4 hover:underline"
+          >
+            Voltar ao último trecho: {lastItem.title}
+          </button>
+        )}
       </div>
       <div className="container-liz atlas-library">
         <aside>
@@ -142,25 +146,6 @@ function BibliotecaPage() {
           </div>
         </aside>
         <section className="min-w-0">
-          <div className="relative">
-            <Search className="absolute left-4 top-3.5 size-4 text-muted-foreground" />
-            <input
-              aria-label="Buscar na biblioteca"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Buscar conceito, autor, obra ou termo"
-              className="h-11 w-full rounded-md border border-input bg-background pl-11 pr-4 text-[15px] placeholder:text-muted-foreground"
-            />
-          </div>
-          {lastItem && !selected && (
-            <button
-              type="button"
-              onClick={() => setSelected(lastItem)}
-              className="mt-3 inline-flex min-h-11 items-center gap-2 text-[15px] font-semibold text-forest underline-offset-4 hover:underline"
-            >
-              Voltar ao último trecho: {lastItem.title}
-            </button>
-          )}
           <div className="flex justify-between items-center py-6">
             <h2 className="font-serif text-3xl font-semibold">{category}</h2>
             <span className="text-xs text-muted-foreground">{shown.length} resultados</span>
@@ -203,6 +188,27 @@ function BibliotecaPage() {
           )}
         </section>
       </div>
+      {!q && category === "Todos" && (
+        <div className="container-liz mt-8">
+          <div className="gv-library-banner">
+            <img
+              src="/assets/genealiz/archive-library.jpg"
+              loading="lazy"
+              decoding="async"
+              alt="Livros e fotografias, composição de acervo ilustrativa"
+            />
+            <div>
+              <p className="gv-category">Acervo de consulta</p>
+              <h2>
+                Conhecimento que
+                <br />
+                acompanha a prática.
+              </h2>
+              <p>Conceitos, autores e leituras para voltar sempre que precisar.</p>
+            </div>
+          </div>
+        </div>
+      )}
       <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
         <SheetContent side="right" className="w-full sm:max-w-[520px] overflow-y-auto p-0">
           {selected?.term ? (

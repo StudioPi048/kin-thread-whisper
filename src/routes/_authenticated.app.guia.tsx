@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ChevronDown } from "lucide-react";
 import { DocumentHeader } from "@/components/ui/document-header";
 
 export const Route = createFileRoute("/_authenticated/app/guia")({
@@ -57,7 +57,7 @@ const TASKS: Task[] = [
       "Meios-irmãos: vincule cada um ao pai/mãe correto; o mapa cria uniões separadas.",
       "Quem não tem genitor informado continua visível com aviso — o sistema não inventa pais.",
     ],
-    note: "Orientação fixa do mapa: cliente e irmãos SEMPRE no topo; pais logo abaixo; avós abaixo dos pais; cada geração anterior desce mais um nível.",
+    note: "Orientação fixa do mapa: consultante e irmãos de sangue no topo; pais logo abaixo; avós abaixo dos pais; cada geração anterior desce mais um nível.",
     to: "/app/genossociogramas",
     action: "Abrir genossociogramas",
   },
@@ -67,11 +67,22 @@ const TASKS: Task[] = [
     steps: [
       "Arraste pessoas para ajustar. O layout é salvo automaticamente após 2 s; “Salvar layout” força o envio.",
       "Desfazer/Refazer valem só para posições — remover pessoas não é desfeito.",
-      "Se a conexão cair e o navegador permitir guardar dados locais, um rascunho só de posições é oferecido ao voltar (Recuperar/Descartar). Se não for possível guardar, o mapa avisa — não saia antes de salvar.",
-      "“Recalcular” pede confirmação, porque substitui as posições salvas.",
+      "Se a conexão cair, mantenha a página aberta e tente salvar novamente. As edições pendentes ficam nesta página.",
+      "“Organizar” pede confirmação, porque substitui as posições salvas.",
     ],
     to: "/app/genossociogramas",
     action: "Ir ao mapa",
+  },
+  {
+    id: "mapa-3d",
+    title: "Explorar e editar a árvore em 3D",
+    steps: [
+      "Alterne entre 2D e 3D sem perder os familiares nem os vínculos.",
+      "Use “Separar vínculos” para examinar cruzamentos. Abra a lista de vínculos para selecionar uma linha pelo teclado.",
+      "Selecione um familiar e use “Abrir uniões” para inspecionar cada união e os filhos associados.",
+    ],
+    to: "/app/genossociogramas",
+    action: "Abrir genossociogramas",
   },
   {
     id: "importar",
@@ -89,9 +100,10 @@ const TASKS: Task[] = [
     id: "sessao",
     title: "Conduzir e registrar uma sessão",
     steps: [
-      "Na Agenda, abra o atendimento e use “Abrir caso”; voltar mantém a data.",
-      "Na aba Sessões, escreva em “Notas da sessão” e salve. As notas são independentes do áudio.",
-      "Se gravar áudio, o texto gerado é provisório: só conta como revisado depois de “Li e revisei este texto”.",
+      "Na Agenda, abra o atendimento e acesse a sessão. Ao voltar, a data é preservada.",
+      "Escreva e salve em “Notas da sessão”. Use “Registrar sessão sem áudio” para criar um registro avulso.",
+      "Registre separadamente as autorizações para gravar e processar com IA. Depois de parar a gravação, guarde o áudio no dossiê. O processamento exige uma confirmação de envio.",
+      "O texto gerado fica provisório até você usar “Li e revisei este texto”.",
       "Ajuste o estado clínico (Agendada → Em atendimento → Registro pendente → Concluída).",
     ],
     to: "/app/agenda",
@@ -130,11 +142,18 @@ function GuiaPage() {
         subtitle="O que fazer, passo a passo, em cada etapa do atendimento."
       />
       <div className="container-liz grid gap-10 lg:grid-cols-[220px_minmax(0,760px)]">
-        <nav aria-label="Tarefas" className="space-y-1 self-start lg:sticky lg:top-6">
+        <nav
+          aria-label="Tarefas"
+          className="hidden space-y-1 self-start lg:sticky lg:top-6 lg:block"
+        >
           {TASKS.map((t) => (
             <a
               key={t.id}
               href={`#${t.id}`}
+              onClick={() => {
+                const item = document.getElementById(t.id);
+                if (item instanceof HTMLDetailsElement) item.open = true;
+              }}
               className="flex min-h-11 items-center rounded-md px-3 text-[15px] text-foreground hover:bg-secondary"
             >
               {t.title}
@@ -143,25 +162,38 @@ function GuiaPage() {
         </nav>
         <div>
           {TASKS.map((t) => (
-            <section id={t.id} key={t.id} className="mb-9 scroll-mt-8 border-b border-border pb-9">
-              <h2 className="font-serif text-3xl font-semibold">{t.title}</h2>
-              <ol className="mt-4 list-decimal space-y-2 pl-5 text-[16px] leading-7 text-foreground">
-                {t.steps.map((s) => (
-                  <li key={s}>{s}</li>
-                ))}
-              </ol>
-              {t.note && (
-                <p className="mt-4 rounded-md border border-forest/30 bg-forest/5 p-3 text-[15px] font-semibold">
-                  {t.note}
-                </p>
-              )}
-              <Link
-                to={t.to}
-                className="mt-5 inline-flex min-h-11 items-center gap-2 text-[15px] font-semibold text-forest"
-              >
-                {t.action} <ArrowRight size={16} aria-hidden />
-              </Link>
-            </section>
+            <details
+              id={t.id}
+              key={t.id}
+              name="guia-tarefas"
+              className="group scroll-mt-8 border-b border-border"
+            >
+              <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 py-3 text-base font-semibold text-primary [&::-webkit-details-marker]:hidden">
+                {t.title}
+                <ChevronDown
+                  className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180"
+                  aria-hidden
+                />
+              </summary>
+              <div className="pb-6">
+                <ol className="mt-4 list-decimal space-y-2 pl-5 text-[16px] leading-7 text-foreground">
+                  {t.steps.map((s) => (
+                    <li key={s}>{s}</li>
+                  ))}
+                </ol>
+                {t.note && (
+                  <p className="mt-4 rounded-md border border-forest/30 bg-forest/5 p-3 text-[15px] font-semibold">
+                    {t.note}
+                  </p>
+                )}
+                <Link
+                  to={t.to}
+                  className="mt-5 inline-flex min-h-11 items-center gap-2 text-[15px] font-semibold text-forest"
+                >
+                  {t.action} <ArrowRight size={16} aria-hidden />
+                </Link>
+              </div>
+            </details>
           ))}
         </div>
       </div>

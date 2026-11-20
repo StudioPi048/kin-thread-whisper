@@ -12,6 +12,9 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { getPendingRecordCount } from "@/lib/agenda.functions";
+import { profileQuery } from "@/lib/profile";
+import { appointmentDurationMin, formatDurationMinutes } from "@/lib/scheduling";
 import {
   readVisits,
   readPref,
@@ -77,24 +80,15 @@ function AppHome() {
     setOnbHidden(readPref(user.id, "onboarding", { hidden: false }).hidden);
   }, [user.id]);
 
-  const profileQ = useQuery({
-    queryKey: ["profile", user.id],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("id", user.id)
-        .maybeSingle();
-      return data;
-    },
-  });
+  const profileQ = useQuery(profileQuery(user.id));
 
   const clientsQ = useQuery({
-    queryKey: ["mesa-clients"],
+    queryKey: ["mesa-clients", user.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clients")
         .select("id, full_name, preferred_name, consent_given_at")
+        .eq("professional_id", user.id)
         .eq("status", "active");
       if (error) throw error;
       return data ?? [];
@@ -102,35 +96,38 @@ function AppHome() {
   });
 
   const upcomingQ = useQuery({
-    queryKey: ["mesa-sessions-upcoming"],
+    queryKey: ["mesa-sessions-upcoming", user.id],
     queryFn: async () => {
-      const start = new Date();
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(start);
-      end.setDate(end.getDate() + 7);
-      const { data, error } = await supabase
-        .from("clinical_sessions")
-        .select("id, client_id, session_date, title, status, duration_seconds")
-        .gte("session_date", start.toISOString())
-        .lt("session_date", end.toISOString())
-        .order("session_date", { ascending: true })
-        .limit(6);
+      const now = new Date().toISOString();
+      const upcoming = () =>
+        supabase
+          .from("clinical_sessions")
+          .select(
+            "id, client_id, session_date, title, status, duration_seconds, planned_duration_minutes, clients(full_name, preferred_name)",
+          )
+          .eq("user_id", user.id)
+          .gte("session_date", now)
+          .order("session_date")
+          .order("id")
+          .limit(6);
+      const [scheduled, legacy] = await Promise.all([
+        upcoming().eq("clinical_status", "scheduled"),
+        upcoming().is("clinical_status", null),
+      ]);
+      const error = scheduled.error ?? legacy.error;
       if (error) throw error;
-      return data ?? [];
+      return [...(scheduled.data ?? []), ...(legacy.data ?? [])]
+        .sort(
+          (a, b) =>
+            Date.parse(a.session_date) - Date.parse(b.session_date) || a.id.localeCompare(b.id),
+        )
+        .slice(0, 6);
     },
   });
 
   const pendingRecordsQ = useQuery({
-    queryKey: ["mesa-pending-records"],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from("clinical_sessions")
-        .select("id", { count: "exact", head: true })
-        .lt("session_date", new Date().toISOString())
-        .neq("status", "completed");
-      if (error) throw error;
-      return count ?? 0;
-    },
+    queryKey: ["mesa-pending-records", user.id],
+    queryFn: () => getPendingRecordCount(),
   });
 
   const onbQ = useQuery({
@@ -164,10 +161,8 @@ function AppHome() {
   const firstName = profileQ.data?.full_name?.split(" ")[0] ?? user.email?.split("@")[0] ?? "";
   const pendingConsent = clients.filter((c) => !c.consent_given_at).length;
   const resumable = visits.filter((v) => clients.some((c) => c.id === v.clientId)).slice(0, 4);
-  const now = Date.now();
-  const next = (upcomingQ.data ?? []).find(
-    (s) => new Date(s.session_date).getTime() >= now - 30 * 60_000,
-  );
+  const next = upcomingQ.data?.[0];
+  const nextDuration = next ? appointmentDurationMin(next) : null;
   const onb = onbQ.data;
   const showOnb = !onbHidden && onb && onb.done < onb.total;
 
@@ -265,15 +260,19 @@ function AppHome() {
               <Link
                 to="/app/clientes/$clientId"
                 params={{ clientId: next.client_id }}
-                search={{ tab: "sessions" }}
+                search={{ tab: "sessions", session: next.id }}
                 className="block rounded-lg border border-border p-3 hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <span className="block text-[20px] font-semibold tabular-nums">
                   {fmtTime(next.session_date)}
                 </span>
-                <span className="block text-[15px] font-medium">{nameOf(next.client_id)}</span>
+                <span className="block text-[15px] font-medium">
+                  {next.clients?.preferred_name ||
+                    next.clients?.full_name ||
+                    nameOf(next.client_id)}
+                </span>
                 <span className="block text-[14px] text-muted-foreground">
-                  {next.duration_seconds ? `${Math.round(next.duration_seconds / 60)} min · ` : ""}
+                  {nextDuration !== null && `${formatDurationMinutes(nextDuration)} · `}
                   {next.title || "Atendimento"}
                 </span>
               </Link>
@@ -281,15 +280,20 @@ function AppHome() {
                 .filter((s) => s.id !== next.id)
                 .slice(0, 3)
                 .map((s) => (
-                  <p key={s.id} className="text-[14px] text-muted-foreground">
-                    {fmtTime(s.session_date)} · {nameOf(s.client_id)}
-                  </p>
+                  <Link
+                    key={s.id}
+                    className="flex min-h-11 items-center text-sm text-forest hover:underline"
+                    to="/app/clientes/$clientId"
+                    params={{ clientId: s.client_id }}
+                    search={{ tab: "sessions", session: s.id }}
+                  >
+                    {fmtTime(s.session_date)} ·{" "}
+                    {s.clients?.preferred_name || s.clients?.full_name || nameOf(s.client_id)}
+                  </Link>
                 ))}
             </>
           ) : (
-            <p className="text-[15px] text-muted-foreground">
-              Nenhum atendimento nos próximos 7 dias.
-            </p>
+            <p className="text-[15px] text-muted-foreground">Nenhum atendimento futuro agendado.</p>
           )}
           <Link
             to="/app/agenda"

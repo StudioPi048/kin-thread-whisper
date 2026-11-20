@@ -2,6 +2,7 @@
  * Agenda: conversão de fuso e validação de reagendamento.
  * Funções puras — usadas no navegador (prévia) e no servidor (validação final).
  */
+import { civilDate } from "./civil-date";
 
 export const DEFAULT_TZ = "America/Sao_Paulo";
 export const MIN_DURATION = 10;
@@ -14,6 +15,11 @@ export function isValidTimeZone(tz: string): boolean {
   } catch {
     return false;
   }
+}
+
+export function browserTz() {
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return tz && isValidTimeZone(tz) ? tz : DEFAULT_TZ;
 }
 
 type Parts = { y: number; mo: number; d: number; h: number; mi: number };
@@ -43,13 +49,39 @@ const pad = (n: number) => n.toString().padStart(2, "0");
 /** "YYYY-MM-DD" do instante no fuso dado. */
 export function dateKeyInTz(iso: string | Date, tz: string): string {
   const p = partsInTz(new Date(iso), tz);
-  return `${p.y}-${pad(p.mo)}-${pad(p.d)}`;
+  return `${String(p.y).padStart(4, "0")}-${pad(p.mo)}-${pad(p.d)}`;
 }
 
 /** "HH:mm" do instante no fuso dado. */
 export function timeInTz(iso: string | Date, tz: string): string {
   const p = partsInTz(new Date(iso), tz);
   return `${pad(p.h)}:${pad(p.mi)}`;
+}
+
+export function shiftDateKey(dateKey: string, days: number): string {
+  const date = new Date(`${dateKey}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+export function isCivilDateKey(dateKey: string): boolean {
+  const date = civilDate(dateKey);
+  return date?.precision === "day" && date.value === dateKey;
+}
+
+/** A day can start after midnight on a clock-change date. */
+export function startOfCivilDay(dateKey: string, tz: string): Date {
+  const midnight = zonedLocalToUtc(dateKey, "00:00", tz);
+  if (midnight) return midnight;
+  const nominal = new Date(`${dateKey}T00:00:00Z`).getTime();
+  let low = nominal - 2 * 86_400_000;
+  let high = nominal + 2 * 86_400_000;
+  while (high - low > 1) {
+    const middle = Math.floor((low + high) / 2);
+    if (dateKeyInTz(new Date(middle), tz) < dateKey) low = middle;
+    else high = middle;
+  }
+  return new Date(high);
 }
 
 /**
@@ -123,4 +155,24 @@ export function plannedDurationMin(row: {
   if (row.planned_duration_minutes) return row.planned_duration_minutes;
   if (row.duration_seconds) return Math.max(MIN_DURATION, Math.round(row.duration_seconds / 60));
   return 60;
+}
+
+export function appointmentDurationMin(row: {
+  status: string;
+  planned_duration_minutes?: number | null;
+  duration_seconds?: number | null;
+}): number | null {
+  if (row.planned_duration_minutes) return row.planned_duration_minutes;
+  // Legacy bookings used duration_seconds. For other records it is audio length.
+  if (row.status === "scheduled" && row.duration_seconds)
+    return Math.max(MIN_DURATION, Math.round(row.duration_seconds / 60));
+  return null;
+}
+
+export function formatDurationMinutes(minutes: number): string {
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  return (
+    [hours && `${hours} h`, remainder && `${remainder} min`].filter(Boolean).join(" ") || "0 min"
+  );
 }

@@ -50,7 +50,9 @@ describe("UnsavedRegistry", () => {
       save: async () => {
         throw new Error("offline");
       },
-      discard: () => (dirty = false),
+      discard: () => {
+        dirty = false;
+      },
     });
     const res = await r.saveAll();
     expect(res.ok).toBe(false);
@@ -70,8 +72,24 @@ describe("UnsavedRegistry", () => {
     r.set("b", { label: "B", isDirty: () => false, save: async () => {}, discard: discardB });
     expect((await r.saveAll()).ok).toBe(true);
     expect(r.anyDirty()).toBe(false);
-    r.discardAll();
+    await r.discardAll();
     expect(discardB).not.toHaveBeenCalled();
+  });
+  it("aguarda a limpeza remota antes de resolver e propaga a falha de descarte", async () => {
+    const r = new UnsavedRegistry();
+    const cleanup = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("sem conexão"))
+      .mockResolvedValue(undefined);
+    r.set("audio", {
+      label: "Áudio pendente",
+      isDirty: () => true,
+      save: async () => {},
+      discard: cleanup,
+    });
+    await expect(r.discardAll()).rejects.toThrow("sem conexão");
+    await expect(r.discardAll()).resolves.toBeUndefined();
+    expect(cleanup).toHaveBeenCalledTimes(2);
   });
   it("save que retorna mas deixa pendência conta como falha", async () => {
     const r = new UnsavedRegistry();

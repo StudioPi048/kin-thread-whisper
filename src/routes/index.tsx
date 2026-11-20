@@ -59,13 +59,14 @@ function Index() {
               começa <em>antes.</em>
             </h1>
             <p>
-              Conecte histórias familiares. Organize seus atendimentos. Tenha espaço para escutar.
+              Monte genossociogramas, organize a agenda e registre as sessões de cada cliente no
+              mesmo dossiê.
             </p>
             <Link to="/auth" search={{ mode: "signup" }} className="gv-button gv-button-gold">
               Criar meu espaço <ArrowRight size={18} />
             </Link>
-            <a href="#plataforma" className="gv-hero-secondary">
-              Explore a plataforma <span>↓</span>
+            <a href="#caso-ficticio" className="gv-hero-secondary">
+              Ver exemplo fictício <span aria-hidden="true">↓</span>
             </a>
           </div>
           <div className="gv-hero-foot">
@@ -94,7 +95,7 @@ function Index() {
               acontecimentos ao longo das sessões.
             </p>
             <div className="gv-text-links">
-              <Link to="/auth">
+              <Link to="/auth" search={{ mode: "signup" }}>
                 Abrir minha conta <ArrowUpRight size={17} />
               </Link>
               <a href="#pratica">
@@ -141,9 +142,9 @@ function Index() {
                   Nome, datas e observações por integrante
                 </li>
               </ul>
-              <Link to="/auth">
-                Explorar os genossociogramas <ArrowUpRight size={18} />
-              </Link>
+              <a href="#caso-ficticio">
+                Ver o mapa do caso fictício <ArrowRight size={18} />
+              </a>
             </div>
             <figure className="gv-family-photo">
               <img
@@ -156,6 +157,31 @@ function Index() {
               <figcaption>Memórias, pessoas e vínculos. Composição ilustrativa.</figcaption>
             </figure>
           </div>
+          <figure
+            id="caso-ficticio"
+            className="mx-0 my-8 scroll-mt-4 overflow-hidden rounded-lg border border-border bg-card md:my-12"
+          >
+            <img
+              src="/assets/genealiz/editor-demo.webp"
+              alt="Editor do genossociograma com três casais em faixas ancestrais e a ficha da tia Teresa aberta."
+              width={1150}
+              height={666}
+              loading="lazy"
+              decoding="async"
+              className="block h-auto w-full"
+            />
+            <figcaption className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-2 text-sm text-ink-soft">
+              Captura do editor com uma família fictícia.
+              <a
+                href="/assets/genealiz/editor-demo.webp"
+                className="inline-flex min-h-11 items-center gap-2 font-semibold text-forest underline underline-offset-4"
+                target="_blank"
+                rel="noopener"
+              >
+                Abrir imagem em tamanho completo <ArrowUpRight size={16} aria-hidden />
+              </a>
+            </figcaption>
+          </figure>
           <div className="gv-feature-pair">
             <article>
               <CalendarDays size={24} />
@@ -164,8 +190,8 @@ function Index() {
                 Agenda, anamnese e registros de sessão acessíveis a partir do dossiê. Retome o
                 acompanhamento com o contexto por perto.
               </p>
-              <Link to="/auth">
-                Organizar atendimentos <ArrowRight size={18} />
+              <Link to="/auth" search={{ redirect: "/app/agenda" }}>
+                Entrar para acessar a Agenda <ArrowRight size={18} />
               </Link>
             </article>
             <article className="gv-library-feature">
@@ -181,8 +207,8 @@ function Index() {
                   Consulte conceitos, autores e referências na biblioteca enquanto desenvolve sua
                   prática.
                 </p>
-                <Link to="/auth">
-                  Conhecer a biblioteca <ArrowRight size={18} />
+                <Link to="/auth" search={{ redirect: "/app/biblioteca" }}>
+                  Entrar para acessar a Biblioteca <ArrowRight size={18} />
                 </Link>
               </div>
             </article>

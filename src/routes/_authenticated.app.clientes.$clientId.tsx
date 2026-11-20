@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { lazy, Suspense } from "react";
 
 const ClientTimeline = lazy(() =>
@@ -30,6 +30,8 @@ import {
   Archive,
   ArchiveRestore,
   ChevronRight,
+  Ellipsis,
+  Download,
   Pencil,
   ShieldCheck,
   ShieldAlert,
@@ -39,8 +41,6 @@ import {
   History,
   FileText,
   Camera,
-  Mail,
-  Phone,
   MapPin,
   Sparkles,
   Layers,
@@ -68,12 +68,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { deleteClientDossier } from "@/lib/delete-client-dossier";
 import { supabase } from "@/integrations/supabase/client";
 import { ClientFormDialog } from "@/components/clients/client-form-dialog";
 import { ClinicalIntelligencePanel } from "@/components/clients/clinical-intelligence-panel";
 import { DocumentHeader } from "@/components/ui/document-header";
 
-import { recordVisit } from "@/lib/recent-activity";
+import { recordVisit, writePref } from "@/lib/recent-activity";
 import { clinicalIntelQuery } from "@/lib/clinical-intel";
 import { detectPatterns } from "@/lib/patterns";
 import { informationGaps } from "@/lib/evidence";
@@ -108,7 +115,13 @@ type DossierTab = (typeof DOSSIER_TABS)[number];
 export const Route = createFileRoute("/_authenticated/app/clientes/$clientId")({
   validateSearch: (
     search: Record<string, unknown>,
-  ): { tab?: DossierTab; from?: "agenda"; agendaDate?: string; person?: string } => {
+  ): {
+    tab?: DossierTab;
+    from?: "agenda";
+    agendaDate?: string;
+    person?: string;
+    session?: string;
+  } => {
     const tab = search.tab as string | undefined;
     return {
       ...(typeof search.agendaDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(search.agendaDate)
@@ -116,6 +129,9 @@ export const Route = createFileRoute("/_authenticated/app/clientes/$clientId")({
         : {}),
       ...(typeof search.person === "string" && /^[0-9a-f-]{36}$/i.test(search.person)
         ? { person: search.person }
+        : {}),
+      ...(typeof search.session === "string" && /^[0-9a-f-]{36}$/i.test(search.session)
+        ? { session: search.session }
         : {}),
       ...(DOSSIER_TABS.includes(tab as DossierTab) ? { tab: tab as DossierTab } : {}),
       ...(search.from === "agenda" ? { from: "agenda" as const } : {}),
@@ -127,13 +143,28 @@ export const Route = createFileRoute("/_authenticated/app/clientes/$clientId")({
 
 function ClientDossierPage() {
   const { clientId } = Route.useParams();
-  const { tab: tabFromUrl, from, agendaDate, person: focusPerson } = Route.useSearch();
+  const {
+    tab: tabFromUrl,
+    from,
+    agendaDate,
+    person: focusPerson,
+    session: focusedSessionId,
+  } = Route.useSearch();
   const { user } = Route.useRouteContext();
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [mapFocus, setMapFocus] = useState<{ clientId: string; personId: string }>();
+  const rememberMapFocus = useCallback(
+    (personId: string) => {
+      setMapFocus({ clientId, personId });
+      writePref(user.id, `map-focus:${clientId}`, { personId });
+    },
+    [clientId, user.id],
+  );
+  const tabScrollRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState<DossierTab>(tabFromUrl ?? "genogram");
 
   // Contexto estável: URL manda na aba; registra visita real (só IDs/aba) por usuário
@@ -145,12 +176,22 @@ function ClientDossierPage() {
     recordVisit(user.id, clientId, activeTab);
   }, [user.id, clientId, activeTab]);
 
+  useEffect(() => {
+    const lane = tabScrollRef.current;
+    const active = lane?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
+    if (!lane || !active) return;
+    const viewport = lane.getBoundingClientRect();
+    const target = active.getBoundingClientRect();
+    if (target.left < viewport.left) lane.scrollLeft += target.left - viewport.left;
+    if (target.right > viewport.right) lane.scrollLeft += target.right - viewport.right;
+  }, [activeTab]);
+
   // A aba só muda depois que a navegação passa pelo guard de alterações
   // não salvas (useBlocker); se a usuária escolher "Ficar", nada desmonta.
   const goToTab = (next: DossierTab) => {
     void navigate({
       from: Route.fullPath,
-      search: (prev) => ({ ...prev, tab: next }),
+      search: (prev) => ({ ...prev, tab: next, person: undefined }),
       replace: true,
     });
   };
@@ -236,23 +277,24 @@ function ClientDossierPage() {
 
   // Sinais leves pra jornada clínica e o card de "próxima sessão" — não
   // duplicam os dados completos que cada aba (Sessões/Genograma) já busca.
-  const { data: nextSessionISO = null } = useQuery({
+  const { data: nextSession = null } = useQuery({
     queryKey: ["client-next-session", clientId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clinical_sessions")
-        .select("session_date")
+        .select("id, session_date")
         .eq("client_id", clientId)
+        .or("clinical_status.eq.scheduled,clinical_status.is.null")
         .gt("session_date", new Date().toISOString())
         .order("session_date", { ascending: true })
         .limit(1)
         .maybeSingle();
       if (error) throw error;
-      return data?.session_date ?? null;
+      return data;
     },
   });
 
-  const { data: genogramPersonCount = 0 } = useQuery({
+  const { data: genogramPersonCount = 0, isLoading: loadingFamilyCount } = useQuery({
     queryKey: ["client-genogram-count", clientId],
     queryFn: async () => {
       const { count, error } = await supabase
@@ -280,13 +322,27 @@ function ClientDossierPage() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
 
+  const exportCase = useMutation({
+    mutationFn: async () => {
+      const [{ exportDossierData }, { readExportPage, downloadJson }] = await Promise.all([
+        import("@/lib/data-export"),
+        import("@/lib/download-export"),
+      ]);
+      const data = await exportDossierData(readExportPage, user.id, clientId);
+      downloadJson(data, `genealiz-dossie-${clientId}.json`);
+    },
+    onSuccess: () => toast.success("Arquivo JSON do dossiê gerado."),
+    onError: (error) => toast.error(error.message),
+  });
+
   const remove = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("clients").delete().eq("id", clientId);
-      if (error) throw error;
+      await deleteClientDossier(clientId, user.id);
     },
     onSuccess: () => {
+      setDeleting(false);
       qc.invalidateQueries({ queryKey: ["clients"] });
+      qc.invalidateQueries({ queryKey: ["all-clients-search"] });
       toast.success("Dossiê removido.");
       navigate({ to: "/app/clientes" });
     },
@@ -431,60 +487,65 @@ function ClientDossierPage() {
             <span>
               {sessionCount} {sessionCount === 1 ? "sessão" : "sessões"}
             </span>
-            <span>
-              {nextSessionISO
-                ? `Próxima: ${new Date(nextSessionISO).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}`
-                : "Sem sessão agendada"}
-            </span>
-            {client.phone && (
-              <span className="inline-flex items-center gap-1">
-                <Phone className="size-3.5" aria-hidden /> {client.phone}
-              </span>
-            )}
-            {client.email && (
-              <span className="inline-flex items-center gap-1">
-                <Mail className="size-3.5" aria-hidden /> {client.email}
-              </span>
+            {nextSession ? (
+              <Link
+                to="/app/clientes/$clientId"
+                params={{ clientId }}
+                search={(previous) => ({ ...previous, tab: "sessions", session: nextSession.id })}
+                className="font-medium text-forest hover:underline"
+              >
+                Próxima sessão ·{" "}
+                {new Date(nextSession.session_date).toLocaleString("pt-BR", {
+                  day: "2-digit",
+                  month: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </Link>
+            ) : (
+              <span>Sem sessão agendada</span>
             )}
           </div>
         }
         actions={
-          <div className="flex items-center gap-1 opacity-60 hover:opacity-100 transition-opacity bg-surface-document/60 p-1 rounded-md border border-border/40">
+          <div className="flex flex-wrap items-center gap-2">
             <LibraryCasePanel />
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => setEditing(true)}
-              className="hover:bg-black/5"
-              title="Editar"
-              aria-label="Editar"
-            >
-              <Pencil className="size-3.5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => toggleArchive.mutate()}
-              className="hover:bg-black/5"
-              title={client.status === "active" ? "Arquivar" : "Reativar"}
-              aria-label={client.status === "active" ? "Arquivar" : "Reativar"}
-            >
-              {client.status === "active" ? (
-                <Archive className="size-3.5" />
-              ) : (
-                <ArchiveRestore className="size-3.5" />
-              )}
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              className="text-clinical-critical hover:bg-clinical-critical/10 hover:text-clinical-critical"
-              onClick={() => setDeleting(true)}
-              title="Excluir"
-              aria-label="Excluir cliente"
-            >
-              <Trash2 className="size-3.5" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="min-h-11" aria-label="Mais ações do dossiê">
+                  <Ellipsis className="size-4" aria-hidden />
+                  <span className="hidden sm:inline">Mais ações</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem className="min-h-11" onSelect={() => setEditing(true)}>
+                  <Pencil className="size-4" aria-hidden /> Editar dossiê
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="min-h-11"
+                  disabled={exportCase.isPending}
+                  onSelect={() => exportCase.mutate()}
+                >
+                  <Download className="size-4" aria-hidden />
+                  {exportCase.isPending ? "Exportando…" : "Exportar dossiê em JSON"}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="min-h-11"
+                  disabled={toggleArchive.isPending}
+                  onSelect={() => toggleArchive.mutate()}
+                >
+                  {client.status === "active" ? (
+                    <Archive aria-hidden />
+                  ) : (
+                    <ArchiveRestore aria-hidden />
+                  )}
+                  {client.status === "active" ? "Arquivar dossiê" : "Reativar dossiê"}
+                </DropdownMenuItem>
+                <DropdownMenuItem className="min-h-11" onSelect={() => setDeleting(true)}>
+                  <Trash2 className="size-4" aria-hidden /> Excluir dossiê
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         }
       />
@@ -499,7 +560,10 @@ function ClientDossierPage() {
           >
             {/* STICKY NAV TABS — rolagem horizontal no mobile */}
             <div className="sticky top-0 z-30 -mx-[18px] flex items-center gap-2 border-b border-border/40 bg-surface-archive px-[18px] py-2 sm:mx-0 sm:px-0">
-              <div className="min-w-0 flex-1 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div
+                ref={tabScrollRef}
+                className="min-w-0 flex-1 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              >
                 <TabsList className="flex h-auto w-max flex-nowrap justify-start gap-1 rounded-full border border-border/40 bg-surface-document p-1 shadow-md">
                   {(
                     [
@@ -515,7 +579,7 @@ function ClientDossierPage() {
                     <TabsTrigger
                       key={value}
                       value={value}
-                      className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-4 py-2 text-[12px] font-semibold whitespace-nowrap text-muted-foreground transition-all data-[state=active]:bg-forest data-[state=active]:text-white"
+                      className="flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-4 py-2 text-[12px] font-semibold whitespace-nowrap text-muted-foreground transition-all data-[state=active]:bg-forest data-[state=active]:text-white"
                     >
                       {Icon && <Icon className="size-3.5" />} {label}
                     </TabsTrigger>
@@ -529,7 +593,7 @@ function ClientDossierPage() {
                   size="sm"
                   variant="outline"
                   onClick={() => goToTab(activeTab === "genogram" ? "clan" : "genogram")}
-                  className="hidden shrink-0 gap-1.5 rounded-full font-semibold sm:flex"
+                  className="hidden shrink-0 gap-1.5 rounded-full font-semibold md:flex"
                 >
                   <Repeat className="size-3.5" />
                   {activeTab === "genogram" ? (
@@ -548,6 +612,29 @@ function ClientDossierPage() {
             <div className="mt-4">
               {/* Visão Geral (Resumo Executivo Clinico) */}
               <TabsContent value="overview">
+                {!loadingFamilyCount && genogramPersonCount <= 1 && (
+                  <section className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-card p-4">
+                    <div>
+                      <h2 className="font-semibold text-primary">Começar a árvore da família</h2>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Traga uma planilha ou registre o primeiro familiar.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        className="min-h-11"
+                        variant="outline"
+                        onClick={() => goToTab("clan")}
+                      >
+                        Abrir planilha para importar
+                      </Button>
+                      <Button className="min-h-11" onClick={() => goToTab("genogram")}>
+                        Abrir mapa para adicionar familiar
+                      </Button>
+                    </div>
+                  </section>
+                )}
+
                 <div className="mb-6">
                   <JourneyStrip stages={journeyStages} />
                 </div>
@@ -686,7 +773,7 @@ function ClientDossierPage() {
                     </Panel>
 
                     <Panel
-                      title="Consentimento LGPD"
+                      title="Consentimento geral"
                       icon={
                         client.consent_given_at ? (
                           <ShieldCheck className="size-4 text-clinical-positive" />
@@ -711,9 +798,16 @@ function ClientDossierPage() {
                         </>
                       ) : (
                         <p className="text-[13px] font-bold text-clinical-warning">
-                          Sem consentimento registrado. Registre antes de anotar dados sensíveis.
+                          Consentimento geral pendente.
                         </p>
                       )}
+                      <Button
+                        variant="outline"
+                        className="mt-3 min-h-11"
+                        onClick={() => goToTab("sessions")}
+                      >
+                        Autorizações de áudio
+                      </Button>
                     </Panel>
                   </aside>
                 </div>
@@ -725,6 +819,9 @@ function ClientDossierPage() {
                     key={client.id}
                     clientId={client.id}
                     focusPersonId={focusPerson}
+                    resumePersonId={mapFocus?.clientId === clientId ? mapFocus.personId : undefined}
+                    onFocusPerson={rememberMapFocus}
+                    onOpenSpreadsheet={() => goToTab("clan")}
                   />
                 </TabSuspense>
               </TabsContent>
@@ -749,13 +846,21 @@ function ClientDossierPage() {
 
               <TabsContent value="clan">
                 <TabSuspense>
-                  <ClanSpreadsheet clientId={client.id} />
+                  <ClanSpreadsheet
+                    clientId={client.id}
+                    onOpenGenogram={() => goToTab("genogram")}
+                  />
                 </TabSuspense>
               </TabsContent>
 
               <TabsContent value="sessions">
                 <TabSuspense>
-                  <SessionsPanel clientId={client.id} />
+                  <SessionsPanel
+                    key={client.id}
+                    clientId={client.id}
+                    clientName={display}
+                    focusedSessionId={focusedSessionId}
+                  />
                 </TabSuspense>
               </TabsContent>
             </div>
@@ -773,24 +878,28 @@ function ClientDossierPage() {
         editing={client}
       />
 
-      <AlertDialog open={deleting} onOpenChange={setDeleting}>
+      <AlertDialog open={deleting} onOpenChange={(open) => !remove.isPending && setDeleting(open)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="font-serif text-primary">
               Excluir dossiê permanentemente?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação apaga <strong>{client.full_name}</strong> e todos os dados clínicos
-              associados. Não pode ser desfeita.
+              Você vai excluir permanentemente o dossiê de <strong>{client.full_name}</strong>,
+              incluindo mapa, planilha, notas, sessões, áudios e foto do perfil.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={remove.isPending}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => remove.mutate()}
+              disabled={remove.isPending}
+              onClick={(event) => {
+                event.preventDefault();
+                remove.mutate();
+              }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Excluir definitivamente
+              {remove.isPending ? "Excluindo…" : "Excluir definitivamente"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

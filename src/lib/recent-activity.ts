@@ -56,7 +56,14 @@ export function readPref<T>(userId: string, name: string, fallback: T): T {
   if (!s || !userId) return fallback;
   try {
     const v = s.getItem(prefKey(userId, name));
-    return v ? { ...fallback, ...JSON.parse(v) } : fallback;
+    if (!v) return fallback;
+    const parsed = JSON.parse(v);
+    if (fallback && typeof fallback === "object" && !Array.isArray(fallback)) {
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+        ? { ...fallback, ...parsed }
+        : fallback;
+    }
+    return parsed ?? fallback;
   } catch {
     return fallback;
   }

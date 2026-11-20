@@ -2,6 +2,7 @@ import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-ro
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
+import { Eye, EyeOff } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,8 @@ const searchSchema = z.object({
   mode: z.enum(["signin", "signup", "recover", "reset"]).optional(),
   redirect: z.string().optional(),
 });
+const newPassword = z.string().min(8, "Mínimo de 8 caracteres").max(72);
+const emptyImage = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 
 /** Erros comuns do Supabase traduzidos com instrução de próximo passo. */
 function friendlyAuthError(err: unknown): string {
@@ -52,14 +55,18 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [recoverSent, setRecoverSent] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [confirmationEmail, setConfirmationEmail] = useState<string | null>(null);
 
   useEffect(() => setMode(initialMode ?? "signin"), [initialMode]);
   const keepErrorRef = useRef(false);
   useEffect(() => {
+    setPasswordVisible(false);
+    setConfirmationEmail(null);
     if (keepErrorRef.current) {
       keepErrorRef.current = false;
       return;
@@ -100,8 +107,11 @@ function AuthPage() {
     e.preventDefault();
     setLoading(true);
     setFormError(null);
+    setNotice(null);
+    setConfirmationEmail(null);
     try {
       if (mode === "recover") {
+        setRecoverSent(false);
         const parsedEmail = z.string().trim().email("E-mail inválido").parse(email);
         const { error } = await supabase.auth.resetPasswordForEmail(parsedEmail, {
           redirectTo: `${window.location.origin}/auth?mode=reset`,
@@ -111,7 +121,7 @@ function AuthPage() {
         return;
       }
       if (mode === "reset") {
-        const parsedPassword = z.string().min(8, "Mínimo de 8 caracteres").max(72).parse(password);
+        const parsedPassword = newPassword.parse(password);
         const { error } = await supabase.auth.updateUser({ password: parsedPassword });
         if (error) throw error;
         toast.success("Senha atualizada.");
@@ -121,7 +131,7 @@ function AuthPage() {
       const parsed = z
         .object({
           email: z.string().trim().email("E-mail inválido").max(255),
-          password: z.string().min(8, "Mínimo de 8 caracteres").max(72),
+          password: mode === "signup" ? newPassword : z.string().min(1, "Informe sua senha"),
           fullName:
             mode === "signup"
               ? z.string().trim().min(2, "Informe seu nome completo").max(120)
@@ -140,9 +150,9 @@ function AuthPage() {
         });
         if (error) throw error;
         if (!su.session) {
-          // Confirmação por e-mail ativa: não há sessão até confirmar.
+          setConfirmationEmail(parsed.email);
           setNotice(
-            "Conta criada. Se a confirmação por e-mail estiver ativa, abra o link enviado para entrar. Não chegou? Confira o spam ou tente entrar depois.",
+            "Se houver uma confirmação pendente, abra o link no seu e-mail antes de entrar. Confira também a caixa de spam.",
           );
           return;
         }
@@ -152,6 +162,12 @@ function AuthPage() {
           email: parsed.email,
           password: parsed.password,
         });
+        if (
+          error?.code === "email_not_confirmed" ||
+          error?.message.toLowerCase().includes("email not confirmed")
+        ) {
+          setConfirmationEmail(parsed.email);
+        }
         if (error) throw error;
         toast.success("Bem-vinda ao GENEALIZ.");
       }
@@ -159,6 +175,26 @@ function AuthPage() {
     } catch (err) {
       const message = err instanceof z.ZodError ? err.errors[0]?.message : friendlyAuthError(err);
       setFormError(message ?? "Não foi possível concluir. Tente de novo.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function resendConfirmation() {
+    if (!confirmationEmail) return;
+    setLoading(true);
+    setFormError(null);
+    setNotice(null);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: confirmationEmail,
+        options: { emailRedirectTo: `${window.location.origin}/app` },
+      });
+      if (error) throw error;
+      setNotice("Solicitação enviada. Confira a caixa de entrada e o spam.");
+    } catch (error) {
+      setFormError(friendlyAuthError(error));
     } finally {
       setLoading(false);
     }
@@ -197,11 +233,16 @@ function AuthPage() {
           <p className="mt-5 text-sm leading-7 text-slate-300 max-w-md">
             Seu espaço de trabalho para organizar relações familiares e acompanhar cada atendimento.
           </p>
-          <img
-            className="gv-auth-image"
-            src="/assets/genealiz/archive-hero.jpg"
-            alt="Fotografias de um arquivo familiar ilustrativo"
-          />
+          <picture>
+            <source media="(min-width: 768px)" srcSet="/assets/genealiz/archive-hero.jpg" />
+            <img
+              className="gv-auth-image"
+              src={emptyImage}
+              width={1536}
+              height={1024}
+              alt="Fotografias de um arquivo familiar ilustrativo"
+            />
+          </picture>
         </div>
         <p className="text-xs text-slate-300">GENEALIZ · Psicogenealogia</p>
       </aside>
@@ -209,7 +250,7 @@ function AuthPage() {
       {/* ── PAINEL DIREITO — Formulário ──────────────────── */}
       <main className="flex items-center justify-center bg-background p-6 md:p-14">
         <div className="w-full max-w-md">
-          <Link to="/" className="mb-10 block md:hidden">
+          <Link to="/" className="mb-10 block md:hidden" aria-label="GENEALIZ — início">
             <GenealizWordmark />
           </Link>
           {/* Header */}
@@ -227,7 +268,7 @@ function AuthPage() {
               {mode === "signin"
                 ? "Bem-vinda de volta. Seus casos aguardam."
                 : mode === "signup"
-                  ? "Acesso restrito a psicogenealogistas formados ou em formação."
+                  ? "Crie seu espaço de trabalho em psicogenealogia."
                   : mode === "recover"
                     ? "Informe seu e-mail e enviaremos um link para redefinir a senha."
                     : "Defina a nova senha da sua conta."}
@@ -250,6 +291,17 @@ function AuthPage() {
               {notice}
             </div>
           )}
+          {confirmationEmail && (
+            <Button
+              type="button"
+              variant="outline"
+              className="mb-5 min-h-11"
+              disabled={loading}
+              onClick={() => void resendConfirmation()}
+            >
+              Reenviar confirmação
+            </Button>
+          )}
           {/* Formulário */}
           <form onSubmit={handleSubmit} className="space-y-5">
             {mode === "signup" && (
@@ -271,7 +323,7 @@ function AuthPage() {
             {mode !== "reset" && (
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-[15px] font-bold">
-                  E-mail profissional
+                  E-mail
                 </Label>
                 <Input
                   id="email"
@@ -280,8 +332,15 @@ function AuthPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="seu@email.com"
                   autoComplete="email"
+                  aria-describedby="auth-email-help"
+                  className="min-h-11"
                   required
                 />
+                <p id="auth-email-help" className="text-sm text-muted-foreground">
+                  {mode === "signup"
+                    ? "Use um endereço que você possa acessar para confirmar a conta."
+                    : "Use o endereço que você informou no cadastro."}
+                </p>
               </div>
             )}
 
@@ -298,22 +357,41 @@ function AuthPage() {
                         setMode("recover");
                         setRecoverSent(false);
                       }}
-                      className="text-[12px] font-semibold text-forest underline-offset-4 hover:underline"
+                      className="inline-flex min-h-11 items-center text-sm font-semibold text-forest underline-offset-4 hover:underline"
                     >
                       Esqueci minha senha
                     </button>
                   )}
                 </div>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder={mode === "signin" ? "Sua senha" : "Mínimo 8 caracteres"}
-                  autoComplete={mode === "signin" ? "current-password" : "new-password"}
-                  minLength={8}
-                  required
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={passwordVisible ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete={mode === "signin" ? "current-password" : "new-password"}
+                    minLength={mode === "signin" ? undefined : 8}
+                    aria-describedby={mode === "signin" ? undefined : "auth-password-help"}
+                    className="min-h-11 pr-12"
+                    required
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute inset-y-0 right-0 size-11"
+                    aria-controls="password"
+                    aria-label={passwordVisible ? "Ocultar senha" : "Mostrar senha"}
+                    onClick={() => setPasswordVisible((visible) => !visible)}
+                  >
+                    {passwordVisible ? <EyeOff aria-hidden /> : <Eye aria-hidden />}
+                  </Button>
+                </div>
+                {mode !== "signin" && (
+                  <p id="auth-password-help" className="text-sm text-muted-foreground">
+                    Use pelo menos 8 caracteres.
+                  </p>
+                )}
               </div>
             )}
 
@@ -322,8 +400,8 @@ function AuthPage() {
                 role="status"
                 className="rounded-lg border border-clinical-positive/25 bg-clinical-positive/8 px-4 py-3 text-[13px] leading-relaxed text-clinical-positive"
               >
-                Se este e-mail tiver conta, o link de redefinição chega em instantes. Confira também
-                a caixa de spam.
+                Se houver uma conta para este e-mail, o link será enviado. Confira a caixa de
+                entrada e o spam.
               </p>
             )}
 

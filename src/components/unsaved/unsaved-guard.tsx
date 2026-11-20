@@ -50,10 +50,19 @@ export function UnsavedProvider({ children }: { children: ReactNode }) {
         `Não foi possível salvar: ${r.failed.map((f) => `${f.label} (${f.message})`).join("; ")}. Suas alterações continuam na tela.`,
       );
   };
-  const discard = () => {
-    registry.discardAll();
+  const discard = async () => {
+    setSaving(true);
     setError(null);
-    blocker.proceed?.();
+    try {
+      await registry.discardAll();
+      blocker.proceed?.();
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : "Não foi possível descartar as alterações.",
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (

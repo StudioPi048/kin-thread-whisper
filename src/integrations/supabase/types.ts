@@ -388,6 +388,21 @@ export type Database = {
         }
         Relationships: []
       }
+      audio_consent_events: {
+        Row: {
+          id: string
+          revision: number
+          client_id: string
+          professional_id: string
+          scope: string
+          granted: boolean
+          source: string
+          created_at: string
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
       clinical_sessions: {
         Row: {
           ai_reviewed_at: string | null
@@ -400,6 +415,8 @@ export type Database = {
           id: string
           manual_notes: string | null
           planned_duration_minutes: number | null
+          processing_consent_id: string | null
+          recording_consent_id: string | null
           session_date: string
           status: string
           structured_note: Json | null
@@ -420,6 +437,8 @@ export type Database = {
           id?: string
           manual_notes?: string | null
           planned_duration_minutes?: number | null
+          processing_consent_id?: string | null
+          recording_consent_id?: string | null
           session_date?: string
           status?: string
           structured_note?: Json | null
@@ -440,6 +459,8 @@ export type Database = {
           id?: string
           manual_notes?: string | null
           planned_duration_minutes?: number | null
+          processing_consent_id?: string | null
+          recording_consent_id?: string | null
           session_date?: string
           status?: string
           structured_note?: Json | null
@@ -905,10 +926,31 @@ export type Database = {
         }
         Returns: boolean
       }
+      record_audio_consent: {
+        Args: { _client_id: string; _scope: string; _granted: boolean; _source: string }
+        Returns: undefined
+      }
       import_genogram_persons: {
         Args: { _client_id: string; _replace?: boolean; _rows: Json }
         Returns: number
       }
+      ensure_genogram_proband: {
+        Args: { _client_id: string }
+        Returns: string
+      }
+      manage_clinical_appointment: {
+        Args: {
+          _action: string
+          _session_id: string
+          _client_id?: string
+          _start?: string
+          _duration_minutes?: number
+          _time_zone?: string
+          _title?: string
+        }
+        Returns: Json
+      }
+      pending_clinical_record_count: { Args: Record<string, never>; Returns: number }
     }
     Enums: {
       app_role: "admin" | "professional"

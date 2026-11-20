@@ -1,4 +1,6 @@
 import { invalidateCase } from "@/lib/clinical-intel";
+import { civilDate } from "@/lib/civil-date";
+import { formatByPrecision, precisionOf } from "@/lib/timeline";
 import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -102,6 +104,7 @@ export function PersonFormDialog({
   const [eventDate, setEventDate] = useState("");
   const [eventType, setEventType] = useState("");
   const [eventDesc, setEventDesc] = useState("");
+  const fromClient = editing?.is_proband === true;
 
   useEffect(() => {
     if (!open) return;
@@ -136,13 +139,23 @@ export function PersonFormDialog({
 
   const mutation = useMutation({
     mutationFn: async (form: FormState) => {
-      if (!form.full_name.trim()) throw new Error("Nome é obrigatório");
-      const payload = {
-        client_id: clientId,
+      if (!fromClient && !form.full_name.trim()) throw new Error("Nome é obrigatório.");
+      for (const date of [form.birth_date, form.death_date]) {
+        if (date && civilDate(date)?.precision !== "day") {
+          throw new Error("Informe uma data completa válida para nascimento e falecimento.");
+        }
+      }
+      if (form.birth_date && form.death_date && form.death_date < form.birth_date) {
+        throw new Error("O falecimento deve ser na data do nascimento ou depois.");
+      }
+      const identity = {
         full_name: form.full_name.trim(),
         preferred_name: form.preferred_name.trim() || null,
         gender: form.gender || null,
         birth_date: form.birth_date || null,
+      };
+      const payload = {
+        client_id: clientId,
         death_date: form.death_date || null,
         is_deceased: form.is_deceased || Boolean(form.death_date),
         is_proband: form.is_proband,
@@ -152,12 +165,14 @@ export function PersonFormDialog({
         life_events:
           form.life_events as unknown as Database["public"]["Tables"]["genogram_persons"]["Insert"]["life_events"],
         notes: form.notes.trim() || null,
-        relationship_to_proband: form.relationship_to_proband.trim() || null,
+        relationship_to_proband: form.is_proband
+          ? "Consulente"
+          : form.relationship_to_proband.trim() || null,
       };
       if (editing) {
         const { error } = await supabase
           .from("genogram_persons")
-          .update(payload)
+          .update(fromClient ? payload : { ...payload, ...identity })
           .eq("id", editing.id)
           .eq("client_id", clientId);
         if (error) throw error;
@@ -167,6 +182,7 @@ export function PersonFormDialog({
           .from("genogram_persons")
           .insert({
             ...payload,
+            ...identity,
             position_x: defaultPosition?.x ?? 0,
             position_y: defaultPosition?.y ?? 0,
           })
@@ -208,10 +224,15 @@ export function PersonFormDialog({
   }
 
   function addEvent() {
-    if (!eventDate || !eventDesc.trim()) return;
+    if (!eventDesc.trim()) return;
+    const date = eventDate.trim();
+    if (date && precisionOf(date) === "unknown") {
+      toast.error("Informe ano, ano e mês, uma data completa ou dia e mês.");
+      return;
+    }
     set("life_events", [
       ...v.life_events,
-      { date: eventDate, type: eventType.trim() || undefined, description: eventDesc.trim() },
+      { date, type: eventType.trim() || undefined, description: eventDesc.trim() },
     ]);
     setEventDate("");
     setEventType("");
@@ -293,11 +314,18 @@ export function PersonFormDialog({
               <h3 className="font-serif text-xl font-bold text-primary border-b border-border pb-2">
                 Identidade
               </h3>
+              {fromClient && (
+                <p className="text-[14px] text-muted-foreground">
+                  Nome, apelido, gênero e nascimento da pessoa consultante são editados no cadastro
+                  do dossiê.
+                </p>
+              )}
               <Row>
                 <Field label="Nome completo *" id="full_name">
                   <Input
                     id="full_name"
-                    required
+                    required={!fromClient}
+                    readOnly={fromClient}
                     autoFocus
                     value={v.full_name}
                     onChange={(e) => set("full_name", e.target.value)}
@@ -306,22 +334,29 @@ export function PersonFormDialog({
                 <Field label="Apelido" id="preferred_name">
                   <Input
                     id="preferred_name"
+                    readOnly={fromClient}
                     value={v.preferred_name}
                     onChange={(e) => set("preferred_name", e.target.value)}
                   />
                 </Field>
               </Row>
-              <Field label="Parentesco com o paciente-índice" id="relationship_to_proband">
-                <RelationshipCombobox
-                  value={v.relationship_to_proband}
-                  onChange={(x) => set("relationship_to_proband", x)}
-                  placeholder="Ex.: Pai, Tia paterna, Bisavô materno..."
-                  triggerClassName="flex h-[42px] w-full rounded-none border-0 border-b-2 border-border/60 bg-transparent px-2 text-[16px] font-medium transition-all duration-300 hover:border-forest/50 focus-visible:outline-none focus-visible:border-forest focus-visible:bg-muted/50"
-                />
-              </Field>
+              {!fromClient && (
+                <Field label="Parentesco com o paciente-índice" id="relationship_to_proband">
+                  <RelationshipCombobox
+                    value={v.relationship_to_proband}
+                    onChange={(x) => set("relationship_to_proband", x)}
+                    placeholder="Ex.: Pai, Tia paterna, Bisavô materno..."
+                    triggerClassName="flex h-[42px] w-full rounded-none border-0 border-b-2 border-border/60 bg-transparent px-2 text-[16px] font-medium transition-all duration-300 hover:border-forest/50 focus-visible:outline-none focus-visible:border-forest focus-visible:bg-muted/50"
+                  />
+                </Field>
+              )}
               <Row>
                 <Field label="Gênero" id="gender">
-                  <Select value={v.gender} onValueChange={(x) => set("gender", x)}>
+                  <Select
+                    value={v.gender}
+                    onValueChange={(x) => set("gender", x)}
+                    disabled={fromClient}
+                  >
                     <SelectTrigger id="gender">
                       <SelectValue />
                     </SelectTrigger>
@@ -356,6 +391,7 @@ export function PersonFormDialog({
                   <Input
                     id="birth_date"
                     type="date"
+                    readOnly={fromClient}
                     value={v.birth_date}
                     onChange={(e) => set("birth_date", e.target.value)}
                   />
@@ -373,7 +409,8 @@ export function PersonFormDialog({
               <div className="flex items-center gap-6 mt-2 mb-4">
                 <label className="flex items-center gap-2 text-[14px] font-medium cursor-pointer">
                   <Checkbox
-                    checked={v.is_deceased}
+                    checked={v.is_deceased || Boolean(v.death_date)}
+                    disabled={Boolean(v.death_date)}
                     onCheckedChange={(c) => set("is_deceased", c === true)}
                   />
                   Já faleceu
@@ -486,10 +523,10 @@ export function PersonFormDialog({
                 <div className="rounded-lg border-2 border-dashed border-border bg-card p-4">
                   <div className="grid gap-3 sm:grid-cols-[130px_1fr_auto]">
                     <Input
-                      type="date"
                       value={eventDate}
                       onChange={(e) => setEventDate(e.target.value)}
-                      aria-label="Data"
+                      aria-label="Data do evento (opcional)"
+                      placeholder="Data opcional"
                     />
                     <Input
                       value={eventDesc}
@@ -507,25 +544,28 @@ export function PersonFormDialog({
                       <Plus className="size-4" />
                     </Button>
                   </div>
+                  <p className="mt-2 text-[14px] text-muted-foreground">
+                    Use AAAA-MM-DD, AAAA-MM, AAAA ou DD/MM.
+                  </p>
                   {v.life_events.length > 0 && (
                     <ul className="mt-4 space-y-2">
                       {v.life_events
-                        .slice()
-                        .sort((a, b) => a.date.localeCompare(b.date))
-                        .map((ev, i) => (
+                        .map((ev, index) => ({ ev, index }))
+                        .sort((a, b) => a.ev.date.localeCompare(b.ev.date))
+                        .map(({ ev, index }) => (
                           <li
-                            key={`${ev.date}-${i}`}
+                            key={`${ev.date}-${index}`}
                             className="flex items-center gap-3 rounded-md border border-border/70 bg-background px-3 py-2 shadow-sm"
                           >
                             <span className="font-mono text-[16px] font-bold text-muted-foreground">
-                              {ev.date}
+                              {formatByPrecision(ev.date, precisionOf(ev.date))}
                             </span>
                             <span className="flex-1 truncate text-[14px] font-medium">
                               {ev.description}
                             </span>
                             <button
                               type="button"
-                              onClick={() => removeEvent(i)}
+                              onClick={() => removeEvent(index)}
                               aria-label={`Remover evento: ${ev.description}`}
                               className="text-muted-foreground hover:text-destructive"
                             >

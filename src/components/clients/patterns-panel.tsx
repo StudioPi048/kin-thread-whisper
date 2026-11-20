@@ -1,39 +1,20 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { AlertCircle, RefreshCw, Sparkles, Activity } from "lucide-react";
 import { motion } from "framer-motion";
 
-import { supabase } from "@/integrations/supabase/client";
+import { clinicalIntelQuery } from "@/lib/clinical-intel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  detectPatterns,
-  severityStyles,
-  type DetectedPattern,
-  type PersonRow,
-  type RelationshipRow,
-} from "@/lib/patterns";
+import { detectPatterns, severityStyles, type DetectedPattern } from "@/lib/patterns";
 
 interface Props {
   clientId: string;
 }
 
 export function PatternsPanel({ clientId }: Props) {
-  const { data, isLoading, refetch, isFetching } = useQuery({
-    queryKey: ["patterns", clientId],
-    queryFn: async () => {
-      const [personsRes, relsRes] = await Promise.all([
-        supabase.from("genogram_persons").select("*").eq("client_id", clientId),
-        supabase.from("genogram_relationships").select("*").eq("client_id", clientId),
-      ]);
-      if (personsRes.error) throw personsRes.error;
-      if (relsRes.error) throw relsRes.error;
-      return {
-        persons: (personsRes.data ?? []) as PersonRow[],
-        relationships: (relsRes.data ?? []) as RelationshipRow[],
-      };
-    },
-  });
+  const { data, isLoading, refetch, isFetching } = useQuery(clinicalIntelQuery(clientId));
 
   const patterns = useMemo(() => {
     if (!data) return [] as DetectedPattern[];
@@ -66,16 +47,23 @@ export function PatternsPanel({ clientId }: Props) {
             hipótese clínica — nunca uma conclusão definitiva.
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => refetch()}
-          disabled={isFetching}
-          className="shrink-0 font-bold"
-        >
-          <RefreshCw className={`size-4 mr-2 ${isFetching ? "animate-spin" : ""}`} />
-          Recalcular Análise
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button asChild className="min-h-11">
+            <Link to="/app/ia-clinica" search={{ caseId: clientId }}>
+              Revisar evidências deste caso
+            </Link>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="shrink-0 font-bold"
+          >
+            <RefreshCw className={`size-4 mr-2 ${isFetching ? "animate-spin" : ""}`} />
+            Recalcular Análise
+          </Button>
+        </div>
       </div>
 
       {patterns.length === 0 ? (

@@ -1,17 +1,29 @@
+import type { QueryClient } from "@tanstack/react-query";
+
 /**
  * Sessões: estado clínico (agenda → atendimento → registro → concluído)
  * separado do estado do áudio (gravando → enviando → processando → revisão → erro).
  */
 
-export type ClinicalStatus = "scheduled" | "in_progress" | "pending_record" | "completed";
+export type ClinicalStatus =
+  "scheduled" | "in_progress" | "pending_record" | "completed" | "canceled";
 export type AudioState =
-  "none" | "recording" | "uploading" | "processing" | "review" | "reviewed" | "error";
+  | "none"
+  | "recording"
+  | "uploading"
+  | "processing"
+  | "review"
+  | "reviewed"
+  | "error"
+  | "waiting_upload"
+  | "waiting_processing";
 
 export const CLINICAL_LABEL: Record<ClinicalStatus, string> = {
   scheduled: "Agendada",
   in_progress: "Em atendimento",
   pending_record: "Registro pendente",
   completed: "Concluída",
+  canceled: "Cancelada",
 };
 
 export const AUDIO_LABEL: Record<AudioState, string> = {
@@ -22,6 +34,8 @@ export const AUDIO_LABEL: Record<AudioState, string> = {
   review: "Aguardando revisão",
   reviewed: "Revisado",
   error: "Erro no áudio",
+  waiting_upload: "Envio pendente",
+  waiting_processing: "Disponível para processamento",
 };
 
 export type SessionLike = {
@@ -39,6 +53,7 @@ const CLINICAL = new Set<ClinicalStatus>([
   "in_progress",
   "pending_record",
   "completed",
+  "canceled",
 ]);
 
 export function clinicalStatusOf(s: SessionLike, now = new Date()): ClinicalStatus {
@@ -52,8 +67,9 @@ export function clinicalStatusOf(s: SessionLike, now = new Date()): ClinicalStat
 export function audioStateOf(s: SessionLike): AudioState {
   if (!s.audio_path) return "none";
   if (s.status === "error") return "error";
-  if (s.status === "transcribing" || s.status === "structuring" || s.status === "draft")
-    return "processing";
+  if (s.status === "awaiting_upload" || s.status === "discarding_upload") return "waiting_upload";
+  if (s.status === "draft") return "waiting_processing";
+  if (s.status === "transcribing" || s.status === "structuring") return "processing";
   if (s.structured_note) return s.ai_reviewed_at ? "reviewed" : "review";
   return "processing";
 }
@@ -120,4 +136,17 @@ export async function confirmReview(
       error: err instanceof Error ? err.message : "Falha ao salvar revisão.",
     };
   }
+}
+
+export async function invalidateSessionViews(qc: QueryClient, clientId: string) {
+  await Promise.all([
+    qc.invalidateQueries({ queryKey: ["clinical_sessions", clientId] }),
+    qc.invalidateQueries({ queryKey: ["client-session-count", clientId] }),
+    qc.invalidateQueries({ queryKey: ["client-next-session", clientId] }),
+    qc.invalidateQueries({ queryKey: ["agenda-data"] }),
+    qc.invalidateQueries({ queryKey: ["agenda-week"] }),
+    qc.invalidateQueries({ queryKey: ["mesa-sessions-upcoming"] }),
+    qc.invalidateQueries({ queryKey: ["mesa-pending-records"] }),
+    qc.invalidateQueries({ queryKey: ["mesa-onboarding-counts"] }),
+  ]);
 }

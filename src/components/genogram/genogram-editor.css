@@ -35,6 +35,14 @@
   margin-left: auto;
 }
 
+.geno-editor-navigation {
+  display: flex;
+  flex: 0 1 320px;
+  align-items: center;
+  gap: 6px;
+  min-width: 130px;
+}
+
 .geno-editor-find {
   display: flex;
   flex: 1 1 140px;
@@ -191,6 +199,10 @@
     min-width: 44px;
   }
 
+  .geno-editor-modes button > svg {
+    display: none;
+  }
+
   .geno-editor-tools {
     margin-left: 0;
   }
@@ -200,17 +212,50 @@
   }
 
   .geno-editor-find {
-    order: 2;
-    flex: 1 0 100%;
+    flex: 1 1 auto;
     max-width: none;
+    min-width: 0;
     padding: 0;
+  }
+
+  .geno-editor-navigation {
+    flex-basis: 100%;
+  }
+
+  .geno-editor-find > svg {
+    display: none;
   }
 
   .geno-editor-find select {
     min-height: 44px;
   }
 
+  .geno-editor-status button,
+  .geno-editor-map-controls .react-flow__controls-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .geno-editor-map-controls {
+    flex-direction: row;
+  }
+
+  .geno-editor-map-controls .react-flow__controls-button {
+    border-bottom: 0;
+    border-inline-end: 1px solid var(--border);
+  }
+
+  .geno-editor-map-controls .react-flow__controls-button:last-child {
+    border-inline-end: 0;
+  }
+
   .atlas-genogram:not(.geno-editor-expanded) .atlas-map-stage {
     min-height: 420px;
+  }
+}
+
+@media (max-width: 359px) {
+  .geno-editor-connect > span {
+    display: none;
   }
 }

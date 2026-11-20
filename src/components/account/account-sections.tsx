@@ -6,7 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { DEFAULT_PREFERENCES, preferencesKey, type Preferences } from "@/lib/preferences";
 import { usePreferences } from "./use-preferences";
-import { exportAccountData, type ExportRow } from "@/lib/data-export";
+import { exportAccountData } from "@/lib/data-export";
+import { downloadJson, readExportPage } from "@/lib/download-export";
 
 const card =
   "rounded-[14px] border border-material-border bg-surface-document p-6 shadow-surface sm:p-8";
@@ -135,23 +136,8 @@ export function DataExport({ userId }: { userId: string }) {
   const run = async () => {
     setState({ phase: "running" });
     try {
-      const out = await exportAccountData(async ({ table, filter, from, to }) => {
-        const { data, error } = await supabase
-          .from(table)
-          .select("*")
-          .in(filter.column, filter.values)
-          .order("id")
-          .range(from, to);
-        if (error) throw new Error(`${table}: ${error.message}`);
-        return (data ?? []) as ExportRow[];
-      }, userId);
-      const blob = new Blob([JSON.stringify(out, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `genealiz-export-${new Date().toISOString().slice(0, 10)}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
+      const out = await exportAccountData(readExportPage, userId);
+      downloadJson(out, `genealiz-conta-${new Date().toISOString().slice(0, 10)}.json`);
       setState({ phase: "done" });
     } catch (e) {
       setState({ phase: "error", msg: e instanceof Error ? e.message : "Falha" });
@@ -164,8 +150,9 @@ export function DataExport({ userId }: { userId: string }) {
         Exportar meus dados
       </h2>
       <p className="mt-1 text-[15px] text-muted-foreground">
-        Baixa um arquivo JSON com seu perfil, clientes, familiares, vínculos, anamneses, sessões
-        (sem áudio) e revisões. O arquivo contém dados clínicos — guarde-o em local seguro.
+        Baixa um JSON de toda a conta com perfil, dossiês, mapas, vínculos, anamneses, sessões,
+        autorizações e revisões. Os arquivos de áudio e fotos ficam fora do download. Você pode
+        exportar um caso pelo menu do próprio dossiê.
       </p>
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <Button className="min-h-11" onClick={run} disabled={state.phase === "running"}>
