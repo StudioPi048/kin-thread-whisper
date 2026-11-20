@@ -4,6 +4,27 @@
  */
 export type Snapshot = Record<string, [number, number]>;
 
+/** Limits a horizontal move to the available space around the person. */
+export function clampHorizontalMove(
+  positions: Snapshot,
+  personId: string,
+  deltaX: number,
+  width: number,
+  height: number,
+): number {
+  const current = positions[personId];
+  if (!current || !Number.isFinite(deltaX) || deltaX === 0) return 0;
+  const [x, y] = current;
+  const direction = Math.sign(deltaX);
+  let distance = Math.abs(deltaX);
+  for (const [id, [otherX, otherY]] of Object.entries(positions)) {
+    if (id === personId || Math.abs(otherY - y) >= height) continue;
+    const gap = (otherX - x) * direction;
+    if (gap > 0) distance = Math.min(distance, Math.max(0, gap - width));
+  }
+  return distance === 0 ? 0 : distance * direction;
+}
+
 export class LayoutHistory {
   private past: Snapshot[] = [];
   private future: Snapshot[] = [];

@@ -1,6 +1,15 @@
 import { parentLinePatterns, validateParentLink } from "@/lib/family-relationships";
 import { clinicalIntelQuery, getMappablePersons, invalidateCase } from "@/lib/clinical-intel";
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Background,
   BackgroundVariant,
@@ -63,6 +72,7 @@ import {
   saveDraft,
   readDraft,
   clearDraft,
+  clampHorizontalMove,
   type Snapshot,
   constrainSnapshotY,
 } from "@/lib/geno/layout-history";
@@ -688,6 +698,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const warnings = renderGraph?.warnings ?? [];
   const [view, setView] = useState<"2d" | "3d">("2d");
+  const [spatialFitRequest, setSpatialFitRequest] = useState(0);
   const [focusRequest, setFocusRequest] = useState<{ personId: string }>();
   const [connection, setConnection] = useState<{ originId: string | null } | null>(null);
   const [toolsOpen, setToolsOpen] = useState(false);
@@ -713,6 +724,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
   const [layoutDirty, setLayoutDirty] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [isLayoutFixed, setIsLayoutFixed] = useState(false);
+  const canMoveLayout = !isLayoutFixed && !connection;
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [parentProposal, setParentProposal] = useState<ParentProposal | null>(null);
   const [panelOpen, setPanelOpen] = useState(true);
@@ -732,6 +744,20 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
   const [pendingDraft, setPendingDraft] = useState<Snapshot | null>(null);
   const [, forceHistory] = useState(0);
   const historyRef = useRef(new LayoutHistory());
+  const positionsRef = useRef<Snapshot>({});
+  const dragStartRef = useRef<Snapshot | null>(null);
+  useLayoutEffect(() => {
+    const positions: Snapshot = {};
+    for (const node of nodes) {
+      if (node.type === "person") positions[node.id] = [node.position.x, node.position.y];
+    }
+    positionsRef.current = positions;
+  }, [nodes]);
+  const snapshot = useCallback(() => dragStartRef.current ?? positionsRef.current, []);
+  const rememberLayout = useCallback((positions: Snapshot) => {
+    historyRef.current.push(positions);
+    forceHistory((count) => count + 1);
+  }, []);
   const rootRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setUserId(data.session?.user.id ?? ""));
@@ -891,7 +917,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
     const next = withQuickAdd(renderGraph.nodes);
     // Atualizar a família não substitui um movimento que ainda está em rascunho.
     setNodes((previous) => {
-      if (revRef.current.isClean()) return next;
+      if (revRef.current.isClean() && !dragStartRef.current) return next;
       const previousById = new Map(previous.map((node) => [node.id, node]));
       return next.map((node) => {
         const existing = previousById.get(node.id);
@@ -911,31 +937,33 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
     return () => window.clearTimeout(timer);
   }, [renderGraph, withQuickAdd, setNodes, setEdges, rfInstance]);
 
-  // Lock dragging strictly to X axis
   const onNodesChangeCustom = useCallback(
     (changes: NodeChange[]) => {
-      const hasPositionChange = changes.some(
-        (change) => change.type === "position" && change.position,
+      const start = snapshot();
+      let finished = false;
+      let moved = false;
+      onNodesChange(
+        changes.map((change) => {
+          if (change.type !== "position" || !change.position) return change;
+          const before = start[change.id];
+          const current = positionsRef.current[change.id];
+          if (!before || !current) return change;
+          const x = canMoveLayout ? change.position.x : before[0];
+          finished ||= !change.dragging;
+          moved ||= x !== before[0];
+          return { ...change, position: { x, y: current[1] } };
+        }),
       );
-      const nextChanges = changes.map((change) => {
-        if (change.type === "position" && change.position) {
-          const node = rfInstance.getNode(change.id);
-          if (node && (node.type === "person" || node.type === "union")) {
-            return {
-              ...change,
-              position: { x: change.position.x, y: node.position.y },
-              positionAbsolute: change.positionAbsolute
-                ? { x: change.positionAbsolute.x, y: node.position.y }
-                : undefined,
-            };
-          }
+
+      if (finished) {
+        dragStartRef.current = null;
+        if (moved) {
+          rememberLayout(start);
+          markLayoutDirty();
         }
-        return change;
-      });
-      if (hasPositionChange) markLayoutDirty();
-      onNodesChange(nextChanges);
+      }
     },
-    [onNodesChange, rfInstance, markLayoutDirty],
+    [canMoveLayout, markLayoutDirty, onNodesChange, rememberLayout, snapshot],
   );
 
   const onNodeDoubleClick = useCallback<NodeMouseHandler>(
@@ -1001,13 +1029,6 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
 
-  const snapshot = useCallback((): Snapshot => {
-    const out: Snapshot = {};
-    for (const n of rfInstance.getNodes()) {
-      if (n.type === "person") out[n.id] = [n.position.x, n.position.y];
-    }
-    return out;
-  }, [rfInstance]);
   const applySnapshot = useCallback(
     (snap: Snapshot) => {
       // Só X do snapshot; Y permanece na faixa da geração (cliente+irmãos no topo)
@@ -1020,6 +1041,22 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
       markLayoutDirty();
     },
     [setNodes, snapshot, markLayoutDirty],
+  );
+  const getMovePersonDelta = useCallback(
+    (id: string, deltaX: number) =>
+      canMoveLayout ? clampHorizontalMove(snapshot(), id, deltaX, NODE_W, NODE_H) : 0,
+    [canMoveLayout, snapshot],
+  );
+  const moveSpatialPerson = useCallback(
+    (id: string, deltaX: number) => {
+      const boundedDelta = getMovePersonDelta(id, deltaX);
+      if (Math.abs(boundedDelta) < 1) return;
+      const start = snapshot();
+      const [x, y] = start[id];
+      rememberLayout(start);
+      applySnapshot({ [id]: [x + boundedDelta, y] });
+    },
+    [applySnapshot, getMovePersonDelta, rememberLayout, snapshot],
   );
   const undoLayout = () => {
     const prev = historyRef.current.undo(snapshot());
@@ -1047,8 +1084,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
   const saveLayout = useMutation({
     mutationFn: async () => {
       const rev = revRef.current.begin();
-      const currentNodes = rfInstance.getNodes();
-      const personNodes = currentNodes.filter((node) => node.type === "person");
+      const personPositions = Object.entries(snapshot());
       const savedAt = new Date().toISOString();
 
       // Ensure layout exists or create one
@@ -1068,12 +1104,12 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
       }
 
       // Prepare positions to upsert
-      const positionsToUpsert = personNodes.map((node) => ({
+      const positionsToUpsert = personPositions.map(([nodeId, [x, y]]) => ({
         layout_id: layoutId,
-        node_id: node.id,
+        node_id: nodeId,
         node_type: "person",
-        x: Math.round(node.position.x),
-        y: Math.round(node.position.y),
+        x: Math.round(x),
+        y: Math.round(y),
         layout_mode: "MANUAL",
       }));
 
@@ -1164,11 +1200,11 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
 
   const organizeLayout = () => {
     if (!data || isLayoutFixed) return;
-    historyRef.current.push(snapshot());
-    forceHistory((count) => count + 1);
+    rememberLayout(snapshot());
     const automatic = buildRenderGraph(qualifiedPersons, data.rels, probandId);
     setNodes(withQuickAdd(automatic.nodes));
     markLayoutDirty();
+    setSpatialFitRequest((request) => request + 1);
     window.requestAnimationFrame(
       () =>
         void rfInstance.fitView({
@@ -1601,18 +1637,16 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
             <span className="hidden sm:inline">Pessoa</span>
           </Button>
 
-          {view === "2d" && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="hidden xl:inline-flex"
-              disabled={!qualifiedCount || isLayoutFixed || saveLayout.isPending}
-              onClick={organizeLayout}
-              title="Reorganizar por filiação"
-            >
-              <RotateCcw className="size-4" /> Organizar
-            </Button>
-          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="hidden xl:inline-flex"
+            disabled={!qualifiedCount || isLayoutFixed || saveLayout.isPending}
+            onClick={organizeLayout}
+            title="Reorganizar por filiação"
+          >
+            <RotateCcw className="size-4" /> Organizar
+          </Button>
 
           <div className="geno-editor-find">
             <label htmlFor="geno-locate" className="sr-only">
@@ -1693,69 +1727,61 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
               </PopoverTrigger>
               <PopoverContent align="end" className="w-64 p-2">
                 <div className="geno-editor-menu" aria-label="Opções do mapa">
-                  {view === "2d" && (
-                    <>
-                      <Button
-                        variant="ghost"
-                        onClick={() => {
-                          organizeLayout();
-                          setToolsOpen(false);
-                        }}
-                        disabled={!qualifiedCount || isLayoutFixed || saveLayout.isPending}
-                      >
-                        <RotateCcw className="size-4" /> Organizar
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        aria-label="Desfazer posição"
-                        disabled={!historyRef.current.canUndo || isLayoutFixed}
-                        onClick={() => {
-                          undoLayout();
-                          setToolsOpen(false);
-                        }}
-                      >
-                        <Undo2 className="size-4" /> Desfazer posição
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        aria-label="Refazer posição"
-                        disabled={!historyRef.current.canRedo || isLayoutFixed}
-                        onClick={() => {
-                          redoLayout();
-                          setToolsOpen(false);
-                        }}
-                      >
-                        <Redo2 className="size-4" /> Refazer posição
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        disabled={saveLayout.isPending || !layoutDirty}
-                        onClick={() => {
-                          saveLayout.mutate();
-                          setToolsOpen(false);
-                        }}
-                      >
-                        <Save className="size-4" />{" "}
-                        {saveLayout.isPending ? "Salvando…" : "Salvar layout agora"}
-                      </Button>
-                      {data?.layout?.id && (
-                        <Button
-                          variant="ghost"
-                          disabled={toggleLayoutFixed.isPending}
-                          onClick={() => {
-                            toggleLayoutFixed.mutate();
-                            setToolsOpen(false);
-                          }}
-                        >
-                          {isLayoutFixed ? (
-                            <Unlock className="size-4" />
-                          ) : (
-                            <Lock className="size-4" />
-                          )}
-                          {isLayoutFixed ? "Liberar posições" : "Fixar posições"}
-                        </Button>
-                      )}
-                    </>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      organizeLayout();
+                      setToolsOpen(false);
+                    }}
+                    disabled={!qualifiedCount || isLayoutFixed || saveLayout.isPending}
+                  >
+                    <RotateCcw className="size-4" /> Organizar
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    aria-label="Desfazer posição"
+                    disabled={!historyRef.current.canUndo || isLayoutFixed}
+                    onClick={() => {
+                      undoLayout();
+                      setToolsOpen(false);
+                    }}
+                  >
+                    <Undo2 className="size-4" /> Desfazer posição
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    aria-label="Refazer posição"
+                    disabled={!historyRef.current.canRedo || isLayoutFixed}
+                    onClick={() => {
+                      redoLayout();
+                      setToolsOpen(false);
+                    }}
+                  >
+                    <Redo2 className="size-4" /> Refazer posição
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    disabled={saveLayout.isPending || !layoutDirty}
+                    onClick={() => {
+                      saveLayout.mutate();
+                      setToolsOpen(false);
+                    }}
+                  >
+                    <Save className="size-4" />{" "}
+                    {saveLayout.isPending ? "Salvando…" : "Salvar layout agora"}
+                  </Button>
+                  {data?.layout?.id && (
+                    <Button
+                      variant="ghost"
+                      disabled={toggleLayoutFixed.isPending}
+                      onClick={() => {
+                        toggleLayoutFixed.mutate();
+                        setToolsOpen(false);
+                      }}
+                    >
+                      {isLayoutFixed ? <Unlock className="size-4" /> : <Lock className="size-4" />}
+                      {isLayoutFixed ? "Liberar posições" : "Fixar posições"}
+                    </Button>
                   )}
                   {socialCount > 0 && (
                     <Button
@@ -1901,7 +1927,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                   <p>Linha tracejada · confira a natureza do vínculo na ficha</p>
                 </PopoverContent>
               </Popover>
-              {(layoutDirty || lastSavedAt) && view === "2d" && (
+              {(layoutDirty || lastSavedAt) && (
                 <span role="status" className="geno-editor-save-status">
                   {layoutDirty
                     ? saveLayout.isPending
@@ -1956,8 +1982,10 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                   onEdgesChange={onEdgesChange}
                   onNodeDoubleClick={onNodeDoubleClick}
                   onNodeDragStart={() => {
-                    historyRef.current.push(snapshot());
-                    forceHistory((x) => x + 1);
+                    dragStartRef.current = positionsRef.current;
+                  }}
+                  onNodeDragStop={() => {
+                    dragStartRef.current = null;
                   }}
                   onNodeClick={(_, node) => node.type === "person" && activatePerson(node.id)}
                   onEdgeDoubleClick={onEdgeDoubleClick}
@@ -1965,7 +1993,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                   isValidConnection={(pair) =>
                     !!connection && !!pair.source && !!pair.target && pair.source !== pair.target
                   }
-                  nodesDraggable={!isLayoutFixed && !connection}
+                  nodesDraggable={canMoveLayout}
                   nodesConnectable={!!connection}
                   elementsSelectable={!connection}
                   deleteKeyCode={null}
@@ -2022,6 +2050,10 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                     connectionOriginId={originId}
                     selectedPersonId={connection ? originId : focusedPerson?.id}
                     focusRequest={focusRequest}
+                    fitRequest={spatialFitRequest}
+                    canMovePeople={canMoveLayout}
+                    onMovePerson={moveSpatialPerson}
+                    getMovePersonDelta={getMovePersonDelta}
                   />
                 </Suspense>
               )}
@@ -2048,7 +2080,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                         size="sm"
                         className="min-h-11"
                         onClick={() => {
-                          historyRef.current.push(snapshot());
+                          rememberLayout(snapshot());
                           applySnapshot(pendingDraft!);
                           setPendingDraft(null);
                         }}

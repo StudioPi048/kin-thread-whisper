@@ -1,6 +1,7 @@
 import type { Edge, Node } from "@xyflow/react";
 import { describe, expect, it } from "vitest";
 import { GEN_GAP, PERSON_SHAPE } from "@/lib/geno/build";
+import { renderSpatialRoutes } from "./genogram-spatial-crossings";
 import {
   buildSpatialLayout,
   projectSpatialLayout,
@@ -33,8 +34,18 @@ function pedigree(source: string, childIds: string[]): Edge {
   return { id: source, type: "pedigree", source, target: childIds[0], data: { childIds } };
 }
 
+function partner(personId: string, unionId: string): Edge {
+  return {
+    id: `${personId}-${unionId}`,
+    type: "partner",
+    source: personId,
+    target: unionId,
+    data: { personId, unionId },
+  };
+}
+
 describe("spatial genossociograma", () => {
-  it("orbits in depth without changing generation coordinates or saved node positions", () => {
+  it("orbits the people on a single plane without changing their generations or saved positions", () => {
     const nodes = [
       person("consultante", 0, 0),
       person("irmã", 0, 0),
@@ -49,10 +60,8 @@ describe("spatial genossociograma", () => {
 
     const expected = [0, 0, SPATIAL_ROW_GAP, SPATIAL_ROW_GAP * 2, SPATIAL_ROW_GAP * 3];
     expect(left.people.map(({ y }) => y)).toEqual(expected);
-    expect(right.people[0].y).toBe(0);
-    expect(right.people[1].y).toBe(right.people[0].y);
-    expect(right.people.at(-1)?.y).toBeGreaterThan(left.people.at(-1)!.y);
-    expect(right.people.at(-1)?.scale).toBeLessThan(right.people[0].scale);
+    expect(right.people.map(({ y }) => y)).toEqual(expected);
+    expect(right.people.every(({ z }) => z === 0)).toBe(true);
     expect(left.people.at(-1)?.x).not.toBe(right.people.at(-1)?.x);
     expect(Math.abs(left.people[1].x - left.people[0].x)).toBeGreaterThan(SPATIAL_CARD_WIDTH);
     expect(nodes).toEqual(original);
@@ -129,6 +138,145 @@ describe("spatial genossociograma", () => {
     expect([confirmed.suggested, tentative.suggested]).toEqual([false, true]);
     expect(confirmed.path).not.toBe(tentative.path);
   });
+
+  it("separates genuinely crossed routes while maintaining the same people and child anchors", () => {
+    const nodes = [
+      person("filha de A", 340, 0),
+      person("filho de B", -340, 0),
+      union("A", -326, 1),
+      union("B", 326, 1),
+    ];
+    const edges = [pedigree("A", ["filha de A"]), pedigree("B", ["filho de B"])];
+    edges[1].data = { ...edges[1].data, suggestedChildIds: ["filho de B"] };
+    const layout = buildSpatialLayout(nodes, edges);
+    const flat = projectSpatialLayout(layout, { yaw: 0, pitch: 0 });
+    const separated = projectSpatialLayout(layout, { yaw: 0, pitch: 0 }, null, {
+      separateLinks: true,
+    });
+    expect(flat.bridgeCount).toBe(0);
+    expect(separated.bridgeCount).toBeGreaterThan(0);
+    expect(separated.people).toEqual(flat.people);
+    expect(separated.unions).toEqual(flat.unions);
+    expect(
+      separated.routes.map(({ edge, unionId, childIds, suggested }) => ({
+        edge,
+        unionId,
+        childIds,
+        suggested,
+      })),
+    ).toEqual([
+      { edge: edges[0], unionId: "A", childIds: ["filha de A"], suggested: false },
+      { edge: edges[1], unionId: "B", childIds: ["filho de B"], suggested: true },
+    ]);
+    for (const route of separated.routes) {
+      const child = separated.people.find(({ id }) => route.childIds?.includes(id))!;
+      expect(route.path).toContain(`L ${child.x} ${child.y + child.height}`);
+    }
+    expect(separated.routes[0].bridgePaths[0]).toContain(" C ");
+    expect(separated.routes[1].bridgePaths).toHaveLength(0);
+    expect(separated.routes[1].path).toBe(flat.routes[1].path);
+  });
+
+  it("expands the same parent’s unions without moving any people or sharing the wrong children", () => {
+    const nodes = [
+      person("Cecília", -198, 1),
+      person("Rita", 198, 1),
+      person("Alberto", 0, 2),
+      person("Aparecida", 0, 2),
+      person("Helena", 0, 2),
+      person("José", 460, 2),
+      union("Alberto e Aparecida", 0, 2),
+      union("Alberto e Helena", 0, 2),
+      union("Aparecida e José", 0, 2),
+    ];
+    const edges = [
+      partner("Alberto", "Alberto e Aparecida"),
+      partner("Aparecida", "Alberto e Aparecida"),
+      partner("Alberto", "Alberto e Helena"),
+      partner("Helena", "Alberto e Helena"),
+      partner("Aparecida", "Aparecida e José"),
+      partner("José", "Aparecida e José"),
+      pedigree("Alberto e Aparecida", ["Cecília"]),
+      pedigree("Alberto e Helena", ["Rita"]),
+    ];
+    const inputs = structuredClone({ nodes, edges });
+    const layout = buildSpatialLayout(nodes, edges);
+    const angles = { yaw: 0, pitch: 0 };
+    const original = projectSpatialLayout(layout, angles, "Alberto");
+    const expanded = projectSpatialLayout(layout, angles, "Alberto", {
+      expandedPersonId: "Alberto",
+      separateLinks: true,
+    });
+    expect(expanded.people).toEqual(original.people);
+    const [first, second, unrelated] = expanded.unions;
+    expect([first.expanded, second.expanded, unrelated.expanded]).toEqual([true, true, false]);
+    expect(first.partners).toEqual(["Alberto", "Aparecida"]);
+    expect(second.partners).toEqual(["Alberto", "Helena"]);
+    expect(first.z).not.toEqual(second.z);
+    expect(Math.abs(first.x - second.x)).toBeGreaterThanOrEqual(32);
+    expect(first.y).toBeLessThan(expanded.people.find(({ id }) => id === "Alberto")!.y);
+    expect(second.y).toBeLessThan(expanded.people.find(({ id }) => id === "Alberto")!.y);
+    expect(unrelated).toEqual(original.unions[2]);
+    expect(expanded.routes.map(({ edge }) => edge)).toEqual(
+      original.routes.map(({ edge }) => edge),
+    );
+    expect(
+      expanded.routes
+        .filter(({ childIds }) => childIds)
+        .map(({ unionId, childIds }) => [unionId, childIds]),
+    ).toEqual([
+      [first.id, ["Cecília"]],
+      [second.id, ["Rita"]],
+    ]);
+    expect(expanded.routes.find(({ id }) => id === edges[0].id)?.path).toContain(
+      `L ${first.x} ${first.y}`,
+    );
+    expect(expanded.routes.find(({ id }) => id === edges[2].id)?.path).toContain(
+      `L ${second.x} ${second.y}`,
+    );
+    expect({ nodes, edges }).toEqual(inputs);
+  });
+
+  it("separates overlapping tracks and ignores their genuine shared trunk and end joins", () => {
+    const line = (id: string, start: number, end: number, unionId?: string) => ({
+      id,
+      unionId,
+      priority: 0,
+      strokes: [
+        [
+          { x: start, y: 0 },
+          { x: end, y: 0 },
+        ],
+      ],
+    });
+    const first = line("a", 0, 100, "same");
+    const sameUnion = line("b", 10, 90, "same");
+    const joined = {
+      id: "c",
+      unionId: "same",
+      priority: 0,
+      strokes: [
+        [
+          { x: 65, y: 0 },
+          { x: 65, y: 70 },
+        ],
+      ],
+    };
+    const unrelated = line("d", 30, 70, "different");
+    const front = renderSpatialRoutes([first, sameUnion, joined], { x: 0, y: 0 });
+    expect(front.every(({ bridgePaths }) => bridgePaths.length === 0)).toBe(true);
+    const overlap = renderSpatialRoutes([first, unrelated], { x: 0, y: 0 });
+    expect(overlap[0].bridgePaths).toHaveLength(1);
+    expect(overlap[0].path).toBe("M 0 0 L 24 0 M 76 0 L 100 0");
+    expect(overlap[1].path).toBe("M 30 0 L 70 0");
+    const misleadingJoin = renderSpatialRoutes([first, { ...joined, unionId: "different" }], {
+      x: 0,
+      y: 0,
+    });
+    expect(misleadingJoin[0].bridgePaths).toHaveLength(1);
+    expect(misleadingJoin[1].path).toBe("M 65 0 L 65 70");
+  });
+
   it("keeps full names, reserves a taller plaque for them and preserves canonical row order", () => {
     const name = "Amélia de Santa Bárbara Martins e Albuquerque Brandão de Oliveira";
     const relationship = "Mãe da Avó Materna do Ramo da Sétima Geração";

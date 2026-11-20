@@ -4,9 +4,41 @@
   container-type: inline-size;
   isolation: isolate;
   display: flex;
+  flex-direction: column;
   overflow: hidden;
   color: var(--ink);
-  background: color-mix(in oklab, var(--archive) 76%, var(--forest-mist));
+  --spatial-field: color-mix(in oklab, var(--archive) 76%, var(--forest-mist));
+  background: var(--spatial-field);
+}
+
+.geno-spatial-workspace {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.geno-spatial-features {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 54px 12px 6px;
+}
+
+.geno-spatial-features button {
+  min-height: 44px;
+  padding-inline: 10px;
+}
+
+.geno-spatial-feedback {
+  margin-inline-start: 7px;
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.geno-spatial-feedback:empty {
+  display: none;
 }
 
 .geno-spatial-viewport {
@@ -26,6 +58,10 @@
 
 .geno-spatial-viewport[data-dragging="true"] {
   cursor: grabbing;
+}
+
+.geno-spatial-viewport[data-moving-person="true"] .geno-spatial-person {
+  cursor: ew-resize;
 }
 
 .geno-spatial-geometry,
@@ -91,9 +127,37 @@
   stroke-width: 2.65;
 }
 
+.geno-spatial-link[data-muted],
+.geno-spatial-geometry [data-bridge][data-muted] {
+  opacity: 0.46;
+}
+
+.geno-spatial-bridge-clearance,
+.geno-spatial-link-hit {
+  fill: none;
+  stroke-linecap: round;
+}
+
+.geno-spatial-bridge-clearance {
+  stroke: var(--spatial-field);
+  stroke-width: 6;
+}
+
+.geno-spatial-link-hit {
+  stroke: transparent;
+  stroke-width: 10;
+  pointer-events: stroke;
+  cursor: pointer;
+}
+
 .geno-spatial-link-social {
   stroke: var(--warm-gray);
   stroke-width: 1.25;
+}
+
+.geno-spatial-link-social.geno-spatial-link-current {
+  stroke: var(--forest);
+  stroke-width: 2.65;
 }
 
 .geno-spatial-link-suggested {
@@ -105,6 +169,14 @@
   fill: var(--archive-doc);
   stroke: var(--branch-ink, var(--forest-soft));
   stroke-width: 1.6;
+}
+
+.geno-spatial-geometry [data-expanded] .geno-spatial-union {
+  stroke-width: 2.5;
+}
+
+.geno-spatial-geometry [data-active] .geno-spatial-union {
+  fill: var(--branch-ink, var(--forest));
 }
 
 .geno-spatial-break {
@@ -215,13 +287,13 @@
 }
 
 .geno-spatial-person-name {
-  font-size: 16px;
+  font-size: var(--plaque-name-size, 16px);
   font-weight: 650;
 }
 
 .geno-spatial-person-role {
   color: var(--branch-ink, var(--ink-soft));
-  font-size: 14px;
+  font-size: var(--plaque-role-size, 14px);
 }
 
 .geno-spatial-context {
@@ -229,6 +301,86 @@
   top: 14px;
   right: 14px;
   pointer-events: none;
+}
+
+.geno-spatial-unions {
+  flex: none;
+  max-height: min(166px, 34%);
+  overflow-y: auto;
+  padding: 9px 12px 11px;
+  border-top: 1px solid var(--border);
+  background: var(--archive-doc);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.geno-spatial-unions header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin-bottom: 4px;
+}
+
+.geno-spatial-unions select {
+  min-height: 44px;
+  max-width: 100%;
+  padding-inline: 6px;
+  border: 1px solid var(--input);
+  border-radius: 5px;
+  background: var(--archive-doc);
+}
+
+.geno-spatial-unions-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 145px), 1fr));
+  gap: 7px 14px;
+}
+
+.geno-spatial-unions-list > li {
+  min-width: 0;
+  border-top: 1px solid var(--border);
+}
+
+.geno-spatial-unions-list button {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 3px 6px;
+  border-radius: 5px;
+  text-align: left;
+}
+
+.geno-spatial-unions-list button:hover,
+.geno-spatial-unions-list button[aria-pressed="true"] {
+  background: var(--forest-mist);
+}
+
+.geno-spatial-unions-list button span,
+.geno-spatial-unions-list > li > p,
+.geno-spatial-unions-list > li > ul {
+  color: var(--ink-soft);
+}
+
+.geno-spatial-unions-list > li > ul,
+.geno-spatial-unions-list > li > p {
+  padding-inline: 6px;
+}
+
+.geno-spatial-unions-list .geno-spatial-union-child {
+  min-height: 34px;
+  padding-inline: 0;
+  color: var(--forest);
+}
+
+@media (pointer: coarse) {
+  .geno-spatial-unions-list .geno-spatial-union-child {
+    min-height: 44px;
+  }
 }
 
 .geno-spatial-branches {
@@ -333,7 +485,7 @@
 .geno-spatial-directory {
   position: absolute;
   right: 12px;
-  top: 58px;
+  top: 12px;
   bottom: 66px;
   z-index: 6;
   display: flex;
@@ -441,7 +593,29 @@
 
 @container (max-width: 430px) {
   .geno-spatial-context {
-    top: 53px;
+    display: none;
+  }
+
+  .geno-spatial-features {
+    padding-inline: 8px;
+  }
+
+  .geno-spatial-features button {
+    padding-inline: 7px;
+    font-size: 12px;
+  }
+
+  .geno-spatial-features button svg {
+    display: none;
+  }
+
+  .geno-spatial-feedback {
+    width: 100%;
+    margin-inline-start: 0;
+  }
+
+  .geno-spatial-unions {
+    padding-inline: 8px;
   }
 
   .geno-spatial-branches {
@@ -462,10 +636,6 @@
   .geno-spatial-deck {
     inset-inline: 6px;
     bottom: 8px;
-  }
-
-  .geno-spatial-directory {
-    top: 75px;
   }
 }
 

@@ -51,7 +51,9 @@ Essas razões verificam os pares definidos, não certificam todas as combinaçõ
 ## Genossociograma (inviolável)
 O consultante e os irmãos consanguíneos ocupam o topo. Pais, avós e antepassados descem em faixas. Cada parentesco usa o grafo comum. O arranjo automático aproxima o eixo de cada casal da fratria correspondente e mantém cada par de antepassados junto, com espaço para distinguir as uniões vizinhas. Cartões opacos protegem nomes e datas das linhas. Os nomes completos quebram em linhas no 2D e no 3D, inclusive no panorama. As sugestões de filiação têm traço pontilhado em bronze e exigem confirmação na ficha. O traço horizontal superior marca falecimento, segundo o Manual da Psicogenealogia, p. 164. A ficha escreve a natureza da filiação ao lado do vínculo.
 
-A vista 3D usa um campo claro e símbolos volumétricos. Os cartões ficam de frente para leitura durante o giro e a inclinação. As cores dos trajetos distinguem os ramos quando o parentesco os identifica. A vista frontal e o enquadramento retomam a leitura das gerações. O índice de nomes aproxima a câmera do familiar escolhido.
+A vista 3D abre de frente, com a árvore inteira enquadrada. Os cartões permanecem voltados para leitura enquanto a câmera inclina. Separar vínculos usa pontes desenhadas em profundidade para distinguir cruzamentos sem alterar as filiações. Abrir uniões desloca as junções de um familiar em profundidade e mostra os filhos de cada par, com cada pessoa representada uma vez. As cores dos trajetos distinguem os ramos quando o parentesco os identifica. O índice de nomes aproxima a câmera do familiar escolhido.
+
+Arrastar o fundo desloca a câmera. Mover pessoa ajusta a posição horizontal do cartão na própria geração. A edição de posições, o histórico e os comandos de filiação usam o mesmo estado nas duas vistas.
 
 ## Linha do tempo do dossiê
 Em telas largas, lista cronológica compacta à esquerda e gráfico temporal à direita, com trilhos por tipo de evento. A seleção sincroniza os dois lados. Registros sem data ficam na lista; datas parciais ocupam uma faixa. No celular, o gráfico precede a lista.

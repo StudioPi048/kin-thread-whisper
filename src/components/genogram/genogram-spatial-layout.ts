@@ -1,24 +1,28 @@
 import type { Edge, Node } from "@xyflow/react";
 import { GEN_GAP, NODE_W, PERSON_SHAPE, type ParentKind } from "@/lib/geno/build";
+import { renderSpatialRoutes, type SpatialPoint2D } from "./genogram-spatial-crossings";
 import type { PersonNodeData } from "./person-node";
 
 export const SPATIAL_CARD_WIDTH = 222;
 export const SPATIAL_CARD_HEIGHT = 91;
 export const SPATIAL_ROW_GAP = 188;
 export const SPATIAL_SYMBOL_CENTER = 31;
+export const SPATIAL_X_SCALE = 0.84;
+export const SPATIAL_MAX_NAME_SIZE = 26;
+export const SPATIAL_MAX_ROLE_SIZE = 18;
 export const SPATIAL_MAX_YAW = (39 * Math.PI) / 180;
 export const SPATIAL_DEFAULT_YAW = (23 * Math.PI) / 180;
 export const SPATIAL_MAX_PITCH = (24 * Math.PI) / 180;
 export const SPATIAL_DEFAULT_PITCH = (19 * Math.PI) / 180;
 
-const DEPTH_PER_ROW = 112;
 const CAMERA_DISTANCE = 1680;
 const MIN_PERSON_GAP = 22;
+const UNION_SEPARATION = 32;
 
-type Point = { x: number; y: number };
-type SpatialPoint = Point & { z: number };
+type SpatialPoint = SpatialPoint2D & { z: number };
 export type SpatialAngles = { yaw: number; pitch: number };
 export type SpatialBranch = "paternal" | "maternal" | "common";
+type SpatialLayoutOptions = { separateLinks?: boolean; expandedPersonId?: string | null };
 
 type SpatialPerson = SpatialPoint & {
   id: string;
@@ -38,6 +42,19 @@ type SpatialUnion = SpatialPoint & {
   single: boolean;
 };
 type Span = { left: number; right: number };
+type SpatialRoute = {
+  id: string;
+  edge: Edge;
+  strokes: SpatialPoint2D[][];
+  highlighted: boolean;
+  branch: SpatialBranch;
+  priority: number;
+  unionId?: string;
+  childIds?: string[];
+  sharedAnchor?: string;
+  parentKind?: ParentKind;
+  suggested?: boolean;
+};
 
 const branchFor = (branch: unknown): SpatialBranch =>
   branch === "paternal" || branch === "maternal" ? branch : "common";
@@ -61,17 +78,12 @@ export function spatialPersonLabel(person: PersonNodeData) {
   };
 }
 
-export function spatialDepth(generation: number) {
-  return -generation * DEPTH_PER_ROW;
-}
-
 export function projectSpatialPoint(point: SpatialPoint, angles: SpatialAngles) {
   const { yaw, pitch } = angles;
   const horizontal = point.x * Math.cos(yaw) + point.z * Math.sin(yaw);
   const depth = (point.z * Math.cos(yaw) - point.x * Math.sin(yaw)) * Math.cos(pitch);
   const scale = Math.max(0.69, Math.min(1.15, CAMERA_DISTANCE / (CAMERA_DISTANCE - depth)));
-  // Keep a shared projected baseline per generation. Depth can move a row as a unit,
-  // so a camera orbit never sorts relatives by apparent distance.
+  // People stay on the family plane. Only connections use a nonzero depth.
   return { x: horizontal * scale, y: point.y - point.z * Math.sin(pitch) * 0.49, scale };
 }
 
@@ -96,7 +108,9 @@ function plaqueHeight(data: PersonNodeData) {
   // with browser text settings and keeps its complete name.
   return Math.max(
     SPATIAL_CARD_HEIGHT,
-    30 + 21 * textLines(name, 19) + (relationship ? 18 * textLines(relationship, 22) : 0),
+    30 +
+      Math.ceil(SPATIAL_MAX_NAME_SIZE * 1.25) * textLines(name, 10) +
+      (relationship ? Math.ceil(SPATIAL_MAX_ROLE_SIZE * 1.25) * textLines(relationship, 14) : 0),
   );
 }
 
@@ -110,9 +124,9 @@ export function buildSpatialLayout(nodes: Node[], edges: Edge[]) {
     const row = sourceRows.get(generation) ?? [];
     row.push({
       id: node.id,
-      x: (node.position.x + NODE_W / 2) * 0.84,
+      x: (node.position.x + NODE_W / 2) * SPATIAL_X_SCALE,
       y: 0,
-      z: spatialDepth(generation),
+      z: 0,
       generation,
       height: plaqueHeight(data),
       branch: branchFor(data.branchId),
@@ -166,11 +180,11 @@ export function buildSpatialLayout(nodes: Node[], edges: Edge[]) {
         : (linked[0]?.generation ?? (node.position.y - PERSON_SHAPE / 2) / GEN_GAP);
     unions.push({
       id: node.id,
-      x: node.position.x * 0.84,
+      x: node.position.x * SPATIAL_X_SCALE,
       y: (rowPosition.get(generation) ?? generation * SPATIAL_ROW_GAP) + SPATIAL_SYMBOL_CENTER,
-      z: spatialDepth(generation),
+      z: 0,
       generation,
-      partners,
+      partners: [...new Set(partners)],
       branch: branchFor(node.data.branchId),
       single: node.data.isSingle === true || partners.length === 1,
       kind: typeof node.data.kind === "string" ? node.data.kind : undefined,
@@ -180,8 +194,17 @@ export function buildSpatialLayout(nodes: Node[], edges: Edge[]) {
   return { people, rows, unions, edges: visibleEdges };
 }
 
-function pathThrough(points: Point[]) {
-  return points.map(({ x, y }, index) => `${index === 0 ? "M" : "L"} ${x} ${y}`).join(" ");
+function routePriority(
+  type: Edge["type"],
+  highlighted: boolean,
+  kind?: ParentKind,
+  suggested?: boolean,
+) {
+  const selection = Number(highlighted);
+  if (suggested) return 2 + selection;
+  if (type === "partner") return 6 + selection;
+  if (type !== "pedigree") return selection;
+  return (kind === "biological" || kind === "unknown" ? 8 : 4) + selection;
 }
 
 function overlaps(a: Span, b: Span) {
@@ -216,6 +239,7 @@ export function projectSpatialLayout(
   layout: ReturnType<typeof buildSpatialLayout>,
   angles: SpatialAngles,
   selectedId?: string | null,
+  { separateLinks = false, expandedPersonId }: SpatialLayoutOptions = {},
 ) {
   const rows = new Map(
     layout.rows.map(([_, row]) => {
@@ -249,6 +273,19 @@ export function projectSpatialLayout(
   );
   const people = Array.from(rows.values()).flat();
   const peopleById = new Map(people.map((person) => [person.id, person]));
+  const coordinatedUnions = layout.unions
+    .filter((union) => !union.single && union.partners.includes(expandedPersonId ?? ""))
+    .sort((a, b) => a.x - b.x || a.id.localeCompare(b.id));
+  const expandedRanks = new Map(
+    coordinatedUnions.length > 1 ? coordinatedUnions.map((union, index) => [union.id, index]) : [],
+  );
+  const expandedCenters = new Map<number, Span[]>();
+  const rowClearance = new Map<number, number>();
+  let previousBottom = -Infinity;
+  for (const [rowY, row] of rows) {
+    rowClearance.set(rowY, rowY - previousBottom);
+    previousBottom = rowY + Math.max(...row.map(({ height }) => height));
+  }
   const unions = layout.unions.map((union) => {
     const projected = projectSpatialPoint(union, angles);
     const partners = union.partners.flatMap((id) => {
@@ -256,12 +293,31 @@ export function projectSpatialLayout(
       return person ? [person] : [];
     });
     const corresponding = partners.filter((person) => person.generation === union.generation);
-    const x = corresponding.length
+    let x = corresponding.length
       ? corresponding.reduce((sum, person) => sum + person.x, 0) / corresponding.length
       : projected.x;
-    const y = corresponding.length
+    let y = corresponding.length
       ? corresponding[0].y + SPATIAL_SYMBOL_CENTER * corresponding[0].scale
       : projected.y;
+    const rank = expandedRanks.get(union.id);
+    const expanded = rank !== undefined;
+    let z = union.z;
+    if (expanded) {
+      z = 110 + (rank * 105) / (coordinatedUnions.length - 1);
+      const inDepth = projectSpatialPoint({ ...union, z }, angles);
+      const rowY = corresponding[0]?.y ?? union.y - SPATIAL_SYMBOL_CENTER;
+      const centers = expandedCenters.get(rowY) ?? [];
+      const xOffset = Math.max(-78, Math.min(78, inDepth.x - projected.x));
+      x = avoidCards(x + xOffset, centers);
+      centers.push({ left: x - UNION_SEPARATION, right: x + UNION_SEPARATION });
+      expandedCenters.set(rowY, centers);
+      // Keep every open hub in the free channel above its people.
+      // A frontal view still offsets the hub from the row so it remains inspectable.
+      const lift = Math.min(15, Math.max(-5, (projected.y - inDepth.y) / 3));
+      const openOffset = 17 + lift + (rank * 10) / (coordinatedUnions.length - 1);
+      const clearance = Math.max(12, (rowClearance.get(rowY) ?? Infinity) - 10);
+      y = rowY - Math.min(clearance, openOffset);
+    }
     const branch: SpatialBranch =
       union.branch !== "common"
         ? union.branch
@@ -269,7 +325,7 @@ export function projectSpatialLayout(
             partners.every((person) => person.branch === partners[0]?.branch)
           ? (partners[0]?.branch ?? "common")
           : "common";
-    return { ...union, ...projected, x, y, branch };
+    return { ...union, ...projected, x, y, z, branch, expanded };
   });
   const unionsById = new Map(unions.map((union) => [union.id, union]));
 
@@ -287,15 +343,7 @@ export function projectSpatialLayout(
       selectedUnions.add(String(edge.data?.unionId ?? edge.target));
     }
   }
-  const routes: {
-    id: string;
-    path: string;
-    highlighted: boolean;
-    edge: Edge;
-    branch: SpatialBranch;
-    parentKind?: ParentKind;
-    suggested?: boolean;
-  }[] = [];
+  const routes: SpatialRoute[] = [];
   for (const edge of layout.edges) {
     if (edge.type === "pedigree") {
       const union = unionsById.get(String(edge.data?.unionId ?? edge.source));
@@ -324,7 +372,8 @@ export function projectSpatialLayout(
         childGroups.set(key, group);
       }
       for (const [key, { rowY, kind, suggested, children }] of childGroups) {
-        const down = rowY > union.y;
+        const down =
+          edge.data?.direction === "down" || (edge.data?.direction !== "up" && rowY > union.y);
         const direction = down ? 1 : -1;
         const anchors = children.map((child) => ({
           x: child.x,
@@ -358,35 +407,38 @@ export function projectSpatialLayout(
             Math.min(20, Math.abs(near - portY) * 0.4) *
             (1 - Math.exp(-0.35 * lane));
         const departureY = portY + (barY - portY) * 0.28;
-        const path = [
-          pathThrough([
+        const strokes = [
+          [
             { x: union.x, y: portY },
             { x: union.x, y: departureY },
             { x: column, y: departureY },
             { x: column, y: barY },
-          ]),
-          pathThrough([
+          ],
+          [
             { x: span.left, y: barY },
             { x: span.right, y: barY },
+          ],
+          ...anchors.map(({ x, y }) => [
+            { x, y: barY },
+            { x, y },
           ]),
-          ...anchors.map(({ x, y }) =>
-            pathThrough([
-              { x, y: barY },
-              { x, y },
-            ]),
-          ),
-        ].join(" ");
+        ];
+        const highlighted =
+          selectedUnions.has(union.id) &&
+          (union.partners.includes(selectedId ?? "") ||
+            children.some((person) => person.id === selectedId));
         routes.push({
           id: `${edge.id}-${key}`,
-          path,
+          strokes,
           edge,
           branch: union.branch,
           suggested,
           parentKind: kind,
-          highlighted:
-            selectedUnions.has(union.id) &&
-            (union.partners.includes(selectedId ?? "") ||
-              children.some((person) => person.id === selectedId)),
+          highlighted,
+          unionId: union.id,
+          childIds: children.map((child) => child.id),
+          sharedAnchor: knownParent?.id,
+          priority: routePriority(edge.type, highlighted, kind, suggested),
         });
       }
       continue;
@@ -406,14 +458,26 @@ export function projectSpatialLayout(
           other.x < Math.max(person.x, union.x),
       );
       const railY = crossesCard ? person.y - 12 : y;
-      const path = pathThrough([{ x, y }, { x, y: railY }, { x: union.x, y: railY }, union]);
+      const rank = expandedRanks.get(union.id);
+      const port =
+        person.id === expandedPersonId && rank !== undefined
+          ? person.x + (rank / (coordinatedUnions.length - 1) - 0.5) * person.width * 0.5
+          : person.x;
+      const strokes = union.expanded
+        ? [[{ x: port, y: person.y }, { x: port, y: union.y }, union]]
+        : [[{ x, y }, { x, y: railY }, { x: union.x, y: railY }, union]];
+      const highlighted = selectedUnions.has(union.id);
+      const suggested = edge.data?.suggested === true;
       routes.push({
         id: edge.id,
-        path,
+        strokes,
         edge,
         branch: union.branch,
-        highlighted: selectedUnions.has(union.id),
-        suggested: edge.data?.suggested === true,
+        highlighted,
+        suggested,
+        unionId: union.id,
+        sharedAnchor: person.id,
+        priority: routePriority(edge.type, highlighted, undefined, suggested),
       });
       continue;
     }
@@ -421,13 +485,21 @@ export function projectSpatialLayout(
     const second = peopleById.get(edge.target);
     if (!first || !second) continue;
     const y = Math.min(first.y, second.y) - 24;
+    const highlighted = first.id === selectedId || second.id === selectedId;
     routes.push({
       id: edge.id,
       edge,
       branch: "common",
-      path: pathThrough([first, { x: first.x, y }, { x: second.x, y }, second]),
-      highlighted: first.id === selectedId || second.id === selectedId,
+      strokes: [[first, { x: first.x, y }, { x: second.x, y }, second]],
+      highlighted,
+      priority: routePriority(edge.type, highlighted),
     });
   }
-  return { people, unions, rows, routes };
+  const bridgeDepth = projectSpatialPoint({ x: 0, y: 0, z: 72 }, angles);
+  const rendered = renderSpatialRoutes(
+    routes,
+    separateLinks ? { x: bridgeDepth.x / 5, y: -bridgeDepth.y } : null,
+  );
+  const bridgeCount = rendered.reduce((sum, route) => sum + route.bridgePaths.length, 0);
+  return { people, unions, rows, routes: rendered, bridgeCount };
 }
