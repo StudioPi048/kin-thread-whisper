@@ -15,7 +15,6 @@ import { cn } from "@/lib/utils";
 export interface PersonNodeData {
   full_name: string;
   preferred_name?: string | null;
-  display_full_name?: boolean;
   gender?: string | null;
   birth_date?: string | null;
   death_date?: string | null;
@@ -30,18 +29,6 @@ export interface PersonNodeData {
   [key: string]: unknown;
 }
 
-/**
- * Nó do genossociograma — convenção internacional:
- *  □ quadrado   = masculino  (borda ameixa)
- *  ○ círculo    = feminino   (borda lavanda)
- *  △ triângulo  = aborto
- *  ◇ losango    = não-binário / desconhecido (borda dourada)
- *  Traço superior = pessoa falecida (Psicogenealogia Viva)
- *
- * Foco: LEGIBILIDADE. Nome e datas sempre em primeiro plano, com fundo
- * sólido; o símbolo é a moldura, nunca cobre o texto. Cliente destacado
- * por moldura ameixa e badge — sem escala exagerada.
- */
 function PersonNodeComponent({ id, data, selected }: NodeProps) {
   const d = data as unknown as PersonNodeData;
   const zoom = useStore((store) => store.transform[2]);
@@ -58,8 +45,12 @@ function PersonNodeComponent({ id, data, selected }: NodeProps) {
 
   const borderColor = isMale ? "border-forest" : isFemale ? "border-forest" : "border-gold";
 
-  const displayName = (!d.display_full_name && d.preferred_name) || d.full_name || "—";
-  // Nome em duas linhas se necessário, sem cortar — o container é largo.
+  const displayName = d.full_name?.trim() || d.preferred_name?.trim() || "Pessoa sem nome";
+  const longestWord = displayName
+    .split(/\s+/)
+    .reduce((length, word) => Math.max(length, word.length), 1);
+  // Aperte a fonte de palavras longas antes de recorrer à quebra de sobrenomes.
+  const nameSize = Math.max(16, Math.min(28, 236 / longestWord, 12 / Math.max(zoom, 0.15)));
   const dates = personDatesLabel(d.birth_date, d.death_date);
 
   return (
@@ -243,7 +234,7 @@ function PersonNodeComponent({ id, data, selected }: NodeProps) {
 
       <div
         className="atlas-person-info"
-        style={overview ? { minHeight: 42, paddingInline: 5 } : undefined}
+        style={overview ? { minHeight: 46, paddingInline: 5 } : undefined}
       >
         {d.connecting && (
           <button
@@ -258,19 +249,16 @@ function PersonNodeComponent({ id, data, selected }: NodeProps) {
           />
         )}
         <p
-          className={cn(
-            "font-semibold leading-tight",
-            overview ? "w-full truncate" : "break-words",
-          )}
-          style={{ fontSize: overview ? Math.min(44, 14 / Math.max(zoom, 0.15)) : 16 }}
-          title={[d.full_name || displayName, d.relationship_to_proband, dates]
-            .filter(Boolean)
-            .join(" · ")}
+          className="geno-person-name"
+          style={{ fontSize: nameSize }}
+          title={[displayName, d.relationship_to_proband, dates].filter(Boolean).join(" · ")}
         >
           {displayName}
         </p>
         {!overview && dates && <p className="atlas-person-dates tabular-nums">{dates}</p>}
-        {!overview && d.is_proband && <span className="text-xs text-bronze">Consultante</span>}
+        {!overview && d.is_proband && displayName.toLocaleLowerCase("pt-BR") !== "consultante" && (
+          <span className="text-xs text-bronze">Consultante</span>
+        )}
       </div>
     </div>
   );

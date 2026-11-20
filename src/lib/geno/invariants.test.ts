@@ -583,3 +583,96 @@ describe("ramos colaterais legados e alinhamento", () => {
     expect(parentUnion(graph, f.aunt.id)).toBeUndefined();
   });
 });
+
+function fourAncestorRows() {
+  const client = p("Consulente", "Caso sintético");
+  const rows: PersonRow[][] = [[client]];
+  const rels: ReturnType<typeof rel>[] = [];
+  for (let depth = 1; depth <= 4; depth++) {
+    const members = rows[depth - 1].flatMap((child, index) => {
+      const father = p("", `Pai ${depth}.${index}`, { gender: "masculino" });
+      const mother = p("", `Mãe ${depth}.${index}`, { gender: "feminino" });
+      rels.push(rel(father.id, child.id, "parent"), rel(mother.id, child.id, "parent"));
+      return [father, mother];
+    });
+    rows.push(members);
+  }
+  return { persons: rows.flat(), rels, rows, client };
+}
+
+describe("blocos de casais em quatro faixas ancestrais", () => {
+  function expectCoupleBlocks(
+    graph: LogicalGraph,
+    layout: ReturnType<typeof layoutGraph>,
+    children: readonly PersonRow[],
+    centered: Iterable<string>,
+  ) {
+    const centerIds = new Set(centered);
+    let previousRight = -Infinity;
+    for (const child of children) {
+      const union = graph.unions.get(parentUnion(graph, child.id)!)!;
+      const parentXs = union.partners.map((id) => layout.personPos.get(id)!.x);
+      const left = Math.min(...parentXs);
+      const right = Math.max(...parentXs);
+      expect(left - previousRight, child.full_name).toBeGreaterThanOrEqual(NODE_W);
+      if (centerIds.has(child.id)) {
+        expect(layout.unionPos.get(union.id)!.x).toBeCloseTo(
+          layout.personPos.get(child.id)!.x + NODE_W / 2,
+          5,
+        );
+      }
+      previousRight = right;
+    }
+  }
+
+  it("mantém oito casais adjacentes e no eixo dos próprios filhos no modo Organizar", () => {
+    const f = fourAncestorRows();
+    const graph = buildLogicalGraph({ persons: f.persons, rels: f.rels });
+    const layout = layoutGraph(graph);
+    expectCoupleBlocks(
+      graph,
+      layout,
+      f.rows[3],
+      f.rows[3].map(({ id }) => id),
+    );
+    expect(checkLayoutInvariants(graph, layout)).toEqual([]);
+  });
+
+  it("corrige apenas casais guardados entrelaçados e preserva a disposição materna", () => {
+    const f = fourAncestorRows();
+    const siblings = [p("Irmã(o)", "Primeira irmã"), p("Irmã(o)", "Segundo irmão")];
+    const third = [-1256, -940, -639, -308, 168, 484, 800, 1116];
+    const fourth = [
+      -1336, -1176, -1496, -384, -704, -544, -864, -1656, 88, 248, 408, 568, 728, 888, 1048, 1208,
+    ];
+    const saved = (member: PersonRow, x: number, depth: number) =>
+      ({ node_id: member.id, node_type: "person", x, y: genY(depth) }) as never;
+    const positions = [
+      saved(f.client, -70, 0),
+      saved(siblings[0], -404, 0),
+      saved(siblings[1], -230, 0),
+      ...f.rows[3].map((member, i) => saved(member, third[i], 3)),
+      ...f.rows[4].map((member, i) => saved(member, fourth[i], 4)),
+    ];
+    const graph = buildLogicalGraph({
+      persons: [...f.persons, ...siblings],
+      rels: [
+        ...f.rels,
+        ...siblings.flatMap((child) =>
+          f.rows[1].map((parent) => rel(parent.id, child.id, "parent")),
+        ),
+      ],
+      positions,
+    });
+    const layout = layoutGraph(graph);
+    expect(layout.adjustedX).toBe(4);
+    expect(layout.personPos.get(f.client.id)!.x).toBe(-70);
+    expect(layout.personPos.get(siblings[0].id)!.x).toBe(-404);
+    expect(layout.personPos.get(siblings[1].id)!.x).toBe(-230);
+    for (const i of [0, 1, 4, 5, 8, 9, 10, 11, 12, 13, 14, 15]) {
+      expect(layout.personPos.get(f.rows[4][i].id)!.x).toBe(fourth[i]);
+    }
+    expectCoupleBlocks(graph, layout, f.rows[3], [f.rows[3][1].id, f.rows[3][3].id]);
+    expect(checkLayoutInvariants(graph, layout)).toEqual([]);
+  });
+});

@@ -109,7 +109,7 @@ type RelationshipSeed = {
   qualifier?: string;
 };
 const personName = (person?: PersonRow) =>
-  person?.preferred_name || person?.full_name || "Pessoa sem nome";
+  person?.full_name || person?.preferred_name || "Pessoa sem nome";
 
 /**
  * UnionNode — cidadão de primeira classe do grafo.
@@ -510,11 +510,6 @@ function buildRenderGraph(
     });
   }
 
-  const displayNameCounts = new Map<string, number>();
-  for (const person of graph.persons.values()) {
-    const name = personName(person.row).toLocaleLowerCase("pt-BR");
-    displayNameCounts.set(name, (displayNameCounts.get(name) ?? 0) + 1);
-  }
   // Pessoas
   for (const [pid, person] of graph.persons) {
     const pos = placement.personPos.get(pid);
@@ -527,8 +522,6 @@ function buildRenderGraph(
       data: {
         full_name: person.row.full_name,
         preferred_name: person.row.preferred_name,
-        display_full_name:
-          (displayNameCounts.get(personName(person.row).toLocaleLowerCase("pt-BR")) ?? 0) > 1,
         gender: person.row.gender,
         birth_date: person.row.birth_date,
         death_date: person.row.death_date,
@@ -634,7 +627,7 @@ function buildRenderGraph(
           {
             personId: "norm-x",
             personName: "",
-            message: `${placement.adjustedX} posição(ões) sobrepostas foram reorganizadas para manter os símbolos legíveis.`,
+            message: `${placement.adjustedX} posição(ões) foram ajustadas para separar os familiares e seus vínculos.`,
           },
         ]
       : []),
@@ -773,12 +766,13 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
       const reduced =
         window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
         document.documentElement.dataset.reduceMotion === "true";
-      void rfInstance.fitView({
-        nodes: [{ id }],
-        duration: reduced ? 0 : 200,
-        maxZoom: 1.2,
-        padding: 0.6,
-      });
+      const node = rfInstance.getNode(id);
+      if (node) {
+        void rfInstance.setCenter(nodeCenterX(node), (node.position.y + nodeBottomY(node)) / 2, {
+          duration: reduced ? 0 : 200,
+          zoom: 1.1,
+        });
+      }
     },
     [rfInstance],
   );
@@ -1641,7 +1635,10 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                 .map((person) => (
                   <option key={person.id} value={person.id}>
                     {personName(person)}
-                    {person.relationship_to_proband ? " · " + person.relationship_to_proband : ""}
+                    {person.relationship_to_proband &&
+                    person.relationship_to_proband !== personName(person)
+                      ? " · " + person.relationship_to_proband
+                      : ""}
                   </option>
                 ))}
             </select>
@@ -1854,7 +1851,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                     className="w-[min(24rem,calc(100vw-2rem))] max-h-96 overflow-y-auto"
                     align="start"
                   >
-                    <h3 className="mb-2 text-sm font-semibold">Filiações para revisar</h3>
+                    <h3 className="mb-2 text-sm font-semibold">Pendências do mapa</h3>
                     <ul className="divide-y divide-border">
                       {warnings.map((warning) => (
                         <li
@@ -1974,7 +1971,7 @@ function GenogramCanvasInner({ clientId, focusPersonId }: CanvasProps) {
                   deleteKeyCode={null}
                   panOnDrag={isMobile}
                   panActivationKeyCode="Space"
-                  minZoom={0.15}
+                  minZoom={0.075}
                   maxZoom={2.5}
                   proOptions={{ hideAttribution: true }}
                   defaultEdgeOptions={{

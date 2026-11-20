@@ -145,6 +145,14 @@
   outline-offset: 3px;
 }
 
+.geno-person-name {
+  width: 100%;
+  font-weight: 600;
+  line-height: 1.13;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
 .atlas-genogram.geno-editor-expanded {
   position: fixed;
   inset: 0;

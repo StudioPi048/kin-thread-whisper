@@ -4,10 +4,11 @@ import { GEN_GAP, PERSON_SHAPE } from "@/lib/geno/build";
 import {
   buildSpatialLayout,
   projectSpatialLayout,
-  SPATIAL_CARD_HEIGHT,
   SPATIAL_CARD_WIDTH,
   SPATIAL_MAX_YAW,
   SPATIAL_ROW_GAP,
+  SPATIAL_MAX_PITCH,
+  spatialPersonLabel,
 } from "./genogram-spatial-layout";
 
 function person(id: string, x: number, generation: number): Node {
@@ -43,12 +44,15 @@ describe("spatial genossociograma", () => {
     ];
     const original = structuredClone(nodes);
     const layout = buildSpatialLayout(nodes, []);
-    const left = projectSpatialLayout(layout, -SPATIAL_MAX_YAW);
-    const right = projectSpatialLayout(layout, SPATIAL_MAX_YAW);
+    const left = projectSpatialLayout(layout, { yaw: -SPATIAL_MAX_YAW, pitch: 0 });
+    const right = projectSpatialLayout(layout, { yaw: SPATIAL_MAX_YAW, pitch: SPATIAL_MAX_PITCH });
 
     const expected = [0, 0, SPATIAL_ROW_GAP, SPATIAL_ROW_GAP * 2, SPATIAL_ROW_GAP * 3];
     expect(left.people.map(({ y }) => y)).toEqual(expected);
-    expect(right.people.map(({ y }) => y)).toEqual(expected);
+    expect(right.people[0].y).toBe(0);
+    expect(right.people[1].y).toBe(right.people[0].y);
+    expect(right.people.at(-1)?.y).toBeGreaterThan(left.people.at(-1)!.y);
+    expect(right.people.at(-1)?.scale).toBeLessThan(right.people[0].scale);
     expect(left.people.at(-1)?.x).not.toBe(right.people.at(-1)?.x);
     expect(Math.abs(left.people[1].x - left.people[0].x)).toBeGreaterThan(SPATIAL_CARD_WIDTH);
     expect(nodes).toEqual(original);
@@ -68,11 +72,17 @@ describe("spatial genossociograma", () => {
       pedigree("bisavós do avô", ["avô", "irmão do avô"]),
       pedigree("bisavós da avó", ["avó", "irmã da avó"]),
     ];
-    const result = projectSpatialLayout(buildSpatialLayout(nodes, edges), SPATIAL_MAX_YAW, "avô");
+    const result = projectSpatialLayout(
+      buildSpatialLayout(nodes, edges),
+      { yaw: SPATIAL_MAX_YAW, pitch: 0 },
+      "avô",
+    );
     const [paternal, maternal] = result.routes;
     const personById = new Map(result.people.map((entry) => [entry.id, entry]));
-    const endsAt = (id: string) =>
-      `L ${personById.get(id)!.x} ${SPATIAL_ROW_GAP * 2 + SPATIAL_CARD_HEIGHT}`;
+    const endsAt = (id: string) => {
+      const { x, y, height } = personById.get(id)!;
+      return `L ${x} ${y + height}`;
+    };
     expect(paternal.path).toContain(endsAt("irmão do avô"));
     expect(paternal.path).not.toContain(endsAt("irmã da avó"));
     expect(maternal.path).toContain(endsAt("irmã da avó"));
@@ -93,7 +103,10 @@ describe("spatial genossociograma", () => {
     ];
     const edge = pedigree("parents", ["biological", "adopted"]);
     edge.data = { ...edge.data, childKinds: { biological: "biological", adopted: "adoptive" } };
-    const result = projectSpatialLayout(buildSpatialLayout(nodes, [edge]), SPATIAL_MAX_YAW);
+    const result = projectSpatialLayout(buildSpatialLayout(nodes, [edge]), {
+      yaw: SPATIAL_MAX_YAW,
+      pitch: 0,
+    });
     const [biological, adopted] = result.routes;
     expect(biological.parentKind).toBe("biological");
     expect(adopted.parentKind).toBe("adoptive");
@@ -108,9 +121,32 @@ describe("spatial genossociograma", () => {
     ];
     const edge = pedigree("parents", ["confirmed", "tentative"]);
     edge.data = { ...edge.data, suggestedChildIds: ["tentative"] };
-    const { routes } = projectSpatialLayout(buildSpatialLayout(nodes, [edge]), SPATIAL_MAX_YAW);
+    const { routes } = projectSpatialLayout(buildSpatialLayout(nodes, [edge]), {
+      yaw: SPATIAL_MAX_YAW,
+      pitch: 0,
+    });
     const [confirmed, tentative] = routes;
     expect([confirmed.suggested, tentative.suggested]).toEqual([false, true]);
     expect(confirmed.path).not.toBe(tentative.path);
+  });
+  it("keeps full names, reserves a taller plaque for them and preserves canonical row order", () => {
+    const name = "Amélia de Santa Bárbara Martins e Albuquerque Brandão de Oliveira";
+    const relationship = "Mãe da Avó Materna do Ramo da Sétima Geração";
+    const first = person("first", -120, 1);
+    first.data = {
+      ...first.data,
+      full_name: name,
+      preferred_name: "Amélia",
+      relationship_to_proband: relationship,
+    };
+    const second = person("second", -100, 1);
+    const layout = buildSpatialLayout([second, first], []);
+    const { people } = projectSpatialLayout(layout, {
+      yaw: SPATIAL_MAX_YAW,
+      pitch: SPATIAL_MAX_PITCH,
+    });
+    expect(spatialPersonLabel(people[0].data)).toEqual({ name, relationship });
+    expect(people[0].height).toBeGreaterThan(people[1].height);
+    expect(people[0].x + people[0].width / 2).toBeLessThan(people[1].x - people[1].width / 2);
   });
 });

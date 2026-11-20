@@ -859,7 +859,7 @@ export interface Placement {
   unionPos: Map<string, { x: number; y: number }>;
   /** Quantas posições salvas tiveram Y corrigido para a faixa da geração (x preservado). */
   normalizedY?: number;
-  /** Posições guardadas sobrepostas, substituídas por posição legível. */
+  /** Posições guardadas sobrepostas ou entrelaçadas, reorganizadas na edição. */
   adjustedX?: number;
 }
 
@@ -903,6 +903,11 @@ export function placeUnionHub(
 type Extent = { left: number; right: number };
 const cardExtent = { left: NODE_W / 2, right: NODE_W / 2 };
 const NODE_STEP = NODE_W + SIBLING_GAP;
+// A abertura de um casal e a folga entre casais são medidas distintas.
+// Nas quatro gerações de um pedigree regular, eixos adjacentes podem ficar
+// a 316px: dois casais de 160px cabem com 156px livres entre centros.
+const COUPLE_BLOCK_STEP = NODE_W + 12;
+const POSITION_EPS = 0.001;
 
 function centerOfSpan(xs: readonly number[]): number {
   return (Math.min(...xs) + Math.max(...xs)) / 2;
@@ -935,6 +940,17 @@ export function layoutGraph(g: LogicalGraph): Placement {
       };
       return order(a) - order(b) || comparePersons(g.persons.get(a)!.row, g.persons.get(b)!.row);
     });
+  const singleCouples = [...g.unions.values()].filter(
+    (union) =>
+      union.direction === "up" &&
+      union.partners.length === 2 &&
+      union.children.length > 0 &&
+      union.partners.every(
+        (id) => participants.get(id)?.filter((item) => item.partners.includes(id)).length === 1,
+      ),
+  );
+  const partnersShareRow = (union: UnionEntity) =>
+    union.partners.every((id) => g.persons.get(id)!.generation === union.generation);
   const partnerOffsets = new Map<string, number[]>();
   const extents = new Map<string, Extent>();
   const ascendingOrder = [...g.persons.values()].sort((a, b) => b.generation - a.generation);
@@ -1048,55 +1064,155 @@ export function layoutGraph(g: LogicalGraph): Placement {
   let normalizedY = 0;
   let adjustedX = 0;
   const keptPositions = new Set<string>();
-  // Posições manuais continuam válidas no eixo horizontal. A cada atualização,
-  // as uniões são recentralizadas sobre os pais que já estão posicionados.
-  const savedOrder = [root, ...[...g.persons.keys()].filter((id) => id !== root)];
-  for (const id of savedOrder) {
-    const person = g.persons.get(id)!;
+  const savedPeople = new Map<string, Point>();
+  for (const [id, person] of g.persons) {
     const saved = g.positions.get(id);
     if (!saved || saved.node_type !== "person" || !Number.isFinite(saved.x)) continue;
     const y = genY(person.generation);
     if (Math.abs(saved.y - y) > 0.5) normalizedY++;
+    savedPeople.set(id, { x: saved.x, y });
+  }
+  const splitPairs = new Set<string>();
+  for (const union of singleCouples) {
+    if (!partnersShareRow(union)) continue;
+    const [a, b] = union.partners.map((id) => savedPeople.get(id));
+    if (!a || !b) continue;
+    const left = Math.min(a.x, b.x);
+    const right = Math.max(a.x, b.x);
+    const split = [...savedPeople].some(
+      ([id, other]) =>
+        !union.partners.includes(id) &&
+        other.y === a.y &&
+        other.x > left + POSITION_EPS &&
+        other.x < right - POSITION_EPS,
+    );
+    if (split) for (const id of union.partners) splitPairs.add(id);
+  }
+  // Posições manuais continuam válidas no eixo horizontal. A cada atualização,
+  // as uniões são recentralizadas sobre os pais que já estão posicionados.
+  const savedOrder = [root, ...[...savedPeople.keys()].filter((id) => id !== root)];
+  for (const id of savedOrder) {
+    const saved = savedPeople.get(id);
+    if (!saved) continue;
     if (
+      splitPairs.has(id) ||
       [...personPos.values()].some(
-        (position) => Math.abs(position.y - y) < NODE_H && Math.abs(position.x - saved.x) < NODE_W,
+        (position) =>
+          Math.abs(position.y - saved.y) < NODE_H && Math.abs(position.x - saved.x) < NODE_W,
       )
     ) {
       adjustedX++;
       continue;
     }
-    personPos.set(id, { x: saved.x, y });
+    personPos.set(id, saved);
     keptPositions.add(id);
   }
   const rootCenter = personPos.has(root) ? personPos.get(root)!.x + NODE_W / 2 : 0;
   const uniqueCouples = new Map<string, UnionEntity>();
-  for (const [, union] of g.unions) {
-    if (union.direction !== "up" || union.partners.length !== 2 || !union.children.length) continue;
-    const unique = union.partners.every(
-      (id) =>
-        !keptPositions.has(id) &&
-        participants.get(id)?.filter((item) => item.partners.includes(id)).length === 1,
-    );
-    if (unique) for (const id of union.partners) uniqueCouples.set(id, union);
+  for (const union of singleCouples) {
+    if (!union.partners.some((id) => keptPositions.has(id))) {
+      for (const id of union.partners) uniqueCouples.set(id, union);
+    }
+  }
+
+  function childAxis(union: UnionEntity): number | undefined {
+    const generation = Math.min(...union.children.map((id) => g.persons.get(id)!.generation));
+    const children = union.children.filter((id) => g.persons.get(id)!.generation === generation);
+    if (children.some((id) => !personPos.has(id))) return undefined;
+    return centerOfSpan(children.map((id) => personPos.get(id)!.x + NODE_W / 2));
+  }
+
+  function placeCouple(partners: string[], axis: number, halfWidth: number) {
+    partners.forEach((id, index) => {
+      personPos.set(id, {
+        x: axis + (index === 0 ? -halfWidth : halfWidth) - NODE_W / 2,
+        y: genY(g.persons.get(id)!.generation),
+      });
+    });
+  }
+
+  function coupleSpans(y: number, except?: string) {
+    return singleCouples.flatMap((other) => {
+      if (other.id === except || !partnersShareRow(other) || genY(other.generation) !== y)
+        return [];
+      const a = personPos.get(other.partners[0]);
+      const b = personPos.get(other.partners[1]);
+      return a && b ? [{ union: other, left: Math.min(a.x, b.x), right: Math.max(a.x, b.x) }] : [];
+    });
+  }
+
+  function placeCompactCouple(union: UnionEntity, partners: string[], ideal: number): boolean {
+    const y = genY(union.generation);
+    const half = NODE_STEP / 2;
+    const margin = half + COUPLE_BLOCK_STEP;
+    let lower = -Infinity;
+    let upper = Infinity;
+    for (const [index, id] of partners.entries()) {
+      const offset = index === 0 ? -half : half;
+      const side = g.persons.get(id)!.branchId;
+      if (side === "paternal") upper = Math.min(upper, rootCenter - NODE_W / 2 - offset);
+      if (side === "maternal") lower = Math.max(lower, rootCenter + NODE_W / 2 - offset);
+    }
+    const slots: { from: number; to: number }[] = [];
+    for (const other of personPos.values()) {
+      if (Math.abs(other.y - y) >= NODE_H) continue;
+      const center = other.x + NODE_W / 2;
+      slots.push({ from: center - margin, to: center + margin });
+    }
+    let orderedLower = lower;
+    let orderedUpper = upper;
+    for (const { union: other, left, right } of coupleSpans(y, union.id)) {
+      const from = left + NODE_W / 2 - margin;
+      const to = right + NODE_W / 2 + margin;
+      slots.push({ from, to });
+      const otherAxis = childAxis(other) ?? (from + to) / 2;
+      if (ideal < otherAxis || (ideal === otherAxis && union.id < other.id)) {
+        orderedUpper = Math.min(orderedUpper, from);
+      } else {
+        orderedLower = Math.max(orderedLower, to);
+      }
+    }
+    function nearest(left: number, right: number): number | undefined {
+      if (left > right) return undefined;
+      const limit = (x: number) => Math.max(left, Math.min(right, x));
+      const candidates = [
+        limit(ideal),
+        ...slots.flatMap(({ from, to }) => [limit(from), limit(to)]),
+      ];
+      return candidates
+        .sort((a, b) => Math.abs(a - ideal) - Math.abs(b - ideal) || a - b)
+        .find((x) =>
+          slots.every(({ from, to }) => x <= from + POSITION_EPS || x >= to - POSITION_EPS),
+        );
+    }
+    // O X manual preservado pode inviabilizar a ordem ideal, mas não quebra
+    // o bloco. Procure a faixa livre mais próxima do eixo da fratria.
+    const axis = nearest(orderedLower, orderedUpper) ?? nearest(lower, upper);
+    if (axis === undefined) return false;
+    placeCouple(partners, axis, half);
+    return true;
   }
 
   function placeSymmetricCouple(union: UnionEntity): boolean {
     const partners = sortedPartners(union);
     if (partners.some((id) => personPos.has(id))) return false;
-    const firstGeneration = Math.min(...union.children.map((id) => g.persons.get(id)!.generation));
-    const children = union.children.filter(
-      (id) => g.persons.get(id)!.generation === firstGeneration,
-    );
-    if (children.some((id) => !personPos.has(id))) return false;
-    const axis = centerOfSpan(children.map((id) => personPos.get(id)!.x + NODE_W / 2));
-    let minHalfWidth = Math.max(
-      NODE_STEP / 2,
-      ((centers.get(partners[1]) ?? 0) - (centers.get(partners[0]) ?? 0)) / 2,
-    );
+    const axis = childAxis(union);
+    if (axis === undefined) return false;
+    const preferred = ((centers.get(partners[1]) ?? 0) - (centers.get(partners[0]) ?? 0)) / 2;
+    let minHalfWidth = NODE_STEP / 2;
     let maxHalfWidth = Infinity;
     const obstacles: { from: number; to: number }[] = [];
-    for (let index = 0; index < partners.length; index++) {
-      const person = g.persons.get(partners[index])!;
+    const sameRow = partnersShareRow(union);
+    if (
+      sameRow &&
+      coupleSpans(genY(union.generation), union.id).some(
+        ({ left, right }) => axis > left + NODE_W / 2 && axis < right + NODE_W / 2,
+      )
+    ) {
+      return placeCompactCouple(union, partners, axis);
+    }
+    for (const [index, id] of partners.entries()) {
+      const person = g.persons.get(id)!;
       const sign = index === 0 ? -1 : 1;
       const limit = rootCenter + (person.branchId === "paternal" ? -NODE_W / 2 : NODE_W / 2);
       if (person.branchId === "paternal" || person.branchId === "maternal") {
@@ -1114,21 +1230,27 @@ export function layoutGraph(g: LogicalGraph): Placement {
       for (const other of personPos.values()) {
         if (Math.abs(other.y - y) >= NODE_H) continue;
         const distance = (other.x + NODE_W / 2 - axis) * sign;
-        obstacles.push({ from: distance - NODE_STEP, to: distance + NODE_STEP });
+        const inRow = sameRow && other.y === y;
+        const step = inRow ? COUPLE_BLOCK_STEP : NODE_STEP;
+        if (inRow) maxHalfWidth = Math.min(maxHalfWidth, Math.abs(distance) - step);
+        obstacles.push({ from: distance - step, to: distance + step });
       }
     }
-    // Aumenta a abertura do casal sem deslocar o eixo dos filhos. Laterais
-    // ainda não posicionados são acomodados depois, fora do núcleo.
-    for (const { from, to } of obstacles.sort((a, b) => a.from - b.from)) {
-      if (minHalfWidth > from + 0.001 && minHalfWidth < to - 0.001) minHalfWidth = to;
+    // Barreiras intergeracionais permitem abrir o par. Na mesma faixa, a
+    // abertura termina antes do próximo bloco para evitar entrelaçamento.
+    obstacles.sort((a, b) => a.from - b.from);
+    function openTo(width: number) {
+      for (const { from, to } of obstacles) {
+        if (width > from + POSITION_EPS && width < to - POSITION_EPS) width = to;
+      }
+      return width;
     }
-    if (minHalfWidth > maxHalfWidth + 0.001) return false;
-    partners.forEach((id, index) => {
-      personPos.set(id, {
-        x: axis + (index === 0 ? -minHalfWidth : minHalfWidth) - NODE_W / 2,
-        y: genY(g.persons.get(id)!.generation),
-      });
-    });
+    const preferredWidth = openTo(Math.max(minHalfWidth, preferred));
+    const width =
+      preferredWidth <= maxHalfWidth + POSITION_EPS ? preferredWidth : openTo(minHalfWidth);
+    if (width > maxHalfWidth + POSITION_EPS)
+      return sameRow && placeCompactCouple(union, partners, axis);
+    placeCouple(partners, axis, width);
     return true;
   }
 
@@ -1148,11 +1270,20 @@ export function layoutGraph(g: LogicalGraph): Placement {
       const overlapping = [...personPos.values()].filter(
         (pos) => Math.abs(pos.y - y) < NODE_H && Math.abs(pos.x - x) < NODE_STEP - 0.001,
       );
-      if (!overlapping.length) break;
+      const spanning = coupleSpans(y).filter(
+        ({ left, right }) => x > left - COUPLE_BLOCK_STEP && x < right + COUPLE_BLOCK_STEP,
+      );
+      if (!overlapping.length && !spanning.length) break;
       x =
         direction < 0
-          ? Math.min(...overlapping.map((position) => position.x)) - NODE_STEP
-          : Math.max(...overlapping.map((position) => position.x)) + NODE_STEP;
+          ? Math.min(
+              ...overlapping.map((position) => position.x),
+              ...spanning.map((span) => span.left),
+            ) - NODE_STEP
+          : Math.max(
+              ...overlapping.map((position) => position.x),
+              ...spanning.map((span) => span.right),
+            ) + NODE_STEP;
     }
     personPos.set(id, { x, y });
   }
@@ -1175,6 +1306,19 @@ export function layoutGraph(g: LogicalGraph): Placement {
     const children = union.children.map((id) => personPos.get(id)!).filter((p) => p.y === childRow);
     const delta = centerOfSpan(children.map((child) => child.x + NODE_W / 2)) - hub.x;
     if (Math.abs(delta) < 0.001) continue;
+    if (union.partners.length === 2 && partnersShareRow(union)) {
+      const [a, b] = union.partners.map((id) => personPos.get(id)!);
+      const left = Math.min(a.x, b.x) + delta;
+      const right = Math.max(a.x, b.x) + delta;
+      const spansOutside = coupleSpans(a.y, union.id).every(
+        (span) => span.right <= left || span.left >= right,
+      );
+      const noInside = [...personPos].every(
+        ([id, point]) =>
+          union.partners.includes(id) || point.y !== a.y || point.x <= left || point.x >= right,
+      );
+      if (!spansOutside || !noInside) continue;
+    }
     const available = union.partners.every((id) => {
       const position = personPos.get(id)!;
       const x = position.x + delta;

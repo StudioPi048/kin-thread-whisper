@@ -2,148 +2,195 @@ import type { Edge, Node } from "@xyflow/react";
 import { GEN_GAP, NODE_W, PERSON_SHAPE, type ParentKind } from "@/lib/geno/build";
 import type { PersonNodeData } from "./person-node";
 
-export const SPATIAL_CARD_WIDTH = 144;
-export const SPATIAL_CARD_HEIGHT = 102;
-export const SPATIAL_MAX_YAW = (42 * Math.PI) / 180;
-export const SPATIAL_DEFAULT_YAW = (24 * Math.PI) / 180;
-
-export const SPATIAL_ROW_GAP = 172;
+export const SPATIAL_CARD_WIDTH = 222;
+export const SPATIAL_CARD_HEIGHT = 91;
+export const SPATIAL_ROW_GAP = 188;
 export const SPATIAL_SYMBOL_CENTER = 31;
-const DEPTH_PER_ROW = 92;
-const MIN_PERSON_SPACING = (SPATIAL_CARD_WIDTH + 20) / Math.cos(SPATIAL_MAX_YAW);
-const CARD_HALF = SPATIAL_CARD_WIDTH / 2;
-const SYMBOL_HALF = 33;
+export const SPATIAL_MAX_YAW = (39 * Math.PI) / 180;
+export const SPATIAL_DEFAULT_YAW = (23 * Math.PI) / 180;
+export const SPATIAL_MAX_PITCH = (24 * Math.PI) / 180;
+export const SPATIAL_DEFAULT_PITCH = (19 * Math.PI) / 180;
+
+const DEPTH_PER_ROW = 112;
+const CAMERA_DISTANCE = 1680;
+const MIN_PERSON_GAP = 22;
 
 type Point = { x: number; y: number };
 type SpatialPoint = Point & { z: number };
-type SpatialPerson = SpatialPoint & { id: string; data: PersonNodeData };
-type SpatialUnion = SpatialPoint & { id: string; label?: string; kind?: string; single: boolean };
+export type SpatialAngles = { yaw: number; pitch: number };
+export type SpatialBranch = "paternal" | "maternal" | "common";
+
+type SpatialPerson = SpatialPoint & {
+  id: string;
+  generation: number;
+  height: number;
+  branch: SpatialBranch;
+  rowLabel: string;
+  data: PersonNodeData;
+};
+type SpatialUnion = SpatialPoint & {
+  id: string;
+  generation: number;
+  partners: string[];
+  kind?: string;
+  label?: string;
+  branch: SpatialBranch;
+  single: boolean;
+};
 type Span = { left: number; right: number };
 
-export const spatialDepth = (rowY: number) => (-rowY / SPATIAL_ROW_GAP) * DEPTH_PER_ROW;
+const branchFor = (branch: unknown): SpatialBranch =>
+  branch === "paternal" || branch === "maternal" ? branch : "common";
 
-export function projectSpatialPoint(point: SpatialPoint, yaw: number): Point {
-  // Orthographic yaw around the vertical axis. Card Y is independent of camera angle.
-  return { x: point.x * Math.cos(yaw) + point.z * Math.sin(yaw), y: point.y };
+export function generationTitle(level: number, lane?: unknown) {
+  if (level === 0) return "Consultante e irmãos";
+  if (lane === "social") return "Vínculos próximos";
+  if (lane === "descendant") return "Descendentes";
+  return ["", "Pais e tios", "Avós", "Bisavós", "Tataravós"][level] || `Geração ${level}`;
+}
+
+export function spatialPersonLabel(person: PersonNodeData) {
+  const name = person.full_name?.trim() || person.preferred_name?.trim() || "Pessoa sem nome";
+  const relationship = person.is_proband
+    ? "Consultante"
+    : person.relationship_to_proband?.trim() || "Parentesco não informado";
+  return {
+    name,
+    relationship:
+      name.localeCompare(relationship, "pt-BR", { sensitivity: "base" }) === 0 ? "" : relationship,
+  };
+}
+
+export function spatialDepth(generation: number) {
+  return -generation * DEPTH_PER_ROW;
+}
+
+export function projectSpatialPoint(point: SpatialPoint, angles: SpatialAngles) {
+  const { yaw, pitch } = angles;
+  const horizontal = point.x * Math.cos(yaw) + point.z * Math.sin(yaw);
+  const depth = (point.z * Math.cos(yaw) - point.x * Math.sin(yaw)) * Math.cos(pitch);
+  const scale = Math.max(0.69, Math.min(1.15, CAMERA_DISTANCE / (CAMERA_DISTANCE - depth)));
+  // Keep a shared projected baseline per generation. Depth can move a row as a unit,
+  // so a camera orbit never sorts relatives by apparent distance.
+  return { x: horizontal * scale, y: point.y - point.z * Math.sin(pitch) * 0.49, scale };
+}
+
+function textLines(value: string, columns: number) {
+  let lines = 1;
+  let length = 0;
+  for (const word of value.split(/\s+/)) {
+    if (length + word.length + 1 > columns) {
+      if (length) lines++;
+      lines += Math.floor(Math.max(0, word.length - 1) / columns);
+      length = word.length % columns || Math.min(columns, word.length);
+    } else {
+      length += word.length + 1;
+    }
+  }
+  return lines;
+}
+
+function plaqueHeight(data: PersonNodeData) {
+  const { name, relationship } = spatialPersonLabel(data);
+  // Reserve the typography box before painting connectors. The HTML can still grow
+  // with browser text settings and keeps its complete name.
+  return Math.max(
+    SPATIAL_CARD_HEIGHT,
+    30 + 21 * textLines(name, 19) + (relationship ? 18 * textLines(relationship, 22) : 0),
+  );
 }
 
 export function buildSpatialLayout(nodes: Node[], edges: Edge[]) {
-  const rows = new Map<number, SpatialPerson[]>();
-  const originalX = new Map<string, number>();
+  const sourceRows = new Map<number, SpatialPerson[]>();
   for (const node of nodes) {
     if (node.hidden || node.type !== "person") continue;
-    const y = (node.position.y / GEN_GAP) * SPATIAL_ROW_GAP;
-    const centerX = (node.position.x + NODE_W / 2) * 0.84;
-    const person = {
+    const data = node.data as PersonNodeData;
+    const generation =
+      typeof data.generation === "number" ? data.generation : node.position.y / GEN_GAP;
+    const row = sourceRows.get(generation) ?? [];
+    row.push({
       id: node.id,
-      x: centerX,
-      y,
-      z: spatialDepth(y),
-      data: node.data as PersonNodeData,
-    };
-    const row = rows.get(y) ?? [];
-    row.push(person);
-    rows.set(y, row);
-    originalX.set(node.id, centerX);
+      x: (node.position.x + NODE_W / 2) * 0.84,
+      y: 0,
+      z: spatialDepth(generation),
+      generation,
+      height: plaqueHeight(data),
+      branch: branchFor(data.branchId),
+      rowLabel: generationTitle(generation, data.lane),
+      data,
+    });
+    sourceRows.set(generation, row);
   }
 
-  // The reading view can space crowded cards without moving a single saved 2D position.
-  const orderedRows = [...rows].sort(([first], [second]) => first - second);
-  for (const [, row] of orderedRows) {
+  const sorted = [...sourceRows].sort(([a], [b]) => a - b);
+  const rows: [number, SpatialPerson[]][] = [];
+  const rowPosition = new Map<number, number>();
+  let bottom = -SPATIAL_ROW_GAP;
+  let previousGeneration = 0;
+  for (const [generation, row] of sorted) {
     row.sort((a, b) => a.x - b.x || a.id.localeCompare(b.id));
-    const anchor = row.find((person) => person.data.is_proband) ?? row[Math.floor(row.length / 2)];
-    const middle = row.indexOf(anchor);
-    for (let i = middle + 1; i < row.length; i++) {
-      row[i].x = Math.max(row[i].x, row[i - 1].x + MIN_PERSON_SPACING);
-    }
-    for (let i = middle - 1; i >= 0; i--) {
-      row[i].x = Math.min(row[i].x, row[i + 1].x - MIN_PERSON_SPACING);
-    }
+    const y = rows.length
+      ? Math.max(
+          generation * SPATIAL_ROW_GAP,
+          bottom + (generation - previousGeneration >= 1 ? 58 : 39),
+        )
+      : generation * SPATIAL_ROW_GAP;
+    for (const person of row) person.y = y;
+    bottom = y + Math.max(...row.map((person) => person.height));
+    previousGeneration = generation;
+    rowPosition.set(generation, y);
+    rows.push([y, row]);
   }
-  const people = orderedRows.flatMap(([, row]) => row);
+  const people = rows.flatMap(([, row]) => row);
   const peopleById = new Map(people.map((person) => [person.id, person]));
-  const partnersByUnion = new Map<string, string[]>();
   const visibleEdges = edges.filter((edge) => !edge.hidden);
+  const partnersByUnion = new Map<string, string[]>();
   for (const edge of visibleEdges) {
     if (edge.type !== "partner") continue;
-    const personId = String(edge.data?.personId ?? edge.source);
-    const unionId = String(edge.data?.unionId ?? edge.target);
-    const partners = partnersByUnion.get(unionId) ?? [];
-    partners.push(personId);
-    partnersByUnion.set(unionId, partners);
+    const uid = String(edge.data?.unionId ?? edge.target);
+    const partners = partnersByUnion.get(uid) ?? [];
+    partners.push(String(edge.data?.personId ?? edge.source));
+    partnersByUnion.set(uid, partners);
   }
-
   const unions: SpatialUnion[] = [];
   for (const node of nodes) {
     if (node.hidden || node.type !== "union") continue;
-    const rowY =
-      typeof node.data.generation === "number"
-        ? node.data.generation * SPATIAL_ROW_GAP
-        : ((node.position.y - PERSON_SHAPE / 2) / GEN_GAP) * SPATIAL_ROW_GAP;
-    const partners = (partnersByUnion.get(node.id) ?? []).flatMap((id) => {
-      const partner = peopleById.get(id);
-      return partner?.y === rowY ? [partner] : [];
+    const partners = partnersByUnion.get(node.id) ?? [];
+    const linked = partners.flatMap((id) => {
+      const person = peopleById.get(id);
+      return person ? [person] : [];
     });
-    const shift = partners.reduce(
-      (sum, partner) => sum + partner.x - (originalX.get(partner.id) ?? partner.x),
-      0,
-    );
+    const generation =
+      typeof node.data.generation === "number"
+        ? node.data.generation
+        : (linked[0]?.generation ?? (node.position.y - PERSON_SHAPE / 2) / GEN_GAP);
     unions.push({
       id: node.id,
-      x:
-        partners.length === 2
-          ? (partners[0].x + partners[1].x) / 2
-          : (partners[0]?.x ?? node.position.x * 0.84 + shift / Math.max(1, partners.length)),
-      y: rowY + SPATIAL_SYMBOL_CENTER,
-      z: spatialDepth(rowY),
-      label: typeof node.data.label === "string" ? node.data.label : undefined,
+      x: node.position.x * 0.84,
+      y: (rowPosition.get(generation) ?? generation * SPATIAL_ROW_GAP) + SPATIAL_SYMBOL_CENTER,
+      z: spatialDepth(generation),
+      generation,
+      partners,
+      branch: branchFor(node.data.branchId),
+      single: node.data.isSingle === true || partners.length === 1,
       kind: typeof node.data.kind === "string" ? node.data.kind : undefined,
-      single: node.data.isSingle === true || partnersByUnion.get(node.id)?.length === 1,
+      label: typeof node.data.label === "string" ? node.data.label : undefined,
     });
   }
-  return { people, rows: orderedRows, unions, edges: visibleEdges };
-}
-
-function nearestFreeX(preferred: number, intervals: Span[]) {
-  // Only interval boundaries and the preferred column can minimize this distance.
-  let best = preferred;
-  let distance = Infinity;
-  const sorted = [...intervals].sort((a, b) => a.left - b.left);
-  const merged: typeof sorted = [];
-  for (const interval of sorted) {
-    const previous = merged.at(-1);
-    if (previous && interval.left < previous.right) {
-      previous.right = Math.max(previous.right, interval.right);
-    } else {
-      merged.push({ ...interval });
-    }
-  }
-  for (const interval of merged) {
-    if (preferred <= interval.left || preferred >= interval.right) continue;
-    for (const boundary of [interval.left, interval.right]) {
-      const next = Math.abs(preferred - boundary);
-      if (next < distance) {
-        best = boundary;
-        distance = next;
-      }
-    }
-  }
-  return best;
+  return { people, rows, unions, edges: visibleEdges };
 }
 
 function pathThrough(points: Point[]) {
   return points.map(({ x, y }, index) => `${index === 0 ? "M" : "L"} ${x} ${y}`).join(" ");
 }
 
-function between(point: number, first: number, last: number) {
-  return point > Math.min(first, last) && point < Math.max(first, last);
+function overlaps(a: Span, b: Span) {
+  return a.right + 10 >= b.left && a.left - 10 <= b.right;
 }
 
 function reserveRail(rails: Map<string, Span[][]>, key: string, span: Span) {
   const lanes = rails.get(key) ?? [];
-  let lane = lanes.findIndex((entries) =>
-    entries.every((other) => span.right + 12 < other.left || span.left > other.right + 12),
-  );
+  let lane = lanes.findIndex((entries) => entries.every((other) => !overlaps(span, other)));
   if (lane === -1) {
     lane = lanes.length;
     lanes.push([]);
@@ -153,134 +200,193 @@ function reserveRail(rails: Map<string, Span[][]>, key: string, span: Span) {
   return lane;
 }
 
+function avoidCards(x: number, cards: Span[]) {
+  const merged: Span[] = [];
+  for (const card of cards.sort((a, b) => a.left - b.left)) {
+    const last = merged.at(-1);
+    if (last && card.left <= last.right) last.right = Math.max(last.right, card.right);
+    else merged.push({ ...card });
+  }
+  const blocked = merged.find((card) => x > card.left && x < card.right);
+  if (!blocked) return x;
+  return x - blocked.left < blocked.right - x ? blocked.left : blocked.right;
+}
+
 export function projectSpatialLayout(
   layout: ReturnType<typeof buildSpatialLayout>,
-  yaw: number,
+  angles: SpatialAngles,
   selectedId?: string | null,
 ) {
-  const people = layout.people.map((person) => ({
-    ...person,
-    ...projectSpatialPoint(person, yaw),
-  }));
-  const peopleById = new Map(people.map((person) => [person.id, person]));
-  const peopleByRow = new Map(
-    layout.rows.map(([y, row]) => [y, row.map((person) => peopleById.get(person.id)!)]),
+  const rows = new Map(
+    layout.rows.map(([_, row]) => {
+      const projected = row.map((person) => {
+        const camera = projectSpatialPoint(person, angles);
+        return {
+          ...person,
+          ...camera,
+          width: SPATIAL_CARD_WIDTH * camera.scale,
+          height: person.height * camera.scale,
+        };
+      });
+      const anchor = projected.findIndex((person) => person.data.is_proband);
+      const center = anchor >= 0 ? anchor : Math.floor(projected.length / 2);
+      for (let i = center + 1; i < projected.length; i++) {
+        const previous = projected[i - 1];
+        const person = projected[i];
+        person.x = Math.max(
+          person.x,
+          previous.x + (person.width + previous.width) / 2 + MIN_PERSON_GAP,
+        );
+      }
+      for (let i = center - 1; i >= 0; i--) {
+        const next = projected[i + 1];
+        const person = projected[i];
+        person.x = Math.min(person.x, next.x - (person.width + next.width) / 2 - MIN_PERSON_GAP);
+      }
+      // A complete row stays aligned even when perspective changes card scale.
+      return [projected[0].y, projected] as const;
+    }),
   );
-  const unionsByRow = new Map<number, SpatialUnion[]>();
+  const people = Array.from(rows.values()).flat();
+  const peopleById = new Map(people.map((person) => [person.id, person]));
   const unions = layout.unions.map((union) => {
-    const projected = { ...union, ...projectSpatialPoint(union, yaw) };
-    if (projected.single) return projected;
-    const rowY = union.y - SPATIAL_SYMBOL_CENTER;
-    const row = peopleByRow.get(rowY) ?? [];
-    const prior = unionsByRow.get(rowY) ?? [];
-    projected.x = nearestFreeX(projected.x, [
-      ...row.map(({ x }) => ({ left: x - SYMBOL_HALF - 13, right: x + SYMBOL_HALF + 13 })),
-      ...prior.map(({ x }) => ({ left: x - 17, right: x + 17 })),
-    ]);
-    prior.push(projected);
-    unionsByRow.set(rowY, prior);
-    return projected;
+    const projected = projectSpatialPoint(union, angles);
+    const partners = union.partners.flatMap((id) => {
+      const person = peopleById.get(id);
+      return person ? [person] : [];
+    });
+    const corresponding = partners.filter((person) => person.generation === union.generation);
+    const x = corresponding.length
+      ? corresponding.reduce((sum, person) => sum + person.x, 0) / corresponding.length
+      : projected.x;
+    const y = corresponding.length
+      ? corresponding[0].y + SPATIAL_SYMBOL_CENTER * corresponding[0].scale
+      : projected.y;
+    const branch: SpatialBranch =
+      union.branch !== "common"
+        ? union.branch
+        : partners[0]?.branch !== "common" &&
+            partners.every((person) => person.branch === partners[0]?.branch)
+          ? (partners[0]?.branch ?? "common")
+          : "common";
+    return { ...union, ...projected, x, y, branch };
   });
   const unionsById = new Map(unions.map((union) => [union.id, union]));
 
   const rails = new Map<string, Span[][]>();
+  const selectedUnions = new Set<string>();
+  for (const edge of layout.edges) {
+    if (
+      edge.type === "pedigree" &&
+      Array.isArray(edge.data?.childIds) &&
+      edge.data.childIds.includes(selectedId)
+    ) {
+      selectedUnions.add(String(edge.data?.unionId ?? edge.source));
+    }
+    if (edge.type === "partner" && String(edge.data?.personId ?? edge.source) === selectedId) {
+      selectedUnions.add(String(edge.data?.unionId ?? edge.target));
+    }
+  }
   const routes: {
     id: string;
     path: string;
     highlighted: boolean;
     edge: Edge;
+    branch: SpatialBranch;
     parentKind?: ParentKind;
     suggested?: boolean;
   }[] = [];
   for (const edge of layout.edges) {
     if (edge.type === "pedigree") {
       const union = unionsById.get(String(edge.data?.unionId ?? edge.source));
-      const childIds = edge.data?.childIds;
+      if (!union || !Array.isArray(edge.data?.childIds)) continue;
       const childKinds = edge.data?.childKinds as Record<string, ParentKind> | undefined;
       const suggestedIds = new Set(
         Array.isArray(edge.data?.suggestedChildIds) ? edge.data.suggestedChildIds : [],
       );
-      if (!union || !Array.isArray(childIds)) continue;
       const childGroups = new Map<
         string,
-        { rowY: number; parentKind: ParentKind; suggested: boolean; children: SpatialPerson[] }
+        {
+          rowY: number;
+          kind: ParentKind;
+          suggested: boolean;
+          children: typeof people;
+        }
       >();
-      for (const childId of new Set(childIds)) {
-        const child = peopleById.get(childId);
+      for (const id of new Set(edge.data.childIds.map(String))) {
+        const child = peopleById.get(id);
         if (!child) continue;
-        const parentKind = childKinds?.[child.id] ?? "unknown";
-        const suggested = suggestedIds.has(child.id);
-        const key = `${child.y}:${parentKind}:${suggested}`;
-        const group = childGroups.get(key) ?? {
-          rowY: child.y,
-          parentKind,
-          suggested,
-          children: [],
-        };
+        const kind = childKinds?.[id] ?? "unknown";
+        const suggested = suggestedIds.has(id);
+        const key = `${child.y}:${kind}:${suggested}`;
+        const group = childGroups.get(key) ?? { rowY: child.y, kind, suggested, children: [] };
         group.children.push(child);
         childGroups.set(key, group);
       }
-      for (const [key, { rowY, parentKind, suggested, children }] of childGroups) {
-        const childIsLower = rowY > union.y;
-        const cardAnchorY = childIsLower ? rowY : rowY + SPATIAL_CARD_HEIGHT;
-        const portY =
-          union.y +
-          (union.single
-            ? childIsLower
-              ? SPATIAL_CARD_HEIGHT - SPATIAL_SYMBOL_CENTER
-              : -SPATIAL_SYMBOL_CENTER
-            : childIsLower
-              ? 7
-              : -7);
-        const firstRailY = childIsLower
-          ? Math.max(portY + 6, cardAnchorY - 18)
-          : Math.min(portY - 6, cardAnchorY + 20);
-        const obstructing = people.filter(({ y }) =>
-          between(y + SPATIAL_SYMBOL_CENTER, union.y, firstRailY),
-        );
-        const column = nearestFreeX(
+      for (const [key, { rowY, kind, suggested, children }] of childGroups) {
+        const down = rowY > union.y;
+        const direction = down ? 1 : -1;
+        const anchors = children.map((child) => ({
+          x: child.x,
+          y: child.y + (down ? 0 : child.height),
+        }));
+        const near = down
+          ? Math.min(...anchors.map((point) => point.y))
+          : Math.max(...anchors.map((point) => point.y));
+        const knownParent = union.single ? peopleById.get(union.partners[0]) : undefined;
+        const portY = knownParent
+          ? knownParent.y + (down ? knownParent.height : 0)
+          : union.y + direction * 6;
+        const middle = (near + portY) / 2;
+        const obstruction = people.filter(({ y, height }) => {
+          const centerY = y + height / 2;
+          return centerY > Math.min(near, portY) && centerY < Math.max(near, portY);
+        });
+        const column = avoidCards(
           union.x,
-          obstructing.map(({ x }) => ({
-            left: x - CARD_HALF - 12,
-            right: x + CARD_HALF + 12,
+          obstruction.map(({ x, width }) => ({
+            left: x - width / 2 - 12,
+            right: x + width / 2 + 12,
           })),
         );
-        const xs = children.map((child) => child.x);
+        const xs = anchors.map(({ x }) => x);
         const span = { left: Math.min(column, ...xs), right: Math.max(column, ...xs) };
-        const lane = reserveRail(rails, `${rowY}:${childIsLower}`, span);
-        // Offset overlapping sibling bars, so separate unions never share a drawn line.
-        const laneOffset = 28 * (1 - Math.exp(-0.25 * lane));
-        const barY = childIsLower
-          ? Math.max(portY + 6, firstRailY - laneOffset)
-          : Math.min(portY - 6, firstRailY + laneOffset);
-        const unionPort = { x: union.x, y: portY };
-        const departureY = portY + (barY > portY ? 12 : -12);
-        const trunk =
-          column === union.x
-            ? pathThrough([unionPort, { x: column, y: barY }])
-            : pathThrough([
-                unionPort,
-                { x: union.x, y: departureY },
-                { x: column, y: departureY },
-                { x: column, y: barY },
-              ]);
-        const bar = pathThrough([
-          { x: span.left, y: barY },
-          { x: span.right, y: barY },
-        ]);
-        const arms = children.map((child) =>
+        const lane = reserveRail(rails, `${rowY}:${down}`, span);
+        const barY =
+          middle +
+          Math.sign(near - portY) *
+            Math.min(20, Math.abs(near - portY) * 0.4) *
+            (1 - Math.exp(-0.35 * lane));
+        const departureY = portY + (barY - portY) * 0.28;
+        const path = [
           pathThrough([
-            { x: child.x, y: barY },
-            { x: child.x, y: cardAnchorY },
+            { x: union.x, y: portY },
+            { x: union.x, y: departureY },
+            { x: column, y: departureY },
+            { x: column, y: barY },
           ]),
-        );
+          pathThrough([
+            { x: span.left, y: barY },
+            { x: span.right, y: barY },
+          ]),
+          ...anchors.map(({ x, y }) =>
+            pathThrough([
+              { x, y: barY },
+              { x, y },
+            ]),
+          ),
+        ].join(" ");
         routes.push({
           id: `${edge.id}-${key}`,
-          path: [trunk, bar, ...arms].join(" "),
-          highlighted: children.some((child) => child.id === selectedId),
+          path,
           edge,
-          parentKind,
+          branch: union.branch,
           suggested,
+          parentKind: kind,
+          highlighted:
+            selectedUnions.has(union.id) &&
+            (union.partners.includes(selectedId ?? "") ||
+              children.some((person) => person.id === selectedId)),
         });
       }
       continue;
@@ -289,40 +395,39 @@ export function projectSpatialLayout(
       const person = peopleById.get(String(edge.data?.personId ?? edge.source));
       const union = unionsById.get(String(edge.data?.unionId ?? edge.target));
       if (!person || !union || union.single) continue;
-      const startY = person.y + SPATIAL_SYMBOL_CENTER;
-      const startX = person.x + Math.sign(union.x - person.x || 1) * SYMBOL_HALF;
-      const row = peopleByRow.get(person.y) ?? [];
+      const direction = Math.sign(union.x - person.x || 1);
+      const x = person.x + (direction * person.width) / 2;
+      const y = person.y + SPATIAL_SYMBOL_CENTER * person.scale;
+      const row = rows.get(person.y) ?? [];
       const crossesCard = row.some(
-        (other) => other.id !== person.id && between(other.x, person.x, union.x),
+        (other) =>
+          other.id !== person.id &&
+          other.x > Math.min(person.x, union.x) &&
+          other.x < Math.max(person.x, union.x),
       );
-      const path = crossesCard
-        ? pathThrough([
-            { x: person.x, y: person.y },
-            { x: person.x, y: person.y - 24 },
-            { x: union.x, y: person.y - 24 },
-            union,
-          ])
-        : pathThrough([{ x: startX, y: startY }, { x: union.x, y: startY }, union]);
+      const railY = crossesCard ? person.y - 12 : y;
+      const path = pathThrough([{ x, y }, { x, y: railY }, { x: union.x, y: railY }, union]);
       routes.push({
         id: edge.id,
         path,
-        highlighted: person.id === selectedId,
         edge,
+        branch: union.branch,
+        highlighted: selectedUnions.has(union.id),
         suggested: edge.data?.suggested === true,
       });
       continue;
     }
-
     const first = peopleById.get(edge.source);
     const second = peopleById.get(edge.target);
     if (!first || !second) continue;
-    const y = Math.min(first.y, second.y) - 30;
+    const y = Math.min(first.y, second.y) - 24;
     routes.push({
       id: edge.id,
+      edge,
+      branch: "common",
       path: pathThrough([first, { x: first.x, y }, { x: second.x, y }, second]),
       highlighted: first.id === selectedId || second.id === selectedId,
-      edge,
     });
   }
-  return { people, unions, rows: peopleByRow, routes };
+  return { people, unions, rows, routes };
 }
