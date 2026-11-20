@@ -12,6 +12,7 @@ import { Toaster } from "sonner";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { workspaceDestination } from "../lib/auth-destination";
 import { supabase } from "@/integrations/supabase/client";
 import { GenealizWordmark } from "@/components/genealiz-wordmark";
 
@@ -126,13 +127,38 @@ function RootComponent() {
   const router = useRouter();
 
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+    let userId: string | null | undefined;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let clearQueries = false;
+
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      const nextUserId = session?.user.id ?? null;
+      if (event === "INITIAL_SESSION" || event === "PASSWORD_RECOVERY") {
+        if (userId === undefined) userId = nextUserId;
+        return;
+      }
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
-      if (event === "SIGNED_OUT") queryClient.clear();
-      router.invalidate();
-      if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
+      if (event !== "USER_UPDATED" && userId === nextUserId) return;
+      clearQueries ||= event === "SIGNED_OUT" || (userId != null && userId !== nextUserId);
+      userId = nextUserId;
+
+      // Leave the auth callback before running loaders or queries that read auth again.
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        if (clearQueries) {
+          queryClient.clear();
+          clearQueries = false;
+        }
+        const location = router.state.resolvedLocation ?? router.state.location;
+        if (!workspaceDestination(location.href)) return;
+        void router.invalidate();
+        if (userId) void queryClient.invalidateQueries();
+      }, 0);
     });
-    return () => sub.subscription.unsubscribe();
+    return () => {
+      clearTimeout(timer);
+      sub.subscription.unsubscribe();
+    };
   }, [router, queryClient]);
 
   return (

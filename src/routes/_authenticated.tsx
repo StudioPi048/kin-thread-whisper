@@ -4,6 +4,7 @@ import { usePreferences, useApplyPreferences } from "@/components/account/use-pr
 import { readClientListPreferences, readPref, readVisits } from "@/lib/recent-activity";
 import { foldSearch, readClientNamePage } from "@/lib/client-index";
 import { workspaceDestination } from "@/lib/auth-destination";
+import { verifiedWorkspaceUser, withAuthCheckTimeout } from "@/lib/workspace-auth";
 import { UnsavedProvider } from "@/components/unsaved/unsaved-guard";
 import { CurrentCaseStrip } from "@/components/archive/current-case-strip";
 import {
@@ -42,10 +43,15 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async ({ location }) => {
-    const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user)
-      throw redirect({ to: "/auth", search: { redirect: workspaceDestination(location.href) } });
-    return { user: data.user };
+    const user = await withAuthCheckTimeout(verifiedWorkspaceUser);
+    if (!user) {
+      throw redirect({
+        to: "/auth",
+        replace: true,
+        search: { redirect: workspaceDestination(location.href), reauth: true },
+      });
+    }
+    return { user };
   },
   component: AuthenticatedLayout,
 });

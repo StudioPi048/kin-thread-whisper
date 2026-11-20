@@ -1,4 +1,4 @@
-import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -11,10 +11,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { GenealizWordmark } from "@/components/genealiz-wordmark";
 import { workspaceDestination } from "@/lib/auth-destination";
+import { verifiedWorkspaceUser, withAuthCheckTimeout } from "@/lib/workspace-auth";
 
 const searchSchema = z.object({
   mode: z.enum(["signin", "signup", "recover", "reset"]).optional(),
   redirect: z.unknown().optional().transform(workspaceDestination),
+  reauth: z.literal(true).optional().catch(undefined),
 });
 const newPassword = z.string().min(8, "Mínimo de 8 caracteres").max(72);
 
@@ -36,18 +38,11 @@ function friendlyAuthError(err: unknown): string {
 
 export const Route = createFileRoute("/auth")({
   validateSearch: (s) => searchSchema.parse(s),
-  beforeLoad: async ({ search }) => {
-    if (typeof window === "undefined") return;
-    // Quem chega do link de redefinição tem sessão temporária — deixa passar.
-    if (search.mode === "reset") return;
-    const { data } = await supabase.auth.getSession();
-    if (data.session) throw redirect({ href: search.redirect ?? "/app" });
-  },
   component: AuthPage,
 });
 
 function AuthPage() {
-  const { mode: initialMode, redirect: redirectTo } = Route.useSearch();
+  const { mode: initialMode, redirect: redirectTo, reauth } = Route.useSearch();
   const navigate = useNavigate();
   const [mode, setMode] = useState<"signin" | "signup" | "recover" | "reset">(
     initialMode ?? "signin",
@@ -60,6 +55,7 @@ function AuthPage() {
   const [recoverSent, setRecoverSent] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [sessionError, setSessionError] = useState<string | null>(null);
   const [confirmationEmail, setConfirmationEmail] = useState<string | null>(null);
   const destination = redirectTo ?? "/app";
 
@@ -72,6 +68,7 @@ function AuthPage() {
 
   useEffect(() => setMode(initialMode ?? "signin"), [initialMode]);
   const keepErrorRef = useRef(false);
+  const authInteraction = useRef(0);
   useEffect(() => {
     setPasswordVisible(false);
     setConfirmationEmail(null);
@@ -83,8 +80,12 @@ function AuthPage() {
     setNotice(null);
   }, [mode]);
 
-  // Link de e-mail expirado/inválido chega com erro no hash da URL.
+  // Renderiza o formulário mesmo quando a recuperação da sessão está lenta.
   useEffect(() => {
+    let active = true;
+    const interaction = authInteraction.current;
+    const isCurrent = () => active && interaction === authInteraction.current;
+    setSessionError(null);
     const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
     const code =
       hash.get("error_code") ?? new URLSearchParams(window.location.search).get("error_code");
@@ -98,24 +99,53 @@ function AuthPage() {
       setMode("recover");
       return;
     }
-    if (initialMode === "reset") {
-      void supabase.auth.getSession().then(({ data }) => {
-        if (!data.session) {
+    if (reauth && initialMode !== "reset") return;
+
+    void withAuthCheckTimeout(async () => {
+      const { data, error } = await supabase.auth.getSession();
+      if (error) throw error;
+      if (!data.session || !isCurrent()) return false;
+      if (initialMode === "reset") return true;
+      return Boolean(await verifiedWorkspaceUser());
+    })
+      .then((hasSession) => {
+        if (!isCurrent()) return;
+        if (initialMode === "reset" && !hasSession) {
           keepErrorRef.current = true;
           setMode("recover");
           setFormError(
             "Não há uma sessão de redefinição ativa. O link pode ter expirado — peça um novo.",
           );
+        } else if (initialMode !== "reset" && hasSession) {
+          void navigate({ href: destination, replace: true });
         }
+      })
+      .catch(() => {
+        if (isCurrent()) {
+          setSessionError(
+            "Não foi possível verificar a sessão. Confira sua conexão e tente novamente.",
+          );
+        }
+        active = false;
       });
-    }
-  }, [initialMode]);
+    return () => {
+      active = false;
+    };
+  }, [initialMode, reauth, destination, navigate]);
+
+  function changeMode(nextMode: typeof mode) {
+    authInteraction.current++;
+    setSessionError(null);
+    setMode(nextMode);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    authInteraction.current++;
     setLoading(true);
     setFormError(null);
     setNotice(null);
+    setSessionError(null);
     setConfirmationEmail(null);
     try {
       if (mode === "recover") {
@@ -209,8 +239,10 @@ function AuthPage() {
   }
 
   async function handleGoogle() {
+    authInteraction.current++;
     setLoading(true);
     setFormError(null);
+    setSessionError(null);
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
         redirect_uri: authCallback(),
@@ -275,12 +307,12 @@ function AuthPage() {
             </p>
           </div>
 
-          {formError && (
+          {(formError || sessionError) && (
             <div
               role="alert"
               className="mb-5 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-[15px] text-destructive"
             >
-              {formError}
+              {formError || sessionError}
             </div>
           )}
           {notice && (
@@ -354,7 +386,7 @@ function AuthPage() {
                     <button
                       type="button"
                       onClick={() => {
-                        setMode("recover");
+                        changeMode("recover");
                         setRecoverSent(false);
                       }}
                       className="inline-flex min-h-11 items-center text-sm font-semibold text-forest underline-offset-4 hover:underline"
@@ -475,7 +507,7 @@ function AuthPage() {
                 <button
                   type="button"
                   className="font-bold text-forest hover:text-forest transition-colors underline-offset-4 hover:underline"
-                  onClick={() => setMode("signin")}
+                  onClick={() => changeMode("signin")}
                 >
                   Entrar
                 </button>
@@ -486,7 +518,7 @@ function AuthPage() {
                 <button
                   type="button"
                   className="font-bold text-forest hover:text-forest transition-colors underline-offset-4 hover:underline"
-                  onClick={() => setMode("signup")}
+                  onClick={() => changeMode("signup")}
                 >
                   Criar conta
                 </button>
@@ -497,7 +529,7 @@ function AuthPage() {
                 <button
                   type="button"
                   className="font-bold text-forest hover:text-forest transition-colors underline-offset-4 hover:underline"
-                  onClick={() => setMode("signin")}
+                  onClick={() => changeMode("signin")}
                 >
                   Entrar
                 </button>
