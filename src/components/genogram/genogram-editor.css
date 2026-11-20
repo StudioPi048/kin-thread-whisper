@@ -284,6 +284,7 @@
   font-weight: 650;
   line-height: 1.2;
   letter-spacing: -0.022em;
+  overflow-wrap: anywhere;
 }
 
 .geno-dock-person {
@@ -301,6 +302,83 @@
   color: var(--forest);
   font-size: 0.875rem;
   font-weight: 750;
+}
+
+.geno-dock-person-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+  padding-block: 12px;
+}
+
+.geno-dock-person-actions button {
+  height: auto;
+  justify-content: flex-start;
+  padding: 7px;
+  text-align: start;
+  white-space: normal;
+}
+
+.geno-dock-person-actions button:first-child,
+.geno-dock-person-actions button:last-child {
+  grid-column: 1 / -1;
+}
+
+.geno-dock-relatives {
+  border-bottom: 1px solid var(--border);
+}
+
+.geno-dock-relatives > summary {
+  min-height: 44px;
+  padding-block: 12px;
+  color: var(--forest);
+  font-size: 0.875rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.geno-dock-link-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.geno-dock-link-list > li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  align-items: center;
+  min-height: 44px;
+  border-top: 1px solid var(--border);
+}
+
+.geno-dock-link-list > li > button {
+  min-height: 44px;
+}
+
+.geno-dock-link-person {
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 7px 5px 7px 0;
+  color: var(--forest);
+  font-size: 0.875rem;
+  text-align: start;
+  overflow-wrap: anywhere;
+}
+
+.geno-dock-link-person span {
+  color: var(--ink-soft);
+}
+
+.geno-dock-link-person:not(:disabled):hover strong {
+  text-decoration: underline;
+}
+
+.geno-dock-link-person:focus-visible,
+.geno-dock-relatives > summary:focus-visible {
+  outline: 2px solid var(--forest);
+  outline-offset: -2px;
 }
 
 .geno-dock-parents {

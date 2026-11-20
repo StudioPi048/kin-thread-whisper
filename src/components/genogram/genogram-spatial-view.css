@@ -23,7 +23,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 4px;
-  padding: 54px 12px 6px;
+  padding: 5px 12px;
 }
 
 .geno-spatial-features button {
@@ -45,7 +45,7 @@
   position: absolute;
   z-index: 8;
   inset-inline-end: 10px;
-  top: 110px;
+  top: 76px;
   max-height: 48%;
   width: min(310px, calc(100% - 20px));
   overflow: auto;
@@ -80,7 +80,7 @@
 }
 
 .geno-spatial-person[data-branch-muted]:not([aria-pressed="true"]):not(:focus-visible):not(:hover) {
-  opacity: 0.48;
+  opacity: 0.72;
 }
 
 .geno-spatial-viewport {
@@ -393,13 +393,6 @@
   font-size: var(--plaque-role-size, 14px);
 }
 
-.geno-spatial-context {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  pointer-events: none;
-}
-
 .geno-spatial-unions {
   flex: none;
   max-height: min(166px, 34%);
@@ -480,32 +473,90 @@
   }
 }
 
-.geno-spatial-branches {
+.geno-spatial-navigation {
   display: flex;
+  flex: none;
+  align-items: center;
   flex-wrap: wrap;
-  gap: 5px 12px;
-  justify-content: flex-end;
-  padding: 6px 8px;
-  border-radius: 5px;
+  gap: 0 12px;
+  padding-inline: 12px;
+  border-bottom: 1px solid var(--border);
   background: var(--archive);
   color: var(--ink-soft);
-  font-size: 12px;
+  font-size: 13px;
 }
 
-.geno-spatial-branches span {
-  display: inline-flex;
+.geno-spatial-scopes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 3px;
   align-items: center;
-  gap: 6px;
 }
 
-.geno-spatial-branches span::before {
-  width: 15px;
-  border-top: 2px solid var(--branch-ink, var(--forest-soft));
+.geno-spatial-scopes button {
+  position: relative;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  padding-inline: 10px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.15;
+  text-align: center;
+}
+
+.geno-spatial-scopes button:hover,
+.geno-spatial-scopes button[aria-pressed="true"] {
+  background: var(--forest-mist);
+  color: var(--forest);
+}
+
+.geno-spatial-scopes button[aria-pressed="true"]::after {
+  position: absolute;
+  inset: auto 0 0;
+  height: 2px;
+  background: var(--branch-ink, var(--forest));
   content: "";
 }
 
-.geno-spatial-branches span[data-suggested="true"]::before {
+.geno-spatial-scopes button:focus-visible {
+  outline: 2px solid var(--forest);
+  outline-offset: -3px;
+}
+
+.geno-spatial-scopes button[data-branch]::before {
+  width: 11px;
+  flex: none;
+  border-top: 2px solid var(--branch-ink);
+  content: "";
+}
+
+.geno-spatial-family svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+}
+
+.geno-spatial-scope-detail {
+  padding-block: 6px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.geno-spatial-suggestion {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-inline-start: auto;
+  padding-block: 6px;
+}
+
+.geno-spatial-suggestion::before {
+  width: 14px;
   border-top: 2px dashed var(--bronze);
+  content: "";
 }
 
 .geno-spatial-deck {
@@ -693,18 +744,9 @@
   .geno-spatial-deck {
     justify-content: center;
   }
-
-  .geno-spatial-context {
-    top: 8px;
-    right: 8px;
-  }
 }
 
 @container (max-width: 430px) {
-  .geno-spatial-context {
-    display: none;
-  }
-
   .geno-spatial-features {
     padding-inline: 8px;
   }
@@ -727,11 +769,36 @@
     padding-inline: 8px;
   }
 
-  .geno-spatial-branches {
-    justify-content: flex-start;
-    gap: 5px 9px;
-    padding: 4px 6px;
-    font-size: 0.875rem;
+  .geno-spatial-navigation {
+    padding-inline: 4px;
+  }
+
+  .geno-spatial-scopes {
+    flex: 1;
+    gap: 0;
+  }
+
+  .geno-spatial-scopes button {
+    flex: 1;
+    padding-inline: 5px;
+  }
+
+  .geno-spatial-scopes button::before,
+  .geno-spatial-family span {
+    display: none;
+  }
+
+  .geno-spatial-family {
+    max-width: 44px;
+    min-width: 44px;
+  }
+
+  .geno-spatial-suggestion {
+    margin-inline-start: 4px;
+  }
+
+  .geno-spatial-scope-detail {
+    padding-inline: 4px;
   }
 
   .geno-spatial-names {
@@ -805,13 +872,11 @@
   --bronze: var(--gold-soft);
 }
 
-.geno-workbench .geno-spatial-geometry [data-branch="maternal"],
-.geno-workbench .geno-spatial-branches [data-branch="maternal"] {
+.geno-workbench .geno-spatial-geometry [data-branch="maternal"] {
   --branch-ink: var(--gold-soft);
 }
 
-.geno-workbench .geno-spatial-geometry [data-branch="paternal"],
-.geno-workbench .geno-spatial-branches [data-branch="paternal"] {
+.geno-workbench .geno-spatial-geometry [data-branch="paternal"] {
   --branch-ink: var(--spatial-trace);
 }
 
@@ -832,22 +897,6 @@
 .geno-workbench .geno-spatial-person[data-parentage-person="proposed"],
 .geno-workbench .geno-spatial-person[data-parentage-person]:focus-visible {
   outline-color: var(--gold-soft);
-}
-
-.geno-workbench .geno-spatial-context {
-  inset: 9px 10px auto auto;
-  z-index: 4;
-}
-
-.geno-workbench .geno-spatial-branches {
-  border-color: var(--forest-soft);
-  border-radius: 4px;
-  background: var(--spatial-field);
-  color: var(--spatial-ruler);
-}
-
-.geno-workbench .geno-spatial-branches [data-suggested="true"]::before {
-  border-color: var(--gold-soft);
 }
 
 .geno-workbench .geno-spatial-deck {
@@ -899,10 +948,6 @@
 }
 
 @container (max-width: 430px) {
-  .geno-workbench .geno-spatial-context {
-    display: none;
-  }
-
   .geno-workbench .geno-spatial-deck {
     padding-inline: 2px;
   }

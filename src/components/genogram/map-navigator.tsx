@@ -12,6 +12,7 @@ export function MapNavigator({
   nodes,
   focusId,
   branch,
+  showScopes = true,
   onBranch,
   onLocate,
   onFit,
@@ -19,6 +20,7 @@ export function MapNavigator({
   nodes: Node[];
   focusId?: string;
   branch: MapBranch | null;
+  showScopes?: boolean;
   onBranch: (branch: MapBranch | null) => void;
   onLocate: (id: string) => void;
   onFit: () => void;
@@ -67,25 +69,27 @@ export function MapNavigator({
             );
           })}
         </div>
-        <div className="geno-map-navigator-actions">
-          <Button type="button" size="sm" variant="outline" onClick={onFit}>
-            <Focus className="size-4" aria-hidden /> Árvore inteira
-          </Button>
-          {branches
-            .filter((item) => people.some((node) => node.data.branchId === item))
-            .map((item) => (
-              <Button
-                key={item}
-                type="button"
-                size="sm"
-                variant={branch === item ? "forest" : "outline"}
-                aria-pressed={branch === item}
-                onClick={() => onBranch(branch === item ? null : item)}
-              >
-                {mapBranchNames[item]}
-              </Button>
-            ))}
-        </div>
+        {showScopes && (
+          <div className="geno-map-navigator-actions">
+            <Button type="button" size="sm" variant="outline" onClick={onFit}>
+              <Focus className="size-4" aria-hidden /> Árvore inteira
+            </Button>
+            {branches
+              .filter((item) => people.some((node) => node.data.branchId === item))
+              .map((item) => (
+                <Button
+                  key={item}
+                  type="button"
+                  size="sm"
+                  variant={branch === item ? "forest" : "outline"}
+                  aria-pressed={branch === item}
+                  onClick={() => onBranch(branch === item ? null : item)}
+                >
+                  {mapBranchNames[item]}
+                </Button>
+              ))}
+          </div>
+        )}
         <div className="geno-map-navigator-generations">
           {[...generations]
             .sort(([first], [second]) => first - second)

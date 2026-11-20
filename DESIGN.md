@@ -65,6 +65,8 @@ O consultante e os irmãos consanguíneos ocupam o topo. Pais, avós e antepassa
 
 O mapa abre com o campo de trabalho ocupando a largura disponível. A ficha aparece ao selecionar uma pessoa ou usar seu botão. A vista 3D abre de frente, com a árvore inteira enquadrada, e oferece um atalho para a perspectiva. Os cartões claros permanecem voltados para leitura à medida que a câmera inclina. Separar vínculos usa pontes desenhadas em profundidade para distinguir cruzamentos sem alterar as filiações. Abrir uniões desloca as junções de um familiar em profundidade e mostra os filhos de cada par, com cada pessoa representada uma vez. As cores dos trajetos distinguem os ramos quando o parentesco os identifica. O índice de nomes aproxima a câmera do familiar escolhido.
 
+No quadro verde, o enquadramento por ramo usa o parentesco do grafo e mantém a geração do consultante como referência. O foco em um núcleo segue as uniões e filiações registradas. Os demais familiares permanecem no mapa e disponíveis para seleção. A perspectiva conserva o foco em uso e o retorno à árvore inteira repõe o panorama. A ficha do 3D reúne a edição da pessoa, a revisão de filiação e a navegação pelos vínculos próximos.
+
 Arrastar o fundo desloca a câmera. Mover pessoa ajusta a posição horizontal do cartão na própria geração. A edição de posições, o histórico e os comandos de filiação usam o mesmo estado nas duas vistas.
 
 ## Linha do tempo do dossiê

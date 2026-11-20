@@ -88,6 +88,12 @@ import {
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -156,6 +162,11 @@ const PrintPreview = lazy(() =>
 );
 
 type QuickRelative = { personId: string; kind: "Pai" | "Mãe" | "Filho(a)" | "Irmã(o)" };
+const quickRelativeChoices = [
+  { kind: "Pai", label: "Pai" },
+  { kind: "Mãe", label: "Mãe" },
+  { kind: "Filho(a)", label: "Filho ou filha" },
+] as const;
 type RelationshipSeed = {
   from?: string;
   to?: string;
@@ -639,7 +650,6 @@ function GenogramCanvasInner({
   const [readerPersonId, setReaderPersonId] = useState<string | null>(null);
   const [mapBranch, setMapBranch] = useState<MapBranch | null>(null);
   const [organizationProposal, setOrganizationProposal] = useState<Snapshot | null>(null);
-  const [spatialFitRequest, setSpatialFitRequest] = useState(0);
   const [focusRequest, setFocusRequest] = useState<{
     personId: string;
     relatedPersonIds?: readonly string[];
@@ -671,9 +681,9 @@ function GenogramCanvasInner({
   const [layoutDirty, setLayoutDirty] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [isLayoutFixed, setIsLayoutFixed] = useState(false);
-  const canMoveLayout = !isLayoutFixed && !connection && !organizationProposal;
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [parentageDraft, setParentageDraft] = useState<ParentageDraft | null>(null);
+  const canMoveLayout = !isLayoutFixed && !connection && !organizationProposal && !parentageDraft;
   const [pickingParentSlot, setPickingParentSlot] = useState<number | null>(null);
   const [reviewDirty, setReviewDirty] = useState(false);
   const reviewSavedRef = useRef(false);
@@ -706,6 +716,7 @@ function GenogramCanvasInner({
     viewport: Viewport;
     anchor?: MapViewAnchor;
     spatialCamera?: SpatialCamera;
+    branch: MapBranch | null;
     personId: string | null;
     panelOpen: boolean;
     mobileSheetOpen: boolean;
@@ -863,6 +874,7 @@ function GenogramCanvasInner({
     setFocusedPersonId(previous.personId);
     setPanelOpen(previous.panelOpen);
     setMobileSheetOpen(previous.mobileSheetOpen);
+    setMapBranch(previous.branch);
     if (previous.spatialCamera) spatialCameraRef.current?.restore(previous.spatialCamera);
     else if (view === "3d") setSpatialAnchor(previous.anchor);
     requestAnimationFrame(() => void rfInstance.setViewport(previous.viewport));
@@ -1008,11 +1020,11 @@ function GenogramCanvasInner({
 
   const onNodeDoubleClick = useCallback<NodeMouseHandler>(
     (_, node) => {
-      if (connection) return;
+      if (connection || parentageDraft) return;
       const person = data?.persons.find((p) => p.id === node.id);
       if (person) setEditingPerson(person);
     },
-    [data, connection],
+    [data, connection, parentageDraft],
   );
 
   const onEdgeDoubleClick: EdgeMouseHandler = (_, edge) => {
@@ -1345,12 +1357,13 @@ function GenogramCanvasInner({
       });
       if (error) throw new Error(error.message);
       if (!data) throw new Error("O servidor não confirmou o desfazer.");
-      return { viewport, spatialCamera };
+      return { viewport, spatialCamera, branch: mapBranch };
     },
-    onSuccess: async ({ viewport, spatialCamera }, reviewId) => {
+    onSuccess: async ({ viewport, spatialCamera, branch }, reviewId) => {
       await invalidateCase(qc, clientId);
       setConfirmedParentage((saved) => (saved?.reviewId === reviewId ? null : saved));
       void qc.invalidateQueries({ queryKey: ["genogram-parentage-review", clientId] });
+      setMapBranch(branch);
       if (spatialCamera) spatialCameraRef.current?.restore(spatialCamera);
       requestAnimationFrame(() => void rfInstance.setViewport(viewport));
       toast.success("Filiação anterior restaurada.");
@@ -1421,6 +1434,33 @@ function GenogramCanvasInner({
           return person ? [person] : [];
         })
       : [];
+  const recordedUnions = remainingLinks.filter((link) => link.relationship_type === "union");
+  const childrenById = new Map<string, boolean>();
+  const focusId = focusedPerson?.id;
+  if (view === "3d" && focusId && renderGraph) {
+    const graph = renderGraph.graph;
+    for (const union of graph.unions.values()) {
+      if (!union.partners.includes(focusId)) continue;
+      for (const id of union.children) {
+        const recorded = getResolvedParents(graph, id).some(
+          (parent) => parent.personId === focusId && parent.source === "explicit",
+        );
+        childrenById.set(id, recorded);
+      }
+    }
+  }
+  const otherLinks =
+    view === "3d"
+      ? remainingLinks.filter(
+          (link) =>
+            link.relationship_type !== "union" &&
+            !(
+              link.relationship_type === "parent" &&
+              link.from_person_id === focusId &&
+              childrenById.has(link.to_person_id)
+            ),
+        )
+      : remainingLinks;
   const reviewChild = parentageDraft?.childId;
   const reviewCurrent = parentageDraft?.current;
   const reviewProposal = parentageDraft?.proposed;
@@ -1465,6 +1505,7 @@ function GenogramCanvasInner({
       viewport: rfInstance.getViewport(),
       anchor: readAnchor2D(),
       spatialCamera: spatialCameraRef.current?.read(),
+      branch: mapBranch,
       personId: fromRoute ? childId : focusedPersonId,
       panelOpen: fromRoute || panelOpen,
       mobileSheetOpen,
@@ -1520,6 +1561,7 @@ function GenogramCanvasInner({
   };
 
   function editRelationship(link: RelRow) {
+    if (parentageDraft || connection) return;
     if (link.relationship_type === "parent") {
       startParentageReview(link.to_person_id);
       return;
@@ -1678,6 +1720,10 @@ function GenogramCanvasInner({
     setPickingParentSlot(null);
     setConnection({ originId: id });
   };
+  const selectBranch = useCallback((branch: MapBranch | null) => {
+    setOrganizationProposal(null);
+    setMapBranch(branch);
+  }, []);
 
   const selectPair = useCallback(
     (firstId: string, secondId: string) => {
@@ -1848,19 +1894,106 @@ function GenogramCanvasInner({
 
   function fitAllPeople() {
     setFocusRequest(undefined);
-    if (view === "3d") setSpatialFitRequest((request) => request + 1);
-    else
-      void rfInstance.fitView({
-        nodes: rfInstance.getNodes().filter((node) => node.type === "person"),
-        padding: MAP_OVERVIEW_PADDING,
-        maxZoom: 1.2,
-      });
+    void rfInstance.fitView({
+      nodes: rfInstance.getNodes().filter((node) => node.type === "person"),
+      padding: MAP_OVERVIEW_PADDING,
+      maxZoom: 1.2,
+    });
   }
 
   function addPerson() {
     setQuickRelative(null);
     setCreatingPerson(true);
   }
+  function locateRelative(id: string) {
+    locatePerson(id);
+    if (isMobile) setMobileSheetOpen(false);
+  }
+  function editFocusedPerson() {
+    if (!focusedPerson) return;
+    setMobileSheetOpen(false);
+    setEditingPerson(focusedPerson);
+  }
+  const personActionsBlocked = !!connection || !!parentageDraft;
+  const reviewAction = focusedPerson && (
+    <Button
+      ref={reviewEditTriggerRef}
+      size="sm"
+      variant="forest"
+      className="min-h-11"
+      disabled={personActionsBlocked}
+      onClick={(event) => startParentageReview(focusedPerson.id, event.currentTarget)}
+    >
+      <Link2 className="size-4" aria-hidden />
+      {directParents.length ? "Revisar filiação" : "Definir filiação"}
+    </Button>
+  );
+  const personActions = focusedPerson && (
+    <>
+      <Button
+        size="sm"
+        variant="outline"
+        className="min-h-11"
+        disabled={personActionsBlocked}
+        onClick={editFocusedPerson}
+      >
+        <Pencil className="size-4" aria-hidden /> Editar pessoa
+      </Button>
+      <Button
+        size="sm"
+        variant="outline"
+        className="min-h-11"
+        disabled={qualifiedCount < 2 || personActionsBlocked}
+        onClick={() => startConnection(focusedPerson.id)}
+      >
+        <Link2 className="size-4" aria-hidden /> Conectar a…
+      </Button>
+    </>
+  );
+  const renderRecordedLinks = (links: RelRow[]) => (
+    <ul className="geno-dock-link-list">
+      {links.map((link) => {
+        const isSource = link.from_person_id === focusedPerson?.id;
+        const other = persons.find(
+          (person) => person.id === (isSource ? link.to_person_id : link.from_person_id),
+        );
+        const isParentage = link.relationship_type === "parent";
+        const action = isParentage
+          ? "Revisar filiação"
+          : link.relationship_type === "union"
+            ? "Editar união"
+            : "Editar vínculo";
+        return (
+          <li key={link.id}>
+            <button
+              type="button"
+              className="geno-dock-link-person"
+              disabled={!other || !mappedIds.has(other.id)}
+              onClick={() => other && locateRelative(other.id)}
+            >
+              <strong>{personName(other)}</strong>
+              <span>
+                {isParentage && isSource
+                  ? "Filho ou filha"
+                  : relationshipLabel(link.relationship_type, link.qualifier)}
+              </span>
+            </button>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              aria-label={`${action} com ${personName(other)}`}
+              title={action}
+              disabled={personActionsBlocked}
+              onClick={() => editRelationship(link)}
+            >
+              <Pencil className="size-4" aria-hidden />
+            </Button>
+          </li>
+        );
+      })}
+    </ul>
+  );
   const personPanel = focusedPerson ? (
     <>
       <header className="geno-dock-person">
@@ -1869,6 +2002,49 @@ function GenogramCanvasInner({
           <p className="mt-1 text-sm text-muted-foreground">{focusedRole}</p>
         )}
       </header>
+      {view === "3d" && (
+        <div
+          className="geno-dock-person-actions"
+          role="group"
+          aria-label="Editar pessoa e vínculos"
+        >
+          {reviewAction}
+          {personActions}
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="min-h-11"
+                disabled={personActionsBlocked}
+              >
+                <UserPlus className="size-4" aria-hidden /> Adicionar parente
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="start"
+              aria-label="Escolher parentesco"
+              onCloseAutoFocus={(event) => {
+                if (creatingPerson) event.preventDefault();
+              }}
+            >
+              {quickRelativeChoices.map(({ kind, label }) => (
+                <DropdownMenuItem
+                  key={kind}
+                  className="min-h-11 cursor-pointer"
+                  onSelect={() => {
+                    setMobileSheetOpen(false);
+                    handleQuickAdd(focusedPerson.id, kind);
+                  }}
+                >
+                  {label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )}
       <section className="geno-dock-parentage" aria-label="Filiação da pessoa selecionada">
         <h3>Filiação</h3>
         {directParents.length ? (
@@ -1883,10 +2059,7 @@ function GenogramCanvasInner({
                   <button
                     type="button"
                     className="block min-h-9 text-left text-sm font-semibold text-forest hover:underline"
-                    onClick={() => {
-                      locatePerson(parent.personId);
-                      if (isMobile) setMobileSheetOpen(false);
-                    }}
+                    onClick={() => locateRelative(parent.personId)}
                   >
                     {personName(person)}
                   </button>
@@ -1903,16 +2076,7 @@ function GenogramCanvasInner({
           <p className="my-2 text-sm text-muted-foreground">Sem filiação registrada no mapa.</p>
         )}
         <div className="geno-dock-review-actions">
-          <Button
-            ref={reviewEditTriggerRef}
-            size="sm"
-            variant="forest"
-            className="min-h-11"
-            onClick={(event) => startParentageReview(focusedPerson.id, event.currentTarget)}
-          >
-            <Link2 className="size-4" aria-hidden />{" "}
-            {directParents.length ? "Revisar filiação" : "Definir filiação"}
-          </Button>
+          {view === "2d" && reviewAction}
           <Button
             type="button"
             size="sm"
@@ -1960,29 +2124,46 @@ function GenogramCanvasInner({
           />
         )}
       </section>
-      <div className="geno-dock-edit-actions">
-        <Button
-          size="sm"
-          variant="outline"
-          className="min-h-11"
-          onClick={() => {
-            setMobileSheetOpen(false);
-            setEditingPerson(focusedPerson);
-          }}
-        >
-          <Pencil className="size-4" aria-hidden /> Editar pessoa
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          className="min-h-11"
-          onClick={() => {
-            startConnection(focusedPerson.id);
-          }}
-        >
-          <Link2 className="size-4" aria-hidden /> Conectar a…
-        </Button>
-      </div>
+      {view === "2d" && <div className="geno-dock-edit-actions">{personActions}</div>}
+      {view === "3d" && recordedUnions.length > 0 && (
+        <details className="geno-dock-relatives">
+          <summary>Uniões registradas ({recordedUnions.length})</summary>
+          {renderRecordedLinks(recordedUnions)}
+        </details>
+      )}
+      {view === "3d" && childrenById.size > 0 && (
+        <details className="geno-dock-relatives">
+          <summary>Filhos ({childrenById.size})</summary>
+          <ul className="geno-dock-link-list">
+            {[...childrenById].map(([id, recorded]) => {
+              const name = personName(persons.find((person) => person.id === id));
+              return (
+                <li key={id}>
+                  <button
+                    type="button"
+                    className="geno-dock-link-person"
+                    onClick={() => locateRelative(id)}
+                  >
+                    <strong>{name}</strong>
+                    <span>{recorded ? "Filiação registrada" : "Filiação sugerida"}</span>
+                  </button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    aria-label={`Revisar filiação de ${name}`}
+                    title="Revisar filiação"
+                    disabled={personActionsBlocked}
+                    onClick={(event) => startParentageReview(id, event.currentTarget)}
+                  >
+                    <Pencil className="size-4" aria-hidden />
+                  </Button>
+                </li>
+              );
+            })}
+          </ul>
+        </details>
+      )}
       {sharedUnionPeople.length > 0 && (
         <details className="mt-4 border-t border-border pt-3">
           <summary className="cursor-pointer text-sm font-semibold">
@@ -1994,10 +2175,7 @@ function GenogramCanvasInner({
                 <button
                   type="button"
                   className="min-h-11 text-left text-sm font-semibold text-forest hover:underline"
-                  onClick={() => {
-                    locatePerson(person.id);
-                    setMobileSheetOpen(false);
-                  }}
+                  onClick={() => locateRelative(person.id)}
                 >
                   {personName(person)}
                 </button>
@@ -2006,40 +2184,10 @@ function GenogramCanvasInner({
           </ul>
         </details>
       )}
-      {remainingLinks.length > 0 && (
-        <details className="mt-4 border-t border-border pt-3">
-          <summary className="cursor-pointer text-sm font-semibold">
-            Outros vínculos ({remainingLinks.length})
-          </summary>
-          <ul className="divide-y divide-border">
-            {remainingLinks.map((rel) => {
-              const isSource = rel.from_person_id === focusedPerson.id;
-              const other = persons.find(
-                (person) => person.id === (isSource ? rel.to_person_id : rel.from_person_id),
-              );
-              return (
-                <li key={rel.id} className="py-2">
-                  <button
-                    type="button"
-                    className="min-h-11 text-left text-sm hover:underline"
-                    onClick={() => {
-                      if (!other) return;
-                      locatePerson(other.id);
-                      setMobileSheetOpen(false);
-                    }}
-                  >
-                    <span className="block font-semibold text-forest">{personName(other)}</span>
-                    {rel.relationship_type === "parent" && isSource
-                      ? "Filho ou filha"
-                      : relationshipLabel(rel.relationship_type, rel.qualifier)}
-                  </button>
-                  <Button size="sm" variant="ghost" onClick={() => editRelationship(rel)}>
-                    {rel.relationship_type === "parent" ? "Revisar filiação" : "Editar vínculo"}
-                  </Button>
-                </li>
-              );
-            })}
-          </ul>
+      {otherLinks.length > 0 && (
+        <details className="geno-dock-relatives">
+          <summary>Outros vínculos ({otherLinks.length})</summary>
+          {renderRecordedLinks(otherLinks)}
         </details>
       )}
       <dl>
@@ -2152,6 +2300,7 @@ function GenogramCanvasInner({
             className="geno-editor-add-person"
             aria-label="Adicionar pessoa"
             title="Adicionar pessoa"
+            disabled={!!parentageDraft}
             onClick={addPerson}
           >
             <UserPlus className="size-4" aria-hidden />{" "}
@@ -2166,7 +2315,7 @@ function GenogramCanvasInner({
             aria-label="Conectar"
             title="Conectar duas pessoas"
             aria-pressed={!!connection}
-            disabled={qualifiedCount < 2}
+            disabled={qualifiedCount < 2 || !!parentageDraft}
             onClick={() => (connection ? setConnection(null) : startConnection())}
           >
             <Link2 className="size-4" aria-hidden /> <span>Conectar</span>
@@ -2185,11 +2334,17 @@ function GenogramCanvasInner({
               onChange={(event) => {
                 const id = event.currentTarget.value;
                 if (!id) return;
-                if (connection) activatePerson(id);
+                if (connection || pickingParentSlot !== null) activatePerson(id);
                 else locatePerson(id);
               }}
             >
-              <option value="">{connection ? "Escolher familiar…" : "Localizar familiar…"}</option>
+              <option value="">
+                {pickingParentSlot !== null
+                  ? "Escolher genitor…"
+                  : connection
+                    ? "Escolher familiar…"
+                    : "Localizar familiar…"}
+              </option>
               {persons
                 .filter((person) => mappedIds.has(person.id))
                 .map((person) => {
@@ -2664,9 +2819,13 @@ function GenogramCanvasInner({
                       cameraRef={spatialCameraRef}
                       parentagePreview={parentagePreview}
                       highlightedBranch={mapBranch}
+                      onBranchChange={selectBranch}
                       onFocusPerson={(id) => setReaderPersonId(id)}
                       onReviewParentage={(id) => startParentageReview(id)}
-                      fitRequest={spatialFitRequest}
+                      onEditRelationship={(id) => {
+                        const link = data?.rels.find((item) => item.id === id);
+                        if (link) editRelationship(link);
+                      }}
                       canMovePeople={canMoveLayout}
                       onMovePerson={moveSpatialPerson}
                       getMovePersonDelta={getMovePersonDelta}
@@ -2843,25 +3002,25 @@ function GenogramCanvasInner({
                   nodes={positionedNodes}
                   focusId={focusedPerson?.id}
                   branch={mapBranch}
-                  onBranch={(branch) => {
-                    setOrganizationProposal(null);
-                    setMapBranch(branch);
-                  }}
+                  showScopes={view === "2d"}
+                  onBranch={selectBranch}
                   onLocate={locatePerson}
                   onFit={fitAllPeople}
                 />
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  className="geno-editor-fit"
-                  aria-label="Árvore inteira"
-                  title="Enquadrar a árvore inteira"
-                  onClick={fitAllPeople}
-                >
-                  <Focus className="size-4" aria-hidden />
-                  <span>Árvore inteira</span>
-                </Button>
+                {view === "2d" && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="geno-editor-fit"
+                    aria-label="Árvore inteira"
+                    title="Enquadrar a árvore inteira"
+                    onClick={fitAllPeople}
+                  >
+                    <Focus className="size-4" aria-hidden />
+                    <span>Árvore inteira</span>
+                  </Button>
+                )}
                 <Button
                   size="icon"
                   variant={mapReading ? "forest" : "ghost"}
