@@ -527,14 +527,11 @@ class Query {
         }
         if (
           this.table === "genogram_relationships" &&
-          rows.some((row) => {
-            const next = { ...row, ...this.payload };
-            return (
-              ["client_id", "from_person_id", "to_person_id", "relationship_type"].some(
-                (key) => row[key] !== next[key],
-              ) && !fixtureHasEndpoints(next, true)
-            );
-          })
+          rows.some(
+            (row) =>
+              !fixtureHasEndpoints(row, true) ||
+              !fixtureHasEndpoints({ ...row, ...this.payload }, true),
+          )
         ) {
           return Promise.resolve(
             fixtureError("Restaure os familiares envolvidos antes de alterar o vínculo."),
@@ -578,7 +575,13 @@ class Query {
         rows = [...updated.values()];
       }
       if (this.mutation === "delete") {
-        if (this.table === "genogram_relationships") recordFixtureRelationshipRemovals(rows);
+        if (this.table === "genogram_relationships") {
+          if (rows.some((row) => !fixtureHasEndpoints(row, true)))
+            return Promise.resolve(
+              fixtureError("Restaure os familiares envolvidos antes de remover o vínculo."),
+            ).then(resolve, reject);
+          recordFixtureRelationshipRemovals(rows);
+        }
         db[this.table] = this.rows.filter((r) => !rows.includes(r));
       }
       if (this.mutation === "insert" || this.mutation === "upsert") {
@@ -679,7 +682,7 @@ function reviewFixtureParentage(args: Record<string, unknown>) {
   const childId = String(args._child_id);
   const clientId = String(args._client_id);
   const child = db.genogram_persons.find((row) => row.client_id === clientId && row.id === childId);
-  if (!child) return fixtureError("Pessoa indisponível.");
+  if (!child || child.archived_at) return fixtureError("Pessoa indisponível.");
   const beforeReviewed = Boolean(child.parentage_reviewed);
   const relationships = db.genogram_relationships.filter((row) => row.client_id === clientId);
   if (JSON.stringify(parentageSnapshot(relationships, childId)) !== JSON.stringify(args._expected))
@@ -701,6 +704,21 @@ function reviewFixtureParentage(args: Record<string, unknown>) {
   const current = relationships.filter(
     (row) => row.to_person_id === childId && row.relationship_type === "parent",
   );
+  if (
+    current.some((row) => !fixtureHasEndpoints(row, true)) ||
+    parents.some(
+      ({ personId }) =>
+        !fixtureHasEndpoints(
+          {
+            client_id: clientId,
+            from_person_id: personId,
+            to_person_id: childId,
+          },
+          true,
+        ),
+    )
+  )
+    return fixtureError("Restaure os genitores arquivados antes de revisar a filiação.");
   const before = current.map((link) => ({ ...link }));
   const now = new Date().toISOString();
   const after = parents.map(({ personId, kind, link }) => {
@@ -790,6 +808,15 @@ function undoFixtureParentage(args: Record<string, unknown>) {
       JSON.stringify(parentageSnapshot(review.after_links, review.child_id))
   )
     return fixtureError("A filiação mudou depois da revisão.");
+  if (
+    [
+      ...links.filter(
+        (row) => row.relationship_type === "parent" && row.to_person_id === review.child_id,
+      ),
+      ...review.before_links,
+    ].some((row) => !fixtureHasEndpoints(row, true))
+  )
+    return fixtureError("Restaure os genitores arquivados antes de desfazer a revisão.");
   db.genogram_relationships = [
     ...db.genogram_relationships.filter(
       (row) =>
@@ -1143,6 +1170,8 @@ export const supabase: any = {
       );
       if (!relationship)
         return fixtureError("O vínculo mudou ou já foi removido. Atualize o mapa.");
+      if (!fixtureHasEndpoints(relationship, true))
+        return fixtureError("Restaure os familiares envolvidos antes de remover o vínculo.");
       const [removal] = recordFixtureRelationshipRemovals([relationship]);
       if (!removal) return fixtureError("Uma das pessoas do vínculo está indisponível.");
       db.genogram_relationships = db.genogram_relationships.filter((row) => row !== relationship);
@@ -1179,7 +1208,11 @@ export const supabase: any = {
       const peopleIds = new Set(args._people as string[]);
       const linkIds = new Set(args._relationships as string[]);
       const people = db.genogram_persons.filter(
-        (row) => row.client_id === args._client_id && !row.is_proband && peopleIds.has(row.id),
+        (row) =>
+          row.client_id === args._client_id &&
+          !row.is_proband &&
+          !row.archived_at &&
+          peopleIds.has(row.id),
       );
       const eligibleLinks = db.genogram_relationships.filter(
         (row) =>
@@ -1215,12 +1248,20 @@ export const supabase: any = {
           return fixtureError(
             "Os vínculos ou a seleção mudaram. Confira novamente antes de remover.",
           );
+        if (links.some((row) => !fixtureHasEndpoints(row, true)))
+          return fixtureError("Restaure os familiares arquivados antes de remover a seleção.");
         recordFixtureRelationshipRemovals(eligibleLinks, peopleIds);
         db.genogram_relationships = db.genogram_relationships.filter((row) => !links.includes(row));
         db.genogram_parentage_reviews = db.genogram_parentage_reviews.filter(
           (row) => !reviews.includes(row),
         );
         db.genogram_persons = db.genogram_persons.filter((row) => !people.includes(row));
+        db.genogram_removed_relationships = db.genogram_removed_relationships.filter(
+          (row) =>
+            row.client_id !== args._client_id ||
+            (!peopleIds.has(row.snapshot.from_person_id) &&
+              !peopleIds.has(row.snapshot.to_person_id)),
+        );
         db.genogram_node_positions = db.genogram_node_positions.filter(
           (row) => !peopleIds.has(row.node_id),
         );
@@ -1413,13 +1454,30 @@ export const supabase: any = {
         (row) => row.client_id === client.id && !row.archived_at,
       );
       const activeIds = new Set(people.map((row) => row.id));
+      const childrenWithArchivedParents = new Set(
+        db.genogram_relationships
+          .filter(
+            (row) =>
+              row.client_id === client.id &&
+              row.relationship_type === "parent" &&
+              !activeIds.has(row.from_person_id) &&
+              activeIds.has(row.to_person_id),
+          )
+          .map((row) => row.to_person_id),
+      );
       const reviews = new Map<string, unknown>();
       for (const row of db.genogram_parentage_reviews) {
-        if (row.client_id === client.id && activeIds.has(row.child_id))
+        if (
+          row.client_id === client.id &&
+          activeIds.has(row.child_id) &&
+          !childrenWithArchivedParents.has(row.child_id)
+        )
           reviews.set(row.child_id, row);
       }
       return fixtureResult({
-        persons: people,
+        persons: people.map((row) =>
+          childrenWithArchivedParents.has(row.id) ? { ...row, parentage_reviewed: false } : row,
+        ),
         relationships: db.genogram_relationships.filter(
           (row) =>
             row.client_id === client.id &&
