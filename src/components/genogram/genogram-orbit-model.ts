@@ -58,6 +58,7 @@ export const ORBIT_DEFAULT_ANGLES: OrbitAngles = { yaw: 0.28, pitch: 0.31 };
 const ROW_SPACING = 220;
 const WORLD_X_SCALE = 0.66;
 const PLANE_PADDING = 72;
+const PLANE_THICKNESS = 19;
 const NEAR = 20;
 
 const branchFor = (branch: unknown): SpatialBranch =>
@@ -373,7 +374,8 @@ export function fitOrbitCamera(
       ];
   const target = centerOf(points);
   const focal = focalLength(frame);
-  const usableX = Math.max(20, frame.width / 2 - 36);
+  const groupFocus = focus.length > 1;
+  const usableX = Math.max(20, frame.width / 2 - (groupFocus ? 52 : 36));
   const usableY = Math.max(20, frame.height / 2 - 41);
   const fitAt = (pitch: number) => {
     const transform = viewTransform({ ...angles, pitch, target });
@@ -399,13 +401,15 @@ export function fitOrbitCamera(
   const pitch = safePitch(model, camera);
   const project = projector({ ...camera, pitch }, frame);
   const projected = points.map(project);
-  const left = Math.min(...projected.map(({ x }) => x));
-  const right = Math.max(...projected.map(({ x }) => x));
+  // In a scoped view, fit the cards as well as the selected people's anchors.
+  const cardHalfWidth = (scale: number) => (groupFocus ? Math.min(106, 79 * scale) : 0);
+  const left = Math.min(...projected.map(({ x, scale }) => x - cardHalfWidth(scale)));
+  const right = Math.max(...projected.map(({ x, scale }) => x + cardHalfWidth(scale)));
   const top = Math.min(...projected.map(({ y }) => y));
   const bottom = Math.max(...projected.map(({ y }) => y));
   const zoom = Math.min(
     1.5,
-    (usableX * 2) / Math.max(1, right - left),
+    ((groupFocus ? Math.max(20, frame.width / 2 - 14) : usableX) * 2) / Math.max(1, right - left),
     (usableY * 2) / Math.max(1, bottom - top),
   );
   return {
@@ -440,6 +444,16 @@ export function projectOrbitScene(model: OrbitModel, camera: OrbitCamera, frame:
   const generations = model.generations
     .map((generation) => {
       const points = generation.corners.map(project);
+      const underside = generation.corners.map((corner) =>
+        project({ ...corner, y: corner.y + PLANE_THICKNESS }),
+      );
+      const sideFaces = points
+        .map((point, index) => {
+          const next = (index + 1) % points.length;
+          return [point, points[next], underside[next], underside[index]];
+        })
+        .filter((face) => face.every(({ visible }) => visible))
+        .map((face) => svgPath(face, true));
       const anchor = points.reduce((left, point) =>
         point.visible && (!left.visible || point.x < left.x) ? point : left,
       );
@@ -450,6 +464,7 @@ export function projectOrbitScene(model: OrbitModel, camera: OrbitCamera, frame:
         depth: points.reduce((sum, point) => sum + point.depth, 0) / points.length,
         visible: points.every(({ visible }) => visible),
         d: svgPath(points, true),
+        sideFaces,
       };
     })
     .sort(backToFront);

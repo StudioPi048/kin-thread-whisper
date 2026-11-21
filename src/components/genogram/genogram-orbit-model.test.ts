@@ -155,6 +155,13 @@ describe("órbita do genossociograma", () => {
     expect(perspective.generations.every(({ d }) => d.startsWith("M ") && d.endsWith(" Z"))).toBe(
       true,
     );
+    expect(
+      perspective.generations.every(
+        ({ sideFaces }) =>
+          sideFaces.length === 4 &&
+          sideFaces.every((face) => face.startsWith("M ") && face.endsWith(" Z")),
+      ),
+    ).toBe(true);
     expect(perspective.people[0].depth).toBeGreaterThan(perspective.people.at(-1)!.depth);
     expect(perspective.pitch).not.toBe(0);
   });
@@ -170,5 +177,22 @@ describe("órbita do genossociograma", () => {
     expect(target.x).toBeCloseTo(frame.width / 2);
     expect(target.y).toBeCloseTo(frame.height / 2);
     expect(target.scale).toBeGreaterThan(1);
+  });
+
+  it("reserva espaço para os dois nomes no enquadramento dos avós em 390 px", () => {
+    const { orbit } = caseModels(4);
+    const frame = { width: 390, height: 500 };
+    const grandparents = orbit.people
+      .filter(({ generation, branch }) => generation === 2 && branch === "paternal")
+      .map(({ id }) => id);
+    const camera = fitOrbitCamera(orbit, frame, ORBIT_DEFAULT_ANGLES, grandparents);
+    const scene = projectOrbitScene(orbit, camera, frame);
+    const focused = scene.people.filter(({ id }) => grandparents.includes(id));
+    expect(focused).toHaveLength(2);
+    for (const { x, scale } of focused) {
+      const halfWidth = Math.min(106, 79 * scale);
+      expect(x - halfWidth).toBeGreaterThanOrEqual(10);
+      expect(x + halfWidth).toBeLessThanOrEqual(frame.width - 10);
+    }
   });
 });

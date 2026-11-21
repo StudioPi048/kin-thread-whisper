@@ -32,6 +32,19 @@ const routesOnMap = () =>
   }));
 const cameraTransform = () =>
   spatial().querySelector(".geno-spatial-geometry > g")?.getAttribute("transform");
+const peopleOnOrbit = (orbit: HTMLElement) =>
+  Array.from(orbit.querySelectorAll<HTMLButtonElement>("[data-person-id][data-generation]"))
+    .map((card) => ({
+      id: card.dataset.personId,
+      generation: Number(card.dataset.generation),
+      name: card.querySelector(".geno-orbit-person-name")?.textContent,
+    }))
+    .sort((a, b) => a.id!.localeCompare(b.id!));
+const routesOnOrbit = (orbit: HTMLElement) =>
+  [...orbit.querySelectorAll("[data-orbit-route]")].map((route) => ({
+    id: route.getAttribute("data-orbit-route"),
+    path: route.getAttribute("d"),
+  }));
 
 beforeEach(() => {
   vi.stubGlobal(
@@ -208,17 +221,9 @@ it("preserva a árvore editável da cena orbital ao confirmar e desfazer uma fil
 
   fireEvent.click(screen.getByRole("button", { name: "Órbita 3D" }));
   const orbit = await screen.findByRole("region", { name: "Cena orbital do genossociograma" });
-  const orbitPeople = () =>
-    Array.from(orbit.querySelectorAll<HTMLButtonElement>("[data-person-id][data-generation]"))
-      .map((card) => ({
-        id: card.dataset.personId,
-        generation: Number(card.dataset.generation),
-        name: card.querySelector(".geno-orbit-person-name")?.textContent,
-      }))
-      .sort((a, b) => a.id!.localeCompare(b.id!));
-  await waitFor(() => expect(orbitPeople()).toEqual(baselinePeople));
+  await waitFor(() => expect(peopleOnOrbit(orbit)).toEqual(baselinePeople));
   expect(
-    orbitPeople()
+    peopleOnOrbit(orbit)
       .filter(({ generation }) => generation === 0)
       .map(({ name }) => name)
       .sort(),
@@ -226,13 +231,18 @@ it("preserva a árvore editável da cena orbital ao confirmar e desfazer uma fil
 
   const paternal = within(orbit).getByRole("button", { name: "Ramo paterno" });
   const maternal = within(orbit).getByRole("button", { name: "Ramo materno" });
+  const generations = within(within(orbit).getByRole("group", { name: "Gerações da árvore" }));
+  const parents = generations.getByRole("button", { name: "Pais e tios" });
   fireEvent.click(paternal);
+  fireEvent.click(parents);
+  expect(orbit.getAttribute("data-active-generation")).toBe("1");
   const navigation = within(orbit).getByRole("region", { name: "Área de navegação orbital" });
   const initialAzimuth = navigation.getAttribute("data-azimuth");
   fireEvent.keyDown(navigation, { key: "ArrowRight" });
   const workingAzimuth = navigation.getAttribute("data-azimuth");
   expect(workingAzimuth).not.toBe(initialAzimuth);
-  fireEvent.click(orbit.querySelector(`[data-person-id="${personId("Pai")}"]`)!);
+  fireEvent.click(within(orbit).getByRole("button", { name: /^Pai(?:,|$)/ }));
+  const workingRoutes = routesOnOrbit(orbit);
   const inspector = within(
     screen.getByRole("complementary", { name: "Ficha da pessoa selecionada" }),
   );
@@ -244,9 +254,11 @@ it("preserva a árvore editável da cena orbital ao confirmar e desfazer uma fil
   expect(slot).toBeGreaterThanOrEqual(0);
   fireEvent.click(review.getByRole("button", { name: `Escolher genitor ${slot + 1} no mapa` }));
   fireEvent.click(maternal);
+  fireEvent.click(generations.getByRole("button", { name: "Avós" }));
+  expect(orbit.getAttribute("data-active-generation")).toBe("2");
   fireEvent.keyDown(navigation, { key: "ArrowRight" });
   const replacement = personId("Avó materna");
-  fireEvent.click(orbit.querySelector(`[data-person-id="${replacement}"]`)!);
+  fireEvent.click(within(orbit).getByRole("button", { name: /^Avó materna(?:,|$)/ }));
   expect(slots[slot].value).toBe(replacement);
   fireEvent.change(review.getByLabelText(`Natureza do vínculo ${slot + 1}`), {
     target: { value: "unknown" },
@@ -256,6 +268,8 @@ it("preserva a árvore editável da cena orbital ao confirmar e desfazer uma fil
 
   const undo = await screen.findByRole("button", { name: "Desfazer filiação" });
   expect(paternal.getAttribute("aria-pressed")).toBe("true");
+  expect(parents.getAttribute("aria-pressed")).toBe("true");
+  expect(orbit.getAttribute("data-active-generation")).toBe("1");
   expect(navigation.getAttribute("data-azimuth")).toBe(workingAzimuth);
   expect(
     (await relationRows())?.find(
@@ -267,11 +281,70 @@ it("preserva a árvore editável da cena orbital ao confirmar e desfazer uma fil
     expect(screen.queryByRole("button", { name: "Desfazer filiação" })).toBeNull(),
   );
   expect(await relationRows()).toEqual(baselineLinks);
-  expect(orbitPeople()).toEqual(baselinePeople);
+  expect(peopleOnOrbit(orbit)).toEqual(baselinePeople);
+  expect(routesOnOrbit(orbit)).toEqual(workingRoutes);
 
   fireEvent.click(within(orbit).getByRole("button", { name: "Voltar ao board" }));
   expect(peopleOnMap().sort((a, b) => a.id!.localeCompare(b.id!))).toEqual(baselinePeople);
   expect(routesOnMap()).toEqual(baselineRoutes);
   expect(inspector.getByRole("heading", { name: "Pai" })).toBeTruthy();
+  queryClient.clear();
+});
+
+it("permite navegar por geração a 390 px e deixa a roda simples rolar a página", async () => {
+  vi.stubGlobal("innerWidth", 390);
+  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(390);
+  vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(640);
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={queryClient}>
+      <GenogramCanvas clientId={clientId} />
+    </QueryClientProvider>,
+  );
+
+  fireEvent.click(await screen.findByRole("button", { name: "Órbita 3D" }));
+  const orbit = await screen.findByRole("region", { name: "Cena orbital do genossociograma" });
+  const tree = within(orbit);
+  const navigation = tree.getByRole("region", { name: "Área de navegação orbital" });
+  const camera = within(tree.getByRole("group", { name: "Câmera da cena orbital" }));
+  await waitFor(() => expect(peopleOnOrbit(orbit)).toHaveLength(35));
+  const allNames = peopleOnOrbit(orbit);
+  const overviewAzimuth = navigation.getAttribute("data-azimuth");
+
+  const generation = tree.getByRole<HTMLSelectElement>("combobox", { name: "Geração em foco" });
+  const grandparents = within(generation).getByRole<HTMLOptionElement>("option", { name: "Avós" });
+  fireEvent.change(generation, { target: { value: grandparents.value } });
+  expect(orbit.getAttribute("data-active-generation")).toBe("2");
+  expect(peopleOnOrbit(orbit)).toEqual(allNames);
+
+  fireEvent.click(camera.getByRole("button", { name: "Vista frontal" }));
+  expect(Number(navigation.getAttribute("data-azimuth"))).toBe(0);
+  fireEvent.click(camera.getByRole("button", { name: "Girar à direita" }));
+  expect(Number(navigation.getAttribute("data-azimuth"))).not.toBe(0);
+
+  const pan = camera.getByRole("button", { name: "Mover câmera" });
+  fireEvent.click(pan);
+  expect(pan.getAttribute("aria-pressed")).toBe("true");
+  const beforePan = navigation.getAttribute("data-azimuth");
+  const beforePanRoutes = routesOnOrbit(orbit);
+  fireEvent.keyDown(navigation, { key: "ArrowRight" });
+  expect(navigation.getAttribute("data-azimuth")).toBe(beforePan);
+  expect(routesOnOrbit(orbit)).not.toEqual(beforePanRoutes);
+  fireEvent.click(pan);
+
+  const beforeWheel = navigation.getAttribute("data-orbit-zoom");
+  expect(beforeWheel).not.toBeNull();
+  expect(fireEvent.wheel(navigation, { deltaY: -120 })).toBe(true);
+  expect(navigation.getAttribute("data-orbit-zoom")).toBe(beforeWheel);
+  expect(fireEvent.wheel(navigation, { deltaY: -120, ctrlKey: true })).toBe(false);
+  expect(Number(navigation.getAttribute("data-orbit-zoom"))).toBeGreaterThan(Number(beforeWheel));
+
+  fireEvent.click(camera.getByRole("button", { name: "Reenquadrar" }));
+  expect(navigation.getAttribute("data-azimuth")).toBe(overviewAzimuth);
+  expect(generation.value).toBe(grandparents.value);
+
+  fireEvent.click(tree.getByRole("button", { name: "Árvore inteira" }));
+  expect(generation.value).not.toBe(grandparents.value);
+  expect(peopleOnOrbit(orbit)).toEqual(allNames);
   queryClient.clear();
 });

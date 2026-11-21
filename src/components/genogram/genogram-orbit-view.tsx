@@ -11,18 +11,7 @@ import {
   type Ref,
 } from "react";
 import type { Edge, Node } from "@xyflow/react";
-import {
-  ArrowLeft,
-  ArrowUpToLine,
-  Focus,
-  GitBranch,
-  Hand,
-  Minus,
-  Orbit,
-  Plus,
-  Square,
-  X,
-} from "lucide-react";
+import { Focus, GitBranch, X } from "lucide-react";
 import {
   buildOrbitModel,
   fitOrbitCamera,
@@ -37,12 +26,8 @@ import {
   type OrbitRoute,
 } from "./genogram-orbit-model";
 import { traceOrbitLineage } from "./genogram-orbit-lineage";
-import {
-  mapBranchNames,
-  readMapViewAnchor,
-  type MapBranch,
-  type MapViewAnchor,
-} from "./map-view-context";
+import { OrbitCameraControls, OrbitNavigation } from "./genogram-orbit-navigation";
+import { readMapViewAnchor, type MapBranch, type MapViewAnchor } from "./map-view-context";
 import type { ParentagePreview } from "./parentage-preview";
 import { personSymbol } from "./person-symbol";
 import "./genogram-orbit-view.css";
@@ -51,6 +36,8 @@ export type OrbitCameraSnapshot = {
   camera: OrbitCamera;
   branch: MapBranch | null;
   personIds: readonly string[];
+  generation: number | null;
+  framing: CameraFraming | null;
 };
 
 export type OrbitCameraHandle = {
@@ -79,6 +66,7 @@ interface GenogramOrbitViewProps {
 }
 
 type Point = { x: number; y: number };
+type CameraFraming = { ids?: readonly string[] };
 type ProjectedPerson = ReturnType<typeof projectOrbitScene>["people"][number];
 type NamePlacement = {
   person: ProjectedPerson;
@@ -91,7 +79,27 @@ const BRANCHES = ["paternal", "maternal"] as const;
 const ZOOM_MIN = 0.26;
 const ZOOM_MAX = 5;
 const TURN = Math.PI * 2;
+const CAMERA_STEP = Math.PI / 8;
+const CAMERA_DURATION = 235;
 const clamp = (number: number, min: number, max: number) => Math.min(max, Math.max(min, number));
+
+function interpolateCamera(from: OrbitCamera, to: OrbitCamera, t: number): OrbitCamera {
+  const interpolate = (start: number, end: number) => start + (end - start) * t;
+  const yaw = ((((to.yaw - from.yaw + Math.PI) % TURN) + TURN) % TURN) - Math.PI;
+  return {
+    yaw: from.yaw + yaw * t,
+    pitch: interpolate(from.pitch, to.pitch),
+    target: {
+      x: interpolate(from.target.x, to.target.x),
+      y: interpolate(from.target.y, to.target.y),
+      z: interpolate(from.target.z, to.target.z),
+    },
+    distance: interpolate(from.distance, to.distance),
+    zoom: interpolate(from.zoom, to.zoom),
+    panX: interpolate(from.panX, to.panX),
+    panY: interpolate(from.panY, to.panY),
+  };
+}
 
 function placeNames(people: readonly ProjectedPerson[], frame: OrbitFrame) {
   const rows = new Map<number, NamePlacement[]>();
@@ -255,6 +263,10 @@ export function GenogramOrbitView({
   const pointerPositions = useRef(new Map<number, Point>());
   const queuedCameraChange = useRef<((camera: OrbitCamera) => OrbitCamera) | null>(null);
   const animationFrame = useRef<number | null>(null);
+  const cameraMotion = useRef<number | null>(null);
+  const cameraDestination = useRef<OrbitCamera | null>(null);
+  const cameraFraming = useRef<CameraFraming | null>(null);
+  const previousFrame = useRef<OrbitFrame | null>(null);
   const lastFit = useRef(fitRequest);
   const lastFocus = useRef(focusRequest);
   const lastAnchor = useRef<MapViewAnchor>(undefined);
@@ -262,6 +274,7 @@ export function GenogramOrbitView({
   const [cameraOverride, setCameraOverride] = useState<OrbitCamera | null>(null);
   const [localBranch, setLocalBranch] = useState<MapBranch | null>(null);
   const [lineage, setLineage] = useState<readonly string[]>([]);
+  const [activeGeneration, setActiveGeneration] = useState<number | null>(null);
   const [dragging, setDragging] = useState(false);
   const [panMode, setPanMode] = useState(false);
   const [activeRouteId, setActiveRouteId] = useState<string | null>(null);
@@ -306,10 +319,38 @@ export function GenogramOrbitView({
     },
     [model.people, parentsByChild],
   );
-  const scopedIds = useMemo(
-    () => new Set(lineage.length ? lineage : branch ? branchPeople(branch) : []),
-    [branch, branchPeople, lineage],
+  const generationPeople = useCallback(
+    (level: number, side: MapBranch | null) => {
+      const scope = side ? new Set(branchPeople(side)) : null;
+      return model.people
+        .filter(({ id, generation }) => generation === level && (!scope || scope.has(id)))
+        .map(({ id }) => id);
+    },
+    [branchPeople, model.people],
   );
+  const generations = useMemo(
+    () =>
+      model.generations
+        .map(({ generation, label }) => ({
+          generation,
+          label,
+          count: generationPeople(generation, branch).length,
+        }))
+        .filter(({ count }) => count > 0),
+    [branch, generationPeople, model.generations],
+  );
+  const framedIds = useMemo(
+    () =>
+      activeGeneration !== null
+        ? generationPeople(activeGeneration, branch)
+        : lineage.length
+          ? lineage
+          : branch
+            ? branchPeople(branch)
+            : undefined,
+    [activeGeneration, branch, branchPeople, generationPeople, lineage],
+  );
+  const scopedIds = useMemo(() => new Set(framedIds), [framedIds]);
 
   const fitted = useMemo(() => fitOrbitCamera(model, frame, ORBIT_DEFAULT_ANGLES), [frame, model]);
   const defaultCamera = useMemo(
@@ -353,11 +394,54 @@ export function GenogramOrbitView({
     frame,
   );
 
+  const cancelCameraMotion = useCallback(() => {
+    if (cameraMotion.current !== null) cancelAnimationFrame(cameraMotion.current);
+    if (animationFrame.current !== null) cancelAnimationFrame(animationFrame.current);
+    cameraMotion.current = null;
+    cameraDestination.current = null;
+    animationFrame.current = null;
+    queuedCameraChange.current = null;
+  }, []);
+
   const changeCamera = useCallback(
     (change: (camera: OrbitCamera) => OrbitCamera) => {
+      cancelCameraMotion();
+      cameraFraming.current = null;
       setCameraOverride((current) => change(current ?? defaultCamera));
     },
-    [defaultCamera],
+    [cancelCameraMotion, defaultCamera],
+  );
+
+  const transitionCamera = useCallback(
+    (destination: OrbitCamera) => {
+      cancelCameraMotion();
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        setCameraOverride(destination);
+        return;
+      }
+      const start = performance.now();
+      cameraDestination.current = destination;
+      const step = (now: number) => {
+        const progress = clamp((now - start) / CAMERA_DURATION, 0, 1);
+        if (progress === 1) {
+          cancelCameraMotion();
+          setCameraOverride(destination);
+          return;
+        }
+        setCameraOverride(interpolateCamera(camera, destination, 1 - (1 - progress) ** 3));
+        cameraMotion.current = requestAnimationFrame(step);
+      };
+      cameraMotion.current = requestAnimationFrame(step);
+    },
+    [camera, cancelCameraMotion],
+  );
+
+  const frameCamera = useCallback(
+    (angles: OrbitAngles, ids?: readonly string[]) => {
+      cameraFraming.current = { ids };
+      transitionCamera(fitOrbitCamera(model, frame, angles, ids));
+    },
+    [frame, model, transitionCamera],
   );
 
   function queueCameraChange(change: (camera: OrbitCamera) => OrbitCamera) {
@@ -376,23 +460,58 @@ export function GenogramOrbitView({
       lastBranch.current = next;
       if (onBranchChange) onBranchChange(next);
       else setLocalBranch(next);
+      const members =
+        next && activeGeneration !== null ? generationPeople(activeGeneration, next) : [];
+      if (!members.length) setActiveGeneration(null);
       setLineage([]);
       setActiveRouteId(null);
-      changeCamera((current) =>
-        fitOrbitCamera(model, frame, current, next ? branchPeople(next) : undefined),
+      frameCamera(
+        next
+          ? { yaw: next === "paternal" ? -0.26 : 0.26, pitch: ORBIT_DEFAULT_ANGLES.pitch }
+          : ORBIT_DEFAULT_ANGLES,
+        members.length ? members : next ? branchPeople(next) : undefined,
       );
     },
-    [branchPeople, changeCamera, frame, model, onBranchChange],
+    [activeGeneration, branchPeople, frameCamera, generationPeople, onBranchChange],
   );
+
+  function focusGeneration(level: number | null) {
+    const ids =
+      level === null
+        ? branch
+          ? branchPeople(branch)
+          : undefined
+        : generationPeople(level, branch);
+    if (level !== null && !ids?.length) return;
+    setActiveGeneration(level);
+    setLineage([]);
+    setActiveRouteId(null);
+    const bearing = cameraDestination.current ?? camera;
+    const angles =
+      level !== null && Math.abs(Math.cos(bearing.yaw)) < 0.5 ? ORBIT_DEFAULT_ANGLES : bearing;
+    frameCamera(angles, ids);
+  }
 
   useImperativeHandle(
     cameraRef,
     () => ({
-      read: () => (hasFrame ? { camera, branch, personIds: lineage } : undefined),
-      restore: ({ camera: savedCamera, branch: savedBranch, personIds }) => {
+      read: () =>
+        hasFrame
+          ? {
+              camera: cameraDestination.current ?? camera,
+              branch,
+              personIds: lineage,
+              generation: activeGeneration,
+              framing: cameraFraming.current,
+            }
+          : undefined,
+      restore: ({ camera: savedCamera, branch: savedBranch, personIds, generation, framing }) => {
+        cancelCameraMotion();
+        cameraFraming.current = framing;
         lastBranch.current = savedBranch;
         if (highlightedBranch === undefined) setLocalBranch(savedBranch);
         setLineage(personIds);
+        setActiveGeneration(generation);
         setActiveRouteId(null);
         setCameraOverride(savedCamera);
       },
@@ -413,6 +532,8 @@ export function GenogramOrbitView({
       branch,
       camera,
       cameraOverride,
+      activeGeneration,
+      cancelCameraMotion,
       fitted.distance,
       frame,
       hasFrame,
@@ -439,14 +560,28 @@ export function GenogramOrbitView({
     observer.observe(element);
     return () => {
       observer.disconnect();
-      if (animationFrame.current !== null) cancelAnimationFrame(animationFrame.current);
+      cancelCameraMotion();
     };
-  }, []);
+  }, [cancelCameraMotion]);
+
+  useEffect(() => {
+    if (!hasFrame) return;
+    const last = previousFrame.current;
+    previousFrame.current = frame;
+    if (!last || (last.width === frame.width && last.height === frame.height)) return;
+    const framing = cameraFraming.current;
+    const activeCamera = cameraDestination.current ?? camera;
+    if (framing) {
+      cancelCameraMotion();
+      setCameraOverride(fitOrbitCamera(model, frame, activeCamera, framing.ids));
+    }
+  }, [camera, cancelCameraMotion, frame, hasFrame, model]);
 
   useEffect(() => {
     const element = viewport.current;
     if (!element) return;
     const onWheel = (event: WheelEvent) => {
+      if (!event.ctrlKey && !event.metaKey && !element.closest(".geno-editor-expanded")) return;
       event.preventDefault();
       const rect = element.getBoundingClientRect();
       const unit = event.deltaMode === 1 ? 12 : event.deltaMode === 2 ? rect.height : 1;
@@ -470,12 +605,8 @@ export function GenogramOrbitView({
 
   useEffect(() => {
     if (!hasFrame || lastBranch.current === branch) return;
-    lastBranch.current = branch;
-    setLineage([]);
-    changeCamera((current) =>
-      fitOrbitCamera(model, frame, current, branch ? branchPeople(branch) : undefined),
-    );
-  }, [branch, branchPeople, changeCamera, frame, hasFrame, model]);
+    branchFocus(branch);
+  }, [branch, branchFocus, hasFrame]);
 
   useEffect(() => {
     if (!hasFrame || !focusRequest || lastFocus.current === focusRequest) return;
@@ -483,8 +614,8 @@ export function GenogramOrbitView({
     lastFocus.current = focusRequest;
     setActiveRouteId(null);
     const people = [focusRequest.personId, ...(focusRequest.relatedPersonIds ?? [])];
-    changeCamera((current) => fitOrbitCamera(model, frame, current, people));
-  }, [changeCamera, focusRequest, frame, hasFrame, model, peopleById]);
+    frameCamera(cameraDestination.current ?? camera, people);
+  }, [camera, focusRequest, frameCamera, hasFrame, peopleById]);
 
   useEffect(() => {
     if (!hasFrame || !viewAnchor || lastAnchor.current === viewAnchor) return;
@@ -504,27 +635,34 @@ export function GenogramOrbitView({
     });
   }, [changeCamera, frame, hasFrame, model, peopleById, viewAnchor]);
 
-  function fitAt(angles: OrbitAngles) {
-    changeCamera(() =>
-      fitOrbitCamera(model, frame, angles, scopedIds.size ? [...scopedIds] : undefined),
-    );
+  function rotateCamera(direction: -1 | 1) {
+    const next = rotated(cameraDestination.current ?? camera, direction * CAMERA_STEP, 0);
+    const framing = cameraFraming.current;
+    if (framing) frameCamera(next, framing.ids);
+    else transitionCamera(next);
   }
 
   function focusPerson(id: string) {
     setActiveRouteId(null);
-    changeCamera((current) => fitOrbitCamera(model, frame, current, [id]));
+    frameCamera(cameraDestination.current ?? camera, [id]);
   }
 
   function followLineage() {
     if (!selectedPersonId || possibleLineage.length < 2) return;
-    setLineage(possibleLineage);
+    const next = lineage[0] === selectedPersonId ? [] : possibleLineage;
+    setLineage(next);
+    setActiveGeneration(null);
     setActiveRouteId(null);
-    changeCamera((current) => fitOrbitCamera(model, frame, current, possibleLineage));
+    frameCamera(
+      cameraDestination.current ?? camera,
+      next.length ? next : branch ? branchPeople(branch) : undefined,
+    );
   }
 
   function onPointerStart(event: PointerEvent<HTMLDivElement>) {
     if (event.button < 0 || event.button > 2 || !(event.target instanceof Element)) return;
     if (event.target.closest("button, [data-orbit-route-hit], [data-orbit-union]")) return;
+    cancelCameraMotion();
     event.currentTarget.setPointerCapture(event.pointerId);
     pointerPositions.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
     setDragging(true);
@@ -630,39 +768,17 @@ export function GenogramOrbitView({
       className="geno-orbit"
       aria-label="Cena orbital do genossociograma"
       data-orbit-branch={branch ?? "all"}
+      data-active-generation={activeGeneration ?? undefined}
     >
-      <div className="geno-orbit-navigation">
-        <div className="geno-orbit-branches" role="group" aria-label="Ramos na cena orbital">
-          <button
-            type="button"
-            aria-pressed={!branch && !lineage.length}
-            onClick={() => branchFocus(null)}
-          >
-            Árvore inteira
-          </button>
-          {displayedBranches.map((side) => (
-            <button
-              key={side}
-              type="button"
-              data-branch={side}
-              aria-pressed={branch === side && !lineage.length}
-              onClick={() => branchFocus(side)}
-            >
-              {mapBranchNames[side]}
-            </button>
-          ))}
-        </div>
-        {onReturnToBoard && (
-          <button
-            type="button"
-            className="geno-orbit-return"
-            aria-label="Voltar ao board"
-            onClick={onReturnToBoard}
-          >
-            <ArrowLeft aria-hidden /> <span>Voltar ao board</span>
-          </button>
-        )}
-      </div>
+      <OrbitNavigation
+        generations={generations}
+        activeGeneration={activeGeneration}
+        branch={branch}
+        branches={displayedBranches}
+        onGeneration={focusGeneration}
+        onBranch={branchFocus}
+        onReturnToBoard={onReturnToBoard}
+      />
 
       <div
         className="geno-orbit-viewport"
@@ -673,8 +789,10 @@ export function GenogramOrbitView({
         tabIndex={0}
         data-dragging={dragging || undefined}
         data-pan={panMode || undefined}
+        data-gesture-mode={panMode ? "pan" : "orbit"}
         data-azimuth={camera.yaw.toFixed(4)}
         data-inclination={camera.pitch.toFixed(4)}
+        data-orbit-zoom={camera.zoom.toFixed(4)}
         onPointerDown={onPointerStart}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerEnd}
@@ -702,7 +820,18 @@ export function GenogramOrbitView({
               {projected.generations
                 .filter(({ visible }) => visible)
                 .map((plane) => (
-                  <g key={plane.generation} data-orbit-generation={plane.generation}>
+                  <g
+                    key={plane.generation}
+                    data-orbit-generation={plane.generation}
+                    data-active-level={activeGeneration === plane.generation || undefined}
+                    data-outside-scope={
+                      (activeGeneration !== null && activeGeneration !== plane.generation) ||
+                      undefined
+                    }
+                  >
+                    {plane.sideFaces.map((side) => (
+                      <path key={side} d={side} className="geno-orbit-plane-side" />
+                    ))}
                     <path d={plane.d} className="geno-orbit-plane" />
                     <path
                       d={plane.d}
@@ -795,18 +924,6 @@ export function GenogramOrbitView({
                   : [],
               )}
             </svg>
-            <div className="geno-orbit-generation-labels" aria-hidden="true">
-              {projected.generations
-                .filter(({ visible, y }) => visible && y >= 10 && y < frame.height - 12)
-                .map((plane) => (
-                  <span
-                    key={plane.generation}
-                    style={{ top: plane.y, left: clamp(plane.x - 10, 10, frame.width - 105) }}
-                  >
-                    {plane.label}
-                  </span>
-                ))}
-            </div>
             <div className="geno-orbit-people">
               {model.people.map(
                 ({ id, data, name, relationship, branch: personBranch, generation }) => {
@@ -842,6 +959,8 @@ export function GenogramOrbitView({
                       data-generation={generation}
                       data-branch={personBranch}
                       data-reference={data.is_proband || undefined}
+                      data-compact={fontSize < 9 || undefined}
+                      data-focused-level={activeGeneration === generation || undefined}
                       data-connection-origin={id === connectionOriginId || undefined}
                       data-muted={
                         (scopedIds.size > 0 && !scopedIds.has(id) && !active && generation !== 0) ||
@@ -922,74 +1041,21 @@ export function GenogramOrbitView({
         </div>
       )}
 
-      <div className="geno-orbit-controls" role="group" aria-label="Câmera da cena orbital">
-        <button
-          type="button"
-          aria-label="Vista em órbita"
-          title="Vista em órbita"
-          onClick={() => fitAt(ORBIT_DEFAULT_ANGLES)}
-        >
-          <Orbit aria-hidden />
-        </button>
-        <button
-          type="button"
-          aria-label="Vista frontal"
-          title="Vista frontal"
-          onClick={() => fitAt(ORBIT_FRONT_ANGLES)}
-        >
-          <Square aria-hidden />
-        </button>
-        <button
-          type="button"
-          aria-label="Mover câmera ao arrastar"
-          aria-pressed={panMode}
-          title="Mover câmera ao arrastar"
-          onClick={() => setPanMode((current) => !current)}
-        >
-          <Hand aria-hidden />
-        </button>
-        <span className="geno-orbit-control-divider" aria-hidden />
-        <button
-          type="button"
-          aria-label="Afastar cena orbital"
-          title="Afastar cena orbital"
-          disabled={camera.zoom <= ZOOM_MIN}
-          onClick={() => changeCamera((current) => zoomed(current, 0.8))}
-        >
-          <Minus aria-hidden />
-        </button>
-        <button
-          type="button"
-          aria-label="Aproximar cena orbital"
-          title="Aproximar cena orbital"
-          disabled={camera.zoom >= ZOOM_MAX}
-          onClick={() => changeCamera((current) => zoomed(current, 1.25))}
-        >
-          <Plus aria-hidden />
-        </button>
-        {probandId && (
-          <button
-            type="button"
-            aria-label="Ir ao topo da árvore"
-            title="Ir ao consultante e aos irmãos"
-            onClick={() => {
-              const top = model.people.filter(({ generation }) => generation === 0);
-              changeCamera((current) =>
-                fitOrbitCamera(
-                  model,
-                  frame,
-                  current,
-                  top.map(({ id }) => id),
-                ),
-              );
-            }}
-          >
-            <ArrowUpToLine aria-hidden />
-          </button>
-        )}
+      <div className="geno-orbit-tools">
+        <OrbitCameraControls
+          panMode={panMode}
+          canZoomIn={camera.zoom < ZOOM_MAX}
+          canZoomOut={camera.zoom > ZOOM_MIN}
+          onReset={() => frameCamera(ORBIT_DEFAULT_ANGLES, framedIds)}
+          onFront={() => frameCamera(ORBIT_FRONT_ANGLES, cameraFraming.current?.ids ?? framedIds)}
+          onRotate={rotateCamera}
+          onTogglePan={() => setPanMode((current) => !current)}
+          onZoom={(direction) =>
+            changeCamera((current) => zoomed(current, direction > 0 ? 1.25 : 0.8))
+          }
+        />
         {selected && (
-          <>
-            <span className="geno-orbit-control-divider" aria-hidden />
+          <div className="geno-orbit-context-tools" role="group" aria-label="Pessoa selecionada">
             <button
               type="button"
               className="geno-orbit-control-labeled"
@@ -1020,14 +1086,14 @@ export function GenogramOrbitView({
                 Ler ficha
               </button>
             )}
-          </>
+          </div>
         )}
         <p className="geno-orbit-gesture" id={instructionsId}>
           {panMode ? "Arraste para mover" : "Arraste para girar"}
           <span className="sr-only">
-            . Use roda ou pinça para aproximar, e Shift ao arrastar para mover. No teclado, use as
-            setas para girar, Shift com as setas para mover, mais e menos para aproximar e afastar,
-            e zero para enquadrar.
+            . Use as setas para girar, Shift com as setas para mover, mais e menos para o zoom e
+            zero para reenquadrar. Na tela ampla, use a roda do mouse ou faça o gesto de pinça para
+            ajustar o zoom.
           </span>
         </p>
       </div>
