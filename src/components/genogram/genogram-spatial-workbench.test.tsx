@@ -190,3 +190,88 @@ it("explora os ramos em 3D, edita por ID no mapa e desfaz sem mudar o restante d
   expect(twoDimensionalNames.sort()).toEqual([...expectedNames.values()].sort());
   queryClient.clear();
 });
+
+it("preserva a árvore editável da cena orbital ao confirmar e desfazer uma filiação", async () => {
+  const baselineLinks = await relationRows();
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={queryClient}>
+      <GenogramCanvas clientId={clientId} />
+    </QueryClientProvider>,
+  );
+
+  fireEvent.click(await screen.findByRole("button", { name: "3D" }));
+  await waitFor(() => expect(peopleOnMap()).toHaveLength(35));
+  const baselinePeople = peopleOnMap().sort((a, b) => a.id!.localeCompare(b.id!));
+  const baselineRoutes = routesOnMap();
+  const personId = (name: string) => baselinePeople.find((person) => person.name === name)!.id;
+
+  fireEvent.click(screen.getByRole("button", { name: "Órbita 3D" }));
+  const orbit = await screen.findByRole("region", { name: "Cena orbital do genossociograma" });
+  const orbitPeople = () =>
+    Array.from(orbit.querySelectorAll<HTMLButtonElement>("[data-person-id][data-generation]"))
+      .map((card) => ({
+        id: card.dataset.personId,
+        generation: Number(card.dataset.generation),
+        name: card.querySelector(".geno-orbit-person-name")?.textContent,
+      }))
+      .sort((a, b) => a.id!.localeCompare(b.id!));
+  await waitFor(() => expect(orbitPeople()).toEqual(baselinePeople));
+  expect(
+    orbitPeople()
+      .filter(({ generation }) => generation === 0)
+      .map(({ name }) => name)
+      .sort(),
+  ).toEqual(["Consultante", "Irmã", "Irmão"]);
+
+  const paternal = within(orbit).getByRole("button", { name: "Ramo paterno" });
+  const maternal = within(orbit).getByRole("button", { name: "Ramo materno" });
+  fireEvent.click(paternal);
+  const navigation = within(orbit).getByRole("region", { name: "Área de navegação orbital" });
+  const initialAzimuth = navigation.getAttribute("data-azimuth");
+  fireEvent.keyDown(navigation, { key: "ArrowRight" });
+  const workingAzimuth = navigation.getAttribute("data-azimuth");
+  expect(workingAzimuth).not.toBe(initialAzimuth);
+  fireEvent.click(orbit.querySelector(`[data-person-id="${personId("Pai")}"]`)!);
+  const inspector = within(
+    screen.getByRole("complementary", { name: "Ficha da pessoa selecionada" }),
+  );
+  expect(inspector.getByRole("heading", { name: "Pai" })).toBeTruthy();
+  fireEvent.click(inspector.getByRole("button", { name: "Revisar filiação" }));
+  const review = within(screen.getByRole("region", { name: "Revisão de filiação" }));
+  const slots = review.getAllByRole<HTMLSelectElement>("combobox", { name: /^Genitor/ });
+  const slot = slots.findIndex(({ value }) => value === personId("Avó paterna"));
+  expect(slot).toBeGreaterThanOrEqual(0);
+  fireEvent.click(review.getByRole("button", { name: `Escolher genitor ${slot + 1} no mapa` }));
+  fireEvent.click(maternal);
+  fireEvent.keyDown(navigation, { key: "ArrowRight" });
+  const replacement = personId("Avó materna");
+  fireEvent.click(orbit.querySelector(`[data-person-id="${replacement}"]`)!);
+  expect(slots[slot].value).toBe(replacement);
+  fireEvent.change(review.getByLabelText(`Natureza do vínculo ${slot + 1}`), {
+    target: { value: "unknown" },
+  });
+  expect(orbit.querySelector('[data-parentage-track="proposed"]')).toBeTruthy();
+  fireEvent.click(review.getByRole("button", { name: "Confirmar filiação" }));
+
+  const undo = await screen.findByRole("button", { name: "Desfazer filiação" });
+  expect(paternal.getAttribute("aria-pressed")).toBe("true");
+  expect(navigation.getAttribute("data-azimuth")).toBe(workingAzimuth);
+  expect(
+    (await relationRows())?.find(
+      (row) => row.to_person_id === personId("Pai") && row.from_person_id === replacement,
+    )?.qualifier,
+  ).toBe("unknown");
+  fireEvent.click(undo);
+  await waitFor(() =>
+    expect(screen.queryByRole("button", { name: "Desfazer filiação" })).toBeNull(),
+  );
+  expect(await relationRows()).toEqual(baselineLinks);
+  expect(orbitPeople()).toEqual(baselinePeople);
+
+  fireEvent.click(within(orbit).getByRole("button", { name: "Voltar ao board" }));
+  expect(peopleOnMap().sort((a, b) => a.id!.localeCompare(b.id!))).toEqual(baselinePeople);
+  expect(routesOnMap()).toEqual(baselineRoutes);
+  expect(inspector.getByRole("heading", { name: "Pai" })).toBeTruthy();
+  queryClient.clear();
+});

@@ -67,7 +67,9 @@ O mapa abre com o campo de trabalho ocupando a largura disponível. A ficha apar
 
 No quadro verde, o enquadramento por ramo usa o parentesco do grafo e mantém a geração do consultante como referência. O foco em um núcleo segue as uniões e filiações registradas. Os demais familiares permanecem no mapa e disponíveis para seleção. A perspectiva conserva o foco em uso e o retorno à árvore inteira repõe o panorama. A ficha do 3D reúne a edição da pessoa, a revisão de filiação e a navegação pelos vínculos próximos.
 
-Arrastar o fundo desloca a câmera. Mover pessoa ajusta a posição horizontal do cartão na própria geração. A edição de posições, o histórico e os comandos de filiação usam o mesmo estado nas duas vistas.
+Arrastar o fundo no board desloca a câmera. Mover pessoa ajusta a posição horizontal do cartão na própria geração.
+
+A Órbita 3D apresenta a mesma árvore em planos espaciais por geração. O arraste gira a câmera em torno da árvore, com inclinação limitada para preservar o topo. Os nomes completos acompanham a câmera em cartões voltados para quem lê. Enquadrar a árvore, escolher um ramo e focar uma pessoa são ações reversíveis de navegação. A ficha, o histórico e os comandos de filiação usam o mesmo estado nas três vistas.
 
 ## Linha do tempo do dossiê
 Em telas largas, lista cronológica compacta à esquerda e gráfico temporal à direita, com trilhos por tipo de evento. A seleção sincroniza os dois lados. Registros sem data ficam na lista; datas parciais ocupam uma faixa. No celular, o gráfico precede a lista.

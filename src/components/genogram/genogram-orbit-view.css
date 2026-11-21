@@ -1,0 +1,483 @@
+.geno-orbit {
+  --orbit-field: color-mix(in oklab, var(--forest) 62%, var(--ink));
+  --orbit-paper: var(--workspace-sheet, var(--archive-doc));
+  --orbit-paper-line: var(--input);
+  --orbit-route: var(--forest-mist);
+  --orbit-paternal: color-mix(in oklab, var(--forest-mist) 80%, var(--forest-mid));
+  --orbit-maternal: var(--gold-soft);
+  --orbit-plane: color-mix(in oklab, var(--forest-mid) 50%, transparent);
+  --orbit-plane-edge: color-mix(in oklab, var(--forest-mist) 32%, var(--forest-mid));
+  --orbit-type-light: color-mix(in oklab, var(--archive-doc) 90%, var(--forest-mist));
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  isolation: isolate;
+  container-type: inline-size;
+  background: var(--orbit-field);
+  color: var(--forest);
+}
+
+.geno-orbit-navigation,
+.geno-orbit-controls,
+.geno-orbit-context {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex: none;
+  align-items: center;
+  min-width: 0;
+  background: var(--orbit-paper);
+}
+
+.geno-orbit-navigation {
+  justify-content: space-between;
+  gap: 6px;
+  padding-inline: 5px;
+  border-bottom: 1px solid var(--orbit-paper-line);
+}
+
+.geno-orbit-branches {
+  display: flex;
+  min-width: 0;
+}
+
+.geno-orbit-navigation button,
+.geno-orbit-controls button,
+.geno-orbit-context button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 5px 11px;
+  border-radius: 4px;
+  color: inherit;
+  font-size: 0.8125rem;
+  font-weight: 650;
+  text-align: center;
+}
+
+.geno-orbit button:focus-visible {
+  position: relative;
+  outline: 2px solid var(--forest);
+  outline-offset: -2px;
+}
+
+.geno-orbit-navigation button:hover,
+.geno-orbit-controls button:hover,
+.geno-orbit-context button:hover {
+  background: var(--workspace-manila, var(--archive-old));
+}
+
+.geno-orbit-navigation button[aria-pressed="true"],
+.geno-orbit-controls button[aria-pressed="true"] {
+  background: var(--workspace-sage, var(--forest-mist));
+}
+
+.geno-orbit-branches button[aria-pressed="true"] {
+  box-shadow: inset 0 -2px var(--forest);
+}
+
+.geno-orbit-branches button[data-branch]::before {
+  width: 10px;
+  height: 2px;
+  background: var(--forest-mid);
+  content: "";
+}
+
+.geno-orbit-branches button[data-branch="maternal"]::before {
+  background: var(--bronze);
+}
+
+.geno-orbit-navigation svg,
+.geno-orbit-controls svg,
+.geno-orbit-context svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+
+.geno-orbit-viewport {
+  position: relative;
+  flex: 1;
+  min-height: 1px;
+  overflow: clip;
+  isolation: isolate;
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+  background: radial-gradient(ellipse at 49% 18%, var(--forest) 0%, var(--orbit-field) 68%);
+}
+
+.geno-orbit-viewport[data-dragging] {
+  cursor: grabbing;
+}
+
+.geno-orbit-viewport:focus-visible {
+  outline: 2px solid var(--gold-soft);
+  outline-offset: -2px;
+}
+
+.geno-orbit-empty {
+  display: grid;
+  place-content: center;
+  height: 100%;
+  color: var(--orbit-type-light);
+}
+
+.geno-orbit-world,
+.geno-orbit-generation-labels,
+.geno-orbit-people {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.geno-orbit-plane {
+  fill: var(--orbit-plane);
+  stroke: var(--orbit-plane-edge);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.geno-orbit-plane-texture {
+  opacity: 0.38;
+}
+
+.geno-orbit-hatch {
+  stroke: color-mix(in oklab, var(--forest-mist) 13%, transparent);
+  stroke-width: 0.5;
+}
+
+.geno-orbit-generation-labels span {
+  position: absolute;
+  padding: 2px 4px;
+  background: var(--orbit-field);
+  color: var(--orbit-type-light);
+  font-size: 0.6875rem;
+  font-weight: 550;
+  line-height: 1.3;
+  white-space: nowrap;
+  transform: translateY(-110%);
+}
+
+.geno-orbit-route,
+.geno-orbit-route-hit,
+.geno-orbit-review-track {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.geno-orbit-route {
+  stroke: var(--orbit-route);
+  stroke-width: 1.35;
+  opacity: 0.82;
+}
+
+.geno-orbit-route[data-branch="maternal"] {
+  stroke: var(--orbit-maternal);
+}
+
+.geno-orbit-route[data-branch="paternal"] {
+  stroke: var(--orbit-paternal);
+}
+
+.geno-orbit-route[data-suggested] {
+  stroke-dasharray: 3 5;
+}
+
+.geno-orbit-route[data-muted] {
+  opacity: 0.3;
+}
+
+.geno-orbit-route[data-active] {
+  stroke-width: 2.6;
+  opacity: 1;
+}
+
+.geno-orbit-route[data-lineage] {
+  stroke: var(--gold-soft);
+  stroke-width: 3.2;
+  opacity: 1;
+}
+
+.geno-orbit-route-hit {
+  stroke: transparent;
+  stroke-width: 12;
+  pointer-events: stroke;
+  cursor: pointer;
+}
+
+.geno-orbit-union {
+  fill: var(--orbit-field);
+  stroke: var(--orbit-route);
+  stroke-width: 1.4;
+}
+
+.geno-orbit-union[data-muted] {
+  opacity: 0.38;
+}
+
+.geno-orbit-union[data-active] {
+  stroke: var(--gold-soft);
+}
+
+.geno-orbit-union-hit {
+  fill: transparent;
+  stroke: none;
+  pointer-events: all;
+  cursor: pointer;
+}
+
+.geno-orbit-name-leader {
+  stroke: var(--orbit-paternal);
+  stroke-width: 1;
+  stroke-opacity: 0.75;
+}
+
+.geno-orbit-name-leader[data-branch="maternal"] {
+  stroke: var(--orbit-maternal);
+}
+
+.geno-orbit-viewport[data-dragging]
+  :is(.geno-orbit-route-hit, .geno-orbit-union-hit, .geno-orbit-person) {
+  pointer-events: none;
+}
+
+.geno-orbit-review-track {
+  stroke: var(--orbit-type-light);
+  stroke-width: 3;
+  stroke-dasharray: 3 5;
+}
+
+.geno-orbit-review-track[data-parentage-track="previous"] {
+  opacity: 0.6;
+}
+
+.geno-orbit-review-track[data-parentage-track="confirmed"],
+.geno-orbit-review-track[data-parentage-track="retained"] {
+  stroke: var(--orbit-paternal);
+  stroke-dasharray: none;
+}
+
+.geno-orbit-review-track[data-parentage-track="proposed"] {
+  stroke: var(--orbit-maternal);
+}
+
+.geno-orbit button.geno-orbit-person {
+  --orbit-symbol-color: var(--forest-mid);
+  --orbit-symbol-surface: var(--forest-mist);
+  position: absolute;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.44em;
+  padding: 0.38em 0.5em;
+  min-height: 1.8em;
+  border: 1px solid var(--orbit-paper-line);
+  border-radius: 0.44em;
+  background: var(--orbit-paper);
+  color: var(--ink);
+  font-weight: 650;
+  line-height: 1.26;
+  text-align: start;
+  pointer-events: auto;
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+}
+
+.geno-orbit-person[hidden] {
+  display: none !important;
+}
+
+.geno-orbit button.geno-orbit-person[data-branch="maternal"] {
+  --orbit-symbol-surface: var(--gold-muted);
+  --orbit-symbol-color: var(--bronze);
+}
+
+.geno-orbit button.geno-orbit-person[data-reference] {
+  --orbit-symbol-surface: var(--gold-muted);
+  --orbit-symbol-color: var(--bronze);
+  border-color: var(--gold);
+}
+
+.geno-orbit-person[data-muted]:not(:is(:focus-visible, :hover, [aria-pressed="true"])) {
+  opacity: 0.62;
+}
+
+.geno-orbit button.geno-orbit-person:hover,
+.geno-orbit button.geno-orbit-person:focus-visible,
+.geno-orbit button.geno-orbit-person[aria-pressed="true"] {
+  border-color: var(--gold-soft);
+  outline: 1px solid var(--gold-soft);
+  outline-offset: 2px;
+}
+
+.geno-orbit button.geno-orbit-person[data-connection-origin],
+.geno-orbit button.geno-orbit-person[data-parentage-person="proposed"] {
+  border-color: var(--bronze);
+  outline: 2px dashed var(--gold-soft);
+  outline-offset: 2px;
+}
+
+.geno-orbit button.geno-orbit-person[data-parentage-person="previous"] {
+  outline: 1px dashed var(--orbit-type-light);
+  outline-offset: 2px;
+}
+
+.geno-orbit button.geno-orbit-person[data-parentage-person="retained"],
+.geno-orbit button.geno-orbit-person[data-parentage-person="confirmed"] {
+  outline: 2px solid var(--orbit-paternal);
+  outline-offset: 2px;
+}
+
+.geno-orbit-person-name {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  hyphens: manual;
+}
+
+.geno-orbit-symbol {
+  position: relative;
+  display: block;
+  width: 0.76em;
+  height: 0.76em;
+  border: 1px solid var(--orbit-symbol-color);
+  border-radius: 1px;
+  background: var(--orbit-symbol-surface);
+}
+
+.geno-orbit-symbol[data-symbol="feminino"] {
+  border-radius: 50%;
+}
+
+.geno-orbit-symbol[data-symbol="desconhecido"] {
+  transform: rotate(45deg) scale(0.8);
+}
+
+.geno-orbit-symbol[data-symbol="aborto"] {
+  border: none;
+  border-radius: 0;
+  clip-path: polygon(50% 3%, 99% 95%, 1% 95%);
+  background: var(--orbit-symbol-color);
+}
+
+.geno-orbit-symbol[data-deceased]::after {
+  position: absolute;
+  inset: 23% 0 auto;
+  border-top: 1px solid var(--orbit-symbol-color);
+  content: "";
+}
+
+.geno-orbit-controls {
+  flex-wrap: wrap;
+  gap: 2px;
+  min-height: 48px;
+  padding: 2px 5px;
+  border-top: 1px solid var(--orbit-paper-line);
+}
+
+.geno-orbit-controls button {
+  padding-inline: 8px;
+}
+
+.geno-orbit-controls button:disabled {
+  opacity: 0.44;
+}
+
+.geno-orbit-control-divider {
+  width: 1px;
+  height: 21px;
+  margin-inline: 2px;
+  background: var(--orbit-paper-line);
+}
+
+.geno-orbit-context {
+  gap: 6px;
+  padding: 2px 5px 2px 12px;
+  border-top: 1px solid var(--orbit-paper-line);
+}
+
+.geno-orbit-context > span {
+  min-width: 0;
+  margin-inline-end: auto;
+  overflow-wrap: anywhere;
+  color: var(--ink-soft);
+  font-size: 0.75rem;
+}
+
+.geno-orbit-context strong {
+  display: block;
+  color: var(--forest);
+  font-size: 0.8125rem;
+}
+
+.geno-orbit-gesture {
+  min-width: 0;
+  margin-block: 0;
+  margin-inline: auto 7px;
+  color: var(--ink-soft);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+@container (max-width: 630px) {
+  .geno-orbit-branches button {
+    padding-inline: 8px;
+  }
+
+  .geno-orbit-controls .geno-orbit-control-labeled > span {
+    display: none;
+  }
+
+  .geno-orbit-controls .geno-orbit-reader {
+    display: none;
+  }
+
+  .geno-orbit-gesture {
+    font-size: 0.6875rem;
+  }
+}
+
+@container (max-width: 465px) {
+  .geno-orbit-return span,
+  .geno-orbit-branches button[data-branch]::before,
+  .geno-orbit-control-divider,
+  .geno-orbit-generation-labels,
+  .geno-orbit-gesture {
+    display: none;
+  }
+
+  .geno-orbit-navigation {
+    gap: 0;
+  }
+
+  .geno-orbit-branches {
+    flex: 1;
+  }
+
+  .geno-orbit-branches button {
+    flex: 1;
+    min-width: 0;
+    padding-inline: 4px;
+  }
+
+  .geno-orbit-controls {
+    gap: 0;
+  }
+
+  .geno-orbit-controls button {
+    flex: 1 1 12.5%;
+  }
+
+  .geno-orbit-context {
+    flex-wrap: wrap;
+  }
+}
