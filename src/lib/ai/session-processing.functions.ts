@@ -14,6 +14,8 @@ import type { TablesUpdate } from "@/integrations/supabase/types";
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1";
 const TRANSCRIBE_MODEL = "openai/gpt-4o-mini-transcribe";
 const STRUCTURE_MODEL = "google/gemini-2.5-flash";
+const TRANSCRIPTION_PROMPT =
+  "Genealiz é a plataforma de psicogenealogia do Instituto Liz. Use a grafia Genealiz quando o áudio mencionar a plataforma. Preserve os demais nomes e transcreva apenas o que foi dito.";
 
 const structureSchema = z
   .object({
@@ -33,6 +35,7 @@ const STRUCTURE_SYSTEM = `Você é assistente clínica de uma psicogenealogista.
 A partir da transcrição bruta de uma sessão, produza um prontuário estruturado
 em JSON com humildade epistêmica: separe SEMPRE o que é FATO relatado do que
 é HIPÓTESE clínica. Nunca invente dados. Se algo não foi dito, deixe vazio.
+Preserve a grafia dos nomes próprios e das marcas presente na transcrição.
 
 Formato de saída obrigatório (JSON válido, nada além):
 {
@@ -163,6 +166,7 @@ export const processSessionAudio = createServerFn({ method: "POST" })
           form.append("file", file, audioPath.split("/").pop() ?? "audio.webm");
           form.append("model", TRANSCRIBE_MODEL);
           form.append("language", "pt");
+          form.append("prompt", TRANSCRIPTION_PROMPT);
           await checkConsent();
           const response = await callGateway("/audio/transcriptions", {
             method: "POST",
