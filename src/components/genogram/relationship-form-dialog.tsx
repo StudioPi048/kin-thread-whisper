@@ -1,5 +1,5 @@
 import { invalidateCase } from "@/lib/clinical-intel";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ArrowDownUp } from "lucide-react";
@@ -75,6 +75,7 @@ export function RelationshipFormDialog({
   const qc = useQueryClient();
   const [v, setV] = useState<FormState>(empty);
   const [confirmRemoval, setConfirmRemoval] = useState(false);
+  const removalToAnnounce = useRef<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -225,11 +226,9 @@ export function RelationshipFormDialog({
     },
     onSuccess: async ({ removalId, relationshipId }) => {
       await invalidateCase(qc, clientId);
+      removalToAnnounce.current = removalId;
       onOpenChange(false);
       onRemoved?.(relationshipId);
-      toast.success("Vínculo removido.", {
-        action: { label: "Desfazer", onClick: () => undoRemoval.mutate(removalId) },
-      });
     },
     onError: (error) =>
       toast.error(
@@ -264,7 +263,22 @@ export function RelationshipFormDialog({
         onOpenChange(next);
       }}
     >
-      <SheetContent side="right" className="flex flex-col gap-0 p-0 sm:max-w-lg w-full">
+      <SheetContent
+        side="right"
+        className="flex flex-col gap-0 p-0 sm:max-w-lg w-full"
+        onCloseAutoFocus={() => {
+          const removalId = removalToAnnounce.current;
+          if (!removalId) return;
+          removalToAnnounce.current = null;
+          // The modal blocks outside pointer input until its closing layer unmounts.
+          toast.success("Vínculo removido.", {
+            duration: 10000,
+            style: { transition: "none" },
+            actionButtonStyle: { minHeight: 44, paddingInline: 12 },
+            action: { label: "Desfazer", onClick: () => undoRemoval.mutate(removalId) },
+          });
+        }}
+      >
         <SheetHeader className="shrink-0 border-b border-border px-5 py-5 pr-14 sm:px-7 sm:pr-14">
           <SheetTitle className="text-xl">
             {editing ? "Editar vínculo" : isParentLink ? "Definir filiação" : "Novo vínculo"}
