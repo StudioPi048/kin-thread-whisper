@@ -139,11 +139,12 @@
 }
 
 .geno-editor-navigation {
+  container: geno-navigation / inline-size;
   display: flex;
-  flex: 1 1 164px;
+  flex: 1 1 230px;
   align-items: center;
   gap: 5px;
-  min-width: min(100%, 152px);
+  min-width: min(100%, 230px);
   max-width: 37rem;
 }
 
@@ -790,8 +791,9 @@
   border-radius: 0;
 }
 
-@container (max-width: 820px) {
-  .geno-editor-fit > span {
+@container geno-navigation (max-width: 355px) {
+  .geno-editor-fit > span,
+  .geno-editor-search-trigger svg:last-child {
     display: none;
   }
 }
