@@ -129,7 +129,7 @@ export function ClanWorkbookPreview({
         .map(({ line, changes }) => `Pessoas · linha ${line} · ${changes.join(" · ")}`),
       ...preview.relations
         .filter(({ state }) => state === "error")
-        .map(({ line, detail }) => `Vínculos · linha ${line} · ${detail}`),
+        .map(({ line, sheet, detail }) => `${sheet ?? "Vínculos"} · linha ${line} · ${detail}`),
     ];
     const url = URL.createObjectURL(
       new Blob([lines.join("\r\n")], { type: "text/plain;charset=utf-8" }),
@@ -251,25 +251,24 @@ export function ClanWorkbookPreview({
             disabled={pending}
           />
           <span>
-            <strong className="block">
-              Substituir a filiação das pessoas listadas na aba Vínculos
-            </strong>
-            A prévia mostra os genitores atuais e os propostos. As mudanças ficam no histórico de
-            filiação.
+            <strong className="block">Substituir a filiação das pessoas listadas no arquivo</strong>
+            Confira os genitores atuais e os propostos. Uma revisão de origem pode indicar que
+            nenhum genitor foi registrado.
           </span>
         </label>
       )}
       {links.length > 0 && (
         <section aria-labelledby="clan-import-links">
           <h3 id="clan-import-links" className="mb-2 font-semibold">
-            Vínculos
+            Vínculos e revisões de filiação
           </h3>
           <ul className="divide-y divide-border rounded-md border border-border">
             {links.map((link) => (
               <ClanImportRow
-                key={link.line}
+                key={`${link.sheet ?? "Vínculos"}:${link.line}`}
                 line={link.line}
                 name={link.name}
+                metadata={link.sheet}
                 status={stateLabels[link.state]}
                 attention={link.state === "error"}
               >

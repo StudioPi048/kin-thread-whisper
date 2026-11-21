@@ -14,7 +14,22 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 8px 14px;
+  min-width: 0;
   font-size: 0.875rem;
+}
+
+.geno-print-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.geno-print-actions [role="status"] {
+  margin-inline-end: auto;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
 }
 
 .geno-print-options label {
@@ -54,6 +69,20 @@
 .geno-print-sheet h3 {
   font-size: 0.9375rem;
   font-weight: 650;
+}
+
+.geno-print-sheet-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.geno-print-sheet-heading span {
+  flex-shrink: 0;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .geno-print-sheet > svg {

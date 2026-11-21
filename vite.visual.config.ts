@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 export default defineConfig({
   tanstackStart: { server: { entry: "server" } },
   vite: {
+    cacheDir: "node_modules/.vite-genealiz-fixtures",
     optimizeDeps: {
       include: [
         "react",
@@ -11,6 +12,8 @@ export default defineConfig({
         "react/jsx-runtime",
         "@tanstack/react-router",
         "@tanstack/react-query",
+        "xlsx",
+        "jspdf",
       ],
     },
     plugins: [

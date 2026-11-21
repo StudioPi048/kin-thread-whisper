@@ -1,6 +1,6 @@
 import { personSymbol } from "./person-symbol";
-import { memo, useEffect } from "react";
-import { Handle, Position, useUpdateNodeInternals, useStore, type NodeProps } from "@xyflow/react";
+import { memo } from "react";
+import { Handle, Position, useStore, type NodeProps } from "@xyflow/react";
 import { Plus } from "lucide-react";
 import {
   DropdownMenu,
@@ -31,12 +31,10 @@ export interface PersonNodeData {
   [key: string]: unknown;
 }
 
-function PersonNodeComponent({ id, data, selected }: NodeProps) {
+function PersonNodeComponent({ data, selected }: NodeProps) {
   const d = data as unknown as PersonNodeData;
   const zoom = useStore((store) => store.transform[2]);
   const overview = zoom < 0.72;
-  const updateHandles = useUpdateNodeInternals();
-  useEffect(() => updateHandles(id), [d.connecting, id, updateHandles]);
   const gender = personSymbol(d);
   const isMale = gender === "masculino";
   const isFemale = gender === "feminino";

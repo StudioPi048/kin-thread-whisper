@@ -8,9 +8,14 @@ import {
 import { genogramGenderOptions, relationshipQualifiers, type RelationshipType } from "./genogram";
 import {
   parentageSnapshot,
+  parentageSources,
+  reviewMatchesCurrent,
   validateParentagePlan,
   type ParentageCandidate,
+  type ParentageHistoryEntry,
+  type ParentageSource,
 } from "./parentage-review";
+import { civilDate } from "./civil-date";
 import type { Tables, TablesUpdate } from "@/integrations/supabase/types";
 
 type Person = Tables<"genogram_persons">;
@@ -21,6 +26,16 @@ type VitalColumn = "birth_date" | "death_date";
 const PERSON_ID = "ID da pessoa";
 const CONSULTANTE = "consultante";
 const UNION_ORDER = "Ordem da união";
+const PARENTAGE_REVIEW_SHEET = "Revisões de filiação";
+const REVIEW_HEADERS = {
+  child: "ID do filho",
+  reviewed: "Filiação revisada",
+  id: "ID da revisão original",
+  createdAt: "Data da revisão original",
+  decision: "Ação da revisão original",
+  source: "Fonte da revisão",
+  note: "Nota da revisão",
+} as const;
 const LINK_HEADERS = [
   "ID do vínculo",
   "Origem",
@@ -70,9 +85,30 @@ export function isClanLinksSheet(sheet: ClanSheet) {
   return ["origem", "destino", "tipo"].every((name) => headers.includes(name));
 }
 
-function cellValue(sheet: ClanSheet, row: string[], header: string) {
+function hasHeader(sheet: ClanSheet, header: string) {
+  return sheet.header.some((label) => normalize(label) === normalize(header));
+}
+
+export function isClanParentageSheet(sheet: ClanSheet) {
+  return (
+    normalize(sheet.name) === normalize(PARENTAGE_REVIEW_SHEET) ||
+    (hasHeader(sheet, REVIEW_HEADERS.child) && hasHeader(sheet, REVIEW_HEADERS.reviewed))
+  );
+}
+
+function rawCellValue(sheet: ClanSheet, row: string[], header: string) {
   const index = sheet.header.findIndex((label) => normalize(label) === normalize(header));
-  return row[index]?.trim() ?? "";
+  return row[index] ?? "";
+}
+
+function cellValue(sheet: ClanSheet, row: string[], header: string) {
+  return rawCellValue(sheet, row, header).trim();
+}
+
+function parseLinkDate(value: string, type: RelationshipType) {
+  const civil = type === "parent" ? civilDate(value) : null;
+  if (civil?.precision === "day") return { kind: "exact" as const, iso: civil.value };
+  return parseDateField(value);
 }
 
 export function parseClanVitalDate(field: VitalColumn, value: string) {
@@ -107,8 +143,26 @@ type RelationWrite = {
 type ParentageWrite = {
   child_key: string;
   expected: ReturnType<typeof parentageSnapshot>;
-  parents: Array<{ key: string; kind: ParentKind | null }>;
+  expected_reviewed?: boolean;
+  expected_review_id?: string | null;
+  parents: Array<{ key: string; kind: ParentKind | null; link?: ParentLinkWrite }>;
+  restore?: ParentageRestore;
 };
+type ParentLinkWrite = Pick<
+  RelationWrite,
+  "key" | "relationship_id" | "expected_updated_at" | "start_date" | "end_date" | "notes"
+>;
+type ReviewDecision = "confirm" | "edit" | "undo";
+type OriginReview = {
+  original_id: string;
+  original_created_at: string;
+  source: ParentageSource;
+  note: string | null;
+  decision: ReviewDecision;
+};
+type ParentageRestore = { reviewed: boolean; review: OriginReview | null };
+export type WorkbookParentageReview = ParentageHistoryEntry;
+type SheetParent = { kind: ParentKind | null; link?: ParentLinkWrite };
 export type ClanWorkbookWrite = {
   people: PersonWrite[];
   links: RelationWrite[];
@@ -124,6 +178,7 @@ type PersonPreview = {
 };
 type RelationPreview = {
   line: number;
+  sheet?: typeof PARENTAGE_REVIEW_SHEET;
   name: string;
   detail: string;
   state: "include" | "update" | "keep" | "error";
@@ -133,19 +188,73 @@ const validKey = (key: string) => /^[A-Za-z0-9_-]{1,80}$/.test(key);
 const equal = (left: unknown, right: unknown) =>
   JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
 const parentKinds = ["biological", "adoptive", "foster", "stepparent", "unknown"];
+const reviewDecisions = ["confirm", "edit", "undo"];
+
+function mostRecentReviews(reviews: WorkbookParentageReview[]) {
+  const byChild = new Map<string, WorkbookParentageReview>();
+  for (const review of reviews) {
+    if ((byChild.get(review.child_id)?.review_number ?? -1) < review.review_number)
+      byChild.set(review.child_id, review);
+  }
+  return byChild;
+}
+
+function reviewOrigin(
+  review: WorkbookParentageReview | undefined,
+  links: ReturnType<typeof parentageSnapshot>,
+  reviewed: boolean,
+): OriginReview | null {
+  if (!review || !reviewMatchesCurrent(review, links, reviewed)) return null;
+  const originalId = review.workbook_import ? review.imported_review_key : review.id;
+  const originalAt = review.workbook_import ? review.imported_review_created_at : review.created_at;
+  const decision = review.workbook_import ? review.imported_review_decision : review.decision;
+  if (!originalId || !originalAt || !decision) return null;
+  return {
+    original_id: originalId,
+    original_created_at: originalAt,
+    source: review.source as ParentageSource,
+    note: review.note,
+    decision: decision as ReviewDecision,
+  };
+}
+
+function timeKey(value: string) {
+  const stamp =
+    /^(\d{4}-\d{2}-\d{2})[T ](?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.(\d{1,6}))?(?:Z|[+-]\d{2}:?\d{2})$/.exec(
+      value,
+    );
+  if (!stamp || !civilDate(stamp[1])) return null;
+  const instant = Date.parse(value);
+  return Number.isFinite(instant) ? `${instant}:${(stamp[2] ?? "").padEnd(6, "0").slice(3)}` : null;
+}
+
+function sameReview(left: OriginReview | null, right: OriginReview | null) {
+  if (!left || !right) return left === right;
+  return (
+    left.original_id === right.original_id &&
+    timeKey(left.original_created_at) === timeKey(right.original_created_at) &&
+    left.source === right.source &&
+    left.note === right.note &&
+    left.decision === right.decision
+  );
+}
 
 export function planClanWorkbook({
   peopleSheet,
   linksSheet,
+  reviewSheet,
   existingPeople,
   existingLinks,
+  existingReviews = [],
   choices,
   replaceParentage,
 }: {
   peopleSheet: ClanSheet;
   linksSheet?: ClanSheet;
+  reviewSheet?: ClanSheet;
   existingPeople: Person[];
   existingLinks: Relation[];
+  existingReviews?: WorkbookParentageReview[];
   choices: Record<string, string>;
   replaceParentage: boolean;
 }) {
@@ -369,10 +478,7 @@ export function planClanWorkbook({
     });
   }
 
-  const parentRows = new Map<
-    string,
-    { lines: number[]; parents: Map<string, ParentKind | null> }
-  >();
+  const parentRows = new Map<string, { lines: number[]; parents: Map<string, SheetParent> }>();
   const linkIds = new Set<string>();
   const explicitLinkKeys = new Set<string>();
   const changedLinkRows: RelationPreview[] = [];
@@ -408,41 +514,8 @@ export function planClanWorkbook({
       });
       continue;
     }
-    if (type === "parent") {
-      const kind = (
-        normalize(qualifier ?? "") === "por confirmar" ? "unknown" : qualifier
-      ) as ParentKind | null;
-      if (kind != null && !parentKinds.includes(kind)) {
-        relations.push({
-          line,
-          name,
-          state: "error",
-          detail: "Informe uma natureza de filiação válida.",
-        });
-        continue;
-      }
-      const childKey = stableReference.get(resolveId(to)) ?? to;
-      const parentKey = stableReference.get(resolveId(from)) ?? from;
-      const group = parentRows.get(childKey) ?? {
-        lines: [] as number[],
-        parents: new Map<string, ParentKind | null>(),
-      };
-      if (group.parents.has(parentKey)) {
-        relations.push({
-          line,
-          name,
-          state: "error",
-          detail: "A mesma filiação aparece mais de uma vez.",
-        });
-        continue;
-      }
-      group.lines.push(line);
-      group.parents.set(parentKey, kind);
-      parentRows.set(childKey, group);
-      continue;
-    }
-    const start = parseDateField(cellValue(linksSheet, row, "Início"));
-    const end = parseDateField(cellValue(linksSheet, row, "Fim"));
+    const start = parseLinkDate(cellValue(linksSheet, row, "Início"), type);
+    const end = parseLinkDate(cellValue(linksSheet, row, "Fim"), type);
     if (
       start.kind === "invalid" ||
       start.kind === "partial" ||
@@ -508,6 +581,89 @@ export function planClanWorkbook({
       continue;
     }
     if (linkKey) explicitLinkKeys.add(linkKey);
+    if (type === "parent") {
+      const parentNote = rawCellValue(linksSheet, row, "Observações") || null;
+      if (parentNote && [...parentNote].length > 32767) {
+        relations.push({
+          line,
+          name,
+          state: "error",
+          detail: "As observações do vínculo devem ter até 32.767 caracteres.",
+        });
+        continue;
+      }
+      const kind = (
+        normalize(qualifier ?? "") === "por confirmar" ? "unknown" : qualifier
+      ) as ParentKind | null;
+      if (kind != null && !parentKinds.includes(kind)) {
+        relations.push({
+          line,
+          name,
+          state: "error",
+          detail: "Informe uma natureza de filiação válida.",
+        });
+        continue;
+      }
+      const childKey = stableReference.get(resolveId(to)) ?? to;
+      const parentKey = stableReference.get(resolveId(from)) ?? from;
+      const group = parentRows.get(childKey) ?? {
+        lines: [] as number[],
+        parents: new Map<string, SheetParent>(),
+      };
+      if (group.parents.has(parentKey)) {
+        relations.push({
+          line,
+          name,
+          state: "error",
+          detail: "A mesma filiação aparece mais de uma vez.",
+        });
+        continue;
+      }
+      const matching = existingLinks.filter(
+        (link) =>
+          link.relationship_type === "parent" &&
+          link.from_person_id === resolveId(from) &&
+          link.to_person_id === resolveId(to),
+      );
+      const target = existing ?? matching[0];
+      if (
+        (!existing && matching.length > 1) ||
+        (linkKey &&
+          target?.clan_reference &&
+          linkKey !== target.id &&
+          linkKey !== target.clan_reference)
+      ) {
+        relations.push({
+          line,
+          name,
+          state: "error",
+          detail:
+            "Esta filiação já tem outro ID lógico no dossiê. Confira o ID do vínculo antes de importar.",
+        });
+        continue;
+      }
+      const hasDetails =
+        reviewSheet ||
+        linkKey ||
+        ["Início", "Fim", "Observações"].some((header) => hasHeader(linksSheet, header));
+      const link = hasDetails
+        ? {
+            key: target?.clan_reference ?? (linkKey || null),
+            relationship_id: target?.id ?? null,
+            expected_updated_at: target?.updated_at ?? null,
+            start_date: hasHeader(linksSheet, "Início") ? startDate : (target?.start_date ?? null),
+            end_date: hasHeader(linksSheet, "Fim") ? endDate : (target?.end_date ?? null),
+            notes: hasHeader(linksSheet, "Observações") ? parentNote : (target?.notes ?? null),
+          }
+        : undefined;
+      const desiredKind = reviewSheet
+        ? kind
+        : (kind ?? (target ? (target.qualifier as ParentKind | null) : "unknown"));
+      group.lines.push(line);
+      group.parents.set(parentKey, { kind: desiredKind, ...(link ? { link } : {}) });
+      parentRows.set(childKey, group);
+      continue;
+    }
     const matches = existingLinks.filter(
       (link) =>
         link.relationship_type === type &&
@@ -608,15 +764,104 @@ export function planClanWorkbook({
   }
 
   const existingParents = existingLinks.filter((link) => link.relationship_type === "parent");
+  const restoredReviews = new Map<string, { line: number; restore: ParentageRestore }>();
+  const reviewIds = new Set<string>();
+  const latestReviews = mostRecentReviews(existingReviews);
+  if (
+    reviewSheet &&
+    (!hasHeader(reviewSheet, REVIEW_HEADERS.child) ||
+      !hasHeader(reviewSheet, REVIEW_HEADERS.reviewed))
+  ) {
+    relations.push({
+      line: 1,
+      sheet: PARENTAGE_REVIEW_SHEET,
+      name: PARENTAGE_REVIEW_SHEET,
+      state: "error",
+      detail: "Inclua as colunas ID do filho e Filiação revisada.",
+    });
+  } else if (reviewSheet) {
+    for (const [index, row] of reviewSheet.rows.entries()) {
+      if (row.every((value) => !value.trim())) continue;
+      const line = index + 2;
+      const inputKey = cellValue(reviewSheet, row, REVIEW_HEADERS.child);
+      const childId = resolveId(inputKey);
+      const key = stableReference.get(childId) ?? inputKey;
+      const flag = normalize(cellValue(reviewSheet, row, REVIEW_HEADERS.reviewed));
+      const originalId = cellValue(reviewSheet, row, REVIEW_HEADERS.id);
+      const originalAt = cellValue(reviewSheet, row, REVIEW_HEADERS.createdAt);
+      const decision = normalize(cellValue(reviewSheet, row, REVIEW_HEADERS.decision));
+      const source = normalize(cellValue(reviewSheet, row, REVIEW_HEADERS.source));
+      const note = rawCellValue(reviewSheet, row, REVIEW_HEADERS.note) || null;
+      const withOrigin = Boolean(originalId || originalAt || decision || source || note);
+      const problems: string[] = [];
+      if (!childId || restoredReviews.has(key)) problems.push("Confira o ID único do filho.");
+      if (flag !== "sim" && flag !== "nao")
+        problems.push("Informe Sim ou Não em Filiação revisada.");
+      if (
+        withOrigin &&
+        (!validKey(originalId) ||
+          reviewIds.has(originalId) ||
+          !timeKey(originalAt) ||
+          !reviewDecisions.includes(decision) ||
+          !Object.hasOwn(parentageSources, source))
+      ) {
+        problems.push("Confira ID, data completa com fuso, ação e fonte da revisão original.");
+      }
+      if (note && [...note].length > 3000)
+        problems.push("A nota da revisão deve ter até 3.000 caracteres.");
+      if (problems.length) {
+        relations.push({
+          line,
+          sheet: PARENTAGE_REVIEW_SHEET,
+          name: label(key) || "Revisão de filiação",
+          state: "error",
+          detail: problems.join(" "),
+        });
+        continue;
+      }
+      if (originalId) reviewIds.add(originalId);
+      restoredReviews.set(key, {
+        line,
+        restore: {
+          reviewed: flag === "sim",
+          review: withOrigin
+            ? {
+                original_id: originalId,
+                original_created_at: originalAt,
+                decision: decision as ReviewDecision,
+                source: source as ParentageSource,
+                note,
+              }
+            : null,
+        },
+      });
+      if (
+        !parentRows.has(key) &&
+        (flag === "sim" ||
+          withOrigin ||
+          byId.get(childId)?.parentage_reviewed ||
+          latestReviews.has(childId) ||
+          existingParents.some((link) => link.to_person_id === childId))
+      ) {
+        parentRows.set(key, { lines: [], parents: new Map() });
+      }
+    }
+  }
+
   const parentPlans = [...parentRows].map(([key, group]) => {
     const childId = resolveId(key);
     const before = existingParents.filter((link) => link.to_person_id === childId);
     const parents = new Map(group.parents);
+    const restoreLine = restoredReviews.get(key);
+    let extraParents = false;
     for (const link of before) {
       const existingKey = stableReference.get(link.from_person_id) ?? link.from_person_id;
-      if (!parents.has(existingKey) && !replaceParentage) parents.set(existingKey, null);
+      if (!parents.has(existingKey) && !replaceParentage) {
+        extraParents = true;
+        parents.set(existingKey, { kind: null });
+      }
     }
-    const choicesForChild = [...parents].map(([parentKey, kind]) => {
+    const choicesForChild = [...parents].map(([parentKey, { kind }]) => {
       const personId = resolveId(parentKey);
       return {
         personId,
@@ -624,7 +869,7 @@ export function planClanWorkbook({
           kind ?? (before.some((link) => link.from_person_id === personId) ? undefined : "unknown"),
       } satisfies ParentageCandidate;
     });
-    return { key, group, childId, before, parents, choicesForChild };
+    return { key, group, childId, before, parents, choicesForChild, restoreLine, extraParents };
   });
   const affectedChildren = new Set(parentPlans.map(({ childId }) => childId));
   const proposed: Parameters<typeof validateParentagePlan>[2] = [
@@ -639,37 +884,83 @@ export function planClanWorkbook({
       })),
     ),
   ];
-  for (const { key, group, childId, before, parents, choicesForChild } of parentPlans) {
-    const error = validateParentagePlan(childId, choicesForChild, proposed);
+  for (const {
+    key,
+    group,
+    childId,
+    before,
+    parents,
+    choicesForChild,
+    restoreLine,
+    extraParents,
+  } of parentPlans) {
+    const expected = parentageSnapshot(existingLinks, childId);
+    const beforeReviewed = byId.get(childId)?.parentage_reviewed ?? false;
+    const latestReview = latestReviews.get(childId);
+    const original = reviewOrigin(latestReview, expected, beforeReviewed);
+    const restore = restoreLine?.restore;
+    const error =
+      (restore && extraParents
+        ? "O dossiê tem outros genitores. Confira e autorize a substituição para restaurar esta revisão."
+        : null) ?? validateParentagePlan(childId, choicesForChild, proposed);
     const changed =
       before.length !== choicesForChild.length ||
-      choicesForChild.some(
-        (p) =>
-          !before.some(
-            (link) => link.from_person_id === p.personId && (!p.kind || p.kind === link.qualifier),
-          ),
-      );
+      [...parents].some(([parentKey, desired]) => {
+        const stored = before.find((link) => link.from_person_id === resolveId(parentKey));
+        if (!stored) return true;
+        if (!desired.link) return desired.kind !== null && desired.kind !== stored.qualifier;
+        const { link } = desired;
+        return (
+          desired.kind !== stored.qualifier ||
+          (link.key !== null && link.key !== (stored.clan_reference ?? stored.id)) ||
+          link.start_date !== stored.start_date ||
+          link.end_date !== stored.end_date ||
+          (link.notes ?? "") !== (stored.notes ?? "")
+        );
+      }) ||
+      (restore && (restore.reviewed !== beforeReviewed || !sameReview(restore.review, original)));
     const beforeLabel = before.map(
       (link) => byId.get(link.from_person_id)?.full_name ?? link.from_person_id,
     );
     const afterLabel = [...parents.keys()].map(label);
     relations.push({
-      line: group.lines[0],
+      line: group.lines[0] ?? restoreLine!.line,
+      ...(group.lines.length ? {} : { sheet: PARENTAGE_REVIEW_SHEET }),
       name: label(key),
-      state: error ? "error" : changed ? "update" : "keep",
+      state: error ? "error" : changed ? (byId.has(childId) ? "update" : "include") : "keep",
       detail:
         error ??
-        `Filiação atual: ${beforeLabel.join(" e ") || "sem registro"}. Proposta: ${afterLabel.join(" e ")}.`,
+        [
+          `Filiação atual: ${beforeLabel.join(" e ") || "sem registro"}. Proposta: ${afterLabel.join(" e ") || "sem genitores registrados"}.`,
+          ...[...parents].flatMap(([parentKey, { kind, link }]) =>
+            link
+              ? [
+                  `${label(parentKey)}: ${relationshipQualifiers.parent.find((entry) => entry.value === kind)?.label ?? "natureza sem registro"}${link.start_date ? `, início ${link.start_date}` : ""}${link.end_date ? `, fim ${link.end_date}` : ""}${link.notes ? ", com observações" : ""}.`,
+                ]
+              : [],
+          ),
+          restore &&
+            (restore.reviewed
+              ? "Estado no arquivo: filiação revisada."
+              : "Estado no arquivo: filiação a revisar."),
+          restore?.review &&
+            `Revisão de origem: ${parentageSources[restore.review.source]} · ${restore.review.original_created_at}.`,
+        ]
+          .filter(Boolean)
+          .join(" "),
     });
     if (!error && changed) {
-      const beforeKeys = [...parents.keys()];
       plan.parentages.push({
         child_key: key,
-        expected: parentageSnapshot(existingLinks, childId),
-        parents: choicesForChild.map((parent, index) => ({
-          key: beforeKeys[index],
-          kind: parent.kind ?? null,
-        })),
+        expected,
+        parents: [...parents].map(([parentKey, desired]) => ({ key: parentKey, ...desired })),
+        ...(restore
+          ? {
+              expected_reviewed: beforeReviewed,
+              expected_review_id: latestReview?.id ?? null,
+              restore,
+            }
+          : {}),
       });
     }
   }
@@ -695,7 +986,11 @@ export function planClanWorkbook({
   };
 }
 
-export async function createClanWorkbook(people: Person[], relationships: Relation[]) {
+export async function createClanWorkbook(
+  people: Person[],
+  relationships: Relation[],
+  reviews: WorkbookParentageReview[] = [],
+) {
   const XLSX = await import("xlsx");
   const workbook = XLSX.utils.book_new();
   const linkedIds = new Set(
@@ -705,6 +1000,7 @@ export async function createClanWorkbook(people: Person[], relationships: Relati
     (person) =>
       person.is_proband ||
       linkedIds.has(person.id) ||
+      person.parentage_reviewed ||
       person.is_deceased ||
       person.health_conditions.length > 0 ||
       [
@@ -779,6 +1075,30 @@ export async function createClanWorkbook(people: Person[], relationships: Relati
       ),
     ]),
     "Vínculos",
+  );
+  const latestReviews = mostRecentReviews(reviews);
+  XLSX.utils.book_append_sheet(
+    workbook,
+    XLSX.utils.aoa_to_sheet([
+      Object.values(REVIEW_HEADERS),
+      ...exportedPeople.map((person) => {
+        const review = reviewOrigin(
+          latestReviews.get(person.id),
+          parentageSnapshot(relationships, person.id),
+          !!person.parentage_reviewed,
+        );
+        return [
+          getClanPersonKey(person),
+          person.parentage_reviewed ? "Sim" : "Não",
+          review?.original_id ?? "",
+          review?.original_created_at ?? "",
+          review?.decision ?? "",
+          review?.source ?? "",
+          review?.note ?? "",
+        ];
+      }),
+    ]),
+    PARENTAGE_REVIEW_SHEET,
   );
   return workbook;
 }

@@ -31,6 +31,7 @@ import {
   useNodesState,
   useReactFlow,
   useStore,
+  useUpdateNodeInternals,
   getNodesBounds,
   getViewportForBounds,
   type Connection,
@@ -803,6 +804,17 @@ function GenogramCanvasInner({
     setIsLayoutFixed(data?.layout?.is_fixed ?? false);
   }, [data?.layout?.is_fixed]);
   const rfInstance = useReactFlow();
+  const connecting = connection !== null;
+  const previousConnecting = useRef(connecting);
+  const updateNodeInternals = useUpdateNodeInternals();
+
+  useEffect(() => {
+    if (previousConnecting.current === connecting) return;
+    previousConnecting.current = connecting;
+    // O React Flow mede os nós na montagem. Neste modo só os handles mudam.
+    const people = rfInstance.getNodes().filter((node) => node.type === "person");
+    if (people.length) updateNodeInternals(people.map(({ id }) => id));
+  }, [connecting, rfInstance, updateNodeInternals]);
 
   const fitViewport2D = useCallback(
     (width: number, height: number) => {

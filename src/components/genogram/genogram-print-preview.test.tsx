@@ -6,8 +6,53 @@ import { validateGraph } from "@/lib/geno/build";
 import { buildRenderGraph } from "./render-graph";
 import { buildSpatialLayout, projectSpatialLayout } from "./genogram-spatial-layout";
 import { GenogramPrintPreview } from "./genogram-print-preview";
+import { paginateGenogram } from "./genogram-print-pages";
 
 afterEach(cleanup);
+
+it.each([4, 6, 8])(
+  "pagina todas as pessoas em %s gerações ancestrais sem cortar fichas",
+  (generations) => {
+    const { persons, rels, probandId } = consultanteFamily(generations);
+    const { nodes, edges } = buildRenderGraph(persons, rels, probandId);
+    const projection = projectSpatialLayout(buildSpatialLayout(nodes, edges), { yaw: 0, pitch: 0 });
+    const pages = paginateGenogram("Genossociograma", projection, 1, true);
+    const [panorama, ...details] = pages;
+    expect(panorama.content.people).toHaveLength(persons.length);
+    expect(details.length).toBeGreaterThan(1);
+    const printedPeople = details.flatMap(({ content }) => content.people.map(({ id }) => id));
+    expect(printedPeople).toHaveLength(persons.length);
+    expect(new Set(printedPeople)).toEqual(new Set(persons.map(({ id }) => id)));
+    for (const { bounds, content, continuation, number } of details) {
+      const printScale = Math.min(
+        396 / (bounds.right - bounds.left),
+        235 / (bounds.bottom - bounds.top),
+      );
+      expect(19 * printScale * (72 / 25.4)).toBeGreaterThanOrEqual(8);
+      for (const { x, y, width, height } of content.people) {
+        expect(x - width / 2).toBeGreaterThanOrEqual(bounds.left);
+        expect(x + width / 2).toBeLessThanOrEqual(bounds.right);
+        expect(y).toBeGreaterThanOrEqual(bounds.top);
+        expect(y + height).toBeLessThanOrEqual(bounds.bottom);
+      }
+      for (const marker of continuation) {
+        const other = pages.find(({ number }) => number === marker.page);
+        const returnPoints = other?.continuation.flatMap(({ page, points }) =>
+          page === number ? points : [],
+        );
+        for (const point of marker.points) {
+          expect(
+            returnPoints?.some(({ x, y }) => Math.hypot(x - point.x, y - point.y) < 0.01),
+          ).toBe(true);
+        }
+      }
+    }
+    expect(details.some(({ continuation }) => continuation.length > 0)).toBe(true);
+    expect(new Set(details.flatMap(({ content }) => content.routes.map(({ id }) => id)))).toEqual(
+      new Set(panorama.content.routes.map(({ id }) => id)),
+    );
+  },
+);
 
 it("inclui a cadeia dos ancestrais compartilhados nas páginas dos dois ramos", () => {
   const { persons, rels, probandId } = consultanteFamily();
@@ -95,8 +140,8 @@ it("desenha duas uniões distintas e preserva a filiação confirmada sem escolh
   expect(new Set(hubs.map(({ y }) => y)).size).toBe(2);
   render(<GenogramPrintPreview open onOpenChange={vi.fn()} nodes={nodes} edges={edges} />);
   const page = screen.getByRole("img", { name: "Genossociograma" });
-  expect(within(page).getByText("1º casamento")).toBeTruthy();
-  expect(within(page).getByText("2º casamento")).toBeTruthy();
+  expect(within(page).getByText("1º casamento", { selector: "text" })).toBeTruthy();
+  expect(within(page).getByText("2º casamento", { selector: "text" })).toBeTruthy();
 });
 
 it("mantém a filiação registrada e a sugestão em trilhos próprios no mapa e na impressão", () => {

@@ -7,6 +7,11 @@ import { GenogramCanvas } from "./genogram-canvas";
 import { PersonFormDialog } from "./person-form-dialog";
 
 vi.mock("@/integrations/supabase/client", () => import("../../../design/preview/client"));
+const { refreshHandles } = vi.hoisted(() => ({ refreshHandles: vi.fn() }));
+vi.mock("@xyflow/react", async (load) => ({
+  ...(await load<typeof import("@xyflow/react")>()),
+  useUpdateNodeInternals: () => refreshHandles,
+}));
 
 const clientId = "00000000-0000-4000-8000-000000000006";
 const spatial = () => screen.getByRole("region", { name: "Área de navegação do mapa 3D" });
@@ -71,6 +76,34 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   Reflect.deleteProperty(HTMLElement.prototype, "scrollIntoView");
+});
+
+it("mede os handles de conexão em lote ao abri-los e fechá-los", async () => {
+  refreshHandles.mockClear();
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={queryClient}>
+      <GenogramCanvas clientId={clientId} />
+    </QueryClientProvider>,
+  );
+  const people = () => [...document.querySelectorAll<HTMLElement>(".react-flow__node-person")];
+  await waitFor(() => expect(people()).toHaveLength(35));
+  const ids = people().map(({ dataset }) => dataset.id);
+  expect(refreshHandles).not.toHaveBeenCalled();
+
+  fireEvent.click(screen.getByRole("button", { name: "Conectar" }));
+  expect(screen.getAllByTitle("Arraste para conectar")).toHaveLength(35);
+  expect(screen.getAllByTitle("Solte a conexão aqui")).toHaveLength(35);
+  expect(refreshHandles).toHaveBeenNthCalledWith(1, ids);
+  fireEvent.click(people().find((node) => node.textContent?.includes("Consultante"))!);
+  expect(screen.getByText(/escolha a segunda pessoa/)).toBeTruthy();
+  expect(refreshHandles).toHaveBeenCalledTimes(1);
+
+  fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+  expect(screen.queryByTitle("Arraste para conectar")).toBeNull();
+  expect(refreshHandles).toHaveBeenNthCalledWith(2, ids);
+  expect(refreshHandles).toHaveBeenCalledTimes(2);
+  expect(people().map(({ dataset }) => dataset.id)).toEqual(ids);
 });
 
 it("mantém um cartão no Tab e percorre os outros nomes completos pelas setas", async () => {

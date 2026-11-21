@@ -155,6 +155,13 @@
       "when": 1795220005000,
       "tag": "0022_workspace_client_search",
       "breakpoints": false
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1795220006000,
+      "tag": "0023_clan_parentage_workbook",
+      "breakpoints": false
     }
   ]
 }

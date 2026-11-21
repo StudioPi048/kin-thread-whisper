@@ -145,7 +145,6 @@ export const sessions = [9, 11, 14].map((h, i) => {
     clients: clients[i],
   };
 });
-const consultante = consultanteFamily();
 const familyClient = clients[4].id;
 const syntheticReviewSession = {
   id: "20000000-0000-4000-8000-000000000004",
@@ -171,34 +170,37 @@ const syntheticReviewSession = {
   updated_at: stamp,
 };
 const fixtureStamp = "2026-11-20T12:00:00.000Z";
-const familyPersonIds = new Map(
-  consultante.persons.map((person, index) => [person.id, personId(index + 100)]),
-);
-const fixtureFamily = consultante.persons.map((person) => ({
-  ...person,
-  client_id: familyClient,
-  id: familyPersonIds.get(person.id)!,
-  created_at: fixtureStamp,
-  updated_at: fixtureStamp,
-}));
-const fixtureLinks = consultante.rels.map((link, index) => ({
-  ...link,
-  client_id: familyClient,
-  id: `60000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
-  from_person_id: familyPersonIds.get(link.from_person_id)!,
-  to_person_id: familyPersonIds.get(link.to_person_id)!,
-  created_at: fixtureStamp,
-  updated_at: fixtureStamp,
-}));
+function makeFixtureFamily(depth = 4) {
+  const sample = consultanteFamily(depth);
+  const ids = new Map(sample.persons.map((person, index) => [person.id, personId(index + 100)]));
+  const people = sample.persons.map((person) => ({
+    ...person,
+    client_id: familyClient,
+    id: ids.get(person.id)!,
+    created_at: fixtureStamp,
+    updated_at: fixtureStamp,
+  }));
+  const links = sample.rels.map((link, index) => ({
+    ...link,
+    client_id: familyClient,
+    id: `60000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+    from_person_id: ids.get(link.from_person_id)!,
+    to_person_id: ids.get(link.to_person_id)!,
+    created_at: fixtureStamp,
+    updated_at: fixtureStamp,
+  }));
+  return { people, links };
+}
+const fixtureFamily = makeFixtureFamily();
 const db: Record<string, any[]> = {
   clients,
   genogram_persons: [
     ...persons.map((person) => ({ ...person, updated_at: fixtureStamp })),
-    ...fixtureFamily,
+    ...fixtureFamily.people,
   ],
   genogram_relationships: [
     ...rels.map((link) => ({ ...link, updated_at: fixtureStamp })),
-    ...fixtureLinks,
+    ...fixtureFamily.links,
   ],
   genogram_parentage_reviews: [],
   hypothesis_reviews: [],
@@ -237,11 +239,24 @@ const persistedFixtureTables = [
   "clinical_sessions",
   "hypothesis_reviews",
 ];
-const fixtureFamilyStorage = "genealiz-local-preview-family-v2";
+let fixtureFamilyStorage = "genealiz-local-preview-family-v2";
 let fixtureHydrated = false;
 function readFixtureFamily() {
   if (fixtureHydrated || typeof window === "undefined") return;
   fixtureHydrated = true;
+  const size = new URLSearchParams(window.location.search).get("familia");
+  if (size === "131" || size === "515") {
+    fixtureFamilyStorage += `-${size}`;
+    const { people, links } = makeFixtureFamily(size === "131" ? 6 : 8);
+    db.genogram_persons = [
+      ...db.genogram_persons.filter((row) => row.client_id !== familyClient),
+      ...people,
+    ];
+    db.genogram_relationships = [
+      ...db.genogram_relationships.filter((row) => row.client_id !== familyClient),
+      ...links,
+    ];
+  }
   const stored = sessionStorage.getItem(fixtureFamilyStorage);
   if (!stored) return;
   try {
@@ -535,6 +550,27 @@ function fixtureError(message: string) {
   return { data: null, error: new Error(message) };
 }
 
+type FixtureParent = ParentageCandidate & {
+  link?: {
+    key: string | null;
+    relationship_id: string | null;
+    expected_updated_at: string | null;
+    start_date: string | null;
+    end_date: string | null;
+    notes: string | null;
+  };
+};
+type FixtureReview = {
+  reviewed: boolean;
+  review: {
+    original_id: string;
+    original_created_at: string;
+    source: string;
+    note: string | null;
+    decision: string;
+  } | null;
+};
+
 function reviewFixtureParentage(args: Record<string, unknown>) {
   const childId = String(args._child_id);
   const clientId = String(args._client_id);
@@ -544,41 +580,72 @@ function reviewFixtureParentage(args: Record<string, unknown>) {
   const relationships = db.genogram_relationships.filter((row) => row.client_id === clientId);
   if (JSON.stringify(parentageSnapshot(relationships, childId)) !== JSON.stringify(args._expected))
     return fixtureError("A filiação mudou. Reabra a revisão.");
-  const parents = args._parents as ParentageCandidate[];
-  const reason = validateParentagePlan(childId, parents, relationships);
+  const latest = db.genogram_parentage_reviews
+    .filter((row) => row.client_id === clientId && row.child_id === childId)
+    .at(-1);
+  if (
+    ("_expected_review_id" in args && (latest?.id ?? null) !== args._expected_review_id) ||
+    ("_expected_reviewed" in args && beforeReviewed !== args._expected_reviewed)
+  ) {
+    return fixtureError("A revisão mudou desde a prévia.");
+  }
+  const restore = args._restore as FixtureReview | undefined;
+  const parents = args._parents as FixtureParent[];
+  const validation = (args._validation_relationships ?? relationships) as typeof relationships;
+  const reason = validateParentagePlan(childId, parents, validation);
   if (reason) return fixtureError(reason);
   const current = relationships.filter(
     (row) => row.to_person_id === childId && row.relationship_type === "parent",
   );
   const before = current.map((link) => ({ ...link }));
   const now = new Date().toISOString();
-  const after = parents.map(({ personId, kind }) => {
+  const after = parents.map(({ personId, kind, link }) => {
     const existing = current.find((row) => row.from_person_id === personId);
-    if (existing)
-      return kind && kind !== existing.qualifier
-        ? { ...existing, qualifier: kind, updated_at: now }
+    if (
+      link?.relationship_id &&
+      (existing?.id !== link.relationship_id || existing.updated_at !== link.expected_updated_at)
+    )
+      throw new Error("O vínculo mudou desde a prévia.");
+    const qualifier = link ? (kind ?? null) : (kind ?? (existing ? existing.qualifier : "unknown"));
+    const metadata = link
+      ? {
+          notes: link.notes,
+          start_date: link.start_date,
+          end_date: link.end_date,
+          clan_reference: existing?.clan_reference ?? (existing?.id === link.key ? null : link.key),
+        }
+      : {};
+    if (existing) {
+      const fields = { qualifier, ...metadata };
+      return Object.entries(fields).some(([key, value]) => (existing[key] ?? null) !== value)
+        ? { ...existing, ...fields, updated_at: now }
         : existing;
+    }
     return {
       id: crypto.randomUUID(),
       client_id: clientId,
       from_person_id: personId,
       to_person_id: childId,
       relationship_type: "parent",
-      qualifier: kind,
+      qualifier,
       notes: null,
       start_date: null,
       end_date: null,
       marriage_order: null,
       created_at: now,
       updated_at: now,
+      ...metadata,
     };
   });
   db.genogram_relationships = [
     ...db.genogram_relationships.filter((link) => !current.includes(link)),
     ...after,
   ];
+  const afterReviewed = restore?.reviewed ?? true;
   db.genogram_persons = db.genogram_persons.map((row) =>
-    row === child ? { ...row, parentage_reviewed: true } : row,
+    row === child && beforeReviewed !== afterReviewed
+      ? { ...row, parentage_reviewed: afterReviewed, updated_at: now }
+      : row,
   );
   const id = crypto.randomUUID();
   db.genogram_parentage_reviews.push({
@@ -588,14 +655,18 @@ function reviewFixtureParentage(args: Record<string, unknown>) {
     professional_id: uid,
     review_number: db.genogram_parentage_reviews.length + 1,
     decision: args._decision,
-    source: args._source,
-    note: args._note ?? null,
+    source: restore ? (restore.review?.source ?? "unverified") : args._source,
+    note: restore ? (restore.review?.note ?? null) : (args._note ?? null),
     before_links: before,
     before_reviewed: beforeReviewed,
-    after_reviewed: true,
+    after_reviewed: afterReviewed,
     after_links: after.map((link) => ({ ...link })),
     created_at: now,
     undone_review_id: null,
+    workbook_import: Boolean(restore),
+    imported_review_key: restore?.review?.original_id ?? null,
+    imported_review_created_at: restore?.review?.original_created_at ?? null,
+    imported_review_decision: restore?.review?.decision ?? null,
   });
   return fixtureResult(id);
 }
@@ -637,6 +708,10 @@ function undoFixtureParentage(args: Record<string, unknown>) {
     decision: "undo",
     source: history.at(-2)?.source ?? "unverified",
     note: history.at(-2)?.note ?? null,
+    workbook_import: history.at(-2)?.workbook_import ?? false,
+    imported_review_key: history.at(-2)?.imported_review_key ?? null,
+    imported_review_created_at: history.at(-2)?.imported_review_created_at ?? null,
+    imported_review_decision: history.at(-2)?.imported_review_decision ?? null,
     before_links: review.after_links,
     after_links: review.before_links,
     before_reviewed: review.after_reviewed,
@@ -736,6 +811,22 @@ function importFixtureWorkbook(args: Record<string, unknown>) {
       if (existing) Object.assign(existing, record);
       else db.genogram_relationships.push({ ...record, id: crypto.randomUUID(), created_at: now });
     }
+    const affected = new Set(plan.parentages.map(({ child_key }) => keys.get(child_key)));
+    const finalRelations = [
+      ...db.genogram_relationships.filter(
+        (row) =>
+          row.client_id === clientId &&
+          (row.relationship_type !== "parent" || !affected.has(row.to_person_id)),
+      ),
+      ...plan.parentages.flatMap(({ child_key, parents }) =>
+        parents.map((parent, index) => ({
+          id: `planned-${child_key}-${index}`,
+          from_person_id: keys.get(parent.key),
+          to_person_id: keys.get(child_key),
+          relationship_type: "parent",
+        })),
+      ),
+    ];
     for (const parentage of plan.parentages) {
       const result = reviewFixtureParentage({
         _client_id: clientId,
@@ -744,10 +835,19 @@ function importFixtureWorkbook(args: Record<string, unknown>) {
         _parents: parentage.parents.map((parent) => ({
           personId: keys.get(parent.key),
           kind: parent.kind,
+          link: parent.link,
         })),
         _decision: "edit",
-        _source: "document",
+        _source: "unverified",
         _note: "Filiação conferida na prévia da planilha fictícia.",
+        _validation_relationships: finalRelations,
+        ...(parentage.restore
+          ? {
+              _restore: parentage.restore,
+              _expected_review_id: parentage.expected_review_id,
+              _expected_reviewed: parentage.expected_reviewed,
+            }
+          : {}),
       });
       if (result.error) throw result.error;
     }
@@ -1123,7 +1223,23 @@ export const supabase: any = {
       job.audio_paths = [];
       return fixtureResult(true);
     }
-    if (name === "import_clan_workbook") return importFixtureWorkbook(args);
+    if (name === "import_clan_workbook" || name === "import_clan_workbook_v2")
+      return importFixtureWorkbook(args);
+    if (name === "get_clan_workbook_snapshot") {
+      const client = db.clients.find(
+        (row) => row.id === args._client_id && row.professional_id === uid,
+      );
+      if (!client) return fixtureResult(null);
+      const reviews = new Map<string, unknown>();
+      for (const row of db.genogram_parentage_reviews) {
+        if (row.client_id === client.id) reviews.set(row.child_id, row);
+      }
+      return fixtureResult({
+        persons: db.genogram_persons.filter((row) => row.client_id === client.id),
+        relationships: db.genogram_relationships.filter((row) => row.client_id === client.id),
+        reviews: [...reviews.values()],
+      });
+    }
     if (name === "remove_empty_clan_rows") {
       const candidates = new Map(
         (args._candidates as { id: string; updated_at: string }[]).map((row) => [

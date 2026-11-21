@@ -700,6 +700,10 @@ export type Database = {
           after_reviewed: boolean
           undone_review_id: string | null
           created_at: string
+          workbook_import: boolean
+          imported_review_key: string | null
+          imported_review_created_at: string | null
+          imported_review_decision: string | null
         }
         Insert: {
           id?: string
@@ -715,6 +719,10 @@ export type Database = {
           after_reviewed: boolean
           undone_review_id?: string | null
           created_at?: string
+          workbook_import?: boolean
+          imported_review_key?: string | null
+          imported_review_created_at?: string | null
+          imported_review_decision?: string | null
         }
         Update: {
           id?: string
@@ -730,6 +738,10 @@ export type Database = {
           after_reviewed?: boolean
           undone_review_id?: string | null
           created_at?: string
+          workbook_import?: boolean
+          imported_review_key?: string | null
+          imported_review_created_at?: string | null
+          imported_review_decision?: string | null
         }
         Relationships: [
           {
@@ -1121,6 +1133,14 @@ export type Database = {
       import_clan_workbook: {
         Args: { _client_id: string; _people: Json; _links: Json; _parentages: Json }
         Returns: { inserted: number; updated: number; related: number; reviewed: number }
+      }
+      import_clan_workbook_v2: {
+        Args: { _client_id: string; _people: Json; _links: Json; _parentages: Json }
+        Returns: { inserted: number; updated: number; related: number; reviewed: number }
+      }
+      get_clan_workbook_snapshot: {
+        Args: { _client_id: string }
+        Returns: Json
       }
       remove_empty_clan_rows: {
         Args: { _client_id: string; _candidates: Json }

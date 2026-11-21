@@ -92,7 +92,7 @@ export function historyLinks(links: ParentageHistoryEntry["after_links"]): Saved
 }
 
 export function reviewMatchesCurrent(
-  review: ParentageHistoryEntry | undefined,
+  review: Pick<ParentageHistoryEntry, "after_links" | "after_reviewed"> | undefined,
   current: readonly ParentageVersion[],
   reviewed: boolean,
 ) {

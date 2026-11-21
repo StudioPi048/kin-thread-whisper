@@ -62,9 +62,11 @@ import {
 import {
   createClanWorkbook,
   isClanLinksSheet,
+  isClanParentageSheet,
   isIdentifiedClanSheet,
   parseClanVitalDate,
   planClanWorkbook,
+  type WorkbookParentageReview,
 } from "@/lib/clan-workbook";
 import { ClanImportRow, ClanSheetSelect, ClanWorkbookPreview } from "./clan-workbook-preview";
 import {
@@ -82,6 +84,28 @@ import {
 } from "@/components/ui/dialog";
 
 type Person = Tables<"genogram_persons">;
+type WorkbookSnapshot = Pick<ClinicalIntelData, "persons" | "relationships"> & {
+  reviews: WorkbookParentageReview[];
+};
+
+async function readWorkbookSnapshot(clientId: string): Promise<WorkbookSnapshot> {
+  const { data, error } = await supabase.rpc("get_clan_workbook_snapshot", {
+    _client_id: clientId,
+  });
+  if (error) throw new Error(error.message);
+  if (
+    !data ||
+    typeof data !== "object" ||
+    Array.isArray(data) ||
+    !Array.isArray(data.persons) ||
+    !Array.isArray(data.relationships) ||
+    !Array.isArray(data.reviews)
+  ) {
+    throw new Error("Não foi possível ler os dados da planilha do clã.");
+  }
+  return data as unknown as WorkbookSnapshot;
+}
+
 type Props = {
   clientId: string;
   onOpenGenogram?: () => void;
@@ -528,6 +552,7 @@ export function ClanSpreadsheet({
     people: ClanSheet;
     linkSheet: string;
     mapping: Mapping;
+    snapshot?: WorkbookSnapshot;
   } | null>(null);
   const [identityChoices, setIdentityChoices] = useState<Record<string, string>>({});
   const [replaceParentage, setReplaceParentage] = useState(false);
@@ -537,14 +562,21 @@ export function ClanSpreadsheet({
   const selectedLinkSheet = importPreview?.sheets.find(
     (sheet) => sheet.name === importPreview.linkSheet,
   );
+  const workbookReviewSheet = importPreview?.sheets.find(isClanParentageSheet);
+  const selectedReviewSheet =
+    selectedLinkSheet || !importPreview?.sheets.some(isClanLinksSheet)
+      ? workbookReviewSheet
+      : undefined;
   const workbookPreview = useMemo(
     () =>
-      structuredImport && importPreview
+      structuredImport && importPreview?.snapshot
         ? planClanWorkbook({
             peopleSheet: importPreview.people,
             linksSheet: selectedLinkSheet,
-            existingPeople: persons ?? [],
-            existingLinks: relationships ?? [],
+            reviewSheet: selectedReviewSheet,
+            existingPeople: importPreview.snapshot.persons,
+            existingLinks: importPreview.snapshot.relationships,
+            existingReviews: importPreview.snapshot.reviews,
             choices: identityChoices,
             replaceParentage,
           })
@@ -553,8 +585,7 @@ export function ClanSpreadsheet({
       structuredImport,
       importPreview,
       selectedLinkSheet,
-      persons,
-      relationships,
+      selectedReviewSheet,
       identityChoices,
       replaceParentage,
     ],
@@ -579,7 +610,9 @@ export function ClanSpreadsheet({
       ),
     [analysis, importDuplicates],
   );
-  const hasRegisteredLinks = !!relationships?.length;
+  const hasRegisteredLinks = !!(structuredImport
+    ? importPreview?.snapshot?.relationships.length
+    : relationships?.length);
   const previewRows = useMemo(
     () =>
       [...analysis]
@@ -627,14 +660,17 @@ export function ClanSpreadsheet({
   const confirmImport = useMutation({
     mutationFn: async () => {
       await queueRef.current!.flush();
-      const latest = await qc.fetchQuery({ ...familyQuery, staleTime: 0 });
       if (!importPreview) throw new Error("Abra uma planilha para importar.");
-      if (structuredImport && workbookPreview) {
+      if (structuredImport) {
+        if (!workbookPreview) throw new Error("Reabra a planilha para conferir a prévia.");
+        const latest = await readWorkbookSnapshot(clientId);
         const current = planClanWorkbook({
           peopleSheet: importPreview.people,
           linksSheet: selectedLinkSheet,
+          reviewSheet: selectedReviewSheet,
           existingPeople: latest.persons,
           existingLinks: latest.relationships,
+          existingReviews: latest.reviews,
           choices: identityChoices,
           replaceParentage,
         });
@@ -643,19 +679,27 @@ export function ClanSpreadsheet({
           !current.actionable ||
           JSON.stringify(current.plan) !== JSON.stringify(workbookPreview.plan)
         ) {
+          setImportPreview((previous) => previous && { ...previous, snapshot: latest });
           throw new Error(
-            "A família mudou desde a prévia. Confira as pessoas e os vínculos antes de confirmar.",
+            "A família mudou desde a prévia. Confira as pessoas, os vínculos e as revisões antes de confirmar.",
           );
         }
-        const { data, error } = await supabase.rpc("import_clan_workbook", {
+        const { data, error } = await supabase.rpc("import_clan_workbook_v2", {
           _client_id: clientId,
           _people: current.plan.people as never,
           _links: current.plan.links as never,
           _parentages: current.plan.parentages as never,
         });
-        if (error) throw new Error(error.message);
+        if (error) {
+          if (error.code === "40001") {
+            const snapshot = await readWorkbookSnapshot(clientId).catch(() => null);
+            if (snapshot) setImportPreview((previous) => previous && { ...previous, snapshot });
+          }
+          throw new Error(error.message);
+        }
         return data;
       }
+      const latest = await qc.fetchQuery({ ...familyQuery, staleTime: 0 });
       if (importReplace && latest.relationships.length) {
         throw new Error("Há vínculos registrados. Adicione as linhas ou edite a planilha atual.");
       }
@@ -713,7 +757,12 @@ export function ClanSpreadsheet({
       setImportDuplicates(false);
       setIdentityChoices({});
       setReplaceParentage(false);
-      const valid = sheets.filter((sheet) => sheet.header.length && !isClanLinksSheet(sheet));
+      const reviewSheets = sheets.filter(isClanParentageSheet);
+      if (reviewSheets.length > 1)
+        throw new Error("Inclua somente uma aba de revisões de filiação.");
+      const valid = sheets.filter(
+        (sheet) => sheet.header.length && !isClanLinksSheet(sheet) && !isClanParentageSheet(sheet),
+      );
       const people =
         valid.find(isIdentifiedClanSheet) ?? valid.find((sheet) => sheet.rows.length) ?? valid[0];
       if (!people) throw new Error("Inclua uma aba de pessoas com os cabeçalhos do modelo.");
@@ -722,6 +771,7 @@ export function ClanSpreadsheet({
         people,
         linkSheet: sheets.find(isClanLinksSheet)?.name ?? "",
         mapping: autoMap(people.header),
+        snapshot: isIdentifiedClanSheet(people) ? await readWorkbookSnapshot(clientId) : undefined,
       });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Verifique o formato do arquivo.");
@@ -733,13 +783,18 @@ export function ClanSpreadsheet({
   const exportWorkbook = async (template = false) => {
     try {
       if (!template) await queueRef.current!.flush();
-      const latest = template ? null : await qc.fetchQuery({ ...familyQuery, staleTime: 0 });
-      const workbook = await createClanWorkbook(latest?.persons ?? [], latest?.relationships ?? []);
+      const latest = template ? null : await readWorkbookSnapshot(clientId);
+      const workbook = await createClanWorkbook(
+        latest?.persons ?? [],
+        latest?.relationships ?? [],
+        latest?.reviews ?? [],
+      );
       const XLSX = await import("xlsx");
       XLSX.writeFile(
         workbook,
         template ? "modelo-planilha-cla.xlsx" : `planilha-cla-${clientId.slice(0, 8)}.xlsx`,
       );
+      toast.success(template ? "Modelo Excel gerado." : "Planilha Excel gerada com as filiações.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível exportar a planilha.");
     }
@@ -1380,7 +1435,10 @@ export function ClanSpreadsheet({
                 <ClanSheetSelect
                   label="Aba de pessoas"
                   sheets={importPreview.sheets.filter(
-                    (sheet) => sheet.header.length && !isClanLinksSheet(sheet),
+                    (sheet) =>
+                      sheet.header.length &&
+                      !isClanLinksSheet(sheet) &&
+                      !isClanParentageSheet(sheet),
                   )}
                   value={importPreview.people.name}
                   disabled={confirmImport.isPending}
@@ -1408,6 +1466,11 @@ export function ClanSpreadsheet({
                 )}
               </div>
             )}
+            {structuredImport && workbookReviewSheet && !selectedReviewSheet && (
+              <p className="text-sm text-muted-foreground">
+                Selecione a aba de vínculos para restaurar também as revisões de filiação.
+              </p>
+            )}
             {workbookPreview && (
               <ClanWorkbookPreview
                 preview={workbookPreview}
@@ -1417,7 +1480,10 @@ export function ClanSpreadsheet({
                 }
                 allowReplacement={replaceParentage}
                 onAllowReplacement={setReplaceParentage}
-                canReplace={!!selectedLinkSheet?.rows.length && hasRegisteredLinks}
+                canReplace={
+                  Boolean(selectedLinkSheet?.rows.length || selectedReviewSheet?.rows.length) &&
+                  hasRegisteredLinks
+                }
                 pending={confirmImport.isPending}
                 onTemplate={() => void exportWorkbook(true)}
               />

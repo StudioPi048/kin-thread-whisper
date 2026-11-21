@@ -89,9 +89,11 @@ export function ParentageHistory({
             const decision =
               entry.decision === "undo"
                 ? "Filiação restaurada"
-                : entry.decision === "edit"
-                  ? "Filiação alterada"
-                  : "Filiação confirmada";
+                : entry.workbook_import
+                  ? "Filiação importada do Excel"
+                  : entry.decision === "edit"
+                    ? "Filiação alterada"
+                    : "Filiação confirmada";
             const source = Object.hasOwn(parentageSources, entry.source)
               ? parentageSources[entry.source as ParentageSource]
               : parentageSources.unverified;
@@ -118,6 +120,14 @@ export function ParentageHistory({
                     {source}
                     {entry.note && <> · {entry.note}</>}
                   </p>
+                  {entry.imported_review_created_at && (
+                    <p>
+                      Revisão de origem em{" "}
+                      <time dateTime={entry.imported_review_created_at}>
+                        {displayDate(entry.imported_review_created_at)}
+                      </time>
+                    </p>
+                  )}
                   {reverted && <p>Restaura a revisão de {displayDate(reverted.created_at)}.</p>}
                 </details>
                 {entry.id === undoableId && (

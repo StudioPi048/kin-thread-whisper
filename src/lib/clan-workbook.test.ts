@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { readClanWorkbook, type ClanSheet } from "./clan-import";
-import { createClanWorkbook, planClanWorkbook } from "./clan-workbook";
+import {
+  createClanWorkbook,
+  getClanPersonKey,
+  isClanParentageSheet,
+  planClanWorkbook,
+  type WorkbookParentageReview,
+} from "./clan-workbook";
 import { consultanteFamily } from "./geno/fixtures";
 
 const peopleWith = (rows: string[][]): ClanSheet => ({
@@ -13,6 +19,63 @@ const linksWith = (rows: string[][]): ClanSheet => ({
   header: ["Origem", "Destino", "Tipo", "Natureza"],
   rows,
 });
+
+async function serializedPlanInput(...args: Parameters<typeof createClanWorkbook>) {
+  const XLSX = await import("xlsx");
+  const workbook = await createClanWorkbook(...args);
+  const [peopleSheet, linksSheet, reviewSheet] = await readClanWorkbook(
+    XLSX.write(workbook, { type: "array", bookType: "xlsx" }),
+    "xlsx",
+  );
+  return { peopleSheet, linksSheet, reviewSheet };
+}
+
+function reviewedFamily() {
+  const { persons, rels } = consultanteFamily();
+  const proband = { ...persons.find((person) => person.is_proband)!, parentage_reviewed: true };
+  const relationships = rels
+    .filter((link) => link.relationship_type === "parent" && link.to_person_id === proband.id)
+    .map((link, index) => ({
+      ...link,
+      qualifier: index ? "foster" : null,
+      start_date: index ? null : "1984-01-15",
+      end_date: index ? "2013-06-10" : null,
+      notes: index ? null : "  Informação preservada\nSegunda linha",
+    }));
+  const parents = relationships.map((link, index) => ({
+    ...persons.find((person) => person.id === link.from_person_id)!,
+    parentage_reviewed: index === 0,
+  }));
+  const makeReview = (id: string, number: number, child: string, links: typeof relationships) =>
+    ({
+      id,
+      review_number: number,
+      client_id: proband.client_id,
+      child_id: child,
+      professional_id: "profissional-teste",
+      decision: "confirm",
+      source: "document",
+      note: "Documento sintético conferido",
+      before_links: [],
+      after_links: links,
+      before_reviewed: false,
+      after_reviewed: true,
+      undone_review_id: null,
+      created_at: "2026-11-20T12:34:59.742619+00:00",
+      workbook_import: false,
+      imported_review_key: null,
+      imported_review_created_at: null,
+      imported_review_decision: null,
+    }) satisfies WorkbookParentageReview;
+  const review = makeReview("revisao-corrente", 3, proband.id, relationships);
+  const noParents = makeReview("revisao-sem-genitores", 4, parents[0].id, []);
+  const history = [
+    { ...review, id: "revisao-antiga", review_number: 1, note: "Histórico anterior" },
+    review,
+    noParents,
+  ];
+  return { people: [proband, ...parents], relationships, history, review, noParents };
+}
 
 describe("conciliação da planilha do clã", () => {
   it("associa homônimos aos genitores escolhidos pelos IDs", () => {
@@ -260,5 +323,174 @@ describe("conciliação da planilha do clã", () => {
     });
     expect(legacy.blocking).toBe(false);
     expect(legacy.plan.links).toHaveLength(0);
+  });
+
+  it("reimporta o XLSX nativo no mesmo caso sem regravar filiações ou revisões", async () => {
+    const { people, relationships, history } = reviewedFamily();
+    const sheets = await serializedPlanInput(people, relationships, history);
+    expect(isClanParentageSheet(sheets.reviewSheet)).toBe(true);
+    expect(sheets.reviewSheet.rows).toHaveLength(people.length);
+    expect(JSON.stringify(sheets.reviewSheet.rows)).not.toContain("revisao-antiga");
+    expect(JSON.stringify(sheets.reviewSheet.rows)).toContain("revisao-sem-genitores");
+    const sameDossier = planClanWorkbook({
+      ...sheets,
+      existingPeople: people,
+      existingLinks: relationships,
+      existingReviews: history,
+      choices: {},
+      replaceParentage: false,
+    });
+    expect(sameDossier.blocking).toBe(false);
+    expect(sameDossier.actionable).toBe(false);
+    expect(sameDossier.plan.parentages).toEqual([]);
+  });
+
+  it("transporta ID lógico, natureza nula, datas, notas, estado sem pais e proveniência entre casos", async () => {
+    const { people, relationships, history, review, noParents } = reviewedFamily();
+    const sheets = await serializedPlanInput(people, relationships, history);
+    const [proband, ...parents] = people;
+    const mappedProband = { ...proband, id: "consultante-destino", parentage_reviewed: false };
+    const request = { ...sheets, choices: {}, replaceParentage: false };
+    const transfer = planClanWorkbook({
+      ...request,
+      existingPeople: [mappedProband],
+      existingLinks: [],
+    });
+    expect(transfer.blocking).toBe(false);
+    expect(transfer.plan.parentages).toHaveLength(2);
+    expect(
+      transfer.plan.parentages.find(({ child_key }) => child_key === "consultante"),
+    ).toMatchObject({
+      expected_reviewed: false,
+      expected_review_id: null,
+      expected: [],
+      parents: relationships.map((link, index) => ({
+        key: getClanPersonKey(parents[index]),
+        kind: link.qualifier,
+        link: {
+          key: link.id,
+          relationship_id: null,
+          expected_updated_at: null,
+          start_date: link.start_date,
+          end_date: link.end_date,
+          notes: link.notes,
+        },
+      })),
+      restore: {
+        reviewed: true,
+        review: {
+          original_id: review.id,
+          original_created_at: review.created_at,
+          decision: review.decision,
+          source: review.source,
+          note: review.note,
+        },
+      },
+    });
+    expect(
+      transfer.plan.parentages.find(({ child_key }) => child_key === parents[0].id),
+    ).toMatchObject({
+      parents: [],
+      restore: { reviewed: true, review: { original_id: noParents.id } },
+    });
+
+    const destinationPeople = [
+      mappedProband,
+      ...parents.map((person, index) => ({
+        ...person,
+        id: `destino-${index}`,
+        clan_reference: getClanPersonKey(person),
+      })),
+    ].map((person) => ({
+      ...person,
+      parentage_reviewed: person.id === mappedProband.id || person.parentage_reviewed,
+    }));
+    const destinationLinks = relationships.map((link, index) => ({
+      ...link,
+      id: `vinculo-destino-${index}`,
+      from_person_id: destinationPeople[index + 1].id,
+      to_person_id: mappedProband.id,
+      updated_at: "2026-11-21T17:00:00+00:00",
+      clan_reference: link.id,
+    }));
+    const destinationReviews = [review, noParents].map((entry, index) => ({
+      ...entry,
+      id: `registro-de-importacao-${index}`,
+      child_id: destinationPeople[index].id,
+      after_links: index ? [] : destinationLinks,
+      created_at: "2026-11-21T17:00:00+00:00",
+      workbook_import: true,
+      imported_review_key: entry.id,
+      imported_review_created_at: entry.created_at.replace("+00:00", "Z"),
+      imported_review_decision: entry.decision,
+    }));
+    const roundtrip = planClanWorkbook({
+      ...request,
+      existingPeople: destinationPeople,
+      existingLinks: destinationLinks,
+      existingReviews: destinationReviews,
+    });
+    expect(roundtrip.blocking).toBe(false);
+    expect(roundtrip.actionable).toBe(false);
+    const exportedAgain = await serializedPlanInput(
+      destinationPeople,
+      destinationLinks,
+      destinationReviews,
+    );
+    expect(exportedAgain.linksSheet.rows).toEqual(sheets.linksSheet.rows);
+    expect(JSON.stringify(exportedAgain.reviewSheet.rows)).toContain(review.id);
+    expect(JSON.stringify(exportedAgain.reviewSheet.rows)).not.toContain("registro-de-importacao");
+  });
+
+  it("bloqueia mudanças de identidade, datas inválidas e a remoção implícita de genitores", async () => {
+    const { people, relationships, history } = reviewedFamily();
+    const sheets = await serializedPlanInput(people, relationships, history);
+    const input = {
+      ...sheets,
+      existingPeople: people,
+      existingLinks: relationships,
+      existingReviews: history,
+      choices: {},
+      replaceParentage: false,
+    };
+    const foreign = { ...relationships[0], clan_reference: "identidade-de-outra-origem" };
+    const conflicting = planClanWorkbook({
+      ...input,
+      existingLinks: [foreign, ...relationships.slice(1)],
+      linksSheet: {
+        ...sheets.linksSheet,
+        rows: [
+          ["id-de-outro-arquivo", ...sheets.linksSheet.rows[0].slice(1)],
+          ...sheets.linksSheet.rows.slice(1),
+        ],
+      },
+    });
+    expect(conflicting.relations.some(({ detail }) => detail.includes("outro ID lógico"))).toBe(
+      true,
+    );
+    expect(conflicting.blocking).toBe(true);
+    const invalid = planClanWorkbook({
+      ...input,
+      linksSheet: {
+        ...sheets.linksSheet,
+        rows: sheets.linksSheet.rows.map((row) => {
+          const cells = [...row];
+          cells[5] = "2024-02-30";
+          return cells;
+        }),
+      },
+    });
+    expect(invalid.blocking).toBe(true);
+    const hasExtra = planClanWorkbook({ ...input, linksSheet: { ...sheets.linksSheet, rows: [] } });
+    expect(hasExtra.blocking).toBe(true);
+    const approved = planClanWorkbook({
+      ...input,
+      linksSheet: { ...sheets.linksSheet, rows: [] },
+      replaceParentage: true,
+    });
+    expect(approved.blocking).toBe(false);
+    expect(
+      approved.plan.parentages.find(({ child_key }) => child_key === "consultante"),
+    ).toMatchObject({ parents: [], expected_review_id: "revisao-corrente" });
   });
 });
