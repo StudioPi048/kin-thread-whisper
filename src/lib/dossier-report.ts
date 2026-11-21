@@ -1,6 +1,6 @@
 import { readDossierReport, type ExportPageReader } from "@/lib/data-export";
 import { buildLogicalGraph } from "@/lib/geno/build";
-import { buildCaseTimeline, formatByPrecision } from "@/lib/timeline";
+import { buildCaseTimeline, formatByPrecision, yearRange } from "@/lib/timeline";
 import { CLINICAL_LABEL, clinicalStatusOf } from "@/lib/session-state";
 import type { PersonRow, RelationshipRow } from "@/lib/patterns";
 
@@ -70,18 +70,28 @@ export async function prepareDossierReport(
   }
   if (options.timeline) {
     const lines = buildCaseTimeline(persons, graph, relationships).map((event) => {
+      const period = yearRange(event.rawDate);
       const when = options.reducedIdentity
-        ? event.year
-          ? String(event.year)
-          : "Data desconhecida"
+        ? period
+          ? `${period.first}–${period.last} (intervalo)`
+          : event.year
+            ? String(event.year)
+            : event.precision === "month_day"
+              ? "Sem ano informado"
+              : "Data desconhecida"
         : formatByPrecision(event.rawDate, event.precision);
-      return [
+      const names = (event.personIds ?? [event.personId])
+        .map((id) => displayed.get(id))
+        .filter(Boolean)
+        .join(" e ");
+      const summary = [
         when,
-        displayed.get(event.personId),
+        names,
         options.reducedIdentity ? timelineType[event.kind] : event.label,
       ]
         .filter(Boolean)
         .join(" · ");
+      return options.reducedIdentity ? summary : `${summary}\n${event.source}`;
     });
     sections.push({ title: "Linha do tempo", lines });
   }

@@ -546,6 +546,13 @@ export type LibraryItem = {
 export const EDITORIAL_SOURCE =
   "Acervo editorial GENEALIZ. Edição e paginação não verificadas — confira a obra antes de citar.";
 
+export function libraryProvenance(item: LibraryItem) {
+  if (item.illustrative) return "Paráfrase ilustrativa";
+  if (item.category === "Meu acervo") return "Referência do seu acervo";
+  if (item.key.startsWith("manual-") && item.source) return item.source;
+  return "Acervo editorial · edição e páginas sem conferência";
+}
+
 export function buildLibraryItems(entries: Entry[]): LibraryItem[] {
   return [
     {

@@ -2,7 +2,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { readPref, writePref } from "@/lib/recent-activity";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, BookOpen, ChevronDown, Copy, History, Link2, Search } from "lucide-react";
+import {
+  ArrowRight,
+  BookOpen,
+  ChevronDown,
+  ChevronLeft,
+  Copy,
+  History,
+  Link2,
+  Search,
+} from "lucide-react";
 import {
   EDITORIAL_SOURCE,
   buildLibraryItems,
@@ -11,6 +20,7 @@ import {
   GLOSSARY,
   type LibraryItem,
   categories,
+  libraryProvenance,
 } from "@/components/library/catalog";
 import { relatedLibraryItem, searchLibrary } from "@/lib/library-search";
 
@@ -45,6 +55,7 @@ export const Route = createFileRoute("/_authenticated/app/biblioteca")({
 function BibliotecaPage() {
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("Todos");
+  const [trail, setTrail] = useState<Array<{ from: LibraryItem; to: string }>>([]);
   const openerRef = useRef<HTMLButtonElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
@@ -78,21 +89,25 @@ function BibliotecaPage() {
   const shown = searchLibrary(items, q, category);
   // Trecho aberto vive na URL (?item=ID) — dá para voltar a ele; só o ID é lembrado.
   const selected = itemKey ? (items.find((x) => x.key === itemKey) ?? null) : null;
-  const setSelected = (x: LibraryItem | null) => {
+  const incoming = [...trail].reverse().find(({ to }) => to === selected?.key);
+  const setSelected = (x: LibraryItem | null, replace = !x) => {
     if (x) {
       writePref(user.id, "library-last", x.key);
       setLastKey(x.key);
     }
-    navigate({ search: x ? { item: x.key } : {}, replace: !x });
+    if (!x) setTrail([]);
+    navigate({ search: x ? { item: x.key } : {}, replace, resetScroll: false });
   };
   const manualEntry = items.find((item) => item.key === "manual-genossociograma");
   const lastItem = lastKey ? items.find((x) => x.key === lastKey) : undefined;
   const openRelatedTerm = (term: string) => {
     const related = relatedLibraryItem(items, term);
-    if (related) {
+    if (related && selected && related.key !== selected.key) {
+      setTrail((previous) => [...previous, { from: selected, to: related.key }]);
       setSelected(related);
       return;
     }
+    if (related) return;
     openerRef.current = null;
     setQ(term);
     setCategory("Todos");
@@ -101,6 +116,9 @@ function BibliotecaPage() {
   useEffect(() => {
     if (selected) titleRef.current?.focus();
   }, [selected]);
+  useEffect(() => {
+    if (!itemKey) setTrail([]);
+  }, [itemKey]);
   return (
     <div className="reference-library">
       <header className="reference-library-hero">
@@ -241,6 +259,7 @@ function BibliotecaPage() {
                 <span className="reference-library-record-identity">
                   <strong>{x.title}</strong>
                   <span className="reference-library-record-meta">{x.meta}</span>
+                  <span className="reference-library-record-meta">{libraryProvenance(x)}</span>
                   <span className="reference-library-record-excerpt line-clamp-2">{x.body}</span>
                 </span>
                 <span className="reference-library-record-kind">{x.category}</span>
@@ -283,8 +302,28 @@ function BibliotecaPage() {
             (openerRef.current?.isConnected ? openerRef.current : searchRef.current)?.focus();
           }}
         >
+          {selected && (
+            <Button
+              type="button"
+              variant="ghost"
+              className="mx-3 mt-2 min-h-11 whitespace-normal text-left"
+              onClick={() => {
+                if (incoming) setTrail((current) => current.slice(0, current.indexOf(incoming)));
+                setSelected(incoming?.from ?? null, true);
+              }}
+            >
+              <ChevronLeft size={16} aria-hidden />
+              {incoming ? `Voltar a ${incoming.from.title}` : "Voltar aos resultados"}
+            </Button>
+          )}
           {selected?.term ? (
-            <GlossaryDetail item={selected.term} titleRef={titleRef} onRelated={openRelatedTerm} />
+            <GlossaryDetail
+              item={selected.term}
+              source={selected.source ?? EDITORIAL_SOURCE}
+              titleRef={titleRef}
+              onRelated={openRelatedTerm}
+              hasRelated={(term) => !!relatedLibraryItem(items, term)}
+            />
           ) : (
             selected && (
               <>
@@ -297,14 +336,14 @@ function BibliotecaPage() {
                 <div className="reference-reading-content">
                   {selected.illustrative && (
                     <p className="mb-4 rounded-md border border-clinical-warning/40 bg-clinical-warning/10 p-3 text-[14px] font-semibold">
-                      Conteúdo ilustrativo
+                      Paráfrase ilustrativa
                     </p>
                   )}
-                  <p className="reference-reading-body">{selected.body}</p>
                   <p className="reference-reading-source">
                     <strong>Fonte</strong>
                     <cite>{selected.source ?? EDITORIAL_SOURCE}</cite>
                   </p>
+                  <p className="reference-reading-body">{selected.body}</p>
                   {selected.details && (
                     <ul className="mt-6 space-y-4 text-sm leading-7">
                       {selected.details.map((d, i) => (
@@ -320,7 +359,7 @@ function BibliotecaPage() {
                       onClick={async () => {
                         try {
                           await navigator.clipboard.writeText(
-                            `${selected.body} — paráfrase ilustrativa (${selected.meta}); não é citação literal.`,
+                            `${selected.body}\n\n${selected.meta}\n${selected.source ?? EDITORIAL_SOURCE}`,
                           );
                           toast.success("Paráfrase copiada com o aviso de fonte");
                         } catch {
@@ -346,12 +385,16 @@ function BibliotecaPage() {
 
 function GlossaryDetail({
   item,
+  source,
   titleRef,
   onRelated,
+  hasRelated,
 }: {
   item: (typeof GLOSSARY)[number];
+  source: string;
   titleRef: React.RefObject<HTMLHeadingElement | null>;
   onRelated: (term: string) => void;
+  hasRelated: (term: string) => boolean;
 }) {
   return (
     <div>
@@ -365,6 +408,10 @@ function GlossaryDetail({
       </div>
 
       <div className="reference-reading-content space-y-8">
+        <p className="reference-reading-source">
+          <strong>Fonte</strong>
+          <cite>{source}</cite>
+        </p>
         <DetailBlock label="Definição completa">
           <p className="reference-reading-body">{item.full}</p>
         </DetailBlock>
@@ -393,7 +440,7 @@ function GlossaryDetail({
                 className="min-h-11 h-auto whitespace-normal"
                 onClick={() => onRelated(r)}
               >
-                <Link2 className="size-4" aria-hidden /> {r}
+                <Link2 className="size-4" aria-hidden /> {hasRelated(r) ? r : `Buscar por ${r}`}
               </Button>
             ))}
           </div>

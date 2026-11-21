@@ -113,6 +113,48 @@
       "when": 1795210003000,
       "tag": "0016_pending_appointments",
       "breakpoints": false
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1795220000000,
+      "tag": "0017_agenda_integrity",
+      "breakpoints": false
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1795220001000,
+      "tag": "0018_hypothesis_review_conflicts",
+      "breakpoints": false
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1795220002000,
+      "tag": "0019_genogram_integrity",
+      "breakpoints": false
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1795220003000,
+      "tag": "0020_clan_import_atomic",
+      "breakpoints": false
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1795220004000,
+      "tag": "0021_session_audio_integrity",
+      "breakpoints": false
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1795220005000,
+      "tag": "0022_workspace_client_search",
+      "breakpoints": false
     }
   ]
 }

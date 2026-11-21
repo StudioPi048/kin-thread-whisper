@@ -3,6 +3,7 @@ import { ArrowDown, ArrowRight, ArrowUpRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { ComponentType, MouseEvent } from "react";
 import { HomeCasePreview } from "@/components/demo/home-case-preview";
+import type { DemoEntry } from "@/components/demo/consultante-demo";
 import { GenealizWordmark } from "@/components/genealiz-wordmark";
 import "@/landing.css";
 
@@ -10,8 +11,10 @@ const pageTitle = "Genealiz — Genossociogramas para a psicogenealogia";
 const pageDescription =
   "Monte a árvore familiar, acompanhe acontecimentos e registre cada atendimento em um só dossiê. Experimente o Genealiz com uma família fictícia.";
 
-const shareImage = "https://kin-thread-whisper.lovable.app/assets/genealiz/archive-hero.jpg";
-const shareImageAlt = "Fotografias antigas de família sobre um álbum de arquivo.";
+const shareImage =
+  "https://kin-thread-whisper.lovable.app/assets/genealiz/dossie-ficticio-social.jpg";
+const shareImageAlt =
+  "Marca Genealiz e recorte das relações no dossiê fictício de Helena Andrade Nogueira.";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -22,8 +25,8 @@ export const Route = createFileRoute("/")({
       { property: "og:description", content: pageDescription },
       { property: "og:type", content: "website" },
       { property: "og:image", content: shareImage },
-      { property: "og:image:width", content: "1536" },
-      { property: "og:image:height", content: "1024" },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
       { property: "og:image:alt", content: shareImageAlt },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:image", content: shareImage },
@@ -34,7 +37,8 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  const [Demo, setDemo] = useState<ComponentType | null>(null);
+  const [Demo, setDemo] = useState<ComponentType<{ entry?: DemoEntry }> | null>(null);
+  const [demoEntry, setDemoEntry] = useState<DemoEntry>();
   const [demoState, setDemoState] = useState<"idle" | "loading" | "error">("idle");
   const demoHeading = useRef<HTMLHeadingElement>(null);
   const demoLoading = useRef(false);
@@ -72,8 +76,12 @@ function Index() {
     void loadDemo();
   }
 
-  function followDemoLink(event: MouseEvent<HTMLAnchorElement>) {
+  function followDemoLink(
+    event: MouseEvent<HTMLAnchorElement>,
+    entry: DemoEntry = { mode: "map" },
+  ) {
     if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    setDemoEntry(entry);
     openDemo();
   }
 
@@ -150,7 +158,7 @@ function Index() {
                   </div>
                 )}
               >
-                <Demo />
+                <Demo entry={demoEntry} />
               </CatchBoundary>
             ) : (
               <div className="public-case-launch">
@@ -168,6 +176,14 @@ function Index() {
                   <ArrowRight size={17} aria-hidden />
                 </button>
                 <span>Sem cadastro. Alterações salvas só enquanto o exercício está aberto.</span>
+              </div>
+            )}
+            {Demo && (
+              <div className="public-actions public-case-after">
+                <a href="/auth?mode=signup" className="public-text-link">
+                  Criar conta para trabalhar no seu primeiro caso{" "}
+                  <ArrowUpRight size={17} aria-hidden />
+                </a>
               </div>
             )}
           </div>

@@ -48,7 +48,7 @@ function parentRel(from: string, to: string): RelationshipRow {
     from_person_id: from,
     to_person_id: to,
     relationship_type: "parent",
-    qualifier: null,
+    qualifier: "biological",
     start_date: null,
     end_date: null,
     notes: null,

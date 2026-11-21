@@ -89,8 +89,13 @@
   min-width: 0;
   overflow: clip;
   cursor: grab;
-  touch-action: none;
+  touch-action: pan-y;
   user-select: none;
+}
+
+.geno-spatial-viewport[data-touch-navigation],
+.geno-spatial-viewport[data-moving-person] {
+  touch-action: none;
 }
 
 .geno-spatial-viewport:focus-visible {

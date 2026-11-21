@@ -105,6 +105,7 @@ function AuthenticatedLayout() {
   const searchReturnFocus = useRef<HTMLElement | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeSearch, setActiveSearch] = useState("");
+  const [searchPage, setSearchPage] = useState(0);
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const prefsQ = usePreferences(user.id);
   useApplyPreferences(prefsQ.data);
@@ -138,16 +139,20 @@ function AuthenticatedLayout() {
     if (!isSearchOpen) {
       setSearchQuery("");
       setActiveSearch("");
+      setSearchPage(0);
       return;
     }
-    const timer = window.setTimeout(() => setActiveSearch(searchQuery.trim()), 220);
+    const timer = window.setTimeout(() => {
+      setActiveSearch(searchQuery.trim());
+      setSearchPage(0);
+    }, 220);
     return () => window.clearTimeout(timer);
   }, [isSearchOpen, searchQuery]);
 
   const isSearchReady = activeSearch === searchQuery.trim();
   const clientSearch = useQuery({
-    queryKey: ["all-clients-search", user.id, activeSearch],
-    queryFn: () => readClientNamePage(user.id, activeSearch, 0, 12),
+    queryKey: ["all-clients-search", user.id, activeSearch, searchPage],
+    queryFn: () => readClientNamePage(user.id, activeSearch, searchPage * 12, 12),
     enabled: isSearchOpen && isSearchReady,
     retry: false,
     gcTime: 0,
@@ -430,10 +435,26 @@ function AuthenticatedLayout() {
               ))}
             </CommandGroup>
           )}
-          {isSearchReady && clientSearch.data?.hasMore && (
-            <p className="px-3 py-2 text-sm text-muted-foreground">
-              Digite mais letras para refinar a busca.
-            </p>
+          {isSearchReady && (searchPage > 0 || clientSearch.data?.hasMore) && (
+            <CommandGroup
+              heading={
+                clientSearch.data ? `${clientSearch.data.total} dossiês` : "Páginas de dossiês"
+              }
+            >
+              {searchPage > 0 && (
+                <CommandItem
+                  value="clients:previous"
+                  onSelect={() => setSearchPage(searchPage - 1)}
+                >
+                  Dossiês anteriores
+                </CommandItem>
+              )}
+              {clientSearch.data?.hasMore && (
+                <CommandItem value="clients:next" onSelect={() => setSearchPage(searchPage + 1)}>
+                  Próximos dossiês
+                </CommandItem>
+              )}
+            </CommandGroup>
           )}
         </CommandList>
         <div className="workspace-command-footer">

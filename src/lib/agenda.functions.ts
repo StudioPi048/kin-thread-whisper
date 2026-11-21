@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { readCasePages } from "@/lib/read-case-pages";
+import { readWorkspaceClientPage } from "@/lib/workspace-client-search";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
 import { agendaSession, sessionHistory, type AgendaSessionDTO } from "@/lib/agenda-model";
@@ -26,13 +28,14 @@ export type AgendaDataDTO = {
   today: AgendaSessionDTO[];
   week: { date: string; count: number }[];
   orphanClients: OrphanClientDTO[];
+  orphanClientCount: number;
   stats: { prontuariosPendentes: number };
 };
 
 type Supabase = SupabaseClient<Database>;
 const civilDate = z.string().refine(isCivilDateKey, "Informe uma data válida.");
 const sessionColumns =
-  "id, client_id, session_date, title, status, duration_seconds, planned_duration_minutes, clinical_status, manual_notes, audio_path, ai_reviewed_at, summary_stale, structured_note, clients!inner(id, full_name, preferred_name)" as const;
+  "id, client_id, session_date, updated_at, title, status, duration_seconds, planned_duration_minutes, clinical_status, manual_notes, audio_path, ai_reviewed_at, summary_stale, structured_note, clients!inner(id, full_name, preferred_name)" as const;
 
 async function pendingCount(supabase: Supabase) {
   const { data, error } = await supabase.rpc("pending_clinical_record_count", {});
@@ -43,6 +46,28 @@ async function pendingCount(supabase: Supabase) {
 export const getPendingRecordCount = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(({ context }) => pendingCount(context.supabase));
+
+async function readAgendaSessions(supabase: Supabase, userId: string, start: string, end: string) {
+  const rows = await readCasePages(
+    (after, limit) => {
+      const page = supabase
+        .from("clinical_sessions")
+        .select(sessionColumns)
+        .eq("clients.status", "active")
+        .neq("status", "deleting")
+        .eq("user_id", userId)
+        .gte("session_date", start)
+        .lt("session_date", end)
+        .order("id")
+        .limit(limit);
+      return after ? page.gt("id", after) : page;
+    },
+    (row) => row.id,
+  );
+  return rows.sort(
+    (a, b) => Date.parse(a.session_date) - Date.parse(b.session_date) || a.id.localeCompare(b.id),
+  );
+}
 
 export const getAgendaData = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -58,80 +83,67 @@ export const getAgendaData = createServerFn({ method: "GET" })
     const tz = data?.tz && isValidTimeZone(data.tz) ? data.tz : DEFAULT_TZ;
     const day = data?.date ?? dateKeyInTz(now, tz);
     const edge = (offset: number) => startOfCivilDay(shiftDateKey(day, offset), tz).toISOString();
-    const [dayRows, weekRows, activeClients, future, prontuariosPendentes] = await Promise.all([
-      supabase
-        .from("clinical_sessions")
-        .select(sessionColumns)
-        .eq("clients.status", "active")
-        .neq("status", "deleting")
-        .eq("user_id", userId)
-        .gte("session_date", edge(0))
-        .lt("session_date", edge(1))
-        .order("session_date")
-        .order("id"),
-      supabase
-        .from("clinical_sessions")
-        .select("session_date, clinical_status, clients!inner(id)")
-        .eq("clients.status", "active")
-        .neq("status", "deleting")
-        .eq("user_id", userId)
-        .gte("session_date", edge(-2))
-        .lt("session_date", edge(5)),
-      supabase
-        .from("clients")
-        .select("id, full_name, preferred_name")
-        .eq("professional_id", userId)
-        .eq("status", "active")
-        .order("full_name"),
-      supabase
-        .from("clinical_sessions")
-        .select("client_id, clients!inner(id)")
-        .eq("clients.status", "active")
-        .neq("status", "deleting")
-        .eq("user_id", userId)
-        .gte("session_date", now.toISOString())
-        .or("clinical_status.eq.scheduled,clinical_status.is.null"),
+    const [rows, weekRows, orphanClients, prontuariosPendentes] = await Promise.all([
+      readAgendaSessions(supabase, userId, edge(0), edge(1)),
+      readCasePages(
+        (after, limit) => {
+          const page = supabase
+            .from("clinical_sessions")
+            .select("id, session_date, clinical_status, clients!inner(id)")
+            .eq("clients.status", "active")
+            .neq("status", "deleting")
+            .eq("user_id", userId)
+            .gte("session_date", edge(-2))
+            .lt("session_date", edge(5))
+            .order("id")
+            .limit(limit);
+          return after ? page.gt("id", after) : page;
+        },
+        (row) => row.id,
+      ),
+      readWorkspaceClientPage(supabase, { limit: 8, withoutUpcoming: true }),
       pendingCount(supabase),
     ]);
-    const error = dayRows.error ?? weekRows.error ?? activeClients.error ?? future.error;
-    if (error) throw new Error(error.message);
-
-    const rows = dayRows.data ?? [];
     const clientIds = [...new Set(rows.map((row) => row.client_id))];
     const historyRows = [];
-    if (clientIds.length) {
-      for (let from = 0; ; from += 500) {
-        const { data: history, error: historyError } = await supabase
-          .from("clinical_sessions")
-          .select("id, client_id, session_date, clinical_status")
-          .eq("user_id", userId)
-          .in("client_id", clientIds)
-          .lt("session_date", edge(1))
-          .order("session_date")
-          .order("id")
-          .range(from, from + 499);
-        if (historyError) throw new Error(historyError.message);
-        historyRows.push(...(history ?? []));
-        if (!history || history.length < 500) break;
-      }
+    for (let start = 0; start < clientIds.length; start += 100) {
+      const batch = clientIds.slice(start, start + 100);
+      historyRows.push(
+        ...(await readCasePages(
+          (after, limit) => {
+            const page = supabase
+              .from("clinical_sessions")
+              .select("id, client_id, session_date, clinical_status, status")
+              .eq("user_id", userId)
+              .neq("status", "deleting")
+              .in("client_id", batch)
+              .lt("session_date", edge(1))
+              .order("id")
+              .limit(limit);
+            return after ? page.gt("id", after) : page;
+          },
+          (row) => row.id,
+        )),
+      );
     }
     const history = sessionHistory(historyRows);
     const weekCounts = new Map<string, number>();
-    for (const row of weekRows.data ?? []) {
+    for (const row of weekRows) {
       if (row.clinical_status === "canceled") continue;
       const date = dateKeyInTz(row.session_date, tz);
       weekCounts.set(date, (weekCounts.get(date) ?? 0) + 1);
     }
-    const upcoming = new Set((future.data ?? []).map((row) => row.client_id));
     return {
       today: rows.map((row) => agendaSession(row, tz, now, history.get(row.id))),
       week: Array.from({ length: 7 }, (_, offset) => {
         const date = shiftDateKey(day, offset - 2);
         return { date, count: weekCounts.get(date) ?? 0 };
       }),
-      orphanClients: (activeClients.data ?? [])
-        .filter((client) => !upcoming.has(client.id))
-        .map((client) => ({ id: client.id, name: client.preferred_name || client.full_name })),
+      orphanClients: orphanClients.clients.map((client) => ({
+        id: client.id,
+        name: client.preferred_name || client.full_name,
+      })),
+      orphanClientCount: orphanClients.total,
       stats: { prontuariosPendentes },
     };
   });
@@ -144,7 +156,9 @@ export type WeekSessionDTO = Pick<
   | "dateKey"
   | "start"
   | "end"
+  | "endDateKey"
   | "startISO"
+  | "updatedAt"
   | "durationMin"
   | "clinicalStatus"
   | "overdue"
@@ -159,22 +173,14 @@ export const getAgendaWeek = createServerFn({ method: "GET" })
     const tz = data.tz && isValidTimeZone(data.tz) ? data.tz : DEFAULT_TZ;
     const start = startOfCivilDay(data.weekStart, tz);
     const end = startOfCivilDay(shiftDateKey(data.weekStart, 7), tz);
-    const { data: rows, error } = await context.supabase
-      .from("clinical_sessions")
-      .select(
-        "id, client_id, session_date, title, status, clinical_status, duration_seconds, planned_duration_minutes, manual_notes, ai_reviewed_at, clients!inner(full_name, preferred_name)",
-      )
-      .eq("clients.status", "active")
-      .neq("status", "deleting")
-      .eq("user_id", context.userId)
-      .gte("session_date", start.toISOString())
-      .lt("session_date", end.toISOString())
-      .order("session_date")
-      .order("id");
-    if (error) throw new Error(error.message);
-
+    const rows = await readAgendaSessions(
+      context.supabase,
+      context.userId,
+      start.toISOString(),
+      end.toISOString(),
+    );
     const now = new Date();
-    return (rows ?? []).map((row) => {
+    return rows.map((row) => {
       const {
         id,
         clientId,
@@ -182,7 +188,9 @@ export const getAgendaWeek = createServerFn({ method: "GET" })
         dateKey,
         start,
         end,
+        endDateKey,
         startISO,
+        updatedAt,
         durationMin,
         clinicalStatus,
         overdue,
@@ -194,7 +202,9 @@ export const getAgendaWeek = createServerFn({ method: "GET" })
         dateKey,
         start,
         end,
+        endDateKey,
         startISO,
+        updatedAt,
         durationMin,
         clinicalStatus,
         overdue,
@@ -204,8 +214,15 @@ export const getAgendaWeek = createServerFn({ method: "GET" })
 
 export type RescheduleResponse =
   | { ok: true; sessionId: string; clientId: string; startISO: string }
-  | { ok: false; errors: string[]; conflicts: { id: string; start: string; patient: string }[] };
+  | {
+      ok: false;
+      errors: string[];
+      conflicts: { id: string; start: string; patient: string }[];
+      stale?: boolean;
+      currentStartISO?: string;
+    };
 
+const versionStamp = z.string().datetime({ offset: true });
 const saveInput = z.object({
   sessionId: z.string().uuid(),
   date: civilDate,
@@ -213,6 +230,8 @@ const saveInput = z.object({
   durationMin: z.number().int(),
   occurrence: z.number().int().min(0).max(1).optional(),
   tz: z.string().max(64),
+  expectedUpdatedAt: versionStamp.optional(),
+  originalStartISO: versionStamp.optional(),
 });
 type SaveInput = z.infer<typeof saveInput>;
 
@@ -225,6 +244,8 @@ const responseSchema = z.discriminatedUnion("ok", [
   }),
   z.object({
     ok: z.literal(false),
+    stale: z.boolean().optional(),
+    currentStartISO: z.string().optional(),
     errors: z.array(z.string()),
     conflicts: z.array(z.object({ id: z.string(), startISO: z.string(), patient: z.string() })),
   }),
@@ -232,10 +253,10 @@ const responseSchema = z.discriminatedUnion("ok", [
 
 async function commitAppointment(
   supabase: Supabase,
-  args: Database["public"]["Functions"]["manage_clinical_appointment"]["Args"],
+  args: Database["public"]["Functions"]["manage_clinical_appointment_v2"]["Args"],
   tz: string,
 ): Promise<RescheduleResponse> {
-  const { data, error } = await supabase.rpc("manage_clinical_appointment", args);
+  const { data, error } = await supabase.rpc("manage_clinical_appointment_v2", args);
   if (error) {
     if (error.code === "22023" || error.code === "42501")
       return { ok: false, errors: [error.message], conflicts: [] };
@@ -246,6 +267,8 @@ async function commitAppointment(
   return {
     ok: false,
     errors: response.errors,
+    stale: response.stale,
+    currentStartISO: response.currentStartISO,
     conflicts: response.conflicts.map(({ id, startISO, patient }) => ({
       id,
       start: timeInTz(startISO, tz),
@@ -272,6 +295,7 @@ async function saveAppointment(
       _start: validation.startISO,
       _duration_minutes: input.durationMin,
       _time_zone: input.tz,
+      ...(input.expectedUpdatedAt ? { _expected_updated_at: input.expectedUpdatedAt } : {}),
     },
     input.tz,
   );
@@ -292,6 +316,15 @@ export const rescheduleSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: SaveInput) => saveInput.parse(data))
   .handler(async ({ data, context }) => {
+    if (data.originalStartISO) {
+      return saveAppointment(
+        context.supabase,
+        data,
+        "reschedule",
+        undefined,
+        data.originalStartISO,
+      );
+    }
     const { data: current, error } = await context.supabase
       .from("clinical_sessions")
       .select("session_date")
@@ -306,13 +339,19 @@ export const rescheduleSession = createServerFn({ method: "POST" })
 
 export const cancelSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { sessionId: string }) =>
-    z.object({ sessionId: z.string().uuid() }).parse(data),
+  .inputValidator((data: { sessionId: string; expectedUpdatedAt?: string }) =>
+    z
+      .object({ sessionId: z.string().uuid(), expectedUpdatedAt: versionStamp.optional() })
+      .parse(data),
   )
   .handler(({ data, context }) =>
     commitAppointment(
       context.supabase,
-      { _action: "cancel", _session_id: data.sessionId },
+      {
+        _action: "cancel",
+        _session_id: data.sessionId,
+        ...(data.expectedUpdatedAt ? { _expected_updated_at: data.expectedUpdatedAt } : {}),
+      },
       DEFAULT_TZ,
     ),
   );

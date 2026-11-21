@@ -14,9 +14,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { ScheduleDialog } from "@/components/agenda/agenda-views";
 import { Button } from "@/components/ui/button";
 import { getPendingRecordCount } from "@/lib/agenda.functions";
+import { readCasePages } from "@/lib/read-case-pages";
 import { activeAudioConsent, readAudioConsents } from "@/lib/audio-consent";
 import { profileQuery } from "@/lib/profile";
 import {
+  agendaBoundaryDelay,
   appointmentDurationMin,
   browserTz,
   dateKeyInTz,
@@ -93,15 +95,20 @@ function AppHome() {
 
   const clientsQ = useQuery({
     queryKey: ["mesa-clients", user.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("clients")
-        .select("id, full_name, preferred_name, consent_given_at")
-        .eq("professional_id", user.id)
-        .eq("status", "active");
-      if (error) throw error;
-      return data ?? [];
-    },
+    queryFn: () =>
+      readCasePages(
+        (after, limit) => {
+          const page = supabase
+            .from("clients")
+            .select("id, full_name, preferred_name, consent_given_at")
+            .eq("professional_id", user.id)
+            .eq("status", "active")
+            .order("id")
+            .limit(limit);
+          return after ? page.gt("id", after) : page;
+        },
+        (client) => client.id,
+      ),
   });
 
   const upcomingQ = useQuery({
@@ -149,29 +156,44 @@ function AppHome() {
   });
 
   const onbQ = useQuery({
-    queryKey: ["mesa-onboarding-counts"],
+    queryKey: ["mesa-onboarding-counts", user.id],
     enabled: !onbHidden,
     queryFn: async () => {
-      const c = (
-        t: "clients" | "genogram_persons" | "genogram_relationships" | "clinical_sessions",
-      ) => supabase.from(t).select("id", { count: "exact", head: true });
-      const [a, b, r, s] = await Promise.all([
-        c("clients"),
-        c("genogram_persons"),
-        c("genogram_relationships"),
-        c("clinical_sessions"),
+      const count = { count: "exact", head: true } as const;
+      const [a, b, r, scheduled, completed] = await Promise.all([
+        supabase.from("clients").select("id", count).eq("status", "active"),
+        supabase
+          .from("genogram_persons")
+          .select("id", count)
+          .eq("is_proband", false)
+          .neq("full_name", ""),
+        supabase.from("genogram_relationships").select("id", count),
+        supabase
+          .from("clinical_sessions")
+          .select("id", count)
+          .neq("status", "deleting")
+          .in("clinical_status", ["scheduled", "in_progress"]),
+        supabase
+          .from("clinical_sessions")
+          .select("id", count)
+          .neq("status", "deleting")
+          .eq("clinical_status", "completed"),
       ]);
-      for (const x of [a, b, r, s]) if (x.error) throw x.error;
+      for (const x of [a, b, r, scheduled, completed]) if (x.error) throw x.error;
       return onboardingSteps({
         clients: a.count ?? 0,
         persons: b.count ?? 0,
         relationships: r.count ?? 0,
-        sessions: s.count ?? 0,
+        scheduled: scheduled.count ?? 0,
+        completed: completed.count ?? 0,
       });
     },
   });
 
   const clients = clientsQ.data ?? [];
+  const onboardingClientId =
+    visits.find((visit) => clients.some((client) => client.id === visit.clientId))?.clientId ??
+    clients[0]?.id;
   const nameOf = (id: string) => {
     const c = clients.find((x) => x.id === id);
     return c ? c.preferred_name || c.full_name : "Cliente";
@@ -186,6 +208,24 @@ function AppHome() {
     )
     .slice(0, 4);
   const next = upcomingQ.data?.[0];
+  const nextStartISO = next?.session_date;
+  const refreshUpcoming = upcomingQ.refetch;
+  const refreshPending = pendingRecordsQ.refetch;
+  useEffect(() => {
+    const boundary = Date.parse(nextStartISO ?? "");
+    if (!Number.isFinite(boundary)) return;
+    let timer: number | undefined;
+    function refreshAtBoundary() {
+      const delay = agendaBoundaryDelay(nextStartISO);
+      if (delay === null) return;
+      timer = window.setTimeout(() => {
+        if (boundary > Date.now()) refreshAtBoundary();
+        else void Promise.all([refreshUpcoming(), refreshPending()]);
+      }, delay);
+    }
+    refreshAtBoundary();
+    return () => window.clearTimeout(timer);
+  }, [nextStartISO, refreshUpcoming, refreshPending]);
   const nextDuration = next ? appointmentDurationMin(next) : null;
   const consentQ = useQuery({
     queryKey: ["audio-consent", next?.client_id],
@@ -334,63 +374,6 @@ function AppHome() {
           </div>
         </section>
 
-        <aside className="work-desk-secondary" aria-labelledby="resume-h">
-          <section className="work-desk-section">
-            <h2 id="resume-h">Retomar dossiê</h2>
-            {clientsQ.isLoading ? (
-              <div role="status" className="work-desk-muted">
-                <span>Carregando casos…</span>
-                <div className="work-skeleton" aria-hidden />
-              </div>
-            ) : clientsQ.isError ? (
-              <ErrorRow
-                msg="Não foi possível carregar os casos."
-                onRetry={() => clientsQ.refetch()}
-              />
-            ) : resumable.length > 0 ? (
-              <ul className="work-desk-ledger">
-                {resumable.map((visit) => (
-                  <li key={visit.clientId}>
-                    <Link
-                      to="/app/clientes/$clientId"
-                      params={{ clientId: visit.clientId }}
-                      search={{
-                        tab: (TAB_LABEL[visit.tab] ? visit.tab : "overview") as "overview",
-                      }}
-                      className="work-desk-row work-desk-resume"
-                    >
-                      <span>
-                        <strong>{nameOf(visit.clientId)}</strong>
-                        <span>{TAB_LABEL[visit.tab] ?? "Visão geral"}</span>
-                      </span>
-                      <time dateTime={dateKeyInTz(new Date(visit.at), tz)}>
-                        {new Date(visit.at).toLocaleDateString("pt-BR")}
-                      </time>
-                      <ArrowRight size={17} aria-hidden />
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="work-desk-muted">
-                {clients.length > 0
-                  ? "Os dossiês que você abrir ficam aqui, na aba em que parou."
-                  : "Nenhum caso cadastrado."}
-              </p>
-            )}
-            <Link to="/app/clientes" className="work-desk-text-link">
-              {!clientsQ.isLoading && !clientsQ.isError && clients.length === 0
-                ? "Cadastrar caso"
-                : "Todos os clientes"}
-              <ArrowRight size={17} aria-hidden />
-            </Link>
-          </section>
-          <Link to="/app/biblioteca" className="work-desk-reference">
-            <BookOpen size={19} aria-hidden />
-            <span>Consultar biblioteca</span>
-            <ArrowRight size={17} aria-hidden />
-          </Link>
-        </aside>
         <div className="work-desk-review">
           {(upcomingQ.data?.length ?? 0) > 1 && (
             <section className="work-upcoming" aria-labelledby="work-upcoming-heading">
@@ -545,6 +528,63 @@ function AppHome() {
             </div>
           </section>
         </div>
+        <aside className="work-desk-secondary" aria-labelledby="resume-h">
+          <section className="work-desk-section">
+            <h2 id="resume-h">Retomar dossiê</h2>
+            {clientsQ.isLoading ? (
+              <div role="status" className="work-desk-muted">
+                <span>Carregando casos…</span>
+                <div className="work-skeleton" aria-hidden />
+              </div>
+            ) : clientsQ.isError ? (
+              <ErrorRow
+                msg="Não foi possível carregar os casos."
+                onRetry={() => clientsQ.refetch()}
+              />
+            ) : resumable.length > 0 ? (
+              <ul className="work-desk-ledger">
+                {resumable.map((visit) => (
+                  <li key={visit.clientId}>
+                    <Link
+                      to="/app/clientes/$clientId"
+                      params={{ clientId: visit.clientId }}
+                      search={{
+                        tab: (TAB_LABEL[visit.tab] ? visit.tab : "overview") as "overview",
+                      }}
+                      className="work-desk-row work-desk-resume"
+                    >
+                      <span>
+                        <strong>{nameOf(visit.clientId)}</strong>
+                        <span>{TAB_LABEL[visit.tab] ?? "Visão geral"}</span>
+                      </span>
+                      <time dateTime={dateKeyInTz(new Date(visit.at), tz)}>
+                        {new Date(visit.at).toLocaleDateString("pt-BR")}
+                      </time>
+                      <ArrowRight size={17} aria-hidden />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="work-desk-muted">
+                {clients.length > 0
+                  ? "Os dossiês que você abrir ficam aqui, na aba em que parou."
+                  : "Nenhum caso cadastrado."}
+              </p>
+            )}
+            <Link to="/app/clientes" className="work-desk-text-link">
+              {!clientsQ.isLoading && !clientsQ.isError && clients.length === 0
+                ? "Cadastrar caso"
+                : "Todos os clientes"}
+              <ArrowRight size={17} aria-hidden />
+            </Link>
+          </section>
+          <Link to="/app/biblioteca" className="work-desk-reference">
+            <BookOpen size={19} aria-hidden />
+            <span>Consultar biblioteca</span>
+            <ArrowRight size={17} aria-hidden />
+          </Link>
+        </aside>
       </div>
 
       {scheduleOpen && (
@@ -585,14 +625,39 @@ function AppHome() {
                   {step.done ? <Check size={16} /> : index + 1}
                 </span>
                 <span>
-                  {step.label}
+                  {step.done ? (
+                    step.label
+                  ) : step.id === "client" ? (
+                    <Link className="work-desk-text-link" to="/app/clientes" hash="novo-cliente">
+                      {step.label}
+                    </Link>
+                  ) : step.id === "schedule" ? (
+                    <button
+                      className="work-desk-text-link"
+                      type="button"
+                      onClick={() => setScheduleOpen(true)}
+                    >
+                      {step.label}
+                    </button>
+                  ) : onboardingClientId ? (
+                    <Link
+                      className="work-desk-text-link"
+                      to="/app/clientes/$clientId"
+                      params={{ clientId: onboardingClientId }}
+                      search={{ tab: step.id === "session" ? "sessions" : "genogram" }}
+                    >
+                      {step.label}
+                    </Link>
+                  ) : (
+                    step.label
+                  )}
                   <span className="sr-only">{step.done ? " (concluído)" : " (pendente)"}</span>
                 </span>
               </li>
             ))}
           </ol>
           <Link to="/" hash="caso-ficticio" className="work-desk-text-link">
-            Praticar no Consultante fictício <ArrowRight size={17} aria-hidden />
+            Praticar com uma família fictícia <ArrowRight size={17} aria-hidden />
           </Link>
         </section>
       )}

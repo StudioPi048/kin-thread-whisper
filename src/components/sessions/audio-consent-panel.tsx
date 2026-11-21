@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import {
   AUDIO_CONSENT_SCOPE,
   AUDIO_CONSENT_SOURCE,
@@ -16,6 +17,8 @@ const scopeDetail: Record<AudioConsentScope, string> = {
   external_processing:
     "Enviar o áudio e a transcrição a serviços externos de IA, via Lovable, para gerar um texto que a profissional revisa.",
 };
+
+type Confirmation = Database["public"]["Functions"]["record_audio_consent_idempotent"]["Args"];
 
 function eventLabel(event: AudioConsentEvent) {
   return `${event.granted ? "Concedida" : "Revogada"} em ${new Date(event.created_at).toLocaleString("pt-BR")} · ${AUDIO_CONSENT_SOURCE[event.source as AudioConsentSource] ?? event.source}`;
@@ -45,6 +48,7 @@ export function AudioConsentPanel({
     granted: boolean;
     sessionId: string;
     targetLabel: string;
+    requestId: string;
   }>();
   const [source, setSource] = useState<AudioConsentSource | "">("");
   const [selection, setSelection] = useState<{ request: typeof requestedScope; id: string }>();
@@ -59,21 +63,13 @@ export function AudioConsentPanel({
   const targetUnavailable = !!target && !selected;
   const [termVersion, setVersion] = useState("");
   const [reference, setReference] = useState("");
+  const [confirmation, setConfirmation] = useState<Confirmation>();
   const activeEvents = sessionId
     ? events.filter((event) => !event.session_id || event.session_id === sessionId)
     : events;
   const save = useMutation({
-    mutationFn: async () => {
-      if (!change || !source) return;
-      const { error } = await supabase.rpc("record_audio_consent_details", {
-        _client_id: clientId,
-        _scope: change.scope,
-        _granted: change.granted,
-        _source: source,
-        ...(change.sessionId ? { _session_id: change.sessionId } : {}),
-        ...(termVersion.trim() ? { _term_version: termVersion.trim() } : {}),
-        ...(reference.trim() ? { _document_reference: reference.trim() } : {}),
-      });
+    mutationFn: async (request: Confirmation) => {
+      const { error } = await supabase.rpc("record_audio_consent_idempotent", request);
       if (error) throw error;
     },
     onSuccess: async () => {
@@ -82,6 +78,7 @@ export function AudioConsentPanel({
       setSource("");
       setVersion("");
       setReference("");
+      setConfirmation(undefined);
     },
   });
 
@@ -150,7 +147,7 @@ export function AudioConsentPanel({
                     variant="outline"
                     className="min-h-11"
                     aria-label={`${latest?.granted ? "Revogar" : "Registrar autorização para"} ${AUDIO_CONSENT_SCOPE[scope].toLowerCase()}`}
-                    disabled={save.isPending || targetUnavailable}
+                    disabled={save.isPending || !!confirmation || targetUnavailable}
                     onClick={() => {
                       save.reset();
                       setChange({
@@ -158,10 +155,12 @@ export function AudioConsentPanel({
                         granted: !latest?.granted,
                         sessionId,
                         targetLabel: selected?.label ?? "Caso inteiro",
+                        requestId: crypto.randomUUID(),
                       });
                       setSource("");
                       setVersion("");
                       setReference("");
+                      setConfirmation(undefined);
                     }}
                   >
                     {latest?.granted ? "Revogar autorização" : "Registrar autorização"}
@@ -175,7 +174,19 @@ export function AudioConsentPanel({
               className="space-y-3 rounded-sm border border-border bg-background p-3"
               onSubmit={(event) => {
                 event.preventDefault();
-                if (source && !save.isPending) save.mutate();
+                if (!source || save.isPending) return;
+                const request = confirmation ?? {
+                  _request_id: change.requestId,
+                  _client_id: clientId,
+                  _scope: change.scope,
+                  _granted: change.granted,
+                  _source: source,
+                  ...(change.sessionId ? { _session_id: change.sessionId } : {}),
+                  ...(termVersion.trim() ? { _term_version: termVersion.trim() } : {}),
+                  ...(reference.trim() ? { _document_reference: reference.trim() } : {}),
+                };
+                setConfirmation(request);
+                save.mutate(request);
               }}
             >
               <p className="text-sm font-semibold">
@@ -189,6 +200,7 @@ export function AudioConsentPanel({
                 Origem da decisão
                 <select
                   required
+                  disabled={!!confirmation}
                   className="mt-1 block min-h-11 w-full max-w-xs rounded-sm border border-input bg-background p-2"
                   value={source}
                   onChange={(event) => setSource(event.target.value as AudioConsentSource)}
@@ -215,6 +227,7 @@ export function AudioConsentPanel({
                   <input
                     className="min-h-11 min-w-0 rounded-md border border-input bg-card px-3 text-base"
                     value={termVersion}
+                    disabled={!!confirmation}
                     maxLength={100}
                     onChange={(e) => setVersion(e.target.value)}
                   />
@@ -224,6 +237,7 @@ export function AudioConsentPanel({
                   <input
                     className="min-h-11 min-w-0 rounded-md border border-input bg-card px-3 text-base"
                     value={reference}
+                    disabled={!!confirmation}
                     maxLength={500}
                     onChange={(e) => setReference(e.target.value)}
                   />
@@ -231,7 +245,7 @@ export function AudioConsentPanel({
               </div>
               {save.isError && (
                 <p role="alert" className="text-sm text-destructive">
-                  A decisão não foi registrada. Confira a conexão e tente novamente.
+                  A confirmação ficou sem resposta. Tente novamente para verificar o mesmo registro.
                 </p>
               )}
               <div className="flex flex-wrap gap-2">

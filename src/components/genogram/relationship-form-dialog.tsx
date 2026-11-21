@@ -156,13 +156,24 @@ export function RelationshipFormDialog({
         notes: form.notes.trim() || null,
       };
       if (editing) {
-        const { error } = await supabase
+        const patch = Object.fromEntries(
+          Object.entries(payload).filter(([key, value]) => value !== editing[key as keyof RelRow]),
+        ) as Partial<typeof payload>;
+        if (!Object.keys(patch).length) return;
+        const { data, error } = await supabase
           .from("genogram_relationships")
-          .update(payload)
+          .update(patch)
           .eq("id", editing.id)
           .eq("client_id", clientId)
-          .neq("relationship_type", "parent");
+          .neq("relationship_type", "parent")
+          .eq("updated_at", editing.updated_at)
+          .select("id")
+          .maybeSingle();
         if (error) throw error;
+        if (!data)
+          throw new Error(
+            "O vínculo mudou ou foi removido em outra aba. Seus dados continuam abertos para conferência.",
+          );
       } else {
         const { error } = await supabase.from("genogram_relationships").insert(payload);
         if (error) throw error;
@@ -190,20 +201,32 @@ export function RelationshipFormDialog({
       if (!editing) return;
       if (editing.relationship_type === "parent")
         throw new Error("Abra a revisão de filiação para remover este vínculo.");
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("genogram_relationships")
         .delete()
         .eq("client_id", clientId)
         .neq("relationship_type", "parent")
-        .eq("id", editing.id);
+        .eq("id", editing.id)
+        .eq("updated_at", editing.updated_at)
+        .select("id")
+        .maybeSingle();
       if (error) throw error;
+      if (!data)
+        throw new Error(
+          "O vínculo mudou ou já foi removido em outra aba. Reabra a ficha para conferir.",
+        );
     },
     onSuccess: async () => {
       await invalidateCase(qc, clientId);
       toast.success("Vínculo removido.");
       onOpenChange(false);
     },
-    onError: () => toast.error("Não foi possível remover o vínculo. Tente novamente."),
+    onError: (error) =>
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível remover o vínculo. Tente novamente.",
+      ),
   });
 
   const isParentLink = v.relationship_type === "parent";
@@ -220,7 +243,17 @@ export function RelationshipFormDialog({
       .filter(Boolean)
       .join(" · ");
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet
+      open={open}
+      onOpenChange={(next) => {
+        if (pending) return;
+        if (!next) {
+          mutation.reset();
+          removal.reset();
+        }
+        onOpenChange(next);
+      }}
+    >
       <SheetContent side="right" className="flex flex-col gap-0 p-0 sm:max-w-lg w-full">
         <SheetHeader className="shrink-0 border-b border-border px-5 py-5 pr-14 sm:px-7 sm:pr-14">
           <SheetTitle className="text-xl">
@@ -256,159 +289,168 @@ export function RelationshipFormDialog({
               mutation.mutate(v);
             }}
           >
-            <div className="space-y-2">
-              <Label htmlFor="geno-rel-type">Tipo de vínculo</Label>
-              <Select
-                value={v.relationship_type}
-                onValueChange={(x) =>
-                  setV((p) => ({ ...p, relationship_type: x as RelationshipType, qualifier: "" }))
-                }
-              >
-                <SelectTrigger id="geno-rel-type">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {relationshipTypes
-                    .filter(({ value }) => !editing || value !== "parent")
-                    .map((t) => (
-                      <SelectItem key={t.value} value={t.value} className="font-bold">
-                        {t.label}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid gap-4">
+            <fieldset disabled={pending} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="geno-rel-from">{fromHint}</Label>
+                <Label htmlFor="geno-rel-type">Tipo de vínculo</Label>
                 <Select
-                  value={v.from_person_id}
-                  onValueChange={(x) => setV((p) => ({ ...p, from_person_id: x }))}
-                >
-                  <SelectTrigger id="geno-rel-from">
-                    <SelectValue placeholder="Selecionar…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {persons.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {personLabel(p)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="geno-rel-to">{toHint}</Label>
-                <Select
-                  value={v.to_person_id}
-                  onValueChange={(x) => setV((p) => ({ ...p, to_person_id: x }))}
-                >
-                  <SelectTrigger id="geno-rel-to">
-                    <SelectValue placeholder="Selecionar…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {persons.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {personLabel(p)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {isParentLink && v.from_person_id && v.to_person_id && (
-              <div className="space-y-2 rounded-md border border-border bg-card p-3">
-                <p className="text-sm">
-                  <strong>{personLabel(persons.find(({ id }) => id === v.from_person_id))}</strong>{" "}
-                  como genitor de{" "}
-                  <strong>{personLabel(persons.find(({ id }) => id === v.to_person_id))}</strong>
-                </p>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="min-h-11"
-                  disabled={pending}
-                  onClick={() =>
-                    setV((state) => ({
-                      ...state,
-                      from_person_id: state.to_person_id,
-                      to_person_id: state.from_person_id,
-                    }))
-                  }
-                >
-                  <ArrowDownUp className="size-4" /> Inverter direção da filiação
-                </Button>
-              </div>
-            )}
-
-            {qualifierOptions.length > 0 && (
-              <div className="space-y-2 pt-2">
-                <Label htmlFor="geno-rel-qualifier">
-                  {isParentLink ? "Natureza da filiação" : "Detalhe do vínculo"}
-                </Label>
-                <Select
-                  value={v.qualifier || undefined}
-                  onValueChange={(x) => setV((p) => ({ ...p, qualifier: x }))}
-                >
-                  <SelectTrigger id="geno-rel-qualifier">
-                    <SelectValue placeholder={isParentLink ? "Selecionar…" : "Opcional"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {qualifierOptions.map((q) => (
-                      <SelectItem key={q.value} value={q.value}>
-                        {q.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {v.relationship_type === "union" && (
-              <div className="space-y-2 pt-2">
-                <Label htmlFor="geno-rel-order">Ordem desta união</Label>
-                <Select
-                  value={v.marriage_order || "none"}
+                  value={v.relationship_type}
                   onValueChange={(x) =>
-                    setV((p) => ({ ...p, marriage_order: x === "none" ? "" : x }))
+                    setV((p) => ({ ...p, relationship_type: x as RelationshipType, qualifier: "" }))
                   }
                 >
-                  <SelectTrigger id="geno-rel-order">
-                    <SelectValue placeholder="União única" />
+                  <SelectTrigger id="geno-rel-type">
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">União única (padrão)</SelectItem>
-                    <SelectItem value="1">① Primeira união</SelectItem>
-                    <SelectItem value="2">② Segunda união</SelectItem>
-                    <SelectItem value="3">③ Terceira união</SelectItem>
-                    <SelectItem value="4">④ Quarta união</SelectItem>
-                    <SelectItem value="5">⑤ Quinta união</SelectItem>
+                    {relationshipTypes
+                      .filter(({ value }) => !editing || value !== "parent")
+                      .map((t) => (
+                        <SelectItem key={t.value} value={t.value} className="font-bold">
+                          {t.label}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
-                <p className="text-[14px] text-muted-foreground leading-snug">
-                  Use quando a pessoa teve mais de um casamento — aparece como ①/②/③ na linha do
-                  casal para diferenciar cônjuges.
-                </p>
               </div>
-            )}
 
-            <div className="space-y-2 pt-2">
-              <Label htmlFor="geno-rel-notes">Origem e observações</Label>
-              <Textarea
-                id="geno-rel-notes"
-                rows={3}
-                value={v.notes}
-                onChange={(e) => setV((p) => ({ ...p, notes: e.target.value }))}
-                placeholder="Ex.: relato da família, documento ou data da confirmação"
-                className="resize-none"
-              />
-            </div>
+              <div className="grid gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="geno-rel-from">{fromHint}</Label>
+                  <Select
+                    value={v.from_person_id}
+                    onValueChange={(x) => setV((p) => ({ ...p, from_person_id: x }))}
+                  >
+                    <SelectTrigger id="geno-rel-from">
+                      <SelectValue placeholder="Selecionar…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {persons.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {personLabel(p)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="geno-rel-to">{toHint}</Label>
+                  <Select
+                    value={v.to_person_id}
+                    onValueChange={(x) => setV((p) => ({ ...p, to_person_id: x }))}
+                  >
+                    <SelectTrigger id="geno-rel-to">
+                      <SelectValue placeholder="Selecionar…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {persons.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {personLabel(p)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {isParentLink && v.from_person_id && v.to_person_id && (
+                <div className="space-y-2 rounded-md border border-border bg-card p-3">
+                  <p className="text-sm">
+                    <strong>
+                      {personLabel(persons.find(({ id }) => id === v.from_person_id))}
+                    </strong>{" "}
+                    como genitor de{" "}
+                    <strong>{personLabel(persons.find(({ id }) => id === v.to_person_id))}</strong>
+                  </p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="min-h-11"
+                    disabled={pending}
+                    onClick={() =>
+                      setV((state) => ({
+                        ...state,
+                        from_person_id: state.to_person_id,
+                        to_person_id: state.from_person_id,
+                      }))
+                    }
+                  >
+                    <ArrowDownUp className="size-4" /> Inverter direção da filiação
+                  </Button>
+                </div>
+              )}
+
+              {qualifierOptions.length > 0 && (
+                <div className="space-y-2 pt-2">
+                  <Label htmlFor="geno-rel-qualifier">
+                    {isParentLink ? "Natureza da filiação" : "Detalhe do vínculo"}
+                  </Label>
+                  <Select
+                    value={v.qualifier || undefined}
+                    onValueChange={(x) => setV((p) => ({ ...p, qualifier: x }))}
+                  >
+                    <SelectTrigger id="geno-rel-qualifier">
+                      <SelectValue placeholder={isParentLink ? "Selecionar…" : "Opcional"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {qualifierOptions.map((q) => (
+                        <SelectItem key={q.value} value={q.value}>
+                          {q.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {v.relationship_type === "union" && (
+                <div className="space-y-2 pt-2">
+                  <Label htmlFor="geno-rel-order">Ordem desta união</Label>
+                  <Select
+                    value={v.marriage_order || "none"}
+                    onValueChange={(x) =>
+                      setV((p) => ({ ...p, marriage_order: x === "none" ? "" : x }))
+                    }
+                  >
+                    <SelectTrigger id="geno-rel-order">
+                      <SelectValue placeholder="União única" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">União única (padrão)</SelectItem>
+                      <SelectItem value="1">① Primeira união</SelectItem>
+                      <SelectItem value="2">② Segunda união</SelectItem>
+                      <SelectItem value="3">③ Terceira união</SelectItem>
+                      <SelectItem value="4">④ Quarta união</SelectItem>
+                      <SelectItem value="5">⑤ Quinta união</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[14px] text-muted-foreground leading-snug">
+                    Use quando a pessoa teve mais de um casamento — aparece como ①/②/③ na linha do
+                    casal para diferenciar cônjuges.
+                  </p>
+                </div>
+              )}
+
+              <div className="space-y-2 pt-2">
+                <Label htmlFor="geno-rel-notes">Origem e observações</Label>
+                <Textarea
+                  id="geno-rel-notes"
+                  rows={3}
+                  value={v.notes}
+                  onChange={(e) => setV((p) => ({ ...p, notes: e.target.value }))}
+                  placeholder="Ex.: relato da família, documento ou data da confirmação"
+                  className="resize-none"
+                />
+              </div>
+            </fieldset>
           </form>
         </ScrollArea>
+        {(mutation.error || removal.error) && (
+          <p role="alert" className="border-t border-border p-3 text-sm text-destructive">
+            {(mutation.error ?? removal.error)?.message}
+          </p>
+        )}
 
         {confirmRemoval && (
           <div className="border-t border-border px-5 py-3 text-sm text-foreground" role="alert">

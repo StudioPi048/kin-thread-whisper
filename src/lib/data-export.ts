@@ -1,4 +1,6 @@
 /** Personal export: explicit ownership, stable pagination, and related layout positions. */
+import { activeAudioConsent, type AudioConsentEvent } from "./audio-consent";
+
 export type ExportTable =
   | "profiles"
   | "clients"
@@ -110,6 +112,62 @@ export async function exportDossierData(read: ExportPageReader, userId: string, 
     note: exportNote,
     client,
     ...(await exportCases(read, [client])),
+  };
+}
+
+type BundleMedia = {
+  session_id: string;
+  state: "included" | "not_selected" | "not_available" | "authorization_required";
+  bytes?: number;
+  mime_type?: string;
+  data_url?: string;
+};
+
+/** Add only the confirmed recordings of this case that retain their original authorization. */
+export async function packageDossier(
+  data: Awaited<ReturnType<typeof exportDossierData>>,
+  readAudio?: (
+    path: string,
+    sessionId: string,
+    grantId: string,
+  ) => Promise<{ bytes: number; mime_type: string; data_url: string }>,
+) {
+  const consent = [...(data.audio_consent_events as unknown as AudioConsentEvent[])].sort(
+    (a, b) => b.revision - a.revision,
+  );
+  const media: BundleMedia[] = [];
+  for (const session of data.clinical_sessions) {
+    if (typeof session.audio_path !== "string" || !session.audio_path) continue;
+    const file: BundleMedia = { session_id: session.id, state: "not_selected" };
+    media.push(file);
+    if (!readAudio) continue;
+    const prefix = `${data.client.professional_id}/${data.client.id}/${session.id}/`;
+    if (
+      session.user_id !== data.client.professional_id ||
+      !session.audio_path.startsWith(prefix) ||
+      !["draft", "transcribing", "structuring", "ready", "error"].includes(String(session.status))
+    ) {
+      file.state = "not_available";
+      continue;
+    }
+    const grant = activeAudioConsent(consent, "recording", session.id);
+    if (!grant || grant.id !== session.recording_consent_id) {
+      file.state = "authorization_required";
+      continue;
+    }
+    try {
+      Object.assign(file, await readAudio(session.audio_path, session.id, grant.id), {
+        state: "included",
+      });
+    } catch {
+      file.state = "not_available";
+    }
+  }
+  return {
+    ...data,
+    format_version: 2,
+    note: "Dossiê com manifesto de gravações. As gravações incluídas são incorporadas no JSON.",
+    manifest: { media_requested: Boolean(readAudio), media },
   };
 }
 

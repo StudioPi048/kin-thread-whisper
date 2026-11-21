@@ -7,6 +7,7 @@ import {
   type ParentageCandidate,
 } from "../../src/lib/parentage-review";
 import type { ClanWorkbookWrite } from "../../src/lib/clan-workbook";
+import { appointmentDurationMin } from "../../src/lib/scheduling";
 const uid = "00000000-0000-4000-8000-000000000001";
 export const cid = "00000000-0000-4000-8000-000000000002";
 const now = new Date();
@@ -200,6 +201,7 @@ const db: Record<string, any[]> = {
     ...fixtureLinks,
   ],
   genogram_parentage_reviews: [],
+  hypothesis_reviews: [],
   dossier_deletion_jobs: [],
   clinical_sessions: [...sessions, syntheticReviewSession],
   audio_consent_events: [],
@@ -227,6 +229,14 @@ const familyFixtureTables = [
   "genogram_relationships",
   "genogram_parentage_reviews",
 ];
+const persistedFixtureTables = [
+  ...familyFixtureTables,
+  "genogram_layouts",
+  "genogram_node_positions",
+  "client_intakes",
+  "clinical_sessions",
+  "hypothesis_reviews",
+];
 const fixtureFamilyStorage = "genealiz-local-preview-family-v2";
 let fixtureHydrated = false;
 function readFixtureFamily() {
@@ -236,7 +246,7 @@ function readFixtureFamily() {
   if (!stored) return;
   try {
     const data = JSON.parse(stored);
-    for (const table of familyFixtureTables)
+    for (const table of persistedFixtureTables)
       if (Array.isArray(data[table])) db[table] = data[table];
   } catch {
     sessionStorage.removeItem(fixtureFamilyStorage);
@@ -247,9 +257,48 @@ function persistFixtureFamily() {
   if (typeof window === "undefined") return;
   sessionStorage.setItem(
     fixtureFamilyStorage,
-    JSON.stringify(Object.fromEntries(familyFixtureTables.map((table) => [table, db[table]]))),
+    JSON.stringify(Object.fromEntries(persistedFixtureTables.map((table) => [table, db[table]]))),
   );
 }
+function fixtureReactivationConflicts(clientId: string) {
+  const now = Date.now();
+  const slots = db.clinical_sessions
+    .filter(
+      (row) =>
+        row.status !== "deleting" &&
+        (row.client_id === clientId ||
+          db.clients.some((client) => client.id === row.client_id && client.status === "active")) &&
+        (["scheduled", "in_progress"].includes(row.clinical_status) ||
+          (row.clinical_status == null && Date.parse(row.session_date) > now)),
+    )
+    .map((row) => {
+      const start = Date.parse(row.session_date);
+      const durationMin = appointmentDurationMin(row) ?? 60;
+      return { row, start, end: start + durationMin * 60_000, durationMin };
+    })
+    .sort((a, b) => a.start - b.start || a.row.id.localeCompare(b.row.id));
+  return slots
+    .filter(({ row, end }) => row.client_id === clientId && end > now)
+    .flatMap(({ row, start, end, durationMin }) => {
+      const collision = slots.find(
+        (other) => other.row.id !== row.id && other.start < end && start < other.end,
+      );
+      if (!collision) return [];
+      const person = db.clients.find((client) => client.id === collision.row.client_id);
+      return [
+        {
+          id: row.id,
+          startISO: row.session_date,
+          updatedAt: row.updated_at,
+          durationMin,
+          conflictName: person?.preferred_name || person?.full_name || "Cliente",
+          conflictStartISO: collision.row.session_date,
+        },
+      ];
+    })
+    .slice(0, 5);
+}
+
 class Query {
   rows: any[];
   filters: ((r: any) => boolean)[] = [];
@@ -373,8 +422,24 @@ class Query {
     try {
       let rows = this.rows.filter((r) => this.filters.every((f) => f(r)));
       if (this.mutation === "update") {
+        if (this.table === "clients" && this.payload.status === "active") {
+          const blocked = rows
+            .filter((row) => row.status === "archived")
+            .flatMap((row) => fixtureReactivationConflicts(row.id));
+          if (blocked.length) {
+            return Promise.resolve({
+              data: null,
+              error: { code: "23P01", details: JSON.stringify(blocked) },
+            }).then(resolve, reject);
+          }
+        }
         const touchedAt = new Date().toISOString();
-        const touchDate = ["client_intakes", "clinical_sessions", "clients"].includes(this.table);
+        const touchDate = [
+          "client_intakes",
+          "clinical_sessions",
+          "clients",
+          ...familyFixtureTables,
+        ].includes(this.table);
         const transcriptContent = (reviews: any) =>
           JSON.stringify(
             Object.entries(reviews ?? {}).flatMap(([key, review]: [string, any]) =>
@@ -410,7 +475,9 @@ class Query {
         rows = (Array.isArray(this.payload) ? this.payload : [this.payload]).map((v: any) => ({
           id: crypto.randomUUID(),
           created_at: stamp,
-          ...(["client_intakes", "clinical_sessions", "clients"].includes(this.table)
+          ...(["client_intakes", "clinical_sessions", "clients", ...familyFixtureTables].includes(
+            this.table,
+          )
             ? { updated_at: new Date().toISOString() }
             : {}),
           ...(this.table === "clinical_sessions"
@@ -443,6 +510,7 @@ class Query {
         });
       }
       rows = rows.slice(this.start, this.start + this.max);
+      if (this.mutation && persistedFixtureTables.includes(this.table)) persistFixtureFamily();
       return Promise.resolve({
         data: this.head ? null : this.one ? (rows[0] ?? null) : rows,
         count: rows.length,
@@ -700,6 +768,254 @@ export const supabase: any = {
   from: (table: string) => new Query(table),
   rpc: async (name: string, args: Record<string, unknown>) => {
     readFixtureFamily();
+    if (name === "search_workspace_clients") {
+      const search = String(args._search ?? "").trim();
+      const fold = (value: string) =>
+        value
+          .normalize("NFD")
+          .replace(/\p{Diacritic}/gu, "")
+          .toLowerCase();
+      const tokens = fold(search)
+        .slice(0, 96)
+        .match(/[\p{Letter}\d]+/gu);
+      const pattern = tokens ? new RegExp(tokens.join(".*"), "u") : null;
+      const offset = Math.max(0, Number(args._offset ?? 0));
+      const limit = Math.min(100, Math.max(1, Number(args._limit ?? 24)));
+      const matches = db.clients
+        .filter((client) => {
+          if (client.professional_id !== uid || client.status !== (args._status ?? "active"))
+            return false;
+          if (
+            args._without_upcoming &&
+            db.clinical_sessions.some(
+              (session) =>
+                session.client_id === client.id &&
+                session.status !== "deleting" &&
+                Date.parse(session.session_date) >= Date.now() &&
+                (session.clinical_status === "scheduled" || session.clinical_status == null),
+            )
+          )
+            return false;
+          const fields = [client.full_name, client.preferred_name];
+          if (args._details)
+            fields.push(
+              client.birthplace,
+              client.email,
+              client.phone,
+              client.presenting_complaint,
+              client.tags?.join(" "),
+            );
+          return !search || pattern?.test(fold(fields.filter(Boolean).join(" ")));
+        })
+        .sort(
+          (a, b) =>
+            (args._details
+              ? String(b.created_at ?? "").localeCompare(String(a.created_at ?? ""))
+              : a.full_name.localeCompare(b.full_name, "pt-BR")) || a.id.localeCompare(b.id),
+        );
+      return fixtureResult({
+        total: matches.length,
+        clients: matches.slice(offset, offset + limit).map((client) =>
+          args._details
+            ? { ...client, preferred_name: client.preferred_name ?? null }
+            : {
+                id: client.id,
+                full_name: client.full_name,
+                status: client.status,
+                preferred_name: client.preferred_name ?? null,
+              },
+        ),
+      });
+    }
+    if (name === "append_hypothesis_review") {
+      if (!db.clients.some((row) => row.id === args._client_id))
+        return fixtureError("Dossiê indisponível.");
+      const latest = db.hypothesis_reviews
+        .filter(
+          (row) => row.client_id === args._client_id && row.hypothesis_key === args._hypothesis_key,
+        )
+        .sort((a, b) => b.version - a.version)[0];
+      if ((latest?.id ?? null) !== args._expected_review_id)
+        return fixtureResult({ kind: "conflict", latest: latest ?? null });
+      const review = {
+        id: crypto.randomUUID(),
+        client_id: args._client_id,
+        professional_id: uid,
+        hypothesis_key: args._hypothesis_key,
+        hypothesis_title: args._hypothesis_title,
+        decision: args._decision,
+        note: args._note,
+        evidence_fingerprint: args._evidence_fingerprint,
+        evidence_snapshot: args._evidence_snapshot,
+        version: (latest?.version ?? 0) + 1,
+        created_at: new Date().toISOString(),
+      };
+      db.hypothesis_reviews.push(review);
+      persistFixtureFamily();
+      return fixtureResult({ kind: "saved", latest: review });
+    }
+    if (name === "save_genogram_arrangement") {
+      const previous = db.genogram_layouts
+        .filter((row) => row.client_id === args._client_id)
+        .sort((a, b) => b.updated_at.localeCompare(a.updated_at) || a.id.localeCompare(b.id))[0];
+      if (
+        (previous?.id ?? null) !== args._layout_id ||
+        (previous?.updated_at ?? null) !== args._expected
+      )
+        return fixtureError("O arranjo mudou em outra aba. O rascunho local foi preservado.");
+      if (previous?.is_fixed) return fixtureError("As posições já estão fixadas.");
+      const positions = args._positions as { id: string; x: number; y: number }[];
+      if (
+        !positions.every((position) =>
+          db.genogram_persons.some(
+            (person) => person.id === position.id && person.client_id === args._client_id,
+          ),
+        )
+      )
+        return fixtureError("Uma pessoa mudou desde que o mapa foi aberto.");
+      const now = new Date(
+        Math.max(Date.now(), Date.parse(previous?.updated_at ?? fixtureStamp) + 1),
+      ).toISOString();
+      const layout = {
+        id: previous?.id ?? crypto.randomUUID(),
+        client_id: args._client_id,
+        name: "Layout Atual",
+        is_fixed: false,
+        created_at: previous?.created_at ?? now,
+        updated_at: now,
+      };
+      db.genogram_layouts = [...db.genogram_layouts.filter((row) => row.id !== layout.id), layout];
+      const ids = new Set(positions.map(({ id }) => id));
+      db.genogram_node_positions = [
+        ...db.genogram_node_positions.filter(
+          (row) => row.layout_id !== layout.id || !ids.has(row.node_id),
+        ),
+        ...positions.map(({ id, x, y }) => ({
+          id: crypto.randomUUID(),
+          layout_id: layout.id,
+          node_id: id,
+          node_type: "person",
+          x,
+          y,
+          layout_mode: "MANUAL",
+        })),
+      ];
+      persistFixtureFamily();
+      return fixtureResult(layout);
+    }
+    if (name === "remove_genogram_selection") {
+      const peopleIds = new Set(args._people as string[]);
+      const linkIds = new Set(args._relationships as string[]);
+      const people = db.genogram_persons.filter(
+        (row) => row.client_id === args._client_id && !row.is_proband && peopleIds.has(row.id),
+      );
+      const eligibleLinks = db.genogram_relationships.filter(
+        (row) =>
+          row.client_id === args._client_id &&
+          row.relationship_type !== "parent" &&
+          linkIds.has(row.id),
+      );
+      if (people.length !== peopleIds.size || eligibleLinks.length !== linkIds.size)
+        return fixtureError(
+          "A seleção mudou ou inclui um item indisponível. Atualize e confira o mapa.",
+        );
+      const links = db.genogram_relationships.filter(
+        (row) =>
+          row.client_id === args._client_id &&
+          (linkIds.has(row.id) ||
+            peopleIds.has(row.from_person_id) ||
+            peopleIds.has(row.to_person_id)),
+      );
+      const reviews = db.genogram_parentage_reviews.filter(
+        (row) => row.client_id === args._client_id && peopleIds.has(row.child_id),
+      );
+      const versions = (rows: { id: string; updated_at: string }[]) =>
+        rows.map(({ id, updated_at }) => [id, updated_at]).sort(([a], [b]) => a.localeCompare(b));
+      const impact = {
+        people: people.length,
+        relationships: links.length,
+        reviews: reviews.length,
+        personVersions: versions(people),
+        relationshipVersions: versions(links),
+      };
+      if (args._expected) {
+        if (JSON.stringify(impact) !== JSON.stringify(args._expected))
+          return fixtureError(
+            "Os vínculos ou a seleção mudaram. Confira novamente antes de remover.",
+          );
+        db.genogram_relationships = db.genogram_relationships.filter((row) => !links.includes(row));
+        db.genogram_parentage_reviews = db.genogram_parentage_reviews.filter(
+          (row) => !reviews.includes(row),
+        );
+        db.genogram_persons = db.genogram_persons.filter((row) => !people.includes(row));
+        db.genogram_node_positions = db.genogram_node_positions.filter(
+          (row) => !peopleIds.has(row.node_id),
+        );
+        persistFixtureFamily();
+      }
+      return fixtureResult(impact);
+    }
+    if (name === "create_genogram_relative") {
+      const clientId = args._client_id;
+      const targetId = String(args._target_id);
+      if (!db.genogram_persons.some((row) => row.client_id === clientId && row.id === targetId))
+        return fixtureError("Dossiê ou familiar indisponível.");
+      const id = crypto.randomUUID();
+      const now = new Date().toISOString();
+      const person = {
+        ...(args._person as object),
+        client_id: clientId,
+        id,
+        is_proband: false,
+        parentage_reviewed: false,
+        created_at: now,
+        updated_at: now,
+      };
+      db.genogram_persons.push(person);
+      if (args._direction === "sibling") {
+        db.genogram_relationships.push({
+          id: crypto.randomUUID(),
+          client_id: clientId,
+          from_person_id: targetId,
+          to_person_id: id,
+          relationship_type: "sibling",
+          qualifier: args._kind,
+          start_date: null,
+          end_date: null,
+          notes: null,
+          marriage_order: null,
+          created_at: now,
+          updated_at: now,
+        });
+      } else {
+        const addingParent = args._direction === "parent";
+        const parents = addingParent
+          ? db.genogram_relationships
+              .filter(
+                (row) =>
+                  row.client_id === clientId &&
+                  row.to_person_id === targetId &&
+                  row.relationship_type === "parent" &&
+                  row.from_person_id !== args._replaces,
+              )
+              .map((row) => ({ personId: row.from_person_id }))
+          : [];
+        const result = reviewFixtureParentage({
+          _client_id: clientId,
+          _child_id: addingParent ? targetId : id,
+          _expected: addingParent ? args._expected : [],
+          _parents: [...parents, { personId: addingParent ? id : targetId, kind: args._kind }],
+          _decision: "edit",
+          _source: "unverified",
+        });
+        if (result.error) {
+          db.genogram_persons = db.genogram_persons.filter((row) => row.id !== id);
+          return result;
+        }
+      }
+      persistFixtureFamily();
+      return fixtureResult(id);
+    }
     if (name === "confirm_session_audio_upload") {
       const session = db.clinical_sessions.find((row) => row.id === args._session_id);
       if (
@@ -711,6 +1027,8 @@ export const supabase: any = {
       ) {
         return fixtureResult("unavailable");
       }
+      if (session.status === "awaiting_upload" && session.clinical_status === "canceled")
+        return fixtureResult("canceled");
       if (!fixtureAudio.has(session.audio_path)) return fixtureResult("missing");
       if (session.status === "awaiting_upload") {
         const grant = [...db.audio_consent_events]
@@ -728,6 +1046,7 @@ export const supabase: any = {
           error_message: null,
           updated_at: new Date().toISOString(),
         });
+        persistFixtureFamily();
       }
       return fixtureResult("confirmed");
     }
@@ -736,6 +1055,7 @@ export const supabase: any = {
       if (name === "begin_session_deletion") {
         if (!session) return fixtureResult(null);
         session.status = "deleting";
+        persistFixtureFamily();
         return fixtureResult(session.audio_path ?? null);
       }
       if (!session) return fixtureResult(true);
@@ -746,6 +1066,7 @@ export const supabase: any = {
         return fixtureResult(false);
       }
       db.clinical_sessions = db.clinical_sessions.filter((row) => row !== session);
+      persistFixtureFamily();
       return fixtureResult(true);
     }
     if (name === "list_dossier_deletions")
@@ -774,6 +1095,7 @@ export const supabase: any = {
       for (const table of [
         "audio_consent_events",
         "client_intakes",
+        "hypothesis_reviews",
         "clinical_sessions",
         "genogram_persons",
         "genogram_relationships",
@@ -802,13 +1124,44 @@ export const supabase: any = {
       return fixtureResult(true);
     }
     if (name === "import_clan_workbook") return importFixtureWorkbook(args);
+    if (name === "remove_empty_clan_rows") {
+      const candidates = new Map(
+        (args._candidates as { id: string; updated_at: string }[]).map((row) => [
+          row.id,
+          row.updated_at,
+        ]),
+      );
+      const linked = new Set(
+        db.genogram_relationships.flatMap((row) => [row.from_person_id, row.to_person_id]),
+      );
+      const before = db.genogram_persons.length;
+      db.genogram_persons = db.genogram_persons.filter(
+        (row) =>
+          row.client_id !== args._client_id ||
+          row.is_proband ||
+          row.parentage_reviewed ||
+          row.full_name.trim() ||
+          !candidates.has(row.id) ||
+          candidates.get(row.id) !== row.updated_at ||
+          linked.has(row.id) ||
+          db.genogram_parentage_reviews.some((review) => review.child_id === row.id),
+      );
+      persistFixtureFamily();
+      return fixtureResult(before - db.genogram_persons.length);
+    }
     if (name === "review_parentage" || name === "undo_parentage_review") {
       const result =
         name === "review_parentage" ? reviewFixtureParentage(args) : undoFixtureParentage(args);
       if (!result.error) persistFixtureFamily();
       return result;
     }
-    if (name === "mesa_pending_clinical_records" || name === "list_pending_clinical_records") {
+    if (
+      [
+        "mesa_pending_clinical_records",
+        "list_pending_clinical_records",
+        "list_pending_clinical_records_v2",
+      ].includes(name)
+    ) {
       const offset = name === "mesa_pending_clinical_records" ? 0 : Number(args._offset ?? 0);
       const limit = name === "mesa_pending_clinical_records" ? 5 : Number(args._limit ?? 31);
       return fixtureResult(
@@ -874,8 +1227,29 @@ export const supabase: any = {
           })),
       );
     }
-    if (name !== "record_audio_consent" && name !== "record_audio_consent_details")
+    if (
+      ![
+        "record_audio_consent",
+        "record_audio_consent_details",
+        "record_audio_consent_idempotent",
+      ].includes(name)
+    )
       return disabled();
+    const reusable = db.audio_consent_events.find(
+      (event) =>
+        args._request_id && event.request_id === args._request_id && event.professional_id === uid,
+    );
+    if (reusable) {
+      return reusable.client_id === args._client_id &&
+        reusable.scope === args._scope &&
+        reusable.granted === args._granted &&
+        reusable.source === args._source &&
+        reusable.session_id === (args._session_id ?? null) &&
+        reusable.term_version === (args._term_version ?? null) &&
+        reusable.document_reference === (args._document_reference ?? null)
+        ? fixtureResult(reusable.id)
+        : fixtureError("Esta confirmação já foi registrada com outros dados.");
+    }
     if (
       !db.clients.some((client) => client.id === args._client_id) ||
       (args._session_id &&
@@ -885,8 +1259,9 @@ export const supabase: any = {
     ) {
       return fixtureError("Caso ou sessão indisponível");
     }
+    const decisionId = crypto.randomUUID();
     db.audio_consent_events.push({
-      id: crypto.randomUUID(),
+      id: decisionId,
       revision: db.audio_consent_events.length + 1,
       client_id: args._client_id,
       professional_id: uid,
@@ -896,9 +1271,10 @@ export const supabase: any = {
       session_id: args._session_id ?? null,
       term_version: args._term_version ?? null,
       document_reference: args._document_reference ?? null,
+      request_id: args._request_id ?? null,
       created_at: new Date().toISOString(),
     });
-    return { data: null, error: null };
+    return fixtureResult(name === "record_audio_consent_idempotent" ? decisionId : null);
   },
   auth: {
     getUser: async () => ({
@@ -915,6 +1291,10 @@ export const supabase: any = {
   },
   storage: {
     from: (bucket: string) => ({
+      download: async (path: string) => {
+        const audio = bucket === "session-audio" ? fixtureAudio.get(path) : undefined;
+        return audio ? fixtureResult(audio) : fixtureError("Gravação indisponível.");
+      },
       createSignedUrl: async (path: string) => {
         const recorded = bucket === "session-audio" ? fixtureAudio.get(path) : undefined;
         return {
@@ -924,6 +1304,12 @@ export const supabase: any = {
       },
       upload: async (path: string, blob: Blob) => {
         if (bucket !== "session-audio") return disabled();
+        if (
+          db.clinical_sessions.some(
+            (session) => session.audio_path === path && session.clinical_status === "canceled",
+          )
+        )
+          return fixtureError("A sessão foi cancelada.");
         if (fixtureAudio.has(path)) return { error: new Error("Arquivo já enviado.") };
         fixtureAudio.set(path, blob);
         return { data: { path }, error: null };

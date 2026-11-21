@@ -290,24 +290,27 @@ export function ClanSpreadsheet({
       const keepIds = new Set(
         getMappablePersons(latest.persons, latest.relationships).map(({ id }) => id),
       );
-      const emptyIds = latest.persons
-        .filter((person) => !keepIds.has(person.id))
-        .map((person) => person.id);
+      const candidates = latest.persons
+        .filter((person) => !person.parentage_reviewed && !keepIds.has(person.id))
+        .map(({ id, updated_at }) => ({ id, updated_at }));
 
-      if (emptyIds.length === 0) return 0;
+      if (candidates.length === 0) return { removed: 0, kept: 0 };
 
-      const { error } = await supabase
-        .from("genogram_persons")
-        .delete()
-        .eq("client_id", clientId)
-        .eq("is_proband", false)
-        .in("id", emptyIds);
+      const { data, error } = await supabase.rpc("remove_empty_clan_rows", {
+        _client_id: clientId,
+        _candidates: candidates,
+      });
       if (error) throw error;
-      return emptyIds.length;
+      const removed = data ?? 0;
+      return { removed, kept: candidates.length - removed };
     },
-    onSuccess: async (count) => {
+    onSuccess: async ({ removed, kept }) => {
       await invalidateCase(qc, clientId);
-      if (count > 0) toast.success(`${count} linhas vazias removidas.`);
+      if (kept > 0) {
+        toast.info(
+          `${removed} linhas removidas. ${kept} linhas com dados ou vínculos preservadas.`,
+        );
+      } else if (removed > 0) toast.success(`${removed} linhas vazias removidas.`);
       else toast.info("Nenhuma linha vazia encontrada.");
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao limpar planilha"),

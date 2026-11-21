@@ -11,7 +11,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { parentLinePatterns } from "@/lib/family-relationships";
-import { personDatesLabel } from "@/lib/genogram";
+import { parentageTrackLabel } from "./genogram-pedigree";
+import { formatDateBR } from "@/lib/genogram";
 import {
   buildSpatialLayout,
   projectSpatialLayout,
@@ -21,8 +22,9 @@ import { personSymbol } from "./person-symbol";
 import { mapBranchNames, type MapBranch } from "./map-view-context";
 import "./genogram-print-preview.css";
 
-type PrintFields = { relationships: boolean; dates: boolean };
+type PrintFields = { relationships: boolean; dates: boolean; socialLinks: boolean };
 const branches = ["paternal", "maternal"] as const;
+const isSocialLink = (edge: Edge) => Boolean(edge.data?.relationshipType);
 
 function wrapLines(text: string, maximum: number) {
   const lines: string[] = [];
@@ -131,6 +133,7 @@ function PrintSheet({
         {projection.routes.map((route) => (
           <path
             key={route.id}
+            data-social-link={isSocialLink(route.edge) || undefined}
             d={route.path}
             fill="none"
             stroke={
@@ -138,15 +141,21 @@ function PrintSheet({
             }
             strokeWidth={3}
             strokeDasharray={
-              route.suggested
-                ? "4 5"
-                : route.parentKind
-                  ? parentLinePatterns[route.parentKind]
-                  : route.edge.type === "partner"
-                    ? undefined
-                    : "4 5"
+              route.parentSource === "legacy"
+                ? "2 3"
+                : route.suggested
+                  ? "4 5"
+                  : route.parentKind
+                    ? parentLinePatterns[route.parentKind]
+                    : route.edge.type === "partner"
+                      ? undefined
+                      : "4 5"
             }
-          />
+          >
+            {route.parentKind && route.parentSource && (
+              <title>{parentageTrackLabel(route.parentKind, route.parentSource)}</title>
+            )}
+          </path>
         ))}
         {projection.unions.map((union) => (
           <g key={union.id}>
@@ -171,9 +180,13 @@ function PrintSheet({
           const { name, relationship } = spatialPersonLabel(person.data);
           const names = wrapLines(name, 22);
           const roles = fields.relationships && relationship ? wrapLines(relationship, 26) : [];
+          const birth = formatDateBR(person.data.birth_date) || person.data.birth_date_partial;
+          const death = formatDateBR(person.data.death_date) || person.data.death_date_partial;
           const dates = fields.dates
-            ? personDatesLabel(person.data.birth_date, person.data.death_date)
-            : "";
+            ? [birth ? `Nascimento ${birth}` : "", death ? `Falecimento ${death}` : ""].filter(
+                Boolean,
+              )
+            : [];
           const symbol = personSymbol(person.data);
           const stroke = { fill: "var(--archive)", stroke: "var(--forest)", strokeWidth: 2.6 };
           const detailsY = 25 + names.length * 21;
@@ -214,9 +227,13 @@ function PrintSheet({
                   </tspan>
                 ))}
               </text>
-              {dates && (
+              {dates.length > 0 && (
                 <text x={47} y={dateY} fill="var(--ink-soft)" fontSize={14}>
-                  {dates}
+                  {dates.map((date, index) => (
+                    <tspan key={date} x={47} dy={index ? 16 : 0}>
+                      {date}
+                    </tspan>
+                  ))}
                 </text>
               )}
             </g>
@@ -226,7 +243,9 @@ function PrintSheet({
       <p className="geno-print-legend">
         Quadrado · masculino. Círculo · feminino. Losango · outro ou desconhecido. Triângulo · perda
         gestacional. Traço horizontal superior · falecimento. Linha contínua · filiação biológica.
-        Linha pontilhada · confira a natureza do vínculo na ficha.
+        Na filiação, traço curto com espaçamento curto · adoção. Traço longo · acolhimento.
+        Traço-ponto · padrasto/madrasta. Traço médio · natureza por confirmar. Em bronze, pontos
+        curtos · rótulo legado. Tracejado · sugestão.
       </p>
     </section>
   );
@@ -244,7 +263,12 @@ export function GenogramPrintPreview({
   edges: Edge[];
 }) {
   const [mode, setMode] = useState<"whole" | "branches">("whole");
-  const [fields, setFields] = useState<PrintFields>({ relationships: true, dates: false });
+  const [fields, setFields] = useState<PrintFields>({
+    relationships: true,
+    dates: false,
+    socialLinks: false,
+  });
+  const socialCount = edges.filter(isSocialLink).length;
   const representedBranches = branches.filter((branch) =>
     nodes.some((node) => node.type === "person" && node.data.branchId === branch),
   );
@@ -255,7 +279,11 @@ export function GenogramPrintPreview({
     );
     const scopes = mode === "branches" ? [undefined, ...available] : [undefined];
     return scopes.map((branch) => {
-      const page = selectPage(nodes, edges, branch);
+      const page = selectPage(
+        nodes,
+        fields.socialLinks ? edges : edges.filter((edge) => !isSocialLink(edge)),
+        branch,
+      );
       return {
         title: branch ? mapBranchNames[branch] : "Genossociograma",
         projection: projectSpatialLayout(buildSpatialLayout(page.nodes, page.edges), {
@@ -264,7 +292,7 @@ export function GenogramPrintPreview({
         }),
       };
     });
-  }, [edges, mode, nodes, open]);
+  }, [edges, fields.socialLinks, mode, nodes, open]);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="geno-print-dialog">
@@ -305,6 +333,16 @@ export function GenogramPrintPreview({
             />{" "}
             Datas de nascimento e falecimento
           </label>
+          {socialCount > 0 && (
+            <label>
+              <input
+                type="checkbox"
+                checked={fields.socialLinks}
+                onChange={(event) => setFields({ ...fields, socialLinks: event.target.checked })}
+              />{" "}
+              Vínculos sociais ({socialCount})
+            </label>
+          )}
         </div>
         <div className="geno-print-preview" aria-label="Prévia de impressão">
           {pages.map((page) => (

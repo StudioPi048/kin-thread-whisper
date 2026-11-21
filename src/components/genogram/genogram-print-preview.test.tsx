@@ -98,3 +98,78 @@ it("desenha duas uniões distintas e preserva a filiação confirmada sem escolh
   expect(within(page).getByText("1º casamento")).toBeTruthy();
   expect(within(page).getByText("2º casamento")).toBeTruthy();
 });
+
+it("mantém a filiação registrada e a sugestão em trilhos próprios no mapa e na impressão", () => {
+  const { persons, rels, probandId } = consultanteFamily();
+  const child = persons.find(({ full_name }) => full_name === "Mãe")!;
+  const first = persons.find(({ full_name }) => full_name === "Avô materno")!;
+  const second = persons.find(({ full_name }) => full_name === "Avó materna")!;
+  const records = rels.filter(
+    ({ relationship_type, from_person_id, to_person_id }) =>
+      relationship_type !== "parent" || from_person_id !== second.id || to_person_id !== child.id,
+  );
+  const firstLink = records.find(
+    ({ from_person_id, to_person_id }) => from_person_id === first.id && to_person_id === child.id,
+  )!;
+  const { graph, nodes, edges } = buildRenderGraph(persons, records, probandId);
+  const edge = graph.edges.find(({ kind, personId }) => kind === "child" && personId === child.id);
+  expect(edge?.parentLinks).toEqual([
+    { personId: first.id, kind: "biological", source: "explicit", relationshipId: firstLink.id },
+    { personId: second.id, kind: "unknown", source: "suggested" },
+  ]);
+  const renderEdge = edges.find(
+    ({ type, source }) => type === "pedigree" && source === edge?.unionId,
+  );
+  expect(renderEdge?.ariaLabel).toContain("Avô materno → Mãe. Filiação registrada · Biológico");
+  expect(renderEdge?.ariaLabel).toContain(
+    "Avó materna → Mãe. Filiação sugerida · Natureza por confirmar",
+  );
+  const projection = projectSpatialLayout(buildSpatialLayout(nodes, edges), { yaw: 0, pitch: 0 });
+  const tracks = projection.routes.filter(({ childIds }) => childIds?.includes(child.id));
+  expect(tracks.map(({ parentId, parentSource }) => [parentId, parentSource])).toEqual([
+    [first.id, "explicit"],
+    [second.id, "suggested"],
+  ]);
+  expect(new Set(tracks.map(({ path }) => path)).size).toBe(2);
+  render(<GenogramPrintPreview open onOpenChange={vi.fn()} nodes={nodes} edges={edges} />);
+  const svg = screen.getByRole("img", { name: "Genossociograma" });
+  expect(within(svg).getAllByText("Filiação registrada · Biológico").length).toBeGreaterThan(0);
+  expect(
+    within(svg).getAllByText("Filiação sugerida · Natureza por confirmar").length,
+  ).toBeGreaterThan(0);
+});
+
+it("controla vínculos sociais na prévia e imprime datas parciais com a precisão registrada", () => {
+  const { persons, rels, probandId } = consultanteFamily();
+  const father = persons.find(({ full_name }) => full_name === "Pai")!;
+  const mother = persons.find(({ full_name }) => full_name === "Mãe")!;
+  const emotional = {
+    ...rels[0],
+    id: "vinculo-social",
+    from_person_id: father.id,
+    to_person_id: mother.id,
+    relationship_type: "emotional",
+    qualifier: "close",
+  };
+  const named = persons.map((person) =>
+    person.id === father.id
+      ? {
+          ...person,
+          birth_date: null,
+          birth_date_partial: "03/1962",
+          death_date: null,
+          death_date_partial: "2019–2020",
+        }
+      : person,
+  );
+  const { nodes, edges } = buildRenderGraph(named, [...rels, emotional], probandId);
+  render(<GenogramPrintPreview open onOpenChange={vi.fn()} nodes={nodes} edges={edges} />);
+  const svg = screen.getByRole("img", { name: "Genossociograma" });
+  expect(svg.querySelector("[data-social-link]")).toBeNull();
+  expect(within(svg).queryByText("Nascimento 03/1962")).toBeNull();
+  fireEvent.click(screen.getByRole("checkbox", { name: "Vínculos sociais (1)" }));
+  fireEvent.click(screen.getByRole("checkbox", { name: "Datas de nascimento e falecimento" }));
+  expect(svg.querySelectorAll("[data-social-link]")).toHaveLength(1);
+  expect(within(svg).getByText("Nascimento 03/1962")).toBeTruthy();
+  expect(within(svg).getByText("Falecimento 2019–2020")).toBeTruthy();
+});

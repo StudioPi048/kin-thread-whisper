@@ -25,6 +25,22 @@
   border-bottom: 1px solid var(--border);
 }
 
+.consultante-demo-guide {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1.25rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--forest-mist);
+}
+
+.consultante-demo-guide p {
+  margin: 0.2rem 0 0;
+  color: var(--ink);
+}
+
 .consultante-demo-toolbar button,
 .consultante-demo-inspector button,
 .consultante-plane-options button {

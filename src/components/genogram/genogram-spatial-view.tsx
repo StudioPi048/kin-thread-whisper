@@ -13,6 +13,7 @@ import type { Edge, Node } from "@xyflow/react";
 import {
   Box,
   GitFork,
+  Hand,
   Layers2,
   List,
   Maximize,
@@ -28,7 +29,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { formatDateBR, relationshipLabel, relationshipQualifiers } from "@/lib/genogram";
+import { formatDateBR, relationshipLabel } from "@/lib/genogram";
+import {
+  findPedigreeRelationship,
+  parentageTrackLabel,
+  type PedigreeData,
+} from "./genogram-pedigree";
 import { cn } from "@/lib/utils";
 import type { PersonNodeData } from "./person-node";
 import type { ParentagePreview } from "./parentage-preview";
@@ -106,11 +112,15 @@ function describeRoute(route: SpatialRoute, names: Map<string, string>, union?: 
     return { title: partners, detail: union?.label || "União" };
   }
   if (route.edge.type === "pedigree") {
-    const kind = relationshipQualifiers.parent.find(({ value }) => value === route.parentKind);
-    const relation = route.suggested ? "Filiação sugerida" : "Filiação registrada";
+    const relation = parentageTrackLabel(
+      route.parentKind ?? "unknown",
+      route.parentSource ?? "explicit",
+    );
     return {
       title: displayNames(route.childIds ?? []),
-      detail: [relation, kind?.label, partners].filter(Boolean).join(" · "),
+      detail: [relation, route.parentId ? displayNames([route.parentId]) : partners]
+        .filter(Boolean)
+        .join(" · "),
     };
   }
   const { relationshipType, qualifier } = route.edge.data ?? {};
@@ -127,6 +137,22 @@ function sameRoute(a: SpatialRoute | undefined, b: SpatialRoute) {
   return (
     a?.id === b.id ||
     (a?.edge.type === "partner" && b.edge.type === "partner" && a.unionId === b.unionId)
+  );
+}
+
+function pedigreeForRoute(route: SpatialRoute, id: string) {
+  if (route.edge.type !== "pedigree" || !route.edge.data) return;
+  return findPedigreeRelationship(
+    route.edge.data as PedigreeData,
+    id,
+    route.childIds,
+    route.parentId,
+  );
+}
+
+function matchesRelationship(route: SpatialRoute, id: string) {
+  return (
+    route.edge.id === id || route.edge.data?.relationshipId === id || !!pedigreeForRoute(route, id)
   );
 }
 
@@ -154,23 +180,32 @@ function fitCamera(layout: Layout, frame: Frame, angles: SpatialAngles): Camera 
 }
 
 function confirmedFamilies(layout: Layout) {
-  const familyChildren = new Map<string, Set<string>>();
+  const unions = new Map(layout.unions.map((union) => [union.id, union]));
+  const families = new Map<string, { parents: string[]; children: Set<string> }>();
+  function getFamily(parents: string[]) {
+    const key = [...parents].sort().join("|");
+    const family = families.get(key) ?? { parents, children: new Set<string>() };
+    families.set(key, family);
+    return family;
+  }
+  for (const { partners, relationshipId } of layout.unions) {
+    if (relationshipId) getFamily(partners);
+  }
   for (const edge of layout.edges) {
     if (edge.type !== "pedigree" || !Array.isArray(edge.data?.childIds)) continue;
-    const unionId = String(edge.data.unionId ?? edge.source);
-    const children = familyChildren.get(unionId) ?? new Set<string>();
-    const suggested = new Set(
-      Array.isArray(edge.data.suggestedChildIds) ? edge.data.suggestedChildIds : [],
-    );
+    const union = unions.get(String(edge.data.unionId ?? edge.source));
+    const data = edge.data as PedigreeData;
     for (const id of edge.data.childIds.map(String)) {
-      if (!suggested.has(id)) children.add(id);
+      const links = data.parentsByChild?.[id];
+      const parents = links
+        ? links.filter(({ source }) => source === "explicit").map(({ personId }) => personId)
+        : data.suggestedChildIds?.includes(id)
+          ? []
+          : (union?.partners ?? []);
+      if (parents.length) getFamily(parents).children.add(id);
     }
-    familyChildren.set(unionId, children);
   }
-  return layout.unions.map(({ id, partners }) => ({
-    parents: partners,
-    children: familyChildren.get(id) ?? new Set<string>(),
-  }));
+  return [...families.values()];
 }
 
 function familyOf(families: ReturnType<typeof confirmedFamilies>, personId: string) {
@@ -392,6 +427,7 @@ export function GenogramSpatialView({
   const directoryId = useId();
   const unionsId = useId();
   const viewportRef = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef(new Map<string, HTMLButtonElement>());
   const directoryTrigger = useRef<HTMLButtonElement>(null);
   const directoryInput = useRef<HTMLInputElement>(null);
   const pointers = useRef(new Map<number, Pointer>());
@@ -417,6 +453,8 @@ export function GenogramSpatialView({
   const [framing, setFraming] = useState<"auto" | "panorama" | "reading">("auto");
   const [dragging, setDragging] = useState(false);
   const [panMode, setPanMode] = useState(true);
+  const [touchNavigation, setTouchNavigation] = useState(false);
+  const [navigationPersonId, setNavigationPersonId] = useState<string | null>(null);
   const [moveMode, setMoveMode] = useState(false);
   const [movePreview, setMovePreview] = useState<MovePreview | null>(null);
   const [separateLinks, setSeparateLinks] = useState(false);
@@ -457,23 +495,6 @@ export function GenogramSpatialView({
   const expandedPersonId =
     unionsOpen && unionMembers.some(({ id }) => id === openedPersonId) ? openedPersonId : null;
   const positionMode = moveMode && !!canMovePeople && !!onMovePerson;
-  const displayLayout = useMemo(
-    () =>
-      movePreview?.deltaX
-        ? buildSpatialLayout(
-            nodes.map((node) =>
-              node.id === movePreview.id
-                ? {
-                    ...node,
-                    position: { ...node.position, x: node.position.x + movePreview.deltaX },
-                  }
-                : node,
-            ),
-            edges,
-          )
-        : layout,
-    [nodes, edges, layout, movePreview],
-  );
   const frontPeople = useMemo(() => projectSpatialLayout(layout, FRONT_ANGLES).people, [layout]);
   const reading =
     framing === "reading" || (framing === "auto" && frame.width > 0 && frame.width < 690);
@@ -508,14 +529,13 @@ export function GenogramSpatialView({
 
   const display = useMemo(
     () =>
-      projectSpatialLayout(
-        displayLayout,
-        { yaw: camera.yaw, pitch: camera.pitch },
-        selectedPersonId,
-        { separateLinks, expandedPersonId, parentagePreview },
-      ),
+      projectSpatialLayout(layout, { yaw: camera.yaw, pitch: camera.pitch }, selectedPersonId, {
+        separateLinks,
+        expandedPersonId,
+        parentagePreview,
+      }),
     [
-      displayLayout,
+      layout,
       camera.yaw,
       camera.pitch,
       selectedPersonId,
@@ -663,27 +683,29 @@ export function GenogramSpatialView({
       if (previousId) {
         setChosenRoute((current) => {
           const route = display.routes.find(({ id }) => id === current);
-          return route?.edge.data?.relationshipId === previousId ? null : current;
+          return route && matchesRelationship(route, previousId) ? null : current;
         });
       }
       lastRelationshipFocus.current = null;
       return;
     }
     if (!hasFrame || lastRelationshipFocus.current === focusedRelationshipId) return;
-    const route = display.routes.find(
-      (item) => item.edge.data?.relationshipId === focusedRelationshipId,
-    );
+    const route = display.routes.find((item) => matchesRelationship(item, focusedRelationshipId));
     const union = route && display.unions.find(({ id }) => id === route.unionId);
-    if (!route || !union) return;
+    if (!route) return;
+    const pedigree = pedigreeForRoute(route, focusedRelationshipId);
+    const ids = pedigree
+      ? [pedigree.childId, pedigree.parent.personId]
+      : (union?.partners ?? [route.edge.source, route.edge.target]);
     lastRelationshipFocus.current = focusedRelationshipId;
     setChosenRoute(route.id);
     setChosenUnion(null);
     changeCamera((current) =>
       fitProjectedPeople(
-        display.people.filter(({ id }) => union.partners.includes(id)),
+        display.people.filter(({ id }) => ids.includes(id)),
         frame,
         current,
-        union.partners[0],
+        ids[0],
       ),
     );
   }, [
@@ -977,6 +999,31 @@ export function GenogramSpatialView({
   const frontal = camera.yaw === 0 && camera.pitch === 0;
   const selected = display.people.find((person) => person.id === selectedPersonId);
   const reference = selected ?? display.people.find(({ data }) => data.is_proband);
+  const tabPersonId =
+    display.people.find(({ id }) => id === navigationPersonId)?.id ??
+    reference?.id ??
+    display.people[0]?.id;
+  function navigateCard(person: ProjectedPerson, key: string) {
+    const horizontal = key === "ArrowLeft" || key === "ArrowRight";
+    const step = key === "ArrowLeft" || key === "ArrowUp" ? -1 : 1;
+    const next = display.people
+      .filter((other) =>
+        horizontal
+          ? other.generation === person.generation && (other.x - person.x) * step > 0
+          : (other.generation - person.generation) * step > 0,
+      )
+      .sort(
+        (a, b) =>
+          (horizontal
+            ? 0
+            : Math.abs(a.generation - person.generation) -
+              Math.abs(b.generation - person.generation)) ||
+          Math.abs(a.x - person.x) - Math.abs(b.x - person.x),
+      )[0];
+    if (!next) return;
+    setNavigationPersonId(next.id);
+    cardRefs.current.get(next.id)?.focus({ preventScroll: true });
+  }
   const hasSuggestions = display.routes.some((route) => route.suggested);
   const shownUnions = display.unions.filter((union) => union.expanded);
   const nameById = new Map(names.map(({ person, name }) => [person.id, name]));
@@ -987,9 +1034,16 @@ export function GenogramSpatialView({
       : "Árvore inteira";
   const unionById = new Map(display.unions.map((union) => [union.id, union]));
   const activeRoute = display.routes.find(({ id }) => id === chosenRoute);
-  const activeRouteDescription = activeRoute
-    ? describeRoute(activeRoute, nameById, unionById.get(activeRoute.unionId ?? ""))
-    : undefined;
+  const focusedParent =
+    activeRoute && focusedRelationshipId && pedigreeForRoute(activeRoute, focusedRelationshipId);
+  const activeRouteDescription = focusedParent
+    ? {
+        title: `${nameById.get(focusedParent.parent.personId)} → ${nameById.get(focusedParent.childId)}`,
+        detail: parentageTrackLabel(focusedParent.parent.kind, focusedParent.parent.source),
+      }
+    : activeRoute
+      ? describeRoute(activeRoute, nameById, unionById.get(activeRoute.unionId ?? ""))
+      : undefined;
   const expandedUnion = shownUnions.find(({ id }) => id === chosenUnion);
   const contextRoute =
     activeRoute ??
@@ -1006,7 +1060,10 @@ export function GenogramSpatialView({
         : undefined;
   const routePeople = (route: SpatialRoute) =>
     route.unionId
-      ? [...(route.childIds ?? []), ...(unionById.get(route.unionId)?.partners ?? [])]
+      ? [
+          ...(route.childIds ?? []),
+          ...(route.parentId ? [route.parentId] : (unionById.get(route.unionId)?.partners ?? [])),
+        ]
       : [route.edge.source, route.edge.target];
   const focusRoute = (route: SpatialRoute) => {
     const ids = new Set(routePeople(route));
@@ -1033,11 +1090,13 @@ export function GenogramSpatialView({
   const routeIsActive = (route: SpatialRoute) =>
     parentagePreview
       ? false
-      : highlightedUnion
-        ? route.unionId === highlightedUnion
-        : activeRoute
-          ? route.id === activeRoute.id
-          : route.highlighted;
+      : activeRoute?.parentId
+        ? route.id === activeRoute.id
+        : highlightedUnion
+          ? route.unionId === highlightedUnion
+          : activeRoute
+            ? route.id === activeRoute.id
+            : route.highlighted;
   const routeIsMuted = (route: SpatialRoute) =>
     parentagePreview ||
     ((activeRoute || expandedUnion) && !routeIsActive(route)) ||
@@ -1054,12 +1113,14 @@ export function GenogramSpatialView({
       route.suggested && "geno-spatial-link-suggested",
       !["pedigree", "partner"].includes(route.edge.type ?? "") && "geno-spatial-link-social",
     );
-  const routeDash = ({ edge, parentKind, suggested }: SpatialRoute) =>
-    suggested
-      ? "5 5"
-      : ((parentKind && parentLinePatterns[parentKind]) ??
-        edge.style?.strokeDasharray ??
-        (edge.type === "pedigree" || edge.type === "partner" ? undefined : "3 5"));
+  const routeDash = ({ edge, parentKind, parentSource, suggested }: SpatialRoute) =>
+    parentSource === "legacy"
+      ? "2 3"
+      : suggested
+        ? "4 5"
+        : ((parentKind && parentLinePatterns[parentKind]) ??
+          edge.style?.strokeDasharray ??
+          (edge.type === "pedigree" || edge.type === "partner" ? undefined : "3 5"));
   const bridgeStatus = display.bridgeCount
     ? `${display.bridgeCount} ${display.bridgeCount === 1 ? "cruzamento separado" : "cruzamentos separados"}`
     : "Nenhum cruzamento entre os vínculos visíveis";
@@ -1332,6 +1393,7 @@ export function GenogramSpatialView({
           className="geno-spatial-viewport"
           data-dragging={dragging}
           data-moving-person={positionMode || undefined}
+          data-touch-navigation={touchNavigation || undefined}
           tabIndex={0}
           role="region"
           aria-label="Área de navegação do mapa 3D"
@@ -1516,10 +1578,21 @@ export function GenogramSpatialView({
                     <button
                       key={person.id}
                       type="button"
+                      ref={(element) => {
+                        if (element) cardRefs.current.set(person.id, element);
+                        else cardRefs.current.delete(person.id);
+                      }}
+                      tabIndex={person.id === tabPersonId ? 0 : -1}
                       className="geno-spatial-person"
                       style={
                         {
-                          left: x + person.x * camera.zoom,
+                          left:
+                            x +
+                            (person.x +
+                              (movePreview?.id === person.id
+                                ? movePreview.deltaX * Math.cos(camera.yaw) * SPATIAL_X_SCALE
+                                : 0)) *
+                              camera.zoom,
                           top: y + person.y * camera.zoom,
                           "--plaque-width": `${SPATIAL_CARD_WIDTH}px`,
                           "--plaque-height": `${person.height / person.scale}px`,
@@ -1546,16 +1619,24 @@ export function GenogramSpatialView({
                         selectPerson(person.id);
                       }}
                       onFocus={(event) => {
+                        setNavigationPersonId(person.id);
                         if (event.currentTarget.matches(":focus-visible")) {
                           revealCard(person);
                           onFocusPerson?.(person.id);
                         }
                       }}
                       onKeyDown={(event) => {
-                        if (!positionMode || !["ArrowLeft", "ArrowRight"].includes(event.key))
+                        if (
+                          !["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)
+                        )
                           return;
                         event.preventDefault();
-                        onMovePerson?.(person.id, event.key === "ArrowLeft" ? -26 : 26);
+                        if (
+                          positionMode &&
+                          (event.key === "ArrowLeft" || event.key === "ArrowRight")
+                        )
+                          onMovePerson?.(person.id, event.key === "ArrowLeft" ? -26 : 26);
+                        else navigateCard(person, event.key);
                       }}
                     >
                       <SpatialSymbol person={data} angles={camera} />
@@ -1782,6 +1863,19 @@ export function GenogramSpatialView({
                 <PopoverContent className="geno-spatial-tools-popover" align="start" side="top">
                   <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
+                    aria-pressed={touchNavigation}
+                    onClick={() => {
+                      setTouchNavigation((active) => !active);
+                      setSpatialToolsOpen(false);
+                    }}
+                  >
+                    <Hand aria-hidden />{" "}
+                    {touchNavigation ? "Voltar a rolar a página" : "Mover o mapa por toque"}
+                  </Button>
+                  <Button
+                    type="button"
                     variant={panMode ? "outline" : "forest"}
                     size="sm"
                     aria-pressed={!panMode}
@@ -1890,10 +1984,11 @@ export function GenogramSpatialView({
         </section>
       )}
       <span id={instructionsId} className="sr-only">
-        Arraste o fundo para mover o mapa. Ative Girar ao arrastar para inclinar a vista. Com dois
-        dedos, mova e amplie. Use as setas para navegar, mais e menos para ampliar, e zero para
-        enquadrar. No modo Mover pessoa, arraste um cartão para os lados ou use as setas esquerda e
-        direita sobre o cartão.
+        Arraste o fundo para mover o mapa. Ative Girar ao arrastar para inclinar a vista. No toque,
+        ative Mover o mapa por toque. Use Tab para focar um cartão e as setas para percorrer a
+        família. No plano do mapa, use mais e menos para ampliar, e zero para enquadrar. No modo
+        Mover pessoa, arraste um cartão para os lados ou use as setas esquerda e direita sobre o
+        cartão.
       </span>
     </section>
   );

@@ -19,14 +19,15 @@ async function calendarRecords() {
     supabase.auth.getUser(),
   ]);
   const roster = clients as Client[];
-  const rows = (sessions as FixtureSession[])
+  const allRows = (sessions as FixtureSession[])
     .map((entry) => ({
       ...entry,
       clients: roster.find((client) => client.id === entry.client_id),
     }))
-    .filter((entry) => entry.clients?.status === "active" && entry.status !== "deleting")
+    .filter((entry) => entry.status !== "deleting")
     .sort((a, b) => Date.parse(a.session_date) - Date.parse(b.session_date));
-  return { rows, roster, user: auth.user.id as string };
+  const rows = allRows.filter((entry) => entry.clients?.status === "active");
+  return { rows, allRows, roster, user: auth.user.id as string };
 }
 
 function pending(rows: FixtureSession[], now: Date) {
@@ -52,6 +53,9 @@ export async function getAgendaData({ data }: { data?: { date?: string; tz?: str
       .filter((s) => s.clinicalStatus === "scheduled" && new Date(s.startISO) >= now)
       .map((s) => s.clientId),
   );
+  const orphanClients = roster.filter(
+    (client) => client.status === "active" && !upcoming.has(client.id),
+  );
   return {
     today: sessions.filter((session) => session.dateKey === date),
     week: Array.from({ length: 7 }, (_, offset) => {
@@ -63,8 +67,9 @@ export async function getAgendaData({ data }: { data?: { date?: string; tz?: str
         ).length,
       };
     }),
-    orphanClients: roster
-      .filter((client) => client.status === "active" && !upcoming.has(client.id))
+    orphanClientCount: orphanClients.length,
+    orphanClients: orphanClients
+      .slice(0, 8)
       .map((client) => ({ id: client.id, name: client.preferred_name || client.full_name })),
     stats: { prontuariosPendentes: pending(rows, now) },
   };
@@ -85,19 +90,34 @@ type AppointmentInput = {
   durationMin: number;
   tz: string;
   occurrence?: number;
+  expectedUpdatedAt?: string;
+  originalStartISO?: string;
 };
 const rejected = (reason: string) => ({ ok: false as const, errors: [reason], conflicts: [] });
+const changed = (currentStartISO: string) => ({
+  ...rejected(
+    "O atendimento mudou. Atualize a Agenda e confira o horário antes de tentar novamente.",
+  ),
+  stale: true,
+  currentStartISO,
+});
 
 async function saveAppointment(
   input: AppointmentInput,
   scheduled?: { clientId: string; title?: string },
 ) {
-  const { rows, roster, user } = await calendarRecords();
+  const { rows, allRows, roster, user } = await calendarRecords();
   const now = new Date();
-  const previous = rows.find((row) => row.id === input.sessionId);
+  const previous = allRows.find((row) => row.id === input.sessionId);
   const clientId = scheduled?.clientId ?? previous?.client_id;
-  if (!clientId || !roster.some((client) => client.id === clientId && client.status === "active")) {
+  if (
+    !clientId ||
+    !roster.some((client) => client.id === clientId && (!scheduled || client.status === "active"))
+  ) {
     return rejected("Selecione um dossiê ativo da sua conta.");
+  }
+  if (previous && input.expectedUpdatedAt && input.expectedUpdatedAt !== previous.updated_at) {
+    return changed(previous.session_date);
   }
   if (
     !scheduled &&
@@ -106,9 +126,14 @@ async function saveAppointment(
     return rejected("Este atendimento não está agendado.");
   const validation = validateReschedule({
     ...input,
-    originalStartISO: previous?.session_date,
-    existing: rows
-      .filter((row) => ["scheduled", "in_progress"].includes(clinicalStatusOf(row, now)))
+    originalStartISO: input.originalStartISO ?? previous?.session_date,
+    existing: allRows
+      .filter(
+        (row) => row.clients?.status === "active" || (!scheduled && row.client_id === clientId),
+      )
+      .filter((row) =>
+        ["scheduled", "in_progress"].includes(row.clinical_status ?? clinicalStatusOf(row, now)),
+      )
       .map((row) => ({
         id: row.id,
         startISO: row.session_date,
@@ -155,11 +180,21 @@ export const scheduleSession = ({
 }) => saveAppointment(data, data);
 export const rescheduleSession = ({ data }: { data: AppointmentInput }) => saveAppointment(data);
 
-export async function cancelSession({ data }: { data: { sessionId: string } }) {
-  const { rows } = await calendarRecords();
-  const row = rows.find((s) => s.id === data.sessionId);
+export async function cancelSession({
+  data,
+}: {
+  data: { sessionId: string; expectedUpdatedAt?: string };
+}) {
+  const { allRows } = await calendarRecords();
+  const row = allRows.find((s) => s.id === data.sessionId);
   if (!row || !["scheduled", "canceled"].includes(row.clinical_status ?? clinicalStatusOf(row)))
     return rejected("Este atendimento não está agendado.");
+  if (
+    row.clinical_status !== "canceled" &&
+    data.expectedUpdatedAt &&
+    data.expectedUpdatedAt !== row.updated_at
+  )
+    return changed(row.session_date);
   await supabase.from("clinical_sessions").update({ clinical_status: "canceled" }).eq("id", row.id);
   return {
     ok: true as const,

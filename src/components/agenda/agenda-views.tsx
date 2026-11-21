@@ -1,4 +1,4 @@
-import { useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -26,6 +26,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
+import type { ReactivationConflict } from "@/lib/agenda-model";
+import { readWorkspaceClientPage } from "@/lib/workspace-client-search";
 import {
   cancelSession,
   getAgendaWeek,
@@ -80,6 +82,7 @@ type Appointment = Pick<
   | "patient"
   | "dateKey"
   | "startISO"
+  | "updatedAt"
   | "durationMin"
   | "clinicalStatus"
   | "overdue"
@@ -88,12 +91,16 @@ type Appointment = Pick<
 function CancellationDialog({ session, onClose }: { session: Appointment; onClose: () => void }) {
   const qc = useQueryClient();
   const cancel = useServerFn(cancelSession);
+  const [original] = useState(session);
   const [message, setMessage] = useState("");
+  const [stale, setStale] = useState(false);
   const mutation = useMutation({
-    mutationFn: () => cancel({ data: { sessionId: session.id } }),
+    mutationFn: () =>
+      cancel({ data: { sessionId: original.id, expectedUpdatedAt: original.updatedAt } }),
     onSuccess: async (result) => {
       if (!result.ok) {
         setMessage(result.errors.join(" "));
+        setStale(result.stale === true);
         return;
       }
       await invalidateSessionViews(qc, result.clientId);
@@ -113,7 +120,7 @@ function CancellationDialog({ session, onClose }: { session: Appointment; onClos
         <AlertDialogHeader>
           <AlertDialogTitle>Cancelar atendimento?</AlertDialogTitle>
           <AlertDialogDescription>
-            O atendimento de {session.patient} ficará no histórico como cancelado e o horário será
+            O atendimento de {original.patient} ficará no histórico como cancelado e o horário será
             liberado.
           </AlertDialogDescription>
         </AlertDialogHeader>
@@ -131,11 +138,19 @@ function CancellationDialog({ session, onClose }: { session: Appointment; onClos
             disabled={mutation.isPending}
             onClick={(event) => {
               event.preventDefault();
-              setMessage("");
-              mutation.mutate();
+              if (stale) {
+                void invalidateSessionViews(qc, original.clientId).finally(onClose);
+              } else {
+                setMessage("");
+                mutation.mutate();
+              }
             }}
           >
-            {mutation.isPending ? "Cancelando…" : "Confirmar cancelamento"}
+            {mutation.isPending
+              ? "Cancelando…"
+              : stale
+                ? "Atualizar Agenda"
+                : "Confirmar cancelamento"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -143,7 +158,11 @@ function CancellationDialog({ session, onClose }: { session: Appointment; onClos
   );
 }
 
-function appointmentDestination(session: Appointment, agendaView: "day" | "week" = "day") {
+function appointmentDestination(
+  session: Appointment,
+  agendaView: "day" | "week" = "day",
+  originDate = session.dateKey,
+) {
   return {
     to: "/app/clientes/$clientId" as const,
     params: { clientId: session.clientId },
@@ -151,13 +170,13 @@ function appointmentDestination(session: Appointment, agendaView: "day" | "week"
       tab: "sessions" as const,
       session: session.id,
       from: "agenda" as const,
-      agendaDate: session.dateKey,
+      agendaDate: originDate,
       agendaView,
     },
   };
 }
 
-function AppointmentActions({ session }: { session: Appointment }) {
+export function AppointmentActions({ session }: { session: Appointment }) {
   const [dialog, setDialog] = useState<"move" | "cancel" | null>(null);
   return (
     <div className="flex flex-wrap gap-2">
@@ -249,7 +268,7 @@ export function DayList({
                     {session.end && (
                       <>
                         <dt>Término</dt>
-                        <dd className="text-foreground">{session.end}</dd>
+                        <dd className="text-foreground">{appointmentEndLabel(session)}</dd>
                       </>
                     )}
                     <dt>Duração</dt>
@@ -324,6 +343,7 @@ function AppointmentDialog({
   const move = useServerFn(rescheduleSession);
   const formId = useId();
   const displayTz = browserTz();
+  const [original] = useState(session);
   const [requestId, setRequestId] = useState(() => session?.id ?? crypto.randomUUID());
   const selectedPerson = session?.patient ?? clientName;
   const [form, setForm] = useState({
@@ -338,31 +358,37 @@ function AppointmentDialog({
   });
   const [occurrence, setOccurrence] = useState<number | undefined>();
   const occurrences = zonedTimeOccurrences(form.date, form.time, form.tz);
-  const originalOccurrence = session
+  const originalOccurrence = original
     ? occurrences.findIndex(
         (option) =>
           Math.floor(option.getTime() / 60_000) ===
-          Math.floor(Date.parse(session.startISO) / 60_000),
+          Math.floor(Date.parse(original.startISO) / 60_000),
       )
     : -1;
   const occurrenceValue = occurrence ?? (originalOccurrence >= 0 ? originalOccurrence : undefined);
   const [result, setResult] = useState<Extract<RescheduleResponse, { ok: false }> | null>(null);
 
   const chooseClient = !session && !clientId;
+  const [clientSearch, setClientSearch] = useState("");
+  const [activeClientSearch, setActiveClientSearch] = useState("");
+  const [clientPage, setClientPage] = useState(0);
+  const [chosenClient, setChosenClient] = useState<{ id: string; name: string }>();
+  useEffect(() => {
+    if (!chooseClient) return;
+    const timer = window.setTimeout(() => {
+      setActiveClientSearch(clientSearch.trim());
+      setClientPage(0);
+    }, 200);
+    return () => window.clearTimeout(timer);
+  }, [chooseClient, clientSearch]);
   const clients = useQuery({
-    queryKey: ["agenda-client-options"],
-    queryFn: async () => {
-      const { data: auth, error: authError } = await supabase.auth.getUser();
-      if (authError || !auth.user) throw new Error("Entre na sua conta para agendar.");
-      const { data, error } = await supabase
-        .from("clients")
-        .select("id, full_name, preferred_name")
-        .eq("professional_id", auth.user.id)
-        .eq("status", "active")
-        .order("full_name");
-      if (error) throw error;
-      return data ?? [];
-    },
+    queryKey: ["agenda-client-options", activeClientSearch, clientPage],
+    queryFn: () =>
+      readWorkspaceClientPage(supabase, {
+        search: activeClientSearch,
+        offset: clientPage * 24,
+        limit: 24,
+      }),
     enabled: chooseClient,
     staleTime: 0,
   });
@@ -377,8 +403,14 @@ function AppointmentDialog({
         tz: form.tz,
         occurrence,
       };
-      return session
-        ? move({ data })
+      return original
+        ? move({
+            data: {
+              ...data,
+              expectedUpdatedAt: original.updatedAt,
+              originalStartISO: original.startISO,
+            },
+          })
         : create({ data: { ...data, clientId: form.clientId, title: form.title } });
     },
     onSuccess: async (answer) => {
@@ -396,7 +428,7 @@ function AppointmentDialog({
   });
 
   const edit = (patch: Partial<typeof form>) => {
-    if (result) setResult(null);
+    if (result && !result.stale) setResult(null);
     if (patch.date !== undefined || patch.time !== undefined || patch.tz !== undefined)
       setOccurrence(undefined);
     if (!session) setRequestId(crypto.randomUUID());
@@ -423,12 +455,20 @@ function AppointmentDialog({
         <form
           onSubmit={(event) => {
             event.preventDefault();
-            mutation.mutate();
+            if (!result?.stale) mutation.mutate();
           }}
         >
           <fieldset disabled={mutation.isPending} className="grid min-w-0 gap-3 sm:grid-cols-2">
             {chooseClient && (
               <div className="min-w-0 space-y-1 sm:col-span-2">
+                <Label htmlFor={formId + "-client-search"}>Buscar cliente por nome</Label>
+                <Input
+                  id={formId + "-client-search"}
+                  type="search"
+                  className="min-h-11"
+                  value={clientSearch}
+                  onChange={(event) => setClientSearch(event.target.value)}
+                />
                 <Label htmlFor={formId + "-client"}>Cliente</Label>
                 <select
                   id={formId + "-client"}
@@ -436,17 +476,53 @@ function AppointmentDialog({
                   value={form.clientId}
                   disabled={clients.isPending || clients.isError}
                   required
-                  onChange={(event) => edit({ clientId: event.target.value })}
+                  onChange={(event) => {
+                    const id = event.target.value;
+                    const name = event.target.selectedOptions[0]?.text;
+                    setChosenClient(id && name ? { id, name } : undefined);
+                    edit({ clientId: id });
+                  }}
                 >
                   <option value="">
                     {clients.isPending ? "Carregando clientes…" : "Selecione um cliente"}
                   </option>
-                  {(clients.data ?? []).map((client) => (
+                  {chosenClient &&
+                    !clients.data?.clients.some(({ id }) => id === chosenClient.id) && (
+                      <option value={chosenClient.id}>{chosenClient.name}</option>
+                    )}
+                  {(clients.data?.clients ?? []).map((client) => (
                     <option key={client.id} value={client.id}>
                       {client.full_name}
                     </option>
                   ))}
                 </select>
+                {(clientPage > 0 || clients.data?.hasMore) && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="min-h-11"
+                      disabled={clientPage === 0}
+                      onClick={() => setClientPage(clientPage - 1)}
+                    >
+                      Anterior
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="min-h-11"
+                      disabled={!clients.data?.hasMore}
+                      onClick={() => setClientPage(clientPage + 1)}
+                    >
+                      Próxima
+                    </Button>
+                    {clients.data && (
+                      <span role="status" className="text-sm text-muted-foreground">
+                        {clients.data.total} clientes
+                      </span>
+                    )}
+                  </div>
+                )}
                 {clients.isError && (
                   <div className="flex flex-wrap items-center gap-2" role="alert">
                     <span className="text-sm text-clinical-critical">
@@ -462,9 +538,11 @@ function AppointmentDialog({
                     </Button>
                   </div>
                 )}
-                {clients.isSuccess && !clients.data.length && (
+                {clients.isSuccess && clients.data.total === 0 && (
                   <p className="text-sm text-muted-foreground">
-                    Cadastre ou reative um cliente em Clientes para agendar.
+                    {activeClientSearch
+                      ? "Nenhum cliente encontrado."
+                      : "Cadastre ou reative um cliente em Clientes para agendar."}
                   </p>
                 )}
               </div>
@@ -582,10 +660,22 @@ function AppointmentDialog({
               >
                 Voltar
               </Button>
+              {result?.stale && original && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="min-h-11"
+                  onClick={() =>
+                    void invalidateSessionViews(qc, original.clientId).finally(onClose)
+                  }
+                >
+                  Atualizar Agenda
+                </Button>
+              )}
               <Button
                 type="submit"
                 className="min-h-11"
-                disabled={!form.clientId || mutation.isPending}
+                disabled={!form.clientId || mutation.isPending || result?.stale}
               >
                 {mutation.isPending && <Loader2 className="size-4 animate-spin" aria-hidden />}
                 {session ? "Confirmar novo horário" : "Agendar"}
@@ -604,6 +694,114 @@ function mondayOf(dateKey: string) {
 }
 
 const WEEKDAY = new Intl.DateTimeFormat("pt-BR", { weekday: "long", timeZone: "UTC" });
+const SHORT_CIVIL_DATE = new Intl.DateTimeFormat("pt-BR", {
+  day: "numeric",
+  month: "short",
+  timeZone: "UTC",
+});
+
+function appointmentEndLabel({
+  dateKey,
+  endDateKey,
+  end,
+}: Pick<WeekSessionDTO, "dateKey" | "endDateKey" | "end">) {
+  if (!end || !endDateKey || endDateKey === dateKey) return end;
+  return `${end} (${SHORT_CIVIL_DATE.format(new Date(`${endDateKey}T12:00:00Z`))})`;
+}
+
+export function ReactivationConflictDialog({
+  clientId,
+  clientName,
+  conflicts,
+  checking,
+  onRetry,
+  onClose,
+}: {
+  clientId: string;
+  clientName: string;
+  conflicts: ReactivationConflict[];
+  checking: boolean;
+  onRetry: () => void;
+  onClose: () => void;
+}) {
+  const [selected, select] = useState<ReactivationConflict | null>(null);
+  const tz = browserTz();
+  const format = new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+    timeZone: tz,
+  });
+  if (selected) {
+    return (
+      <AppointmentDialog
+        session={{
+          id: selected.id,
+          clientId,
+          patient: clientName,
+          dateKey: dateKeyInTz(selected.startISO, tz),
+          startISO: selected.startISO,
+          updatedAt: selected.updatedAt,
+          durationMin: selected.durationMin,
+          clinicalStatus: "scheduled",
+          overdue: Date.parse(selected.startISO) <= Date.now(),
+        }}
+        onClose={() => select(null)}
+        onSaved={onRetry}
+      />
+    );
+  }
+  return (
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open && !checking) onClose();
+      }}
+    >
+      <DialogContent className="max-h-[90dvh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Confira os horários antes de reativar</DialogTitle>
+          <DialogDescription>
+            {clientName} continua arquivado. Resolva os conflitos para voltar à Agenda.
+          </DialogDescription>
+        </DialogHeader>
+        <ul className="divide-y divide-border">
+          {conflicts.map((conflict) => (
+            <li key={conflict.id} className="py-3">
+              <p className="font-medium">{format.format(new Date(conflict.startISO))}</p>
+              <p className="text-sm text-muted-foreground">
+                Coincide com {conflict.conflictName} em{" "}
+                {format.format(new Date(conflict.conflictStartISO))}.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-2 min-h-11"
+                disabled={checking}
+                onClick={() => select(conflict)}
+              >
+                Reagendar
+              </Button>
+            </li>
+          ))}
+        </ul>
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="ghost"
+            className="min-h-11"
+            disabled={checking}
+            onClick={onClose}
+          >
+            Manter arquivado
+          </Button>
+          <Button type="button" className="min-h-11" disabled={checking} onClick={onRetry}>
+            {checking ? "Verificando…" : "Verificar novamente"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export function WeekView({
   dateKey,
@@ -682,17 +880,17 @@ export function WeekView({
                     <p className="flex items-center gap-1 font-semibold tabular-nums">
                       <Clock className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
                       {slot.start}
-                      {slot.end && " – " + slot.end}
+                      {slot.end && " – " + appointmentEndLabel(slot)}
                     </p>
                     <Link
-                      {...appointmentDestination(slot, "week")}
+                      {...appointmentDestination(slot, "week", dateKey)}
                       className="flex min-h-11 items-center gap-1.5 break-words font-semibold text-forest hover:underline"
                     >
                       <span className="min-w-0">{slot.patient}</span>
                       <ExternalLink className="size-3.5 shrink-0" aria-hidden />
                     </Link>
                     <StatusPill status={slot.clinicalStatus} />
-                    {slot.clinicalStatus === "scheduled" && (
+                    {(slot.clinicalStatus === "scheduled" || slot.overdue) && (
                       <details className="mt-1">
                         <summary className="min-h-11 cursor-pointer content-center text-sm font-semibold text-forest">
                           Ações

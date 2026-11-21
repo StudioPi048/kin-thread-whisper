@@ -375,6 +375,7 @@ export function planClanWorkbook({
   >();
   const linkIds = new Set<string>();
   const explicitLinkKeys = new Set<string>();
+  const changedLinkRows: RelationPreview[] = [];
   const hasUnionOrder = linksSheet?.header.some(
     (header) => normalize(header) === normalize(UNION_ORDER),
   );
@@ -470,7 +471,7 @@ export function planClanWorkbook({
         !/^\d+$/.test(rawOrder) ||
         !Number.isSafeInteger(marriageOrder) ||
         marriageOrder! < 1 ||
-        marriageOrder! > 2147483647)
+        marriageOrder! > 32767)
     ) {
       relations.push({
         line,
@@ -541,8 +542,15 @@ export function planClanWorkbook({
     if (target) linkIds.add(target.id);
     const state =
       identical?.id === target?.id && identical ? "keep" : target ? "update" : "include";
-    relations.push({ line, name, state, detail: DEFAULT_LINK_TYPE[type] });
+    const preview = {
+      line,
+      name,
+      state,
+      detail: DEFAULT_LINK_TYPE[type],
+    } satisfies RelationPreview;
+    relations.push(preview);
     if (state !== "keep") {
+      changedLinkRows.push(preview);
       plan.links.push({
         key: linkKey || null,
         relationship_id: target?.id ?? null,
@@ -559,14 +567,50 @@ export function planClanWorkbook({
     }
   }
 
-  let proposed: Parameters<typeof validateParentagePlan>[2] = existingLinks.filter(
-    (link) => link.relationship_type === "parent",
+  const replacements = new Map(
+    plan.links.flatMap((link) =>
+      link.relationship_id ? [[link.relationship_id, link] as const] : [],
+    ),
   );
-  for (const [key, group] of parentRows) {
+  const unionOrders = new Map<string, Array<RelationPreview | null>>();
+  const recordOrder = (
+    from: string,
+    to: string,
+    order: number | null,
+    row: RelationPreview | null,
+  ) => {
+    const key = JSON.stringify([[from, to].sort(), order]);
+    const rows = unionOrders.get(key) ?? [];
+    rows.push(row);
+    unionOrders.set(key, rows);
+  };
+  for (const link of existingLinks) {
+    if (link.relationship_type === "union" && !replacements.has(link.id)) {
+      recordOrder(link.from_person_id, link.to_person_id, link.marriage_order, null);
+    }
+  }
+  for (const [index, link] of plan.links.entries()) {
+    if (link.relationship_type !== "union") continue;
+    const order = link.marriage_order_present
+      ? (link.marriage_order ?? null)
+      : (existingLinks.find((existing) => existing.id === link.relationship_id)?.marriage_order ??
+        null);
+    recordOrder(resolveId(link.from_key), resolveId(link.to_key), order, changedLinkRows[index]);
+  }
+  for (const rows of unionOrders.values()) {
+    if (rows.length < 2) continue;
+    for (const row of rows) {
+      if (!row) continue;
+      row.state = "error";
+      row.detail =
+        "Há outra união com esta ordem para as mesmas pessoas. Confira a ordem das duas uniões.";
+    }
+  }
+
+  const existingParents = existingLinks.filter((link) => link.relationship_type === "parent");
+  const parentPlans = [...parentRows].map(([key, group]) => {
     const childId = resolveId(key);
-    const before = existingLinks.filter(
-      (link) => link.relationship_type === "parent" && link.to_person_id === childId,
-    );
+    const before = existingParents.filter((link) => link.to_person_id === childId);
     const parents = new Map(group.parents);
     for (const link of before) {
       const existingKey = stableReference.get(link.from_person_id) ?? link.from_person_id;
@@ -580,6 +624,22 @@ export function planClanWorkbook({
           kind ?? (before.some((link) => link.from_person_id === personId) ? undefined : "unknown"),
       } satisfies ParentageCandidate;
     });
+    return { key, group, childId, before, parents, choicesForChild };
+  });
+  const affectedChildren = new Set(parentPlans.map(({ childId }) => childId));
+  const proposed: Parameters<typeof validateParentagePlan>[2] = [
+    ...existingParents.filter((link) => !affectedChildren.has(link.to_person_id)),
+    ...parentPlans.flatMap(({ childId, choicesForChild }) =>
+      choicesForChild.map((parent) => ({
+        id: `planned:${parent.personId}:${childId}`,
+        from_person_id: parent.personId,
+        to_person_id: childId,
+        relationship_type: "parent",
+        updated_at: "",
+      })),
+    ),
+  ];
+  for (const { key, group, childId, before, parents, choicesForChild } of parentPlans) {
     const error = validateParentagePlan(childId, choicesForChild, proposed);
     const changed =
       before.length !== choicesForChild.length ||
@@ -611,16 +671,6 @@ export function planClanWorkbook({
           kind: parent.kind ?? null,
         })),
       });
-      proposed = [
-        ...proposed.filter((link) => link.to_person_id !== childId),
-        ...choicesForChild.map((parent) => ({
-          id: `planned:${parent.personId}:${childId}`,
-          from_person_id: parent.personId,
-          to_person_id: childId,
-          relationship_type: "parent",
-          updated_at: "",
-        })),
-      ];
     }
   }
 

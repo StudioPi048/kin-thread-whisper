@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { exportAccountData, exportDossierData, type ExportPageReader } from "./data-export";
+import {
+  exportAccountData,
+  exportDossierData,
+  packageDossier,
+  type ExportPageReader,
+} from "./data-export";
 import { smallFamily } from "./geno/fixtures";
 import { buildLogicalGraph, layoutGraph, type NodePositionRow } from "./geno/build";
 import type { PersonRow, RelationshipRow } from "./patterns";
@@ -45,6 +50,63 @@ describe("exportação pessoal", () => {
 });
 
 describe("exportação de um dossiê", () => {
+  it("lista gravações e inclui bytes somente com opção e autorização vigente", async () => {
+    const session = (id: string, audio_path = `owner/case/${id}/audio.webm`) => ({
+      id,
+      audio_path,
+      client_id: "case",
+      user_id: "owner",
+      status: "ready",
+      recording_consent_id: "grant",
+    });
+    const read: ExportPageReader = async ({ table }) => {
+      if (table === "clients") return [{ id: "case", professional_id: "owner" }];
+      if (table === "clinical_sessions")
+        return [
+          session("ok"),
+          session("revoked"),
+          session("missing"),
+          session("foreign", "another/case/foreign/audio.webm"),
+        ];
+      if (table === "audio_consent_events")
+        return [
+          {
+            id: "grant",
+            client_id: "case",
+            scope: "recording",
+            granted: true,
+            revision: 1,
+            session_id: null,
+          },
+          {
+            id: "revoke",
+            client_id: "case",
+            scope: "recording",
+            granted: false,
+            revision: 2,
+            session_id: "revoked",
+          },
+        ];
+      return [];
+    };
+    const data = await exportDossierData(read, "owner", "case");
+    const without = await packageDossier(data);
+    expect(without.manifest.media.every(({ state }) => state === "not_selected")).toBe(true);
+    const requested: string[] = [];
+    const withAudio = await packageDossier(data, async (path) => {
+      requested.push(path);
+      if (path.includes("missing")) throw new Error("unavailable");
+      return { bytes: 1, mime_type: "audio/webm", data_url: "data:audio/webm;base64,AA==" };
+    });
+    expect(requested).toEqual(["owner/case/ok/audio.webm", "owner/case/missing/audio.webm"]);
+    expect(withAudio.format_version).toBe(2);
+    expect(withAudio.manifest.media.map(({ state }) => state)).toEqual([
+      "included",
+      "authorization_required",
+      "not_available",
+      "not_available",
+    ]);
+  });
   it("mantém parentescos por ID e rejeita exportação da conta errada", async () => {
     const read: ExportPageReader = async ({ table, filter }) => {
       if (table === "clients") return [{ id: "case", professional_id: "owner" }];

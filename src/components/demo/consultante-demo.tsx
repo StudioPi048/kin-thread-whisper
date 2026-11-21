@@ -8,6 +8,7 @@ import {
   Network,
   Pencil,
   RotateCcw,
+  Search,
   Undo2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,7 @@ import { ConsultantePlane } from "./consultante-plane";
 import "./consultante-demo.css";
 
 const family = practiceFamily();
+const sofiaId = family.persons.find((person) => person.relationship_to_proband === "Meia-irmã")?.id;
 const initialCase: Case = {
   persons: family.persons,
   links: family.rels.map((link) =>
@@ -45,6 +47,7 @@ const modes = [
 ] as const;
 
 type Mode = (typeof modes)[number]["value"];
+export type DemoEntry = { personId?: string; mode: "map" | "timeline" };
 type Case = { persons: PersonRow[]; links: RelationshipRow[]; positions: NodePositionRow[] };
 type Edit =
   | { kind: "name"; name: string }
@@ -118,10 +121,10 @@ function displayRelationships(tree: LogicalGraph) {
   );
 }
 
-export default function ConsultanteDemo() {
+export default function ConsultanteDemo({ entry }: { entry?: DemoEntry }) {
   const id = useId();
-  const [mode, setMode] = useState<Mode>("map");
-  const [personId, setPersonId] = useState(family.probandId);
+  const [mode, setMode] = useState<Mode>(entry?.mode ?? "map");
+  const [personId, setPersonId] = useState(entry?.personId ?? family.probandId);
   const [snapshot, setSnapshot] = useState<Case>(initialCase);
   const [history, setHistory] = useState<RecordChange[]>([]);
   const [edit, setEdit] = useState<Edit | null>(null);
@@ -134,6 +137,15 @@ export default function ConsultanteDemo() {
   const nameAction = useRef<HTMLButtonElement>(null);
   const parentAction = useRef<HTMLButtonElement>(null);
   const returnFocus = useRef<Edit["kind"] | null>(null);
+
+  useEffect(() => {
+    if (!entry) return;
+    const target = entry.personId ?? family.probandId;
+    setMode(entry.mode);
+    setPersonId(target);
+    setEdit(null);
+    setFocusRequest(entry.personId ? { personId: target } : undefined);
+  }, [entry]);
 
   const tree = useMemo(() => {
     const rendered = buildRenderGraph(
@@ -328,6 +340,35 @@ export default function ConsultanteDemo() {
 
   return (
     <div className="consultante-demo">
+      <div className="consultante-demo-guide">
+        <div>
+          <strong>Família fictícia</strong> · Alterações temporárias
+          <p>
+            {edit?.kind === "parent"
+              ? "Escolha o vínculo e compare a proposta no mapa antes de confirmar."
+              : history.at(-1)?.kind === "parent"
+                ? "Confira a nova ligação na árvore. Use Desfazer para restaurar a filiação."
+                : personId === sofiaId
+                  ? "Abra Revisar filiação na ficha de Sofia para testar uma mudança de união."
+                  : "Localize Sofia para conferir a união dos pais na ficha."}
+          </p>
+        </div>
+        {sofiaId && (
+          <Button
+            type="button"
+            className="min-h-11"
+            variant="outline"
+            disabled={!!edit}
+            onClick={() => {
+              if (mode === "timeline") setMode("map");
+              select(sofiaId);
+              setFocusRequest({ personId: sofiaId });
+            }}
+          >
+            <Search aria-hidden /> {personId === sofiaId ? "Enquadrar Sofia" : "Localizar Sofia"}
+          </Button>
+        )}
+      </div>
       <header className="consultante-demo-toolbar">
         <div className="consultante-demo-modes" role="group" aria-label="Vista do caso">
           {modes.map(({ value, label, icon: Icon }) => (

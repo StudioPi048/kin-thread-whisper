@@ -273,3 +273,24 @@ export function filterTimeline(items: CaseTimelineItem[], f: TimelineFilter): Ca
       (!f.kind || it.kind === f.kind),
   );
 }
+
+export type TimelineGrouping = "none" | "decade" | "generation";
+
+export function groupTimelineList(items: CaseTimelineItem[], grouping: TimelineGrouping) {
+  if (grouping === "none") return [{ value: null, items }];
+  const groups = new Map<number | null, CaseTimelineItem[]>();
+  for (const item of items) {
+    const value =
+      grouping === "generation"
+        ? item.generation
+        : item.year === null
+          ? null
+          : Math.floor(item.year / 10) * 10;
+    const group = groups.get(value);
+    if (group) group.push(item);
+    else groups.set(value, [item]);
+  }
+  return [...groups]
+    .sort(([a], [b]) => (a ?? Infinity) - (b ?? Infinity))
+    .map(([value, items]) => ({ value, items }));
+}

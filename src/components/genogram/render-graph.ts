@@ -1,12 +1,14 @@
 import type { Edge, Node } from "@xyflow/react";
 import type { Tables } from "@/integrations/supabase/types";
 import { relationshipLabel } from "@/lib/genogram";
+import { parentageTrackLabel } from "./genogram-pedigree";
 import {
   buildLogicalGraph,
   layoutGraph,
   validateGraph,
   GEN_GAP,
   type GenogramWarning,
+  type ResolvedParent,
 } from "@/lib/geno/build";
 
 type PersonRow = Tables<"genogram_persons">;
@@ -61,7 +63,9 @@ export function buildRenderGraph(
         preferred_name: person.row.preferred_name,
         gender: person.row.gender,
         birth_date: person.row.birth_date,
+        birth_date_partial: person.row.birth_date_partial,
         death_date: person.row.death_date,
+        death_date_partial: person.row.death_date_partial,
         is_deceased: person.row.is_deceased,
         is_proband: person.row.is_proband,
         relationship_to_proband: person.row.is_proband
@@ -104,11 +108,17 @@ export function buildRenderGraph(
   const seenChildUnion = new Set<string>();
   const childKindsByUnion = new Map<string, Record<string, string>>();
   const suggestionsByUnion = new Map<string, string[]>();
+  const parentsByUnion = new Map<string, Record<string, readonly ResolvedParent[]>>();
   for (const edge of graph.edges) {
     if (edge.kind !== "child") continue;
     const children = childKindsByUnion.get(edge.unionId) ?? {};
     children[edge.personId] = edge.childKind ?? "biological";
     childKindsByUnion.set(edge.unionId, children);
+    if (edge.parentLinks) {
+      const parents = parentsByUnion.get(edge.unionId) ?? {};
+      parents[edge.personId] = edge.parentLinks;
+      parentsByUnion.set(edge.unionId, parents);
+    }
     if (edge.suggested) {
       const suggestions = suggestionsByUnion.get(edge.unionId) ?? [];
       suggestions.push(edge.personId);
@@ -138,6 +148,7 @@ export function buildRenderGraph(
   for (const [uid, union] of graph.unions) {
     if (seenChildUnion.has(uid) || union.children.length === 0) continue;
     seenChildUnion.add(uid);
+    const parentage = parentsByUnion.get(uid);
     edges.push({
       id: `pedigree_${uid}`,
       source: uid,
@@ -145,11 +156,20 @@ export function buildRenderGraph(
       sourceHandle: "bottom",
       targetHandle: "top-target",
       type: "pedigree",
+      ariaLabel: union.children
+        .flatMap((childId) =>
+          (parentage?.[childId] ?? []).map(
+            (parent) =>
+              `${graph.persons.get(parent.personId)?.row.full_name} → ${graph.persons.get(childId)?.row.full_name}. ${parentageTrackLabel(parent.kind, parent.source)}`,
+          ),
+        )
+        .join(". "),
       style: { stroke: "var(--color-forest)", strokeWidth: 2 },
       data: {
         unionId: uid,
         childIds: union.children,
         childKinds: childKindsByUnion.get(uid),
+        parentsByChild: parentage,
         suggestedChildIds: suggestionsByUnion.get(uid),
         direction: union.direction,
       },

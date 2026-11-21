@@ -1,7 +1,8 @@
-import { useCallback, useId, useRef, useState, type MouseEventHandler } from "react";
+import { useCallback, useId, useRef, useState, type MouseEvent } from "react";
 import * as Tabs from "@radix-ui/react-tabs";
 import { ArrowDown, ArrowUpRight } from "lucide-react";
 import { practiceFamily } from "@/lib/geno/fixtures";
+import type { DemoEntry } from "./consultante-demo";
 import "./home-case-preview.css";
 
 const { persons, rels, probandId } = practiceFamily();
@@ -72,7 +73,7 @@ function NamePlate({
 export function HomeCasePreview({
   onOpenCase,
 }: {
-  onOpenCase?: MouseEventHandler<HTMLAnchorElement>;
+  onOpenCase?: (event: MouseEvent<HTMLAnchorElement>, entry: DemoEntry) => void;
 }) {
   const titleId = useId();
   const [tab, setTab] = useState("relacoes");
@@ -195,7 +196,15 @@ export function HomeCasePreview({
 
       <footer className="home-case-footer">
         <span>{Object.keys(roles).length} pessoas neste recorte</span>
-        <a href="#caso-ficticio" onClick={onOpenCase}>
+        <a
+          href="#caso-ficticio"
+          onClick={(event) =>
+            onOpenCase?.(event, {
+              personId: tab === "registros" ? record.id : undefined,
+              mode: tab === "cronologia" ? "timeline" : "map",
+            })
+          }
+        >
           Ver caso completo <ArrowDown size={16} aria-hidden="true" />
         </a>
       </footer>

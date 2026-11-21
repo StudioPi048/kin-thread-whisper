@@ -81,6 +81,7 @@ describe("salvamento da anamnese", () => {
     const edits = captureIntakeEdits(
       { presenting_intention: "Retorno", "source:opening": null },
       1,
+      row,
     );
     const saved = await persistIntakeEdits(
       { read: async () => row, insert: vi.fn(), update },
@@ -99,7 +100,96 @@ describe("salvamento da anamnese", () => {
       },
       expect.objectContaining({ updated_at: "revision-2" }),
     );
-    expect(saved.signature_notes).toBe("Conferida em outra aba");
+    expect(saved.row?.signature_notes).toBe("Conferida em outra aba");
+    expect(saved.conflicts).toEqual({});
+  });
+
+  it("persiste somente alterações independentes e devolve as três versões da resposta e da fonte", async () => {
+    const original = sample({
+      presenting_intention: "Resposta anterior",
+      signature_notes: "Anotação original",
+      field_context: { presenting_intention: { source: "client", status: "pending" } },
+      last_section_edited: "opening",
+      last_field_edited: "signature_notes",
+    });
+    let row = sample({
+      ...original,
+      updated_at: "revision-2",
+      presenting_intention: "Resposta em outra aba",
+      field_context: { presenting_intention: { source: "family", status: "pending" } },
+    });
+    const independent = captureIntakeEdits(
+      {
+        signature_notes: "Anotação nova",
+        "context:presenting_intention:status": "unknown",
+        last_section_edited: "opening",
+        last_field_edited: "signature_notes",
+      },
+      1,
+      original,
+    );
+    const overlap = captureIntakeEdits(
+      {
+        presenting_intention: "Meu rascunho",
+        "context:presenting_intention:source": "document",
+        last_section_edited: "opening",
+        last_field_edited: "presenting_intention",
+      },
+      2,
+      original,
+    );
+    const writer = {
+      read: async () => row,
+      insert: vi.fn(),
+      update: vi.fn(async (patch: Partial<ClientIntake>) => {
+        row = { ...row, ...patch, updated_at: "revision-3" };
+        return row;
+      }),
+    };
+    const all = { ...independent, ...overlap };
+    const result = await persistIntakeEdits(writer, all);
+    expect(result.accepted).toEqual(independent);
+    expect(result.conflicts).toEqual({
+      presenting_intention: { previous: "Resposta anterior", current: "Resposta em outra aba" },
+      "context:presenting_intention:source": { previous: "client", current: "family" },
+    });
+    expect(result.row).toMatchObject({
+      presenting_intention: "Resposta em outra aba",
+      signature_notes: "Anotação nova",
+      last_field_edited: "signature_notes",
+      field_context: { presenting_intention: { source: "family", status: "unknown" } },
+    });
+    const pending = acknowledgeIntakeEdits(all, result.accepted, result.row);
+    expect(pending).toEqual(overlap);
+
+    // A escrita explícita corresponde à versão que a pessoa revisou, mesmo com nova alteração.
+    const reviewed = {
+      presenting_intention: { ...pending.presenting_intention, expected: "Resposta em outra aba" },
+    };
+    row = { ...row, presenting_intention: "Terceira versão" };
+    expect(await persistIntakeEdits(writer, reviewed)).toMatchObject({
+      wrote: false,
+      conflicts: {
+        presenting_intention: { previous: "Resposta em outra aba", current: "Terceira versão" },
+      },
+    });
+    expect(writer.update).toHaveBeenCalledTimes(1);
+  });
+
+  it("usa o valor confirmado pelo próprio envio como base de uma edição posterior da mesma resposta", async () => {
+    const initial = sample({ presenting_intention: "A" });
+    const sent = captureIntakeEdits({ presenting_intention: "B" }, 1, initial);
+    const next = captureIntakeEdits({ presenting_intention: "C" }, 2, initial, sent);
+    const afterOwnWrite = sample({ presenting_intention: "B", updated_at: "revision-2" });
+    const remaining = acknowledgeIntakeEdits(next, sent, afterOwnWrite);
+    expect(remaining.presenting_intention).toMatchObject({ expected: "B", value: "C" });
+    const update = vi.fn(async (patch) => ({ ...afterOwnWrite, ...patch }));
+    const result = await persistIntakeEdits(
+      { read: async () => afterOwnWrite, insert: vi.fn(), update },
+      remaining,
+    );
+    expect(result.conflicts).toEqual({});
+    expect(result.row?.presenting_intention).toBe("C");
   });
 
   it("preserva outras fontes quando altera só a situação de uma resposta", () => {
@@ -164,4 +254,23 @@ it("preserva a hora civil relatada e permite limpar uma data na Anamnese", () =>
       ),
     ),
   ).toEqual({ birth_datetime: null, union_date: null, birth_place: "Cidade de teste" });
+});
+
+it("filtra respostas sem fonte e permite combinar o filtro com a busca da pergunta", () => {
+  const intake = sample({
+    presenting_intention: "Resposta com fonte",
+    pregnancy_notes: "Resposta sem fonte",
+    birth_notes: "   ",
+    field_context: {
+      presenting_intention: { source: "client" },
+      signature_notes: { status: "pending" },
+    },
+  });
+  expect(findIntakeQuestions("", intake).map(({ field }) => field)).toEqual([
+    "signature_notes",
+    "pregnancy_notes",
+  ]);
+  expect(findIntakeQuestions("Gestacao", intake).map(({ field }) => field)).toEqual([
+    "pregnancy_notes",
+  ]);
 });

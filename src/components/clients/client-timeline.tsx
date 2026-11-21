@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ListFilter, MapPin, RefreshCw } from "lucide-react";
+import { ChevronLeft, ListFilter, MapPin, RefreshCw, ZoomIn } from "lucide-react";
 
 import { clinicalIntelQuery, getMappablePersons } from "@/lib/clinical-intel";
 import { buildLogicalGraph } from "@/lib/geno/build";
@@ -10,11 +10,13 @@ import {
   buildCaseTimeline,
   filterTimeline,
   formatByPrecision,
+  groupTimelineList,
   yearRange,
   type TimelineBranch,
   type CaseTimelineItem,
   type TimelineFilter,
   type TimelineKind,
+  type TimelineGrouping,
 } from "@/lib/timeline";
 import { buildTimelineScale, groupTimelineMarkers } from "@/lib/timeline-scale";
 import "./client-timeline.css";
@@ -52,6 +54,8 @@ export function ClientTimeline({ clientId, focusEvent }: Props) {
   const [filter, setFilter] = useState<TimelineFilter>({});
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [compareBranches, setCompareBranches] = useState(false);
+  const [groupBy, setGroupBy] = useState<TimelineGrouping>("none");
+  const [previousPeriods, setPreviousPeriods] = useState<Array<number | undefined>>([]);
   const [view, setView] = useState<"chart" | "list" | null>(null);
   const [selection, setSelection] = useState<string | null>(focusEvent ?? null);
   const all = useMemo(() => {
@@ -88,6 +92,22 @@ export function ClientTimeline({ clientId, focusEvent }: Props) {
     ];
   }, [items, scale]);
   const selected = items.find((item) => item.key === selection) ?? dated[0] ?? undated[0];
+  const hasCalendarDate = undated.filter(({ precision }) => precision === "month_day");
+  const withoutDate = undated.filter(({ precision }) => precision !== "month_day");
+  const zoomYear = selected?.year ?? dated[0]?.year;
+  const zoomDecade =
+    zoomYear == null || !scale || scale.toYear - scale.fromYear < 10
+      ? undefined
+      : Math.floor(zoomYear / 10) * 10;
+  function goToDecade(decade: number | undefined) {
+    if (filter.decade === decade) return;
+    setPreviousPeriods((previous) => [...previous, filter.decade]);
+    setFilter((current) => ({ ...current, decade }));
+  }
+  function returnToPeriod() {
+    setFilter((current) => ({ ...current, decade: previousPeriods.at(-1) }));
+    setPreviousPeriods((previous) => previous.slice(0, -1));
+  }
   const people = useMemo(
     () =>
       [
@@ -183,7 +203,7 @@ export function ClientTimeline({ clientId, focusEvent }: Props) {
 
   const selectClass =
     "h-11 min-w-0 rounded-md border border-input bg-card px-3 text-sm text-foreground";
-  const activeView = view ?? (scale ? "chart" : "list");
+  const activeView = view ?? (focusEvent ? "list" : scale ? "chart" : "list");
   const activeFilters = [
     filter.personId &&
       (people.find(([id]) => id === filter.personId)?.[1] ?? "Familiar indisponível"),
@@ -240,7 +260,7 @@ export function ClientTimeline({ clientId, focusEvent }: Props) {
                 aria-pressed={activeView === "chart"}
                 onClick={() => setView("chart")}
               >
-                Gráfico
+                Panorama
               </Button>
             </div>
           )}
@@ -351,9 +371,7 @@ export function ClientTimeline({ clientId, focusEvent }: Props) {
             id="tl-decade"
             className={selectClass}
             value={filter.decade ?? ""}
-            onChange={(e) =>
-              setFilter({ ...filter, decade: e.target.value ? Number(e.target.value) : undefined })
-            }
+            onChange={(e) => goToDecade(e.target.value ? Number(e.target.value) : undefined)}
           >
             <option value="">Todas</option>
             {decades.map((decade) => (
@@ -371,36 +389,92 @@ export function ClientTimeline({ clientId, focusEvent }: Props) {
               <li key={index}>{label}</li>
             ))}
           </ul>
-          <Button variant="link" className="min-h-11 px-1" onClick={() => setFilter({})}>
+          <Button
+            variant="link"
+            className="min-h-11 px-1"
+            onClick={() => {
+              setFilter({});
+              setPreviousPeriods([]);
+            }}
+          >
             Limpar filtros
           </Button>
         </div>
       )}
 
       {!selected ? (
-        <p className="rounded-md border border-border bg-card p-6 text-sm text-muted-foreground">
-          Nenhum registro com esses filtros.
-        </p>
+        <div className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-card p-4 text-sm text-muted-foreground">
+          <p>Nenhum registro com esses filtros.</p>
+          {previousPeriods.length > 0 && (
+            <Button variant="outline" className="min-h-11" onClick={returnToPeriod}>
+              Voltar ao intervalo anterior
+            </Button>
+          )}
+        </div>
       ) : (
         <div className="case-timeline-layout" data-view={activeView}>
           <section className="case-timeline-list" aria-labelledby="case-timeline-list-title">
-            <h2 id="case-timeline-list-title">Acontecimentos</h2>
-            {dated.length > 0 && (
-              <TimelineList
-                items={dated}
-                selected={selected}
-                clientId={clientId}
-                onSelect={setSelection}
-                label="Registros com data"
-              />
-            )}
-            {undated.length > 0 && (
+            <div className="case-timeline-list-heading">
+              <h2 id="case-timeline-list-title">Acontecimentos</h2>
+              {dated.length > 1 && (
+                <label className="grid min-w-0 gap-1 text-sm text-ink-soft">
+                  Agrupar acontecimentos
+                  <select
+                    className={selectClass}
+                    value={groupBy}
+                    onChange={(e) => setGroupBy(e.target.value as TimelineGrouping)}
+                  >
+                    <option value="none">Ordem cronológica</option>
+                    <option value="decade">Por década</option>
+                    <option value="generation">Por geração</option>
+                  </select>
+                </label>
+              )}
+            </div>
+            {dated.length > 0 &&
+              groupTimelineList(dated, groupBy).map(({ value, items }) => {
+                const label =
+                  groupBy === "none"
+                    ? null
+                    : value === null
+                      ? "Geração não identificada"
+                      : groupBy === "decade"
+                        ? `${value}–${value + 9}`
+                        : GEN_LABEL(value);
+                return (
+                  <div className="case-timeline-list-group" key={value ?? "none"}>
+                    {label && <h3>{label}</h3>}
+                    <TimelineList
+                      items={items}
+                      selected={selected}
+                      clientId={clientId}
+                      onSelect={setSelection}
+                      label={label ?? "Registros com data"}
+                    />
+                  </div>
+                );
+              })}
+            {hasCalendarDate.length > 0 && (
               <div className="case-timeline-undated">
                 <h3>
-                  Sem data para o gráfico <span>{undated.length}</span>
+                  Dia e mês, sem ano <span>{hasCalendarDate.length}</span>
                 </h3>
                 <TimelineList
-                  items={undated}
+                  items={hasCalendarDate}
+                  selected={selected}
+                  clientId={clientId}
+                  onSelect={setSelection}
+                  label="Registros com dia e mês, sem ano"
+                />
+              </div>
+            )}
+            {withoutDate.length > 0 && (
+              <div className="case-timeline-undated">
+                <h3>
+                  Sem data para o gráfico <span>{withoutDate.length}</span>
+                </h3>
+                <TimelineList
+                  items={withoutDate}
                   selected={selected}
                   clientId={clientId}
                   onSelect={setSelection}
@@ -416,6 +490,9 @@ export function ClientTimeline({ clientId, focusEvent }: Props) {
               filter.branch ? undefined : () => setCompareBranches((active) => !active)
             }
             scale={scale}
+            zoomDecade={zoomDecade}
+            onZoom={goToDecade}
+            onReturnToPeriod={previousPeriods.length ? returnToPeriod : undefined}
             selected={selected}
             clientId={clientId}
             onSelect={setSelection}
@@ -450,6 +527,7 @@ function TimelineList({
           <button
             type="button"
             className="case-timeline-row"
+            data-precision={item.precision}
             aria-pressed={selected.key === item.key}
             onClick={() => onSelect(item.key)}
           >
@@ -484,10 +562,16 @@ function TimelineOverview({
   onSelect,
   compareBranches,
   onCompareBranches,
+  zoomDecade,
+  onZoom,
+  onReturnToPeriod,
 }: {
   scale: Scale;
   compareBranches: boolean;
   onCompareBranches?: () => void;
+  zoomDecade?: number;
+  onZoom: (decade: number) => void;
+  onReturnToPeriod?: () => void;
   selected: CaseTimelineItem;
   clientId: string;
   onSelect: (key: string) => void;
@@ -555,6 +639,28 @@ function TimelineOverview({
           decoding="async"
         />
       </header>
+      {(onReturnToPeriod || zoomDecade !== undefined) && (
+        <div className="case-timeline-range-tools" role="group" aria-label="Escala cronológica">
+          {onReturnToPeriod && (
+            <Button
+              variant="outline"
+              className="min-h-11 whitespace-normal text-left"
+              onClick={onReturnToPeriod}
+            >
+              <ChevronLeft size={16} aria-hidden /> Voltar ao intervalo anterior
+            </Button>
+          )}
+          {zoomDecade !== undefined && (
+            <Button
+              variant="outline"
+              className="min-h-11 whitespace-normal text-left"
+              onClick={() => onZoom(zoomDecade)}
+            >
+              <ZoomIn size={16} aria-hidden /> Aproximar década de {zoomDecade}
+            </Button>
+          )}
+        </div>
+      )}
       {scale ? (
         <figure className="case-timeline-figure">
           <div className="case-timeline-ruler" aria-hidden="true">

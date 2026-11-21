@@ -1,5 +1,12 @@
 import type { Edge, Node } from "@xyflow/react";
-import { GEN_GAP, NODE_W, PERSON_SHAPE, type ParentKind } from "@/lib/geno/build";
+import {
+  GEN_GAP,
+  NODE_W,
+  PERSON_SHAPE,
+  type ParentKind,
+  type ResolvedParent,
+} from "@/lib/geno/build";
+import { groupPedigreeChildren, type PedigreeData } from "./genogram-pedigree";
 import {
   avoidCards,
   pathThrough,
@@ -49,6 +56,7 @@ type SpatialUnion = SpatialPoint & {
   partners: string[];
   kind?: string;
   label?: string;
+  relationshipId?: string;
   hubOffset?: number;
   branch: SpatialBranch;
   single: boolean;
@@ -65,6 +73,8 @@ type SpatialRoute = {
   childIds?: string[];
   sharedAnchor?: string;
   parentKind?: ParentKind;
+  parentSource?: ResolvedParent["source"];
+  parentId?: string;
   suggested?: boolean;
 };
 
@@ -215,6 +225,8 @@ export function buildSpatialLayout(nodes: Node[], edges: Edge[]) {
       single: node.data.isSingle === true || partners.length === 1,
       kind: typeof node.data.kind === "string" ? node.data.kind : undefined,
       label: typeof node.data.label === "string" ? node.data.label : undefined,
+      relationshipId:
+        typeof node.data.relationshipId === "string" ? node.data.relationshipId : undefined,
       hubOffset: typeof node.data.hubOffset === "number" ? node.data.hubOffset : undefined,
     });
   }
@@ -366,41 +378,30 @@ export function projectSpatialLayout(
     if (edge.type === "pedigree") {
       const union = unionsById.get(String(edge.data?.unionId ?? edge.source));
       if (!union || !Array.isArray(edge.data?.childIds)) continue;
-      const childKinds = edge.data?.childKinds as Record<string, ParentKind> | undefined;
-      const suggestedIds = new Set(
-        Array.isArray(edge.data?.suggestedChildIds) ? edge.data.suggestedChildIds : [],
-      );
-      const childGroups = new Map<
-        string,
-        {
-          rowY: number;
-          kind: ParentKind;
-          suggested: boolean;
-          children: typeof people;
-        }
-      >();
-      for (const id of new Set(edge.data.childIds.map(String))) {
+      const childNodes = [...new Set<string>(edge.data.childIds.map(String))].flatMap((id) => {
         const child = peopleById.get(id);
-        if (!child) continue;
-        const kind = childKinds?.[id] ?? "unknown";
-        const suggested = suggestedIds.has(id);
-        const key = `${child.y}:${kind}:${suggested}`;
-        const group = childGroups.get(key) ?? { rowY: child.y, kind, suggested, children: [] };
-        group.children.push(child);
-        childGroups.set(key, group);
-      }
-      for (const [key, { rowY, kind, suggested, children }] of childGroups) {
+        return child ? [child] : [];
+      });
+      const groups = groupPedigreeChildren(childNodes, ({ y }) => y, edge.data as PedigreeData);
+      for (const { key, rowY, kind, source, parentId, children } of groups) {
+        const suggested = source !== "explicit";
         const down =
           edge.data?.direction === "down" || (edge.data?.direction !== "up" && rowY > union.y);
         const direction = down ? 1 : -1;
+        const knownParent = parentId
+          ? peopleById.get(parentId)
+          : union.single
+            ? peopleById.get(union.partners[0])
+            : undefined;
+        const hubX = parentId && knownParent ? knownParent.x : union.x;
+        const portOffset = parentId ? (hubX < union.x ? -8 : 8) : 0;
         const anchors = children.map((child) => ({
-          x: child.x,
+          x: child.x + portOffset,
           y: child.y + (down ? 0 : child.height),
         }));
         const near = down
           ? Math.min(...anchors.map((point) => point.y))
           : Math.max(...anchors.map((point) => point.y));
-        const knownParent = union.single ? peopleById.get(union.partners[0]) : undefined;
         const portY = knownParent
           ? knownParent.y + (down ? knownParent.height : 0)
           : union.y + direction * 6;
@@ -410,7 +411,7 @@ export function projectSpatialLayout(
           return centerY > Math.min(near, portY) && centerY < Math.max(near, portY);
         });
         const column = avoidCards(
-          union.x,
+          hubX,
           obstruction.map(({ x, width }) => ({
             left: x - width / 2 - 12,
             right: x + width / 2 + 12,
@@ -427,8 +428,8 @@ export function projectSpatialLayout(
         const departureY = portY + (barY - portY) * 0.28;
         const strokes = [
           [
-            { x: union.x, y: portY },
-            { x: union.x, y: departureY },
+            { x: hubX, y: portY },
+            { x: hubX, y: departureY },
             { x: column, y: departureY },
             { x: column, y: barY },
           ],
@@ -467,6 +468,8 @@ export function projectSpatialLayout(
           branch: union.branch,
           suggested,
           parentKind: kind,
+          parentSource: source,
+          parentId,
           highlighted,
           unionId: union.id,
           childIds: children.map((child) => child.id),

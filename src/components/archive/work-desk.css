@@ -842,8 +842,8 @@
   .work-desk-columns {
     grid-template:
       "agenda"
-      "dossier"
       "review"
+      "dossier"
       / minmax(0, 1fr);
   }
 

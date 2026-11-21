@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { searchLibrary } from "./library-search";
+import { buildLibraryItems, libraryProvenance } from "@/components/library/catalog";
 
 const items = [
   {
@@ -38,5 +39,15 @@ describe("busca da biblioteca", () => {
   });
   it("respeita a categoria", () => {
     expect(searchLibrary(items, "", "Livros").map((i) => i.key)).toEqual(["2"]);
+  });
+  it("distingue referências cadastradas, paráfrases e edição editorial a conferir", () => {
+    const catalog = buildLibraryItems([]);
+    const from = (key: string) => libraryProvenance(catalog.find((item) => item.key === key)!);
+    expect(from("manual-genossociograma")).toContain("pp. 163–164");
+    expect(from("quote-0")).toBe("Paráfrase ilustrativa");
+    expect(from("term-0")).toContain("edição e páginas sem conferência");
+    expect(libraryProvenance({ ...catalog[0], category: "Meu acervo" })).toBe(
+      "Referência do seu acervo",
+    );
   });
 });

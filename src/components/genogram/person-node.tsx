@@ -17,7 +17,9 @@ export interface PersonNodeData {
   preferred_name?: string | null;
   gender?: string | null;
   birth_date?: string | null;
+  birth_date_partial?: string | null;
   death_date?: string | null;
+  death_date_partial?: string | null;
   is_deceased: boolean;
   is_proband: boolean;
   notes?: string | null;

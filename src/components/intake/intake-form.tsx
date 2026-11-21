@@ -1,4 +1,5 @@
 import { IntakeEventProposal, type IntakeFinding } from "./intake-event-proposal";
+import { IntakeConflictReview } from "./intake-conflict-review";
 import { useUnsaved } from "@/components/unsaved/unsaved-guard";
 import { createContext, useContext, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -26,6 +27,7 @@ import {
   INTAKE_QUESTION_LABELS,
   INTAKE_ANSWER_STATUS,
   INTAKE_ANSWER_SOURCE,
+  INTAKE_SECTION_SOURCE,
   answerContext,
   findIntakeQuestions,
   isIntakeSection,
@@ -48,6 +50,7 @@ import {
   captureIntakeEdits,
   intakePatch,
   persistIntakeEdits,
+  type IntakeConflicts,
   type IntakeEdits,
   type IntakeFields,
 } from "./intake-save";
@@ -62,12 +65,7 @@ const IntakeContext = createContext<{
 const AUTOSAVE_MS = 1200;
 
 export function IntakeForm(props: Props) {
-  return (
-    <CaseIntakeForm
-      key={`${props.professionalId}:${props.clientId}:${props.focusQuestion ?? ""}`}
-      {...props}
-    />
-  );
+  return <CaseIntakeForm key={`${props.professionalId}:${props.clientId}`} {...props} />;
 }
 
 function CaseIntakeForm({ clientId, professionalId, focusQuestion }: Props) {
@@ -83,6 +81,7 @@ function CaseIntakeForm({ clientId, professionalId, focusQuestion }: Props) {
     linkedField ? "full" : undefined,
   );
   const [search, setSearch] = useState("");
+  const [withoutSource, setWithoutSource] = useState(false);
   const [finding, setFinding] = useState<IntakeFinding>();
   const [focusRequest, setFocusRequest] = useState<{ field?: keyof ClientIntake } | undefined>(
     linkedField ? { field: linkedField } : undefined,
@@ -90,7 +89,14 @@ function CaseIntakeForm({ clientId, professionalId, focusQuestion }: Props) {
   const formRef = useRef<HTMLDivElement>(null);
   const sectionTitleRef = useRef<HTMLHeadingElement>(null);
   const [pending, setPending] = useState<IntakeEdits>({});
+  const pendingRef = useRef<IntakeEdits>({});
+  const replacePending = (edits: IntakeEdits) => {
+    pendingRef.current = edits;
+    setPending(edits);
+  };
+  const [conflicts, setConflicts] = useState<IntakeConflicts>({});
   const revision = useRef(0);
+  const persistedRevision = useRef(0);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const queryKey = ["client-intake", professionalId, clientId] as const;
   const readIntake = async () => {
@@ -107,11 +113,23 @@ function CaseIntakeForm({ clientId, professionalId, focusQuestion }: Props) {
   const intake = intakeQuery.data;
   const draft = useMemo(() => ({ ...intake, ...intakePatch(intake, pending) }), [intake, pending]);
   const hasPending = Object.keys(pending).length > 0;
+  const canSave = Object.keys(pending).some((key) => !conflicts[key]);
+  const conflictCount = Object.keys(conflicts).length;
   const mode = activeMode ?? (intake ? "full" : "brief");
   const section =
     activeSection ??
     (isIntakeSection(intake?.last_section_edited) ? intake.last_section_edited : "opening");
-  const results = useMemo(() => findIntakeQuestions(search).slice(0, 10), [search]);
+  const results = useMemo(() => {
+    const matches = findIntakeQuestions(search, withoutSource ? draft : undefined);
+    return withoutSource ? matches : matches.slice(0, 10);
+  }, [draft, search, withoutSource]);
+
+  useEffect(() => {
+    if (!linkedField || !linkedSection) return;
+    setMode("full");
+    setSection(linkedSection);
+    setFocusRequest({ field: linkedField });
+  }, [linkedField, linkedSection]);
 
   useEffect(() => {
     if (!focusRequest) return;
@@ -156,35 +174,46 @@ function CaseIntakeForm({ clientId, professionalId, focusQuestion }: Props) {
         },
         edits,
       ),
-    onSuccess: async (data, edits) => {
+    onSuccess: async ({ row, accepted, conflicts: foundConflicts, wrote }) => {
       // A read started before the write could otherwise restore the older cache.
       await qc.cancelQueries({ queryKey, exact: true });
       qc.setQueryData<ClientIntake | null>(queryKey, (cached) =>
-        cached && cached.updated_at > data.updated_at ? cached : data,
+        cached && row && cached.updated_at > row.updated_at ? cached : row,
       );
-      setPending((current) => acknowledgeIntakeEdits(current, edits));
-      setSavedAt(new Date());
+      replacePending(acknowledgeIntakeEdits(pendingRef.current, accepted, row));
+      setConflicts(foundConflicts);
+      if (wrote) {
+        persistedRevision.current++;
+        setSavedAt(new Date());
+      }
     },
   });
   const mutate = useRef(save.mutateAsync);
   mutate.current = save.mutateAsync;
   const [queue] = useState(
     () =>
-      new KeyedDebounce<IntakeEdits>(
-        async (_, edits) => void (await mutate.current(edits)),
-        AUTOSAVE_MS,
-      ),
+      new KeyedDebounce<{ pending: true }>(async () => {
+        // Captura o rascunho com a versão já confirmada pelo envio anterior.
+        const edits = pendingRef.current;
+        if (Object.keys(edits).length) await mutate.current(edits);
+      }, AUTOSAVE_MS),
   );
 
   useUnsaved(`intake:${clientId}`, {
     label: "Anamnese",
-    isDirty: () => queue.hasPending(),
-    save: () => queue.flush(),
+    isDirty: () => Object.keys(pendingRef.current).length > 0 || queue.hasPending(),
+    save: async () => {
+      await queue.flush();
+      if (Object.keys(pendingRef.current).length)
+        throw new Error("Resolva as alterações feitas em outra aba antes de sair.");
+    },
     discard: async () => {
-      const sent = await queue.discardAndWait();
-      setPending({});
+      const confirmed = persistedRevision.current;
+      await queue.discardAndWait();
+      replacePending({});
+      setConflicts({});
       save.reset();
-      if (sent)
+      if (persistedRevision.current > confirmed)
         toast.info(
           "O envio em andamento da Anamnese foi confirmado. As outras alterações foram descartadas.",
         );
@@ -201,12 +230,33 @@ function CaseIntakeForm({ clientId, professionalId, focusQuestion }: Props) {
           ? "clan_narratives"
           : "opening"
         : section;
+    const current = pendingRef.current;
     const edits = captureIntakeEdits(
       { ...patch, last_section_edited: lastSection, last_field_edited: lastField },
       ++revision.current,
+      intake,
+      current,
     );
-    setPending((current) => ({ ...current, ...edits }));
-    queue.push("intake", edits);
+    replacePending({ ...current, ...edits });
+    queue.push("intake", { pending: true });
+  };
+
+  const resolve = (key: string, keepDraft: boolean) => {
+    const conflict = conflicts[key];
+    const current = { ...pendingRef.current };
+    if (!conflict || !current[key]) return;
+    if (keepDraft) current[key] = { ...current[key], expected: conflict.current };
+    else delete current[key];
+    replacePending(current);
+    setConflicts((previous) => {
+      const remaining = { ...previous };
+      delete remaining[key];
+      return remaining;
+    });
+    if (keepDraft) {
+      queue.push("intake", { pending: true });
+      void queue.flush().catch(() => {});
+    }
   };
 
   const completion = calculateCompletion(draft);
@@ -296,13 +346,22 @@ function CaseIntakeForm({ clientId, professionalId, focusQuestion }: Props) {
             Retomar última pergunta
           </Button>
         )}
-        {search.trim() && (
+        <label className="flex min-h-11 items-center gap-2 text-sm font-medium">
+          <input
+            type="checkbox"
+            className="size-5 accent-primary"
+            checked={withoutSource}
+            onChange={(event) => setWithoutSource(event.target.checked)}
+          />
+          Respostas sem fonte própria
+        </label>
+        {(search.trim() || withoutSource) && (
           <div
             className="basis-full border-t border-border pt-2"
             aria-label="Perguntas encontradas"
           >
             {results.length ? (
-              <ul className="grid gap-x-4 sm:grid-cols-2">
+              <ul className="grid max-h-72 gap-x-4 overflow-y-auto sm:grid-cols-2">
                 {results.map(({ section, field, label }) => (
                   <li key={field ?? section.id}>
                     <button
@@ -318,7 +377,9 @@ function CaseIntakeForm({ clientId, professionalId, focusQuestion }: Props) {
               </ul>
             ) : (
               <p role="status" className="text-sm text-muted-foreground">
-                Nenhuma pergunta encontrada.
+                {withoutSource
+                  ? "Nenhuma resposta sem fonte própria encontrada."
+                  : "Nenhuma pergunta encontrada."}
               </p>
             )}
           </div>
@@ -333,6 +394,12 @@ function CaseIntakeForm({ clientId, professionalId, focusQuestion }: Props) {
           ) : save.isError ? (
             <span className="text-clinical-critical">
               Falha ao salvar. As respostas continuam aqui.
+            </span>
+          ) : conflictCount ? (
+            <span className="text-clinical-warning">
+              {conflictCount === 1
+                ? "Uma alteração precisa ser comparada."
+                : `${conflictCount} alterações precisam ser comparadas.`}
             </span>
           ) : hasPending ? (
             <span className="text-clinical-warning">Alterações pendentes</span>
@@ -351,12 +418,19 @@ function CaseIntakeForm({ clientId, professionalId, focusQuestion }: Props) {
           variant="outline"
           className="min-h-11"
           onClick={() => void queue.flush().catch(() => {})}
-          disabled={save.isPending || !hasPending}
+          disabled={save.isPending || !canSave}
         >
           <Save aria-hidden className="size-4" />
           {save.isError ? "Tentar salvar de novo" : "Salvar agora"}
         </Button>
       </div>
+      <IntakeConflictReview
+        conflicts={conflicts}
+        pending={pending}
+        saving={save.isPending}
+        onResolve={resolve}
+        onOpenQuestion={selectQuestion}
+      />
       <IntakeContext.Provider
         value={{
           draft,
@@ -448,11 +522,11 @@ function CaseIntakeForm({ clientId, professionalId, focusQuestion }: Props) {
                       }
                     >
                       <option value="">Não registrada</option>
-                      <option value="cliente">Relato do cliente</option>
-                      <option value="familiar">Relato de familiar</option>
-                      <option value="documento">Documento</option>
-                      <option value="observacao">Observação da profissional</option>
-                      <option value="misto">Fontes mistas</option>
+                      {Object.entries(INTAKE_SECTION_SOURCE).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
                     </select>
                   </label>
                 )}

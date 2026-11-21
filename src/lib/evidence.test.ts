@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { buildHypotheses, evidenceForCase } from "./evidence";
-import type { PersonRow } from "./patterns";
+import type { PersonRow, RelationshipRow } from "./patterns";
 
 const person = (id: string, extra: Partial<PersonRow>) =>
   ({
@@ -60,6 +60,24 @@ describe("lacunas reais", () => {
     expect(g).toContain("Pai não cadastrado.");
     expect(g).toContain("Mãe não cadastrada.");
     expect(g).toContain("Data de nascimento de Cliente desconhecida.");
+  });
+
+  it("mantém a fonte de uma filiação tipificada como lacuna até a revisão", () => {
+    const proband = person("Consultante", { is_proband: true, client_id: "teste" });
+    const other = ["Pai", "Mãe"].map((name) => person(name, { client_id: "teste" }));
+    const relationships = other.map(({ id }) => ({
+      id: `link-${id}`,
+      client_id: "teste",
+      from_person_id: id,
+      to_person_id: proband.id,
+      qualifier: "biological",
+      relationship_type: "parent",
+    })) as RelationshipRow[];
+    const message = "Confirme a fonte da filiação de Consultante.";
+    expect(informationGaps([proband, ...other], relationships)).toContain(message);
+    expect(
+      informationGaps([{ ...proband, parentage_reviewed: true }, ...other], relationships),
+    ).not.toContain(message);
   });
 });
 

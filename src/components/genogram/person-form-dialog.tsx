@@ -37,10 +37,13 @@ import {
   estimateConceptionDate,
   findNearbyLosses,
   formatDateBR,
+  relationshipQualifiers,
 } from "@/lib/genogram";
 import { personLifeEvents, type LifeEvent } from "@/lib/patterns";
 import { RelationshipCombobox } from "./relationship-combobox";
 import type { Database } from "@/integrations/supabase/types";
+import type { ParentageVersion } from "@/lib/parentage-review";
+import { editGenogram } from "./genogram-integrity";
 
 type PersonRow = Database["public"]["Tables"]["genogram_persons"]["Row"];
 
@@ -53,6 +56,13 @@ interface Props {
   defaultRelationship?: string;
   defaultGender?: string;
   onCreated?: (id: string) => void;
+  quickLink?: {
+    targetId: string;
+    targetName: string;
+    direction: "parent" | "child" | "sibling";
+    parents: { id: string; name: string }[];
+    expected: ParentageVersion[];
+  };
   allPersons?: PersonRow[];
 }
 
@@ -97,6 +107,7 @@ export function PersonFormDialog({
   defaultRelationship,
   defaultGender,
   onCreated,
+  quickLink,
   allPersons = [],
 }: Props) {
   const qc = useQueryClient();
@@ -105,6 +116,10 @@ export function PersonFormDialog({
   const [eventDate, setEventDate] = useState("");
   const [eventType, setEventType] = useState("");
   const [eventDesc, setEventDesc] = useState("");
+  const [linkKind, setLinkKind] = useState("unknown");
+  const [linkedCreation, setLinkedCreation] = useState(true);
+  const [replaces, setReplaces] = useState("");
+  const needsReplacement = quickLink?.direction === "parent" && quickLink.parents.length >= 2;
   const fromClient = editing?.is_proband === true;
 
   useEffect(() => {
@@ -136,6 +151,9 @@ export function PersonFormDialog({
     setEventDate("");
     setEventType("");
     setEventDesc("");
+    setLinkKind("unknown");
+    setLinkedCreation(true);
+    setReplaces("");
   }, [open, editing, defaultRelationship, defaultGender]);
 
   const mutation = useMutation({
@@ -169,19 +187,50 @@ export function PersonFormDialog({
           : form.relationship_to_proband.trim() || null,
       };
       if (editing) {
-        const { error } = await supabase
+        const desired = fromClient ? payload : { ...payload, ...identity };
+        const patch = Object.fromEntries(
+          Object.entries(desired).filter(
+            ([key, value]) =>
+              JSON.stringify(value) !== JSON.stringify(editing[key as keyof PersonRow]),
+          ),
+        ) as Partial<typeof desired>;
+        if (JSON.stringify(form.life_events) === JSON.stringify(personLifeEvents(editing)))
+          delete patch.life_events;
+        if (!Object.keys(patch).length) return null;
+        const { data, error } = await supabase
           .from("genogram_persons")
-          .update(fromClient ? payload : { ...payload, ...identity })
+          .update(patch)
           .eq("id", editing.id)
-          .eq("client_id", clientId);
+          .eq("client_id", clientId)
+          .eq("updated_at", editing.updated_at)
+          .select("id")
+          .maybeSingle();
         if (error) throw error;
+        if (!data)
+          throw new Error(
+            "A ficha mudou ou foi removida em outra aba. Suas alterações continuam abertas para conferência.",
+          );
         return null;
       } else {
+        if (quickLink && linkedCreation) {
+          if (needsReplacement && !replaces)
+            throw new Error("Escolha qual vínculo parental será substituído.");
+          return editGenogram("create_genogram_relative", {
+            _client_id: clientId,
+            _person: { ...payload, ...identity },
+            _target_id: quickLink.targetId,
+            _direction: quickLink.direction,
+            _kind: linkKind,
+            ...(quickLink.direction === "parent" ? { _expected: quickLink.expected } : {}),
+            ...(replaces ? { _replaces: replaces } : {}),
+          });
+        }
         const { data, error } = await supabase
           .from("genogram_persons")
           .insert({
             ...payload,
             ...identity,
+            ...(quickLink ? { relationship_to_proband: null } : {}),
             position_x: defaultPosition?.x ?? 0,
             position_y: defaultPosition?.y ?? 0,
           })
@@ -263,7 +312,14 @@ export function PersonFormDialog({
     : "?";
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet
+      open={open}
+      onOpenChange={(next) => {
+        if (mutation.isPending) return;
+        if (!next) mutation.reset();
+        onOpenChange(next);
+      }}
+    >
       {/* Editorial width: sm:max-w-2xl */}
       <SheetContent
         side="right"
@@ -284,7 +340,7 @@ export function PersonFormDialog({
                   Dossiê
                 </p>
                 <SheetTitle className="font-serif text-3xl font-bold text-forest">
-                  {editing ? "Editar Dossiê" : "Nova Adição"}
+                  {editing ? "Editar pessoa" : quickLink ? "Adicionar parente" : "Adicionar pessoa"}
                 </SheetTitle>
               </div>
             </div>
@@ -309,295 +365,366 @@ export function PersonFormDialog({
               mutation.mutate(v);
             }}
           >
-            {/* Identidade */}
-            <div className="space-y-4">
-              <h3 className="font-serif text-xl font-bold text-primary border-b border-border pb-2">
-                Identidade
-              </h3>
-              {fromClient && (
-                <p className="text-[14px] text-muted-foreground">
-                  Nome, apelido, gênero e nascimento da pessoa consultante são editados no cadastro
-                  do dossiê.
-                </p>
+            <fieldset disabled={mutation.isPending} className="space-y-8">
+              {quickLink && (
+                <fieldset className="space-y-3 border-b border-border pb-5">
+                  <legend className="font-semibold">Vínculo com {quickLink.targetName}</legend>
+                  <label className="flex min-h-11 items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={linkedCreation}
+                      onCheckedChange={(checked) => setLinkedCreation(checked === true)}
+                    />
+                    Criar pessoa e vínculo juntos
+                  </label>
+                  {linkedCreation && (
+                    <>
+                      <Field
+                        label={
+                          quickLink.direction === "sibling"
+                            ? "Natureza da irmandade"
+                            : "Natureza da filiação"
+                        }
+                        id="quick-link-nature"
+                      >
+                        <Select value={linkKind} onValueChange={setLinkKind}>
+                          <SelectTrigger id="quick-link-nature">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="unknown">Natureza por confirmar</SelectItem>
+                            {relationshipQualifiers[
+                              quickLink.direction === "sibling" ? "sibling" : "parent"
+                            ].map(({ value, label }) => (
+                              <SelectItem key={value} value={value}>
+                                {label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                      {needsReplacement && (
+                        <Field label="Genitor que será substituído" id="quick-link-replaces">
+                          <Select value={replaces} onValueChange={setReplaces}>
+                            <SelectTrigger id="quick-link-replaces">
+                              <SelectValue placeholder="Escolher genitor" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {quickLink.parents.map(({ id, name }) => (
+                                <SelectItem key={id} value={id}>
+                                  {name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </Field>
+                      )}
+                    </>
+                  )}
+                </fieldset>
               )}
-              <Row>
-                <Field label="Nome completo *" id="full_name">
-                  <Input
-                    id="full_name"
-                    required={!fromClient}
-                    readOnly={fromClient}
-                    autoFocus
-                    value={v.full_name}
-                    onChange={(e) => set("full_name", e.target.value)}
-                  />
-                </Field>
-                <Field label="Apelido" id="preferred_name">
-                  <Input
-                    id="preferred_name"
-                    readOnly={fromClient}
-                    value={v.preferred_name}
-                    onChange={(e) => set("preferred_name", e.target.value)}
-                  />
-                </Field>
-              </Row>
-              {!fromClient && (
-                <Field label="Parentesco com o paciente-índice" id="relationship_to_proband">
-                  <RelationshipCombobox
-                    value={v.relationship_to_proband}
-                    onChange={(x) => set("relationship_to_proband", x)}
-                    placeholder="Ex.: Pai, Tia paterna, Bisavô materno..."
-                    triggerClassName="flex h-[42px] w-full rounded-none border-0 border-b-2 border-border/60 bg-transparent px-2 text-[16px] font-medium transition-all duration-300 hover:border-forest/50 focus-visible:outline-none focus-visible:border-forest focus-visible:bg-muted/50"
-                  />
-                </Field>
-              )}
-              <Row>
-                <Field label="Gênero" id="gender">
-                  <Select
-                    value={v.gender}
-                    onValueChange={(x) => set("gender", x)}
-                    disabled={fromClient}
-                  >
-                    <SelectTrigger id="gender">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {genogramGenderOptions.map((g) => (
-                        <SelectItem key={g.value} value={g.value}>
-                          <span className="mr-2 font-serif font-bold text-forest">{g.symbol}</span>{" "}
-                          {g.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </Field>
-                <Field label="Ocupação" id="occupation">
-                  <Input
-                    id="occupation"
-                    value={v.occupation}
-                    onChange={(e) => set("occupation", e.target.value)}
-                    placeholder="Ex.: professora, militar"
-                  />
-                </Field>
-              </Row>
-            </div>
-
-            {/* Ciclo de vida */}
-            <div className="space-y-4">
-              <h3 className="font-serif text-xl font-bold text-primary border-b border-border pb-2">
-                Ciclo de Vida
-              </h3>
-              <Row>
-                <Field label="Nascimento" id="birth_date">
-                  <Input
-                    id="birth_date"
-                    placeholder="DD/MM/AAAA ou ano"
-                    readOnly={fromClient}
-                    value={v.birth_date}
-                    onChange={(e) => set("birth_date", e.target.value)}
-                  />
-                </Field>
-                <Field label="Falecimento" id="death_date">
-                  <Input
-                    id="death_date"
-                    placeholder="DD/MM/AAAA ou ano"
-                    value={v.death_date}
-                    onChange={(e) => set("death_date", e.target.value)}
-                  />
-                </Field>
-              </Row>
-
-              <div className="flex items-center gap-6 mt-2 mb-4">
-                <label className="flex items-center gap-2 text-[14px] font-medium cursor-pointer">
-                  <Checkbox
-                    checked={v.is_deceased || Boolean(v.death_date)}
-                    disabled={Boolean(v.death_date)}
-                    onCheckedChange={(c) => set("is_deceased", c === true)}
-                  />
-                  Já faleceu
-                </label>
-                <label className="flex items-center gap-2 text-[14px] font-bold text-forest cursor-pointer">
-                  <Checkbox
-                    checked={v.is_proband}
-                    disabled={allPersons.some((person) => person.is_proband)}
-                    onCheckedChange={(c) => set("is_proband", c === true)}
-                  />
-                  É o consultante
-                </label>
+              {/* Identidade */}
+              <div className="space-y-4">
+                <h3 className="font-serif text-xl font-bold text-primary border-b border-border pb-2">
+                  Identidade
+                </h3>
+                {fromClient && (
+                  <p className="text-[14px] text-muted-foreground">
+                    Nome, apelido, gênero e nascimento da pessoa consultante são editados no
+                    cadastro do dossiê.
+                  </p>
+                )}
+                <Row>
+                  <Field label="Nome completo *" id="full_name">
+                    <Input
+                      id="full_name"
+                      required={!fromClient}
+                      readOnly={fromClient}
+                      autoFocus
+                      value={v.full_name}
+                      onChange={(e) => set("full_name", e.target.value)}
+                    />
+                  </Field>
+                  <Field label="Apelido" id="preferred_name">
+                    <Input
+                      id="preferred_name"
+                      readOnly={fromClient}
+                      value={v.preferred_name}
+                      onChange={(e) => set("preferred_name", e.target.value)}
+                    />
+                  </Field>
+                </Row>
+                {!fromClient && (
+                  <Field label="Parentesco com o paciente-índice" id="relationship_to_proband">
+                    <RelationshipCombobox
+                      value={v.relationship_to_proband}
+                      onChange={(x) => set("relationship_to_proband", x)}
+                      placeholder="Ex.: Pai, Tia paterna, Bisavô materno..."
+                      triggerClassName="flex h-[42px] w-full rounded-none border-0 border-b-2 border-border/60 bg-transparent px-2 text-[16px] font-medium transition-all duration-300 hover:border-forest/50 focus-visible:outline-none focus-visible:border-forest focus-visible:bg-muted/50"
+                    />
+                  </Field>
+                )}
+                <Row>
+                  <Field label="Gênero" id="gender">
+                    <Select
+                      value={v.gender}
+                      onValueChange={(x) => set("gender", x)}
+                      disabled={fromClient}
+                    >
+                      <SelectTrigger id="gender">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {genogramGenderOptions.map((g) => (
+                          <SelectItem key={g.value} value={g.value}>
+                            <span className="mr-2 font-serif font-bold text-forest">
+                              {g.symbol}
+                            </span>{" "}
+                            {g.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Field label="Ocupação" id="occupation">
+                    <Input
+                      id="occupation"
+                      value={v.occupation}
+                      onChange={(e) => set("occupation", e.target.value)}
+                      placeholder="Ex.: professora, militar"
+                    />
+                  </Field>
+                </Row>
               </div>
 
-              {conceptionDate && (
-                <div className="rounded-lg border border-border/70 bg-card px-4 py-3 text-[14px]">
-                  <p className="font-bold text-foreground">
-                    Concepção estimada:{" "}
-                    <span className="font-mono tabular-nums">
-                      {format(conceptionDate, "dd/MM/yyyy", { locale: ptBR })}
-                    </span>
-                    <span className="ml-1 font-normal text-muted-foreground">
-                      (nascimento − 9 meses; ajuste manual se houve prematuridade)
-                    </span>
-                  </p>
-                  {nearbyLosses.length > 0 && (
-                    <div className="mt-2 flex items-start gap-2 text-clinical-critical">
-                      <HeartCrack className="mt-0.5 size-4 shrink-0" />
-                      <p>
-                        Possível <strong>filho(a) de substituição</strong>: nasceu até 9 meses após
-                        o falecimento de{" "}
-                        {nearbyLosses
-                          .map(
-                            (l) => `${l.name} (${l.deathDateLabel}, ${l.daysBeforeBirth}d antes)`,
-                          )
-                          .join("; ")}
-                        .
-                      </p>
-                    </div>
-                  )}
+              {/* Ciclo de vida */}
+              <div className="space-y-4">
+                <h3 className="font-serif text-xl font-bold text-primary border-b border-border pb-2">
+                  Ciclo de Vida
+                </h3>
+                <Row>
+                  <Field label="Nascimento" id="birth_date">
+                    <Input
+                      id="birth_date"
+                      placeholder="DD/MM/AAAA ou ano"
+                      readOnly={fromClient}
+                      value={v.birth_date}
+                      onChange={(e) => set("birth_date", e.target.value)}
+                    />
+                  </Field>
+                  <Field label="Falecimento" id="death_date">
+                    <Input
+                      id="death_date"
+                      placeholder="DD/MM/AAAA ou ano"
+                      value={v.death_date}
+                      onChange={(e) => set("death_date", e.target.value)}
+                    />
+                  </Field>
+                </Row>
+
+                <div className="flex items-center gap-6 mt-2 mb-4">
+                  <label className="flex items-center gap-2 text-[14px] font-medium cursor-pointer">
+                    <Checkbox
+                      checked={v.is_deceased || Boolean(v.death_date)}
+                      disabled={Boolean(v.death_date)}
+                      onCheckedChange={(c) => set("is_deceased", c === true)}
+                    />
+                    Já faleceu
+                  </label>
+                  <label className="flex items-center gap-2 text-[14px] font-bold text-forest cursor-pointer">
+                    <Checkbox
+                      checked={v.is_proband}
+                      disabled={allPersons.some((person) => person.is_proband)}
+                      onCheckedChange={(c) => set("is_proband", c === true)}
+                    />
+                    É o consultante
+                  </label>
                 </div>
-              )}
 
-              {(v.is_deceased || v.death_date) && (
-                <Field label="Causa da morte" id="cause_of_death">
-                  <Input
-                    id="cause_of_death"
-                    value={v.cause_of_death}
-                    onChange={(e) => set("cause_of_death", e.target.value)}
-                    placeholder="Ex.: câncer de mama, acidente, suicídio"
-                  />
-                </Field>
-              )}
-            </div>
-
-            {/* Saúde e Padrões */}
-            <div className="space-y-4">
-              <h3 className="font-serif text-xl font-bold text-primary border-b border-border pb-2">
-                Padrões & Histórico
-              </h3>
-
-              <Field label="Condições de saúde (física/mental)" id="health_conditions">
-                <div className="flex gap-2">
-                  <Input
-                    id="health_conditions"
-                    value={conditionInput}
-                    onChange={(e) => setConditionInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        addCondition();
-                      }
-                    }}
-                    placeholder="Diabetes, luto, depressão... (Enter para adicionar)"
-                  />
-                  <Button
-                    type="button"
-                    variant="forest"
-                    size="icon"
-                    onClick={addCondition}
-                    aria-label="Adicionar condição de saúde"
-                  >
-                    <Plus className="size-4" />
-                  </Button>
-                </div>
-                {v.health_conditions.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {v.health_conditions.map((c) => (
-                      <Badge
-                        key={c}
-                        variant="secondary"
-                        className="gap-1.5 font-semibold text-[16px] bg-accent/50 px-2 py-1"
-                      >
-                        {c}
-                        <button
-                          type="button"
-                          onClick={() => removeCondition(c)}
-                          aria-label={`Remover ${c}`}
-                          className="opacity-60 hover:opacity-100 transition-opacity"
-                        >
-                          <X className="size-3" />
-                        </button>
-                      </Badge>
-                    ))}
+                {conceptionDate && (
+                  <div className="rounded-lg border border-border/70 bg-card px-4 py-3 text-[14px]">
+                    <p className="font-bold text-foreground">
+                      Concepção estimada:{" "}
+                      <span className="font-mono tabular-nums">
+                        {format(conceptionDate, "dd/MM/yyyy", { locale: ptBR })}
+                      </span>
+                      <span className="ml-1 font-normal text-muted-foreground">
+                        (nascimento − 9 meses; ajuste manual se houve prematuridade)
+                      </span>
+                    </p>
+                    {nearbyLosses.length > 0 && (
+                      <div className="mt-2 flex items-start gap-2 text-clinical-critical">
+                        <HeartCrack className="mt-0.5 size-4 shrink-0" />
+                        <p>
+                          Possível <strong>filho(a) de substituição</strong>: nasceu até 9 meses
+                          após o falecimento de{" "}
+                          {nearbyLosses
+                            .map(
+                              (l) => `${l.name} (${l.deathDateLabel}, ${l.daysBeforeBirth}d antes)`,
+                            )
+                            .join("; ")}
+                          .
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
-              </Field>
 
-              <Field label="Eventos biográficos marcantes" id="life_events">
-                <div className="rounded-lg border-2 border-dashed border-border bg-card p-4">
-                  <div className="grid gap-3 sm:grid-cols-[130px_1fr_auto]">
+                {(v.is_deceased || v.death_date) && (
+                  <Field label="Causa da morte" id="cause_of_death">
                     <Input
-                      value={eventDate}
-                      onChange={(e) => setEventDate(e.target.value)}
-                      aria-label="Data do evento (opcional)"
-                      placeholder="Data opcional"
+                      id="cause_of_death"
+                      value={v.cause_of_death}
+                      onChange={(e) => set("cause_of_death", e.target.value)}
+                      placeholder="Ex.: câncer de mama, acidente, suicídio"
                     />
+                  </Field>
+                )}
+              </div>
+
+              {/* Saúde e Padrões */}
+              <div className="space-y-4">
+                <h3 className="font-serif text-xl font-bold text-primary border-b border-border pb-2">
+                  Padrões & Histórico
+                </h3>
+
+                <Field label="Condições de saúde (física/mental)" id="health_conditions">
+                  <div className="flex gap-2">
                     <Input
-                      value={eventDesc}
-                      onChange={(e) => setEventDesc(e.target.value)}
-                      placeholder="Descrição (ex.: exílio, casamento, aborto)"
-                      aria-label="Descrição"
+                      id="health_conditions"
+                      value={conditionInput}
+                      onChange={(e) => setConditionInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addCondition();
+                        }
+                      }}
+                      placeholder="Diabetes, luto, depressão... (Enter para adicionar)"
                     />
                     <Button
                       type="button"
-                      variant="outline"
+                      variant="forest"
                       size="icon"
-                      onClick={addEvent}
-                      aria-label="Adicionar evento biográfico"
+                      onClick={addCondition}
+                      aria-label="Adicionar condição de saúde"
                     >
                       <Plus className="size-4" />
                     </Button>
                   </div>
-                  <p className="mt-2 text-[14px] text-muted-foreground">
-                    Use AAAA-MM-DD, AAAA-MM, AAAA ou DD/MM.
-                  </p>
-                  {v.life_events.length > 0 && (
-                    <ul className="mt-4 space-y-2">
-                      {v.life_events
-                        .map((ev, index) => ({ ev, index }))
-                        .sort((a, b) => a.ev.date.localeCompare(b.ev.date))
-                        .map(({ ev, index }) => (
-                          <li
-                            key={`${ev.date}-${index}`}
-                            className="flex items-center gap-3 rounded-md border border-border/70 bg-background px-3 py-2 shadow-sm"
+                  {v.health_conditions.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {v.health_conditions.map((c) => (
+                        <Badge
+                          key={c}
+                          variant="secondary"
+                          className="gap-1.5 font-semibold text-[16px] bg-accent/50 px-2 py-1"
+                        >
+                          {c}
+                          <button
+                            type="button"
+                            onClick={() => removeCondition(c)}
+                            aria-label={`Remover ${c}`}
+                            className="opacity-60 hover:opacity-100 transition-opacity"
                           >
-                            <span className="font-mono text-[16px] font-bold text-muted-foreground">
-                              {formatByPrecision(ev.date, precisionOf(ev.date))}
-                            </span>
-                            <span className="flex-1 truncate text-[14px] font-medium">
-                              {ev.description}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => removeEvent(index)}
-                              aria-label={`Remover evento: ${ev.description}`}
-                              className="text-muted-foreground hover:text-destructive"
-                            >
-                              <X className="size-4" />
-                            </button>
-                          </li>
-                        ))}
-                    </ul>
+                            <X className="size-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
                   )}
-                </div>
-              </Field>
+                </Field>
 
-              <Field label="Anotações sistêmicas (Mitos, Segredos)" id="notes">
-                <Textarea
-                  id="notes"
-                  rows={4}
-                  value={v.notes}
-                  onChange={(e) => set("notes", e.target.value)}
-                  placeholder="Segredos de família, padrões repetitivos, síndromes de aniversário, missões transgeracionais invisíveis..."
-                  className="resize-none"
-                />
-              </Field>
-            </div>
+                <Field label="Eventos biográficos marcantes" id="life_events">
+                  <div className="rounded-lg border-2 border-dashed border-border bg-card p-4">
+                    <div className="grid gap-3 sm:grid-cols-[130px_1fr_auto]">
+                      <Input
+                        value={eventDate}
+                        onChange={(e) => setEventDate(e.target.value)}
+                        aria-label="Data do evento (opcional)"
+                        placeholder="Data opcional"
+                      />
+                      <Input
+                        value={eventDesc}
+                        onChange={(e) => setEventDesc(e.target.value)}
+                        placeholder="Descrição (ex.: exílio, casamento, aborto)"
+                        aria-label="Descrição"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={addEvent}
+                        aria-label="Adicionar evento biográfico"
+                      >
+                        <Plus className="size-4" />
+                      </Button>
+                    </div>
+                    <p className="mt-2 text-[14px] text-muted-foreground">
+                      Use AAAA-MM-DD, AAAA-MM, AAAA ou DD/MM.
+                    </p>
+                    {v.life_events.length > 0 && (
+                      <ul className="mt-4 space-y-2">
+                        {v.life_events
+                          .map((ev, index) => ({ ev, index }))
+                          .sort((a, b) => a.ev.date.localeCompare(b.ev.date))
+                          .map(({ ev, index }) => (
+                            <li
+                              key={`${ev.date}-${index}`}
+                              className="flex items-center gap-3 rounded-md border border-border/70 bg-background px-3 py-2 shadow-sm"
+                            >
+                              <span className="font-mono text-[16px] font-bold text-muted-foreground">
+                                {formatByPrecision(ev.date, precisionOf(ev.date))}
+                              </span>
+                              <span className="flex-1 truncate text-[14px] font-medium">
+                                {ev.description}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => removeEvent(index)}
+                                aria-label={`Remover evento: ${ev.description}`}
+                                className="text-muted-foreground hover:text-destructive"
+                              >
+                                <X className="size-4" />
+                              </button>
+                            </li>
+                          ))}
+                      </ul>
+                    )}
+                  </div>
+                </Field>
+
+                <Field label="Anotações sistêmicas (Mitos, Segredos)" id="notes">
+                  <Textarea
+                    id="notes"
+                    rows={4}
+                    value={v.notes}
+                    onChange={(e) => set("notes", e.target.value)}
+                    placeholder="Segredos de família, padrões repetitivos, síndromes de aniversário, missões transgeracionais invisíveis..."
+                    className="resize-none"
+                  />
+                </Field>
+              </div>
+            </fieldset>
           </form>
         </ScrollArea>
 
         {/* Footer */}
+        {mutation.error && (
+          <p
+            role="alert"
+            className="border-t border-border bg-card px-8 py-2 text-sm text-destructive"
+          >
+            {mutation.error.message}
+          </p>
+        )}
         <div className="border-t border-border bg-card px-8 py-5 shrink-0 flex justify-end gap-3">
           <Button
             type="button"
             variant="ghost"
-            onClick={() => onOpenChange(false)}
+            onClick={() => {
+              mutation.reset();
+              onOpenChange(false);
+            }}
             disabled={mutation.isPending}
           >
             Cancelar
@@ -605,11 +732,17 @@ export function PersonFormDialog({
           <Button
             type="submit"
             form="person-form"
-            disabled={mutation.isPending}
+            disabled={mutation.isPending || (linkedCreation && needsReplacement && !replaces)}
             variant="forest"
             size="lg"
           >
-            {mutation.isPending ? "Salvando..." : editing ? "Salvar dossiê" : "Adicionar à árvore"}
+            {mutation.isPending
+              ? "Salvando..."
+              : editing
+                ? "Salvar dossiê"
+                : quickLink && !linkedCreation
+                  ? "Salvar pessoa sem vínculo"
+                  : "Adicionar à árvore"}
           </Button>
         </div>
       </SheetContent>

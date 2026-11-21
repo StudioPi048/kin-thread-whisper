@@ -1029,6 +1029,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      search_workspace_clients: {
+        Args: {
+          _status?: string
+          _search?: string
+          _offset?: number
+          _limit?: number
+          _details?: boolean
+          _without_upcoming?: boolean
+        }
+        Returns: Json
+      }
       begin_dossier_deletion: { Args: { _client_id: string }; Returns: boolean }
       dossier_deletion_manifest: { Args: { _client_id: string }; Returns: Json }
       finish_dossier_deletion: { Args: { _client_id: string }; Returns: boolean }
@@ -1058,6 +1069,22 @@ export type Database = {
         Args: { _offset?: number; _limit?: number }
         Returns: { id: string; client_id: string; session_date: string; title: string | null; client_name: string; overdue: boolean }[]
       }
+      list_pending_clinical_records_v2: {
+        Args: { _offset?: number; _limit?: number }
+        Returns: {
+          id: string
+          client_id: string
+          session_date: string
+          title: string | null
+          client_name: string
+          overdue: boolean
+          updated_at: string
+          status: string
+          clinical_status: string | null
+          duration_seconds: number | null
+          planned_duration_minutes: number | null
+        }[]
+      }
       mesa_pending_clinical_records: {
         Args: Record<PropertyKey, never>
         Returns: { id: string; client_id: string; session_date: string; title: string | null }[]
@@ -1074,6 +1101,19 @@ export type Database = {
         }
         Returns: undefined
       }
+      record_audio_consent_idempotent: {
+        Args: {
+          _request_id: string
+          _client_id: string
+          _scope: string
+          _granted: boolean
+          _source: string
+          _session_id?: string
+          _term_version?: string
+          _document_reference?: string
+        }
+        Returns: string
+      }
       import_genogram_persons: {
         Args: { _client_id: string; _replace?: boolean; _rows: Json }
         Returns: number
@@ -1082,9 +1122,33 @@ export type Database = {
         Args: { _client_id: string; _people: Json; _links: Json; _parentages: Json }
         Returns: { inserted: number; updated: number; related: number; reviewed: number }
       }
+      remove_empty_clan_rows: {
+        Args: { _client_id: string; _candidates: Json }
+        Returns: number
+      }
       ensure_genogram_proband: {
         Args: { _client_id: string }
         Returns: string
+      }
+      create_genogram_relative: {
+        Args: {
+          _client_id: string
+          _person: Json
+          _target_id: string
+          _direction: string
+          _kind: string
+          _expected?: Json
+          _replaces?: string
+        }
+        Returns: string
+      }
+      remove_genogram_selection: {
+        Args: { _client_id: string; _people: string[]; _relationships: string[]; _expected?: Json }
+        Returns: Json
+      }
+      save_genogram_arrangement: {
+        Args: { _client_id: string; _layout_id: string | null; _expected: string | null; _positions: Json }
+        Returns: Json
       }
       manage_clinical_appointment: {
         Args: {
@@ -1095,6 +1159,19 @@ export type Database = {
           _duration_minutes?: number
           _time_zone?: string
           _title?: string
+        }
+        Returns: Json
+      }
+      manage_clinical_appointment_v2: {
+        Args: {
+          _action: string
+          _session_id: string
+          _client_id?: string
+          _start?: string
+          _duration_minutes?: number
+          _time_zone?: string
+          _title?: string
+          _expected_updated_at?: string
         }
         Returns: Json
       }

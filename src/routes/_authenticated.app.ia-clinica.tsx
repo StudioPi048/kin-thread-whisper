@@ -1,11 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { DocumentHeader } from "@/components/ui/document-header";
-import { evidenceForCase, type Hypothesis } from "@/lib/evidence";
+import { evidenceForCase, parentageToReview, type Hypothesis } from "@/lib/evidence";
 import type { DetectedPattern } from "@/lib/patterns";
 import { clinicalIntelQuery } from "@/lib/clinical-intel";
 import { readVisits } from "@/lib/recent-activity";
@@ -79,9 +79,14 @@ function IaClinicaPage() {
   const opened = panel.clientId === clientId ? panel.opened : new Map<string, ReviewEntry>();
   const showHyp = panel.clientId === clientId && panel.showHyp;
   const evidenceData = caseQ.data;
-  const ev = evidenceData
-    ? evidenceForCase(evidenceData.persons, evidenceData.relationships)
-    : null;
+  const ev = useMemo(
+    () => (evidenceData ? evidenceForCase(evidenceData.persons, evidenceData.relationships) : null),
+    [evidenceData],
+  );
+  const missingParentage = useMemo(
+    () => (evidenceData ? parentageToReview(evidenceData.persons, evidenceData.relationships) : []),
+    [evidenceData],
+  );
   const patterns = new Map(ev?.patterns.map((pattern) => [pattern.id, pattern]));
   const current = new Map<string, ReviewEntry>();
   for (const hypothesis of ev?.hypotheses ?? []) {
@@ -209,6 +214,27 @@ function IaClinicaPage() {
 
           {ev && evidenceData && (
             <>
+              {missingParentage.length > 0 && (
+                <details className="rounded-md border border-border px-3">
+                  <summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold">
+                    Filiações com fonte a confirmar ({missingParentage.length})
+                  </summary>
+                  <ul className="divide-y divide-border pb-2 text-sm">
+                    {missingParentage.map(({ id, name }) => (
+                      <li key={id}>
+                        <Link
+                          to="/app/clientes/$clientId"
+                          params={{ clientId }}
+                          search={{ tab: "genogram", person: id, review: "parentage" }}
+                          className="inline-flex min-h-11 items-center text-forest underline underline-offset-4"
+                        >
+                          Revisar filiação de {name}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
               <section aria-labelledby="ev-h" className="space-y-3">
                 <h2 id="ev-h" className="text-lg font-semibold text-foreground">
                   Evidências detectadas ({ev.patterns.length})

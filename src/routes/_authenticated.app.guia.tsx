@@ -31,6 +31,7 @@ type Task = {
     | "/app/clientes"
     | "/app/genossociogramas"
     | "/app/agenda"
+    | "/app/linha-do-tempo"
     | "/app/ia-clinica"
     | "/app/biblioteca";
   action: string;
@@ -100,7 +101,7 @@ const TASKS: Task[] = [
     id: "sessao",
     title: "Conduzir e registrar uma sessão",
     steps: [
-      "Na Agenda, abra o atendimento e acesse a sessão. Ao voltar, a data é preservada.",
+      "Na Agenda, abra o atendimento para acessar a sessão. Use o caminho Agenda no dossiê para voltar à mesma visão.",
       "Escreva e salve em “Notas da sessão”. Use “Registrar sessão sem áudio” para criar um registro avulso.",
       "Registre separadamente as autorizações para gravar e processar com IA. Depois de parar a gravação, guarde o áudio no dossiê. O processamento exige uma confirmação de envio.",
       "O texto gerado fica provisório até você usar “Li e revisei este texto”.",
@@ -110,12 +111,35 @@ const TASKS: Task[] = [
     action: "Abrir agenda",
   },
   {
+    id: "anamnese",
+    title: "Registrar respostas e fontes na Anamnese",
+    steps: [
+      "No dossiê, use “Primeira sessão” para as perguntas iniciais ou “Anamnese completa” para abrir todas as seções.",
+      "Abra o controle de fonte abaixo da pergunta para registrar situação, origem e referência. Use “Respostas sem fonte própria” para localizar lacunas ou “Retomar última pergunta” para continuar.",
+      "Quando duas abas editarem a mesma informação, compare a versão anterior, a versão salva e seu rascunho antes de escolher qual manter.",
+      "Para transformar um relato em acontecimento, confira o familiar, a data e a origem. Se houver um registro semelhante, confirme apenas se for outra ocorrência.",
+    ],
+    to: "/app/clientes",
+    action: "Escolher um caso",
+  },
+  {
+    id: "cronologia",
+    title: "Ler e conferir a linha do tempo",
+    steps: [
+      "Escolha o caso. Em telas menores, alterne “Lista” e “Panorama” para ver os mesmos acontecimentos.",
+      "No panorama, aproxime a década em foco, abra os marcadores agrupados e use “Voltar ao intervalo anterior” quando precisar.",
+      "Selecione um acontecimento para ler a data e a fonte. Use os atalhos para conferir o registro no mapa, na planilha ou na Anamnese.",
+    ],
+    to: "/app/linha-do-tempo",
+    action: "Abrir linha do tempo",
+  },
+  {
     id: "hipoteses",
     title: "Revisar hipóteses com base em evidências",
     steps: [
       "Em Evidências e hipóteses, escolha o caso e marque as evidências que deseja considerar.",
-      "Cada hipótese mostra fontes, limites e perguntas — sem diagnóstico nem confiança numérica.",
-      "Registre a revisão (faz sentido / contestada / faltam dados). O histórico é salvo por caso e avisa quando a evidência mudou.",
+      "Abra “Registros consultados” para verificar a ficha ou o vínculo usado como fonte.",
+      "Registre a revisão (faz sentido / contestada / faltam dados). Quando outra aba já tiver registrado uma revisão, confira a decisão mais recente antes de salvar a sua.",
     ],
     to: "/app/ia-clinica",
     action: "Abrir evidências",

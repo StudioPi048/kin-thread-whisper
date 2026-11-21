@@ -111,6 +111,7 @@ type CapturedAudio = {
   sessionId: string;
   existingSession: boolean;
   recordingGrantId: string;
+  recordedSessionId?: string;
   blob: Blob;
   seconds: number;
   fileId: string;
@@ -124,6 +125,9 @@ async function confirmAudioUpload(sessionId: string, path: string) {
   });
   if (error) throw new Error("Não foi possível verificar o envio. Tente confirmar novamente.");
   if (data === "confirmed") return;
+  if (data === "canceled") {
+    throw new Error("A sessão foi cancelada. Confira o destino antes de guardar a gravação.");
+  }
   if (data === "missing") {
     throw new Error("O arquivo ainda não está no dossiê. Tente novamente ou remova a reserva.");
   }
@@ -159,6 +163,94 @@ async function clearPendingUpload(sessionId: string, path: string) {
     .eq("audio_path", path)
     .eq("status", "discarding_upload");
   if (update) throw new Error("Não foi possível confirmar o descarte. Tente novamente.");
+}
+
+async function releaseUnconfirmedAudio({ sessionId, path }: CapturedAudio) {
+  if (!path) return;
+  const { data, error } = await supabase
+    .from("clinical_sessions")
+    .select("status, audio_path")
+    .eq("id", sessionId)
+    .maybeSingle();
+  if (error) throw new Error("Não foi possível verificar o áudio pendente.");
+  if (data?.audio_path !== path) return;
+  if (data.status !== "awaiting_upload" && data.status !== "discarding_upload") {
+    return "confirmed";
+  }
+  await clearPendingUpload(sessionId, path);
+}
+
+function CapturedAudioPlayer({ blob }: { blob: Blob }) {
+  const [url, setURL] = useState<string>();
+  const [error, setError] = useState(false);
+  useEffect(() => {
+    if (typeof URL.createObjectURL !== "function") return;
+    const preview = URL.createObjectURL(blob);
+    setURL(preview);
+    return () => URL.revokeObjectURL(preview);
+  }, [blob]);
+  if (!url) return null;
+  return (
+    <div className="space-y-1">
+      <audio
+        className="max-w-full"
+        aria-label="Ouvir trecho capturado"
+        controls
+        preload="metadata"
+        src={url}
+        onError={() => setError(true)}
+      />
+      {error && (
+        <p role="status" className="text-sm text-muted-foreground">
+          O navegador não conseguiu reproduzir este trecho.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function SavedAudioPlayer({ sessionId, audioPath }: { sessionId: string; audioPath: string }) {
+  const player = useQuery({
+    queryKey: ["session-audio-playback", sessionId, audioPath],
+    enabled: false,
+    retry: false,
+    gcTime: 0,
+    queryFn: async () => {
+      const { data, error } = await supabase.storage
+        .from("session-audio")
+        .createSignedUrl(audioPath, 180);
+      if (error || !data?.signedUrl) throw new Error("Não foi possível abrir o áudio.");
+      return data.signedUrl;
+    },
+  });
+  return (
+    <section className="space-y-2" aria-label="Áudio guardado">
+      <Button
+        type="button"
+        variant="outline"
+        className="min-h-11"
+        disabled={player.isFetching}
+        onClick={() => void player.refetch()}
+      >
+        <Play className="size-4" aria-hidden />{" "}
+        {player.data ? "Atualizar player" : "Ouvir áudio guardado"}
+      </Button>
+      {player.data && (
+        <audio
+          className="max-w-full"
+          controls
+          preload="none"
+          aria-label="Reproduzir áudio guardado"
+          src={player.data}
+        />
+      )}
+      {player.isError && (
+        <p role="alert" className="text-sm text-destructive">
+          Não foi possível abrir o áudio.
+        </p>
+      )}
+    </section>
+  );
 }
 
 function formatDuration(sec: number | null | undefined): string {
@@ -267,10 +359,30 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
   const recordingGrant = targetUnavailable
     ? undefined
     : grantFor("recording", targetId || undefined);
+  const pendingSession = sessions.find((session) => session.id === pendingAudio?.sessionId);
+  const pendingDestinationUnavailable =
+    !!pendingAudio?.existingSession &&
+    (!pendingSession ||
+      pendingSession.status === "deleting" ||
+      pendingSession.clinical_status === "canceled");
   const canUploadPending =
     pendingAudio &&
+    !pendingDestinationUnavailable &&
+    grantFor("recording", pendingAudio.recordedSessionId)?.id === pendingAudio.recordingGrantId &&
     grantFor("recording", pendingAudio.existingSession ? pendingAudio.sessionId : undefined)?.id ===
       pendingAudio.recordingGrantId;
+  const canRecover =
+    pendingAudio &&
+    pendingDestinationUnavailable &&
+    grantFor("recording", pendingAudio.recordedSessionId)?.id === pendingAudio.recordingGrantId;
+  const recoveryTargets =
+    pendingAudio && canRecover
+      ? targets.filter(
+          (target) => grantFor("recording", target.id)?.id === pendingAudio.recordingGrantId,
+        )
+      : [];
+  const canRecoverAsNew =
+    pendingAudio && canRecover && grantFor("recording")?.id === pendingAudio.recordingGrantId;
   const recordingStatus = starting
     ? "Confirmando a autorização e o acesso ao microfone."
     : recording
@@ -302,6 +414,7 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const activeGrantRef = useRef<{ id: string; sessionId?: string } | null>(null);
   const timerRef = useRef<number | null>(null);
+  const recorderEndTimerRef = useRef<number | null>(null);
 
   const refreshSessions = () => invalidateSessionViews(qc, clientId);
 
@@ -321,6 +434,10 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
     if (timerRef.current !== null) {
       window.clearInterval(timerRef.current);
       timerRef.current = null;
+    }
+    if (recorderEndTimerRef.current !== null) {
+      window.clearTimeout(recorderEndTimerRef.current);
+      recorderEndTimerRef.current = null;
     }
     if (mountedRef.current) {
       setRecording(false);
@@ -438,12 +555,10 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
       recorder.ondataavailable = ({ data }) => {
         if (data.size) parts.push(data);
       };
-      recorder.onerror = () => {
-        clearRecorder();
-        setOperationError("O microfone foi interrompido. Inicie outra gravação.");
-      };
-      recorder.onstop = () => {
-        if (!mountedRef.current) return;
+      let microphoneFailed = false;
+      const finishCapture = () => {
+        if (!mountedRef.current || mediaRecorderRef.current !== recorder) return;
+        const seconds = recordedSeconds();
         clearRecorder();
         const blob = new Blob(parts, { type: recorder.mimeType || parts[0]?.type });
         if (!blob.size) {
@@ -452,13 +567,26 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
         }
         updatePending({
           blob,
-          seconds: recordedSeconds(),
+          seconds,
           sessionId: targetId || crypto.randomUUID(),
           existingSession: !!targetId,
           recordingGrantId: recordingGrant.id,
+          recordedSessionId: targetId || undefined,
           fileId: crypto.randomUUID(),
         });
+        if (microphoneFailed) {
+          setOperationError(
+            "O microfone foi interrompido. Confira o trecho recuperado antes de guardar.",
+          );
+        }
       };
+      recorder.onerror = () => {
+        microphoneFailed = true;
+        if (recorder.state !== "inactive") recorder.stop();
+        // Alguns gravadores emitem os dados finais e o evento de parada depois do erro.
+        recorderEndTimerRef.current = window.setTimeout(finishCapture, 500);
+      };
+      recorder.onstop = finishCapture;
       recorder.start(1000);
       mediaRecorderRef.current = recorder;
       stream = undefined;
@@ -489,12 +617,22 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
     setUploading(true);
     setOperationError("");
     try {
+      const destination = audio.existingSession ? audio.sessionId : undefined;
+      if (destination !== audio.recordedSessionId) {
+        await requireAudioConsent(
+          supabase,
+          clientId,
+          "recording",
+          audio.recordingGrantId,
+          audio.recordedSessionId,
+        );
+      }
       await requireAudioConsent(
         supabase,
         clientId,
         "recording",
         audio.recordingGrantId,
-        audio.existingSession ? audio.sessionId : undefined,
+        destination,
       );
       const { data: userRes, error: userError } = await supabase.auth.getUser();
       const uid = userRes.user?.id;
@@ -505,12 +643,20 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
 
       const { data: existing, error: readError } = await supabase
         .from("clinical_sessions")
-        .select("id, audio_path, status")
+        .select("id, audio_path, status, clinical_status")
         .eq("id", audio.sessionId)
         .eq("client_id", clientId)
         .eq("user_id", uid)
         .maybeSingle();
       if (readError) throw new Error("Não foi possível consultar a sessão.");
+      if (
+        existing?.clinical_status === "canceled" &&
+        (!existing.audio_path ||
+          existing.status === "awaiting_upload" ||
+          existing.status === "discarding_upload")
+      ) {
+        throw new Error("A sessão foi cancelada. Confira outro destino para o trecho capturado.");
+      }
       if (existing?.audio_path && existing.audio_path !== path)
         throw new Error("A sessão já tem outro áudio.");
       if (existing?.status === "discarding_upload")
@@ -541,6 +687,7 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
           .is("audio_path", null)
           .select("id")
           .maybeSingle();
+        if (error?.code === "22023") throw new Error(error.message);
         if (error || !data) throw new Error("O áudio da sessão mudou. Confira antes de reenviar.");
       }
       if (existing?.status === "awaiting_upload" || existing?.audio_path !== path) {
@@ -581,19 +728,8 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
       audioLock.current = true;
       setUploading(true);
       try {
-        const { data: row, error: readError } = await supabase
-          .from("clinical_sessions")
-          .select("status, audio_path")
-          .eq("id", audio.sessionId)
-          .maybeSingle();
-        if (readError) throw new Error("Não foi possível verificar o áudio pendente.");
-        if (
-          row?.audio_path === audio.path &&
-          (row.status === "awaiting_upload" || row.status === "discarding_upload")
-        ) {
-          await clearPendingUpload(audio.sessionId, audio.path);
-          void refreshSessions();
-        }
+        await releaseUnconfirmedAudio(audio);
+        void refreshSessions();
       } finally {
         setUploading(false);
         audioLock.current = false;
@@ -601,6 +737,46 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
     }
     updatePending(null);
     setOperationError("");
+  };
+
+  const movePendingAudio = async (destination: string) => {
+    const audio = pendingAudioRef.current;
+    if (!audio || audioLock.current) return;
+    const newSession = destination === "new";
+    const destinationId = newSession ? undefined : destination;
+    audioLock.current = true;
+    setUploading(true);
+    try {
+      await requireAudioConsent(
+        supabase,
+        clientId,
+        "recording",
+        audio.recordingGrantId,
+        audio.recordedSessionId,
+      );
+      await requireAudioConsent(
+        supabase,
+        clientId,
+        "recording",
+        audio.recordingGrantId,
+        destinationId,
+      );
+      if ((await releaseUnconfirmedAudio(audio)) === "confirmed") {
+        throw new Error("O áudio já foi guardado. Confira a sessão de origem.");
+      }
+      updatePending({
+        ...audio,
+        sessionId: destinationId ?? crypto.randomUUID(),
+        existingSession: !newSession,
+        path: undefined,
+      });
+      setRecordingSelection({ focus: focusedSessionId, id: destinationId ?? "" });
+      setOperationError("");
+    } finally {
+      audioLock.current = false;
+      setUploading(false);
+      void refreshSessions();
+    }
   };
 
   useUnsaved(`audio:${clientId}`, {
@@ -770,9 +946,19 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
               <Button
                 variant="forest"
                 className="min-h-11"
-                onClick={() => focusNotes(linkedSession.id)}
+                onClick={() => {
+                  if (clinicalStatusOf(linkedSession) !== "completed") {
+                    focusNotes(linkedSession.id);
+                    return;
+                  }
+                  const record = document.getElementById(`session-${linkedSession.id}`);
+                  record?.scrollIntoView({ block: "nearest" });
+                  record?.focus({ preventScroll: true });
+                }}
               >
-                Registrar sessão sem áudio
+                {clinicalStatusOf(linkedSession) === "completed"
+                  ? "Abrir registro da sessão"
+                  : "Registrar sessão sem áudio"}
               </Button>
             )}
             <Button
@@ -894,8 +1080,56 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
                 : `Áudio por guardar · ${formatDuration(pendingAudio.seconds)}`}
               {!uploading &&
                 !canUploadPending &&
+                !pendingDestinationUnavailable &&
                 " · É necessária a autorização usada na gravação."}
             </p>
+            {!pendingDestinationUnavailable && (
+              <p className="text-sm">
+                Destino ·{" "}
+                <strong>
+                  {pendingAudio.existingSession
+                    ? pendingSession?.title || "Sessão existente"
+                    : "Nova sessão"}
+                </strong>
+              </p>
+            )}
+            <CapturedAudioPlayer blob={pendingAudio.blob} />
+            {pendingDestinationUnavailable && (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  A sessão de origem está indisponível. O trecho fica nesta tela.
+                  {recoveryTargets.length || canRecoverAsNew
+                    ? " Escolha outro destino coberto pela mesma autorização."
+                    : " A autorização da gravação ainda não permite guardá-la em outro destino."}
+                </p>
+                {(recoveryTargets.length > 0 || canRecoverAsNew) && (
+                  <label className="grid max-w-md gap-1.5 text-sm">
+                    Novo destino da gravação
+                    <select
+                      className="min-h-11 min-w-0 rounded-sm border border-input bg-background p-2"
+                      value=""
+                      disabled={uploading}
+                      onChange={(event) => {
+                        const destination = event.target.value;
+                        if (destination)
+                          void movePendingAudio(destination).catch((error) =>
+                            setOperationError(error.message),
+                          );
+                      }}
+                    >
+                      <option value="">Selecione uma sessão</option>
+                      {canRecoverAsNew && <option value="new">Nova sessão</option>}
+                      {recoveryTargets.map((target) => (
+                        <option key={target.id} value={target.id}>
+                          {format(new Date(target.session_date), "dd/MM/yyyy HH:mm")} ·{" "}
+                          {target.title ?? "Sessão"}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+              </>
+            )}
             <div className="flex flex-wrap gap-2">
               <Button
                 className="min-h-11"
@@ -1098,6 +1332,8 @@ function SessionCard({
   const [draft, dispatch] = useReducer(noteReducer, session.manual_notes, noteDraftInit);
   useEffect(() => dispatch({ type: "reset", saved: session.manual_notes }), [session.manual_notes]);
   const dirty = isDirty(draft);
+  const [editingFinalNote, setEditingFinalNote] = useState(false);
+  const showNoteEditor = clinical !== "completed" || editingFinalNote || dirty;
 
   const refresh = () => invalidateSessionViews(qc, clientId);
 
@@ -1404,67 +1640,87 @@ function SessionCard({
         )}
 
         {/* Notas da profissional — independentes do áudio */}
-        <div className="space-y-2">
-          <label htmlFor={notesId} className="text-[15px] font-semibold text-primary">
-            Notas manuais
-          </label>
-          <p id={`${notesId}-help`} className="text-sm text-muted-foreground">
-            Salve suas anotações para registrá-las no dossiê.
-          </p>
-          <Textarea
-            id={notesId}
-            aria-describedby={`${notesId}-help ${notesId}-status`}
-            value={draft.text}
-            onChange={(e) => dispatch({ type: "edit", text: e.target.value })}
-            className="min-h-[140px] text-[16px] leading-relaxed"
-          />
-          {dirty && draft.saved !== draft.server && (
-            <details className="space-y-2 rounded-md border border-border p-3">
-              <summary className="cursor-pointer font-semibold">
-                Ver versão salva em outra aba
-              </summary>
-              <p className="whitespace-pre-wrap break-words text-sm">
-                {draft.server || "A outra versão está sem notas."}
-              </p>
+        {showNoteEditor ? (
+          <div className="space-y-2">
+            <label htmlFor={notesId} className="text-[15px] font-semibold text-primary">
+              Notas manuais
+            </label>
+            <p id={`${notesId}-help`} className="text-sm text-muted-foreground">
+              Salve suas anotações para registrá-las no dossiê.
+            </p>
+            <Textarea
+              id={notesId}
+              aria-describedby={`${notesId}-help ${notesId}-status`}
+              value={draft.text}
+              onChange={(e) => dispatch({ type: "edit", text: e.target.value })}
+              className="min-h-[140px] text-[16px] leading-relaxed"
+            />
+            {dirty && draft.saved !== draft.server && (
+              <details className="space-y-2 rounded-md border border-border p-3">
+                <summary className="cursor-pointer font-semibold">
+                  Ver versão salva em outra aba
+                </summary>
+                <p className="whitespace-pre-wrap break-words text-sm">
+                  {draft.server || "A outra versão está sem notas."}
+                </p>
+                <Button
+                  variant="outline"
+                  className="min-h-11"
+                  onClick={() => dispatch({ type: "discard" })}
+                >
+                  Usar versão salva
+                </Button>
+              </details>
+            )}
+            <div className="flex flex-wrap items-center gap-3 text-[14px]">
               <Button
-                variant="outline"
+                onClick={saveNotes}
+                disabled={!dirty || draft.phase === "saving"}
                 className="min-h-11"
-                onClick={() => dispatch({ type: "discard" })}
               >
-                Usar versão salva
+                {draft.phase === "saving" ? (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                ) : (
+                  <Save className="mr-2 size-4" />
+                )}
+                {draft.phase === "error" ? "Tentar salvar de novo" : "Salvar notas"}
               </Button>
-            </details>
-          )}
-          <div className="flex flex-wrap items-center gap-3 text-[14px]">
-            <Button
-              onClick={saveNotes}
-              disabled={!dirty || draft.phase === "saving"}
-              className="min-h-11"
-            >
-              {draft.phase === "saving" ? (
-                <Loader2 className="mr-2 size-4 animate-spin" />
-              ) : (
-                <Save className="mr-2 size-4" />
-              )}
-              {draft.phase === "error" ? "Tentar salvar de novo" : "Salvar notas"}
-            </Button>
-            <span
-              id={`${notesId}-status`}
-              role="status"
-              className={draft.phase === "error" ? "text-destructive" : "text-muted-foreground"}
-            >
-              {draft.phase === "error"
-                ? (draft.error ?? "Falha ao salvar as notas. O texto continua aqui.")
-                : draft.phase === "saving"
-                  ? "Salvando notas…"
-                  : dirty
-                    ? "Notas com alterações pendentes"
-                    : draft.saved
-                      ? "Notas salvas no dossiê"
-                      : "Sem notas salvas"}
-            </span>
+              <span
+                id={`${notesId}-status`}
+                role="status"
+                className={draft.phase === "error" ? "text-destructive" : "text-muted-foreground"}
+              >
+                {draft.phase === "error"
+                  ? (draft.error ?? "Falha ao salvar as notas. O texto continua aqui.")
+                  : draft.phase === "saving"
+                    ? "Salvando notas…"
+                    : dirty
+                      ? "Notas com alterações pendentes"
+                      : draft.saved
+                        ? "Notas salvas no dossiê"
+                        : "Sem notas salvas"}
+              </span>
+            </div>
           </div>
-        </div>
+        ) : (
+          <section className="space-y-2" aria-label="Notas da sessão concluída">
+            <p className="text-[15px] font-semibold text-primary">Notas manuais</p>
+            <p className="whitespace-pre-wrap break-words text-[15px]">
+              {session.manual_notes?.trim() || "Sem notas manuais registradas."}
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11"
+              onClick={() => {
+                setEditingFinalNote(true);
+                requestAnimationFrame(() => document.getElementById(notesId)?.focus());
+              }}
+            >
+              Editar notas
+            </Button>
+          </section>
+        )}
 
         {rows.length > 0 && (
           <section
@@ -1532,9 +1788,11 @@ function SessionCard({
           </section>
         )}
 
+        {session.audio_path && !session.transcript && audio !== "waiting_upload" && (
+          <SavedAudioPlayer sessionId={session.id} audioPath={session.audio_path} />
+        )}
         {session.transcript && (
           <TranscriptReview
-            key={session.transcript}
             sessionId={session.id}
             clientId={clientId}
             transcript={session.transcript}
@@ -1543,6 +1801,7 @@ function SessionCard({
             audioPath={session.audio_path}
             updatedAt={session.updated_at}
             processing={session.status !== "ready" && session.status !== "error"}
+            completed={clinical === "completed"}
             onRetranscribe={canRetranscribe ? () => onReprocess(true) : undefined}
             retranscribeDisabled={!processingAuthorized || processingBusy}
             refresh={refresh}

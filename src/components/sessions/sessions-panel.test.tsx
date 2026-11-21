@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { audioConsentsKey } from "@/lib/audio-consent";
 import { clients, sessions } from "../../../design/preview/client";
 import { SessionsPanel } from "./sessions-panel";
+import { TranscriptReview } from "./transcript-review";
 
 const controls = vi.hoisted(() => ({ consentUnavailable: false }));
 
@@ -44,6 +45,46 @@ function openSessionPanel(index: number, focusSession: boolean) {
     </QueryClientProvider>,
   );
   return { client, session, queryClient };
+}
+
+function fakeMicrophone() {
+  const stopped = vi.fn();
+  let interrupt: (() => void) | undefined;
+  Object.defineProperty(navigator, "mediaDevices", {
+    configurable: true,
+    value: { getUserMedia: async () => ({ getTracks: () => [{ stop: stopped }] }) },
+  });
+  vi.stubGlobal(
+    "MediaRecorder",
+    class {
+      static isTypeSupported() {
+        return true;
+      }
+      state = "inactive";
+      mimeType = "audio/webm";
+      ondataavailable?: (event: { data: Blob }) => void;
+      onstop?: () => void;
+      onerror?: () => void;
+      constructor(readonly stream: MediaStream) {
+        interrupt = () => {
+          this.ondataavailable?.({ data: new Blob(["trecho recuperado"]) });
+          this.onerror?.();
+        };
+      }
+      start() {
+        this.state = "recording";
+      }
+      stop() {
+        this.state = "inactive";
+        const notify = () => {
+          this.ondataavailable?.({ data: new Blob(["áudio fictício"]) });
+          this.onstop?.();
+        };
+        queueMicrotask(notify);
+      }
+    },
+  );
+  return { stopped, interrupt: () => interrupt?.() };
 }
 
 beforeEach(() => {
@@ -108,35 +149,7 @@ it("confirma a autorização no escopo acionado no gravador", async () => {
 
 it("retém o trecho capturado em caso de falha e aguarda reconfirmação para guardá-lo", async () => {
   const { id: sessionId, client_id: clientId } = sessions[2];
-  const stopped = vi.fn();
-  Object.defineProperty(navigator, "mediaDevices", {
-    configurable: true,
-    value: { getUserMedia: async () => ({ getTracks: () => [{ stop: stopped }] }) },
-  });
-  vi.stubGlobal(
-    "MediaRecorder",
-    class {
-      static isTypeSupported() {
-        return true;
-      }
-      state = "inactive";
-      mimeType = "audio/webm";
-      ondataavailable?: (event: { data: Blob }) => void;
-      onstop?: () => void;
-      constructor(readonly stream: MediaStream) {}
-      start() {
-        this.state = "recording";
-      }
-      stop() {
-        this.state = "inactive";
-        const notify = () => {
-          this.ondataavailable?.({ data: new Blob(["áudio fictício"]) });
-          this.onstop?.();
-        };
-        queueMicrotask(notify);
-      }
-    },
-  );
+  const { stopped } = fakeMicrophone();
   await supabase.rpc("record_audio_consent_details", {
     _client_id: clientId,
     _scope: "recording",
@@ -160,4 +173,90 @@ it("retém o trecho capturado em caso de falha e aguarda reconfirmação para gu
   controls.consentUnavailable = false;
   await act(() => queryClient.invalidateQueries({ queryKey: audioConsentsKey(clientId) }));
   await waitFor(() => expect(keep.disabled).toBe(false));
+});
+
+it("recupera a gravação interrompida, impede o envio à sessão cancelada e permite ouvir antes da IA", async () => {
+  const { id: sessionId, client_id: clientId } = sessions[2];
+  const { interrupt } = fakeMicrophone();
+  await supabase.rpc("record_audio_consent_details", {
+    _client_id: clientId,
+    _scope: "recording",
+    _source: "written",
+    _granted: true,
+  });
+  const { queryClient } = openSessionPanel(2, true);
+  const start = await screen.findByRole<HTMLButtonElement>("button", { name: "Iniciar gravação" });
+  await waitFor(() => expect(start.disabled).toBe(false));
+  fireEvent.click(start);
+  await screen.findByRole("button", { name: "Finalizar gravação" });
+  await act(async () => interrupt());
+  await screen.findByText(/trecho recuperado/);
+  await supabase
+    .from("clinical_sessions")
+    .update({ clinical_status: "canceled" })
+    .eq("id", sessionId);
+  const save = await screen.findByRole<HTMLButtonElement>("button", {
+    name: "Guardar áudio no dossiê",
+  });
+  fireEvent.click(save);
+  await screen.findByText(/sessão foi cancelada/);
+  const destination = await screen.findByLabelText("Novo destino da gravação");
+  expect(save.disabled).toBe(true);
+  fireEvent.change(destination, { target: { value: "new" } });
+  await waitFor(() => expect(save.disabled).toBe(false));
+  fireEvent.click(save);
+  await screen.findByRole("button", { name: "Ouvir áudio guardado" });
+  const data = await queryClient.fetchQuery({
+    queryKey: ["clinical_sessions", clientId],
+    queryFn: async () =>
+      (await supabase.from("clinical_sessions").select("*").eq("client_id", clientId)).data,
+  });
+  expect(data?.find((item) => item.id === sessionId)).toMatchObject({
+    clinical_status: "canceled",
+    audio_path: null,
+  });
+  const moved = data?.find((item) => item.id !== sessionId);
+  expect(moved).toMatchObject({
+    status: "draft",
+    audio_path: expect.stringMatching(/\.webm$/),
+  });
+  expect(moved?.transcript ?? null).toBeNull();
+});
+
+it("prioriza a leitura da nota concluída e deixa a edição disponível por escolha", async () => {
+  openSessionPanel(4, false);
+  const edit = await screen.findByRole("button", { name: "Editar notas" });
+  expect(screen.queryByLabelText("Notas manuais")).toBeNull();
+  fireEvent.click(edit);
+  expect(screen.getByLabelText("Notas manuais")).toBeTruthy();
+});
+
+it("mantém a correção local visível quando outra aba substitui a transcrição", async () => {
+  const queryClient = new QueryClient();
+  queryClients.push(queryClient);
+  const transcript = (text: string) => (
+    <QueryClientProvider client={queryClient}>
+      <TranscriptReview
+        sessionId={sessions[0].id}
+        clientId={sessions[0].client_id}
+        transcript={text}
+        updatedAt="2026-11-21T10:00:00Z"
+        audioPath={null}
+        processing={false}
+        refresh={async () => {}}
+      />
+    </QueryClientProvider>
+  );
+  const { rerender } = render(transcript("Relato fictício da primeira versão."));
+  fireEvent.click(screen.getByRole("button", { name: "Revisar transcrição" }));
+  fireEvent.click(screen.getByRole("button", { name: "Revisar trecho" }));
+  fireEvent.change(screen.getByLabelText("Decisão"), { target: { value: "corrected" } });
+  fireEvent.change(screen.getByRole("textbox"), { target: { value: "Minha correção fictícia" } });
+  rerender(transcript("Relato fictício da segunda versão."));
+  expect(screen.getByText(/A transcrição mudou em outra aba/)).toBeTruthy();
+  expect(screen.getByLabelText<HTMLTextAreaElement>("Sua correção na versão anterior").value).toBe(
+    "Minha correção fictícia",
+  );
+  expect(screen.getByText("Relato fictício da segunda versão.")).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Salvar revisão" })).toBeNull();
 });

@@ -58,7 +58,10 @@ function family() {
     p("Avô materno"),
     p("Avó materna"),
   ];
-  const g = buildLogicalGraph({ persons, rels: [] });
+  const rels = persons
+    .slice(0, 3)
+    .flatMap((child) => persons.slice(3, 5).map((parent) => rel(parent.id, child.id, "parent")));
+  const g = buildLogicalGraph({ persons, rels });
   return { persons, g, pl: layoutGraph(g) };
 }
 
@@ -137,7 +140,7 @@ const rel = (
   from_person_id: from,
   to_person_id: to,
   relationship_type: type,
-  qualifier: null,
+  qualifier: type === "parent" ? "biological" : null,
   start_date: null,
   end_date: null,
   notes: null,
@@ -160,6 +163,9 @@ describe("filiação explícita, meios-irmãos e órfãos", () => {
     const orfao = p("Irmã(o) do avô materno", "Tio-avô solto");
     const persons = [cli, irma, pai, mae, outra, meio, avo, orfao];
     const rels = [
+      ...[cli, irma].flatMap((child) =>
+        [pai, mae].map((parent) => rel(parent.id, child.id, "parent")),
+      ),
       rel(pai.id, meio.id, "parent"),
       rel(outra.id, meio.id, "parent"),
       rel(pai.id, outra.id, "union", { marriage_order: 2 }),
@@ -366,6 +372,9 @@ describe("filiações confiáveis no mapa ampliado", () => {
     const filha = p("Filho(a)");
     const neta = p("Neta");
     const rels = [
+      ...[cli, sangue].flatMap((child) =>
+        [pai, mae].map((parent) => rel(parent.id, child.id, "parent")),
+      ),
       rel(pai.id, meio.id, "parent"),
       rel(outraMae.id, meio.id, "parent"),
       rel(pai.id, adocao.id, "parent", { qualifier: "adoptive" }),
@@ -399,7 +408,7 @@ describe("filiações confiáveis no mapa ampliado", () => {
     expect(checkLayoutInvariants(graph, layoutGraph(graph))).toEqual([]);
   });
 
-  it("um meio-irmão paterno legado recebe só o pai conhecido e filho do consulente desce em faixa própria", () => {
+  it("uma meia-irmã paterna declarada fica no topo com o pai em revisão e o filho desce em faixa própria", () => {
     const cli = p("Consulente");
     const pai = p("Pai");
     const mae = p("Mãe");
@@ -411,8 +420,9 @@ describe("filiações confiáveis no mapa ampliado", () => {
       rels: [],
     });
     expect(graph.topRowIds).toEqual(new Set([cli.id, meiaIrma.id]));
-    expect(getResolvedParents(graph, meiaIrma.id)).toMatchObject([
-      { personId: pai.id, source: "legacy" },
+    expect(getResolvedParents(graph, meiaIrma.id)).toEqual([]);
+    expect(getSuggestedParents(graph, meiaIrma.id)).toMatchObject([
+      { personId: pai.id, source: "suggested", kind: "unknown" },
     ]);
     expect(getResolvedParents(graph, filho.id)).toMatchObject([
       { personId: cli.id, source: "legacy" },
@@ -420,6 +430,32 @@ describe("filiações confiáveis no mapa ampliado", () => {
     expect(getResolvedParents(graph, social.id)).toEqual([]);
     expect(graph.persons.get(social.id)!.lane).toBe("social");
     expect(graph.persons.get(filho.id)!.lane).toBe("descendant");
+    expect(checkLayoutInvariants(graph, layoutGraph(graph))).toEqual([]);
+  });
+
+  it("mantém uma filiação sem natureza por ID e reserva o topo para a irmandade de sangue declarada", () => {
+    const cli = p("Consultante", "Pessoa de referência", { is_proband: true });
+    const pai = p("Pai");
+    const incerto = p("Irmã(o)", "Pessoa com filiação indeterminada");
+    const rotulo = p("Irmão", "Pessoa com rótulo genérico");
+    const declarado = p("Irmão biológico do consultante", "Pessoa de sangue declarado");
+    const registro = rel(pai.id, incerto.id, "parent", { qualifier: null });
+    const graph = buildLogicalGraph({
+      persons: [cli, pai, incerto, rotulo, declarado],
+      rels: [rel(pai.id, cli.id, "parent", { qualifier: "Biológico" }), registro],
+    });
+    expect(graph.topRowIds).toEqual(new Set([cli.id, declarado.id]));
+    expect(getResolvedParents(graph, incerto.id)).toEqual([
+      { personId: pai.id, kind: "unknown", source: "explicit", relationshipId: registro.id },
+    ]);
+    expect(parentUnion(graph, incerto.id)).toBeTruthy();
+    expect(graph.warnings).toContainEqual(
+      expect.objectContaining({
+        personId: incerto.id,
+        message: expect.stringContaining("natureza de filiação por confirmar"),
+      }),
+    );
+    expect(getResolvedParents(graph, rotulo.id)).toEqual([]);
     expect(checkLayoutInvariants(graph, layoutGraph(graph))).toEqual([]);
   });
 
@@ -449,6 +485,9 @@ function unclesFromLegacySheet() {
   const unknown = p("Tio", "Jorge");
   return {
     persons: [...persons, uncle, uncle2, aunt, unknown],
+    rootLinks: [client, sibling1, sibling2].flatMap((child) =>
+      [father, mother].map((parent) => rel(parent.id, child.id, "parent")),
+    ),
     client,
     sibling1,
     sibling2,
@@ -468,7 +507,7 @@ function unclesFromLegacySheet() {
 describe("ramos colaterais legados e alinhamento", () => {
   it("desenha tios no ramo dos seus próprios avós em revisão e centraliza cada fratria", () => {
     const f = unclesFromLegacySheet();
-    const graph = buildLogicalGraph({ persons: f.persons, rels: [] });
+    const graph = buildLogicalGraph({ persons: f.persons, rels: f.rootLinks });
     const layout = layoutGraph(graph);
     const centerX = (id: string) => layout.personPos.get(id)!.x + NODE_W / 2;
     const groupX = (children: readonly PersonRow[]) => {
@@ -510,6 +549,7 @@ describe("ramos colaterais legados e alinhamento", () => {
     const graph = buildLogicalGraph({
       persons: f.persons,
       rels: [
+        ...f.rootLinks,
         rel(f.mg.id, f.mother.id, "parent"),
         rel(f.mg.id, f.aunt.id, "parent"),
         rel(f.mg.id, f.mm.id, "union"),
@@ -549,6 +589,7 @@ describe("ramos colaterais legados e alinhamento", () => {
         aunt2,
       ],
       rels: [
+        ...f.rootLinks.filter(({ to_person_id }) => to_person_id !== f.sibling2.id),
         rel(f.father.id, adoptive.id, "parent", { qualifier: "adotiva" }),
         rel(f.mother.id, adoptive.id, "parent", { qualifier: "adotiva" }),
         rel(f.mg.id, f.mother.id, "parent"),

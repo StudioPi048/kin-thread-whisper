@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import { FileSpreadsheet } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { Download, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ClanSheet } from "@/lib/clan-import";
 import type { planClanWorkbook } from "@/lib/clan-workbook";
@@ -100,16 +100,46 @@ export function ClanWorkbookPreview({
   pending: boolean;
   onTemplate: () => void;
 }) {
+  const [showUnchanged, setShowUnchanged] = useState(false);
   const needsReview = (person: (typeof preview.people)[number]) =>
     person.state === "error" || person.state === "match" || Boolean(choices[person.key]);
-  const people = [...preview.people].sort(
-    (left, right) =>
-      Number(needsReview(right)) - Number(needsReview(left)) || left.line - right.line,
+  const people = preview.people
+    .filter((row) => showUnchanged || row.state !== "keep" || needsReview(row))
+    .sort(
+      (left, right) =>
+        Number(needsReview(right)) - Number(needsReview(left)) || left.line - right.line,
+    );
+  const links = preview.relations
+    .filter((row) => showUnchanged || row.state !== "keep")
+    .sort(
+      (left, right) =>
+        Number(right.state === "error") - Number(left.state === "error") || left.line - right.line,
+    );
+  const counts = [...preview.people, ...preview.relations].reduce(
+    (totals, row) => ({ ...totals, [row.state]: totals[row.state] + 1 }),
+    { include: 0, update: 0, keep: 0, match: 0, error: 0 },
   );
-  const links = [...preview.relations].sort(
-    (left, right) =>
-      Number(right.state === "error") - Number(left.state === "error") || left.line - right.line,
-  );
+  const downloadIssues = () => {
+    const lines = [
+      "Prévia de importação · GENEALIZ",
+      "Corrija estas linhas no arquivo original e importe novamente.",
+      "",
+      ...preview.people
+        .filter(({ state }) => state === "error" || state === "match")
+        .map(({ line, changes }) => `Pessoas · linha ${line} · ${changes.join(" · ")}`),
+      ...preview.relations
+        .filter(({ state }) => state === "error")
+        .map(({ line, detail }) => `Vínculos · linha ${line} · ${detail}`),
+    ];
+    const url = URL.createObjectURL(
+      new Blob([lines.join("\r\n")], { type: "text/plain;charset=utf-8" }),
+    );
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "conferencia-planilha-genealiz.txt";
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="grid min-w-0 gap-5">
@@ -131,10 +161,35 @@ export function ClanWorkbookPreview({
           <FileSpreadsheet className="size-4" aria-hidden /> Baixar modelo
         </Button>
       </div>
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-md border border-border px-4 py-3 text-sm">
+        <p role="status" className="font-medium tabular-nums">
+          {counts.include} inclusões · {counts.update} alterações · {counts.error + counts.match}{" "}
+          pendências
+        </p>
+        {counts.keep > 0 && (
+          <label className="flex min-h-11 items-center gap-2">
+            <input
+              type="checkbox"
+              className="size-4"
+              checked={showUnchanged}
+              onChange={(event) => setShowUnchanged(event.target.checked)}
+            />
+            Ver {counts.keep} sem alterações
+          </label>
+        )}
+        {preview.blocking && (
+          <Button type="button" variant="ghost" className="min-h-11" onClick={downloadIssues}>
+            <Download className="size-4" aria-hidden /> Baixar pendências
+          </Button>
+        )}
+      </div>
       <section aria-labelledby="clan-import-people">
         <h3 id="clan-import-people" className="mb-2 font-semibold">
           Pessoas
         </h3>
+        {people.length === 0 && (
+          <p className="text-sm text-muted-foreground">Nenhuma alteração nas fichas.</p>
+        )}
         <ul className="divide-y divide-border rounded-md border border-border">
           {people.map((person) => (
             <ClanImportRow

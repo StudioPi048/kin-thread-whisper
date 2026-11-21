@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { appointmentDurationMin, dateKeyInTz, timeInTz } from "./scheduling";
 import {
   audioStateOf,
@@ -10,12 +11,18 @@ export type AgendaSessionRow = SessionLike & {
   id: string;
   client_id: string;
   title: string | null;
+  updated_at?: string;
   duration_seconds?: number | null;
   planned_duration_minutes?: number | null;
   clients?: { id?: string; full_name: string; preferred_name: string | null } | null;
 };
 
-type HistoryRow = Pick<AgendaSessionRow, "id" | "client_id" | "clinical_status" | "session_date">;
+type HistoryRow = Pick<
+  AgendaSessionRow,
+  "id" | "client_id" | "clinical_status" | "session_date"
+> & {
+  status?: string;
+};
 
 export function sessionHistory(rows: HistoryRow[]) {
   const perClient = new Map<string, { firstSession: string; count: number }>();
@@ -24,7 +31,7 @@ export function sessionHistory(rows: HistoryRow[]) {
   );
   const sessions = new Map<string, { number: number; firstSession: string }>();
   for (const row of ordered) {
-    if (row.clinical_status === "canceled") continue;
+    if (row.clinical_status === "canceled" || row.status === "deleting") continue;
     const previous = perClient.get(row.client_id);
     const firstSession = previous?.firstSession ?? row.session_date;
     const count = (previous?.count ?? 0) + 1;
@@ -61,6 +68,7 @@ export function agendaSession(
   const durationMin = appointmentDurationMin(row);
   const start = new Date(row.session_date);
   const dateKey = dateKeyInTz(start, tz);
+  const end = durationMin === null ? null : new Date(start.getTime() + durationMin * 60_000);
   const number = clinicalStatus === "canceled" ? null : (history?.number ?? 1);
   const isFirst = number === 1;
   const type = isFirst
@@ -80,9 +88,10 @@ export function agendaSession(
       .join(""),
     dateKey,
     start: timeInTz(start, tz),
-    end:
-      durationMin === null ? null : timeInTz(new Date(start.getTime() + durationMin * 60_000), tz),
+    end: end === null ? null : timeInTz(end, tz),
+    endDateKey: end === null ? null : dateKeyInTz(end, tz),
     startISO: start.toISOString(),
+    updatedAt: row.updated_at,
     type,
     sessionNumber: number,
     isFirst,
@@ -99,3 +108,30 @@ export function agendaSession(
 }
 
 export type AgendaSessionDTO = ReturnType<typeof agendaSession>;
+
+const reactivationConflictsSchema = z
+  .array(
+    z.object({
+      id: z.string().uuid(),
+      startISO: z.string().datetime({ offset: true }),
+      updatedAt: z.string().datetime({ offset: true }),
+      durationMin: z.number(),
+      conflictName: z.string(),
+      conflictStartISO: z.string().datetime({ offset: true }),
+    }),
+  )
+  .min(1);
+
+export type ReactivationConflict = z.infer<typeof reactivationConflictsSchema>[number];
+
+export function readReactivationConflicts(error: unknown): ReactivationConflict[] | null {
+  if (!error || typeof error !== "object" || !("code" in error) || error.code !== "23P01")
+    return null;
+  if (!("details" in error) || typeof error.details !== "string") return null;
+  try {
+    const result = reactivationConflictsSchema.safeParse(JSON.parse(error.details));
+    return result.success ? result.data : null;
+  } catch {
+    return null;
+  }
+}

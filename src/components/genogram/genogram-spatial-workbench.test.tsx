@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { supabase } from "@/integrations/supabase/client";
 import { GenogramCanvas } from "./genogram-canvas";
+import { PersonFormDialog } from "./person-form-dialog";
 
 vi.mock("@/integrations/supabase/client", () => import("../../../design/preview/client"));
 
@@ -70,6 +71,140 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   Reflect.deleteProperty(HTMLElement.prototype, "scrollIntoView");
+});
+
+it("mantém um cartão no Tab e percorre os outros nomes completos pelas setas", async () => {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={queryClient}>
+      <GenogramCanvas clientId={clientId} />
+    </QueryClientProvider>,
+  );
+  fireEvent.click(await screen.findByRole("button", { name: "3D" }));
+  await waitFor(() => expect(peopleOnMap()).toHaveLength(35));
+  const viewport = spatial();
+  const root = viewport.querySelector<HTMLButtonElement>('[data-reference="true"]')!;
+  expect(viewport.querySelectorAll("[data-person-id][tabindex='0']")).toHaveLength(1);
+  root.focus();
+  fireEvent.keyDown(root, { key: "ArrowRight" });
+  const focused = document.activeElement as HTMLButtonElement;
+  expect(focused).not.toBe(root);
+  expect(focused.dataset.generation).toBe("0");
+  expect(focused.getAttribute("aria-label")).toMatch(/Irmã|Irmão/);
+  expect(viewport.querySelectorAll("[data-person-id][tabindex='0']")).toHaveLength(1);
+});
+
+it("cancela a adição rápida sem ficha e salva pessoa e filiação na mesma operação", async () => {
+  const subject = (
+    await supabase
+      .from("genogram_persons")
+      .select("*")
+      .eq("client_id", clientId)
+      .eq("is_proband", true)
+      .single()
+  ).data!;
+  const people = async () => {
+    const { data, error } = await supabase
+      .from("genogram_persons")
+      .select("*")
+      .eq("client_id", clientId);
+    if (error) throw error;
+    return data ?? [];
+  };
+  const original = (await people()).length;
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const close = vi.fn();
+  const created = vi.fn();
+  const editor = () => (
+    <QueryClientProvider client={qc}>
+      <PersonFormDialog
+        open
+        clientId={clientId}
+        onOpenChange={close}
+        onCreated={created}
+        quickLink={{
+          targetId: subject.id,
+          targetName: subject.full_name,
+          direction: "child",
+          parents: [],
+          expected: [],
+        }}
+      />
+    </QueryClientProvider>
+  );
+  const cancel = render(editor());
+  fireEvent.change(screen.getByLabelText("Nome completo *"), {
+    target: { value: "Rascunho sem vínculo" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+  expect(close).toHaveBeenCalledWith(false);
+  expect(await people()).toHaveLength(original);
+  cancel.unmount();
+  render(editor());
+  fireEvent.change(screen.getByLabelText("Nome completo *"), {
+    target: { value: "Familiar fictício vinculado" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Adicionar à árvore" }));
+  await waitFor(() => expect(created).toHaveBeenCalledOnce());
+  const [id] = created.mock.calls[0];
+  try {
+    expect(await people()).toHaveLength(original + 1);
+    expect(await relationRows()).toContainEqual(
+      expect.objectContaining({
+        from_person_id: subject.id,
+        to_person_id: id,
+        relationship_type: "parent",
+        qualifier: "unknown",
+      }),
+    );
+  } finally {
+    const args = { _client_id: clientId, _people: [id], _relationships: [] };
+    const preview = await supabase.rpc("remove_genogram_selection", args);
+    await supabase.rpc("remove_genogram_selection", { ...args, _expected: preview.data });
+  }
+});
+
+it("preserva a edição de pessoa em memória quando outra aba altera a ficha", async () => {
+  const initial = (
+    await supabase
+      .from("genogram_persons")
+      .select("*")
+      .eq("client_id", clientId)
+      .eq("full_name", "Pai")
+      .single()
+  ).data!;
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const close = vi.fn();
+  render(
+    <QueryClientProvider client={qc}>
+      <PersonFormDialog open clientId={clientId} editing={initial} onOpenChange={close} />
+    </QueryClientProvider>,
+  );
+  fireEvent.change(screen.getByLabelText("Nome completo *"), {
+    target: { value: "Edição em rascunho" },
+  });
+  const remoteEdit = await supabase
+    .from("genogram_persons")
+    .update({ notes: "Nota da outra aba" })
+    .eq("id", initial.id);
+  expect(remoteEdit.error).toBeNull();
+  try {
+    fireEvent.click(screen.getByRole("button", { name: "Salvar dossiê" }));
+    expect((await screen.findByRole("alert")).textContent).toContain(
+      "A ficha mudou ou foi removida em outra aba",
+    );
+    expect((screen.getByLabelText("Nome completo *") as HTMLInputElement).value).toBe(
+      "Edição em rascunho",
+    );
+    expect(close).not.toHaveBeenCalled();
+    const saved = (
+      await supabase.from("genogram_persons").select("*").eq("id", initial.id).single()
+    ).data!;
+    expect(saved.full_name).toBe(initial.full_name);
+    expect(saved.notes).toBe("Nota da outra aba");
+  } finally {
+    await supabase.from("genogram_persons").update({ notes: initial.notes }).eq("id", initial.id);
+  }
 });
 
 it("abre o board estreito em escala de leitura, com ficha e panorama fora da escala", async () => {

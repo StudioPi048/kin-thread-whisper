@@ -79,6 +79,7 @@ export interface LogicalEdge {
   unionId: string;
   childKind?: ParentKind;
   suggested?: boolean;
+  parentLinks?: readonly ResolvedParent[];
 }
 
 export interface GenogramWarning {
@@ -175,16 +176,16 @@ export function getSuggestedParents(
   return graph.suggestedParentsByChild.get(personId) ?? [];
 }
 
-function parentKind(qualifier: string | null): ParentKind {
+export function parentKind(qualifier: string | null): ParentKind {
   const value = qualifier
     ?.toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .trim();
-  if (!value || /^biolog/.test(value)) return "biological";
-  if (/adot|adopt/.test(value)) return "adoptive";
-  if (/acolh|criac|foster|guarda/.test(value)) return "foster";
-  if (/stepparent|padrasto|madrasta/.test(value)) return "stepparent";
+  if (value && /^biolog/.test(value)) return "biological";
+  if (value && /^(adot|adopt)/.test(value)) return "adoptive";
+  if (value && /^(acolh|criac|foster|guarda)/.test(value)) return "foster";
+  if (value && /^(stepparent|padrasto|madrasta)/.test(value)) return "stepparent";
   return "unknown";
 }
 
@@ -383,6 +384,8 @@ export function buildLogicalGraph({
         warn(to.id, "o mesmo genitor tem tipos de filiação incompatíveis. Revise os vínculos.");
       } else if (!conflicting) {
         parents.push({ personId: from.id, kind, source: "explicit", relationshipId: r.id });
+        if (kind === "unknown")
+          warn(to.id, "natureza de filiação por confirmar. Revise o vínculo registrado.");
       }
       g.parentsByChild.set(to.id, parents);
       continue;
@@ -438,7 +441,7 @@ export function buildLogicalGraph({
 
   const inferred = (p: PersonRow): ResolvedParent => ({
     personId: p.id,
-    kind: "biological",
+    kind: "unknown",
     source: "legacy",
   });
   for (const { child: childRole, parents: roles, id } of ANCESTOR_FAMILIES) {
@@ -454,7 +457,10 @@ export function buildLogicalGraph({
       pairKey(hints.map((p) => p.id)),
       `u_${id === "root" ? `root_${proband.id}` : id}`,
     );
-    if (!declaredChildren.has(child.id)) g.parentsByChild.set(child.id, hints.map(inferred));
+    if (!declaredChildren.has(child.id)) {
+      g.parentsByChild.set(child.id, hints.map(inferred));
+      warn(child.id, "filiação da planilha antiga. Confira os pais e a natureza dos vínculos.");
+    }
   }
 
   // Um rótulo de colateral só localiza a faixa e o ramo. Mesmo sabendo
@@ -465,6 +471,7 @@ export function buildLogicalGraph({
     if (p.client_id !== proband.client_id) continue;
     if (role === "Filho(a)") {
       g.parentsByChild.set(p.id, [inferred(proband)]);
+      warn(p.id, "filiação da planilha antiga. Confira o vínculo com o consultante.");
       continue;
     }
     const text = role
@@ -474,26 +481,20 @@ export function buildLogicalGraph({
     const halfSibling = text.match(/^mei[oa][ -]irmao? (patern[oa]|matern[oa]|de pai|de mae)$/);
     if (halfSibling) {
       const side: Side = /^(patern|de pai)/.test(halfSibling[1]) ? "paternal" : "maternal";
-      const parents = biologicalParents(getResolvedParents(g, proband.id)).filter(
+      const parents = getResolvedParents(g, proband.id).filter(
         (link) => parentSide(g.persons.get(link.personId)!) === side,
       );
-      if (parents.length === 1) {
-        g.parentsByChild.set(p.id, [inferred(g.persons.get(parents[0].personId)!.row)]);
-      }
+      if (
+        parents.length === 1 &&
+        (parents[0].source === "legacy" || parents[0].kind === "biological")
+      )
+        g.suggestedParentsByChild.set(p.id, [
+          { personId: parents[0].personId, kind: "unknown", source: "suggested" },
+        ]);
       continue;
     }
-    if (role !== "Irmã(o)" || siblings.has(p.id)) continue;
-    const parents = getResolvedParents(g, proband.id);
-    if (parents.length > 0 && parents.every((parent) => parent.kind === "biological")) {
-      g.parentsByChild.set(
-        p.id,
-        parents.map((parent) => ({
-          personId: parent.personId,
-          kind: "biological",
-          source: "legacy",
-        })),
-      );
-    }
+    if (role === "Irmã(o)" && !siblings.has(p.id))
+      warn(p.id, "confirme a natureza da irmandade e informe os pais conhecidos.");
   }
 
   const parentsOf = (id: string) => getResolvedParents(g, id).map((p) => p.personId);
@@ -535,7 +536,7 @@ export function buildLogicalGraph({
       .trim()
       .toLowerCase();
     const declaredBlood =
-      /^irmao? (?:biologic[oa]|de sangue)(?: (?:do consulente|do paciente))?$/.test(
+      /^(?:irmao? (?:biologic[oa]|de sangue)(?: (?:do consultante|do consulente|do paciente))?|mei[oa][ -]irmao? (?:patern[oa]|matern[oa]|de pai|de mae))$/.test(
         bloodTag ?? "",
       ) || [...(qualifiers ?? [])].some((q) => q === "biological" || q === "twin" || q === "half");
     if (declaredBlood && qualifiers?.has("adoptive")) {
@@ -566,7 +567,11 @@ export function buildLogicalGraph({
     const anchor = chosenRoles.get(family.child);
     if (!anchor || invalidChildren.has(anchor.id) || cyclic.has(anchor.id)) continue;
     const resolved = getResolvedParents(g, anchor.id);
-    if (!resolved.length || resolved.some((parent) => parent.kind !== "biological")) continue;
+    if (
+      !resolved.length ||
+      resolved.some((parent) => parent.kind !== "biological" && parent.kind !== "unknown")
+    )
+      continue;
     let candidatePair = [...resolved];
 
     if (
@@ -591,7 +596,7 @@ export function buildLogicalGraph({
         continue;
       const suggestion: ResolvedParent = {
         personId: candidate.id,
-        kind: "biological",
+        kind: "unknown",
         source: "suggested",
       };
       g.suggestedParentsByChild.set(anchor.id, [suggestion]);
@@ -623,7 +628,7 @@ export function buildLogicalGraph({
         continue;
       g.suggestedParentsByChild.set(
         person.id,
-        candidatePair.map(({ personId, kind }) => ({ personId, kind, source: "suggested" })),
+        candidatePair.map(({ personId }) => ({ personId, kind: "unknown", source: "suggested" })),
       );
       warn(person.id, "filiação sugerida pelo ramo. Confira quais pais são compartilhados.");
     }
@@ -687,6 +692,7 @@ export function buildLogicalGraph({
       personId: child,
       unionId: id,
       childKind: edgeKind,
+      parentLinks: parents,
       ...(suggested.length > 0 ? { suggested: true } : {}),
     });
   }

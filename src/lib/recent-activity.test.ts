@@ -41,9 +41,15 @@ describe("retomada por usuário", () => {
 
 describe("onboarding com dados reais", () => {
   it("conta progresso pelos registros existentes", () => {
-    const r = onboardingSteps({ clients: 1, persons: 3, relationships: 0, sessions: 0 });
+    const r = onboardingSteps({
+      clients: 1,
+      persons: 3,
+      relationships: 0,
+      scheduled: 0,
+      completed: 0,
+    });
     expect(r.done).toBe(2);
-    expect(r.total).toBe(4);
+    expect(r.total).toBe(5);
   });
 });
 

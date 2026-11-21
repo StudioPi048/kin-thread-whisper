@@ -1,6 +1,7 @@
 import { queryOptions, type QueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { PersonRow, RelationshipRow } from "@/lib/patterns";
+import { readCasePages } from "@/lib/read-case-pages";
 
 export interface ClinicalIntelData {
   client: { full_name: string; presenting_complaint: string | null } | null;
@@ -49,22 +50,42 @@ export const clinicalIntelQuery = (clientId: string) =>
     queryKey: ["clinical-intel", clientId] as const,
     enabled: !!clientId,
     queryFn: async (): Promise<ClinicalIntelData> => {
-      const [clientRes, personsRes, relsRes] = await Promise.all([
+      const [clientRes, persons, relationships] = await Promise.all([
         supabase
           .from("clients")
           .select("full_name, presenting_complaint")
           .eq("id", clientId)
           .maybeSingle(),
-        supabase.from("genogram_persons").select("*").eq("client_id", clientId),
-        supabase.from("genogram_relationships").select("*").eq("client_id", clientId),
+        readCasePages(
+          (after, limit) => {
+            const page = supabase
+              .from("genogram_persons")
+              .select("*")
+              .eq("client_id", clientId)
+              .order("id")
+              .limit(limit);
+            return after ? page.gt("id", after) : page;
+          },
+          (person) => person.id,
+        ),
+        readCasePages(
+          (after, limit) => {
+            const page = supabase
+              .from("genogram_relationships")
+              .select("*")
+              .eq("client_id", clientId)
+              .order("id")
+              .limit(limit);
+            return after ? page.gt("id", after) : page;
+          },
+          (relationship) => relationship.id,
+        ),
       ]);
       if (clientRes.error) throw clientRes.error;
-      if (personsRes.error) throw personsRes.error;
-      if (relsRes.error) throw relsRes.error;
       return {
         client: clientRes.data,
-        persons: (personsRes.data ?? []) as PersonRow[],
-        relationships: (relsRes.data ?? []) as RelationshipRow[],
+        persons: persons as PersonRow[],
+        relationships: relationships as RelationshipRow[],
       };
     },
   });

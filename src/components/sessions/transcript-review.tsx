@@ -24,6 +24,8 @@ type ReviewDraft = {
   correction: string;
   audioSecond: number | null;
   updatedAt: string;
+  transcriptVersion: string;
+  sourceText: string;
 };
 
 export function TranscriptReview({
@@ -35,6 +37,7 @@ export function TranscriptReview({
   audioPath,
   updatedAt,
   processing,
+  completed,
   onRetranscribe,
   retranscribeDisabled,
   refresh,
@@ -47,6 +50,7 @@ export function TranscriptReview({
   audioPath: string | null;
   updatedAt: string;
   processing: boolean;
+  completed?: boolean;
   onRetranscribe?: () => void;
   retranscribeDisabled?: boolean;
   refresh: () => Promise<unknown>;
@@ -58,6 +62,11 @@ export function TranscriptReview({
   const player = useRef<HTMLAudioElement>(null);
   const lock = useRef(false);
   const passages = useMemo(() => transcriptPassages(transcript, segments), [transcript, segments]);
+  const transcriptVersion = useMemo(
+    () => JSON.stringify([transcript, segments]),
+    [transcript, segments],
+  );
+  const changedTranscript = draft && draft.transcriptVersion !== transcriptVersion;
   const decisions = useMemo(() => readTranscriptReviews(reviews), [reviews]);
   const playback = useQuery({
     queryKey: ["session-audio-playback", sessionId, audioPath],
@@ -79,6 +88,7 @@ export function TranscriptReview({
       !draft ||
       lock.current ||
       processing ||
+      changedTranscript ||
       (draft.decision === "corrected" && !draft.correction.trim())
     ) {
       throw new Error("Confira a correção antes de salvar.");
@@ -146,10 +156,47 @@ export function TranscriptReview({
         onClick={() => setOpen((value) => !value)}
       >
         <FileText className="size-4" aria-hidden />
-        {open ? "Ocultar transcrição" : "Revisar transcrição"}
+        {open
+          ? "Ocultar transcrição"
+          : completed
+            ? "Abrir transcrição e áudio"
+            : "Revisar transcrição"}
       </Button>
       {open && (
         <div className="space-y-4">
+          {changedTranscript && (
+            <section
+              className="space-y-2 rounded-md border border-border p-3"
+              aria-label="Rascunho da versão anterior"
+            >
+              <p role="status" className="text-sm font-semibold">
+                A transcrição mudou em outra aba. Compare o trecho anterior com a nova versão.
+              </p>
+              <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">
+                {draft.sourceText}
+              </p>
+              {draft.decision === "corrected" && (
+                <Textarea
+                  aria-label="Sua correção na versão anterior"
+                  value={draft.correction}
+                  readOnly
+                />
+              )}
+              {draft.decision !== "corrected" && (
+                <p className="text-sm">
+                  Decisão anterior · {transcriptDecisionLabels[draft.decision]}
+                </p>
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                className="min-h-11"
+                onClick={() => setDraft(undefined)}
+              >
+                Dispensar rascunho anterior
+              </Button>
+            </section>
+          )}
           {audioPath && (
             <div className="flex flex-wrap items-center gap-3">
               <Button
@@ -192,7 +239,7 @@ export function TranscriptReview({
           <ol className="divide-y divide-border rounded-md border border-border">
             {passages.map((part) => {
               const existing = decisions[part.index];
-              const selected = draft?.index === part.index;
+              const selected = !changedTranscript && draft?.index === part.index;
               const position = existing?.audio_second ?? part.start;
               return (
                 <li className="space-y-3 p-4" key={part.index}>
@@ -315,6 +362,8 @@ export function TranscriptReview({
                           correction: existing?.correction || part.text,
                           audioSecond: position,
                           updatedAt,
+                          transcriptVersion,
+                          sourceText: part.text,
                         })
                       }
                     >

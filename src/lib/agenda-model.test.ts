@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { agendaSession, sessionHistory, type AgendaSessionRow } from "./agenda-model";
-import { appointmentDurationMin, shiftDateKey, startOfCivilDay } from "./scheduling";
+import {
+  agendaSession,
+  readReactivationConflicts,
+  sessionHistory,
+  type AgendaSessionRow,
+} from "./agenda-model";
+import {
+  agendaBoundaryDelay,
+  appointmentDurationMin,
+  shiftDateKey,
+  startOfCivilDay,
+} from "./scheduling";
 
 const now = new Date("2026-11-20T15:00:00Z");
 const appointment = (id: string, day: string, patch: Partial<AgendaSessionRow> = {}) =>
@@ -43,6 +53,49 @@ describe("Agenda", () => {
     });
     expect(appointmentDurationMin({ status: "ready", duration_seconds: 190 })).toBeNull();
     expect(appointmentDurationMin({ status: "scheduled", duration_seconds: 4_500 })).toBe(75);
+  });
+
+  it("mostra o término no dia civil seguinte de acordo com o fuso da Agenda", () => {
+    const session = appointment("overnight", "2026-11-20", {
+      session_date: "2026-11-21T02:30:00Z",
+      planned_duration_minutes: 90,
+    });
+    expect(agendaSession(session, "America/Sao_Paulo", now)).toMatchObject({
+      dateKey: "2026-11-20",
+      start: "23:30",
+      endDateKey: "2026-11-21",
+      end: "01:00",
+    });
+  });
+
+  it("pula uma exclusão pendente na numeração do histórico", () => {
+    const deleting = appointment("deleting", "2026-11-19", { status: "deleting" });
+    const next = appointment("first", "2026-11-20");
+    expect(sessionHistory([deleting, next]).get(next.id)?.number).toBe(1);
+  });
+
+  it("agenda a atualização da Mesa quando o primeiro compromisso vence", () => {
+    expect(agendaBoundaryDelay("2026-11-20T15:01:00Z", Number(now))).toBe(60_250);
+    expect(agendaBoundaryDelay("2026-11-20T14:59:00Z", Number(now))).toBe(250);
+    expect(agendaBoundaryDelay(undefined, Number(now))).toBeNull();
+  });
+
+  it("preserva a versão e o horário para resolver conflitos de reativação", () => {
+    const collision = {
+      id: "f1a74947-4d25-4ceb-9b0c-7ea74220d286",
+      startISO: "2026-11-21T10:00:00+00:00",
+      updatedAt: "2026-11-20T15:00:00.123456+00:00",
+      durationMin: 60,
+      conflictName: "Caso fictício",
+      conflictStartISO: "2026-11-21T10:30:00+00:00",
+    };
+    expect(
+      readReactivationConflicts({ code: "23P01", details: JSON.stringify([collision]) }),
+    ).toEqual([collision]);
+    expect(readReactivationConflicts({ code: "23P01", details: "inválido" })).toBeNull();
+    expect(
+      readReactivationConflicts({ code: "42501", details: JSON.stringify([collision]) }),
+    ).toBeNull();
   });
 
   it("só mostra texto gerado após revisão e prioriza a nota profissional", () => {

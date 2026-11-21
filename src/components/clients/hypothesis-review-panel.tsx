@@ -1,11 +1,10 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { History, Loader2, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useUnsaved } from "@/components/unsaved/unsaved-guard";
@@ -14,34 +13,20 @@ import {
   DECISION_LABEL,
   compareReviewEvidence,
   evidenceFingerprint,
-  evidenceSnapshot,
   isStale,
   reviewsForPattern,
   type ReviewDecision,
   type ReviewRow,
 } from "@/lib/hypothesis-review";
-
-const reviewsKey = (clientId: string) => ["hypothesis-reviews", clientId] as const;
+import {
+  hypothesisReviewsQuery,
+  observeReview,
+  reviewsKey,
+  submitHypothesisReview,
+  type ObservedReview,
+} from "@/lib/hypothesis-review-save";
 
 type ReviewDraft = { decision: ReviewDecision | ""; note: string; fingerprint: string };
-
-function useHypothesisReviews(clientId: string) {
-  return useQuery({
-    queryKey: reviewsKey(clientId),
-    enabled: !!clientId,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("hypothesis_reviews")
-        .select(
-          "id, hypothesis_key, hypothesis_title, decision, note, version, evidence_fingerprint, evidence_snapshot, created_at",
-        )
-        .eq("client_id", clientId)
-        .order("version", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as ReviewRow[];
-    },
-  });
-}
 
 export function HypothesisReview({
   clientId,
@@ -57,7 +42,7 @@ export function HypothesisReview({
   available: boolean;
 }) {
   const qc = useQueryClient();
-  const q = useHypothesisReviews(clientId);
+  const q = useQuery(hypothesisReviewsQuery(clientId));
   const fp = evidenceFingerprint(pattern);
   const rows = reviewsForPattern(q.data ?? [], hypothesisKey, pattern);
   const latest = rows[0] ?? null;
@@ -73,37 +58,52 @@ export function HypothesisReview({
   const needsDecision = Boolean(draft.decision && draft.fingerprint !== fp);
   const [showHistory, setShowHistory] = useState(false);
   const pendingSave = useRef<Promise<void> | null>(null);
+  const observed = useRef<ObservedReview | null>(null);
+  const [reviewConflict, setReviewConflict] = useState<{
+    latest: ReviewRow | null;
+    observed: ObservedReview;
+  } | null>(null);
+  useEffect(() => {
+    if (!observed.current && q.data) {
+      observed.current = observeReview(q.data, hypothesisKey, pattern).observed;
+    }
+  }, [q.data, hypothesisKey, pattern]);
 
   const save = useMutation({
     mutationFn: async ({
       submitted,
-      snapshot,
+      confirmed,
     }: {
       submitted: ReviewDraft;
-      snapshot: ReturnType<typeof evidenceSnapshot>;
+      confirmed: ObservedReview;
     }) => {
       if (!submitted.decision) throw new Error("Escolha uma decisão.");
-      const { data, error } = await supabase
-        .from("hypothesis_reviews")
-        .insert({
-          client_id: clientId,
-          hypothesis_key: hypothesisKey,
-          hypothesis_title: title,
-          decision: submitted.decision,
-          note: submitted.note.trim() || null,
-          evidence_fingerprint: submitted.fingerprint,
-          evidence_snapshot: [snapshot],
-        })
-        .select("id, version")
-        .single();
-      if (error) throw error;
-      return data;
+      return submitHypothesisReview(qc, {
+        clientId,
+        key: hypothesisKey,
+        title,
+        pattern,
+        decision: submitted.decision,
+        note: submitted.note,
+        fingerprint: submitted.fingerprint,
+        observed: confirmed,
+      });
     },
-    onSuccess: (_data, { submitted }) => {
+    onSuccess: (result, { submitted }) => {
+      if (result.kind === "conflict") {
+        setReviewConflict(result);
+        return;
+      }
+      observed.current = { id: result.latest.id, canonicalId: result.latest.id };
+      setReviewConflict(null);
       setDraft((current) =>
         current === submitted ? { ...current, decision: "", note: "" } : current,
       );
-      qc.invalidateQueries({ queryKey: reviewsKey(clientId) });
+      qc.setQueryData<ReviewRow[]>(reviewsKey(clientId), (previous) => [
+        ...(previous ?? []).filter((row) => row.id !== result.latest.id),
+        result.latest,
+      ]);
+      void qc.invalidateQueries({ queryKey: reviewsKey(clientId) });
     },
   });
 
@@ -114,9 +114,17 @@ export function HypothesisReview({
     if (!available || !submitted.decision || submitted.fingerprint !== fp) {
       return Promise.reject(new Error("Confira as evidências atuais e escolha uma decisão."));
     }
+    if (reviewConflict)
+      return Promise.reject(new Error("Confira a revisão registrada em outra aba antes de sair."));
+    const confirmed = observed.current;
+    if (!confirmed || q.isError)
+      return Promise.reject(new Error("Carregue o histórico antes de confirmar uma revisão."));
     pendingSave.current = save
-      .mutateAsync({ submitted, snapshot: evidenceSnapshot(pattern) })
-      .then(() => undefined)
+      .mutateAsync({ submitted, confirmed })
+      .then((result) => {
+        if (result.kind === "conflict")
+          throw new Error("Confira a revisão registrada em outra aba antes de sair.");
+      })
       .finally(() => {
         pendingSave.current = null;
       });
@@ -125,6 +133,8 @@ export function HypothesisReview({
   const discard = async () => {
     await pendingSave.current?.catch(() => undefined);
     setDraft(() => ({ decision: "", note: "", fingerprint: fp }));
+    if (q.data) observed.current = observeReview(q.data, hypothesisKey, pattern).observed;
+    setReviewConflict(null);
     save.reset();
   };
   useUnsaved(`review:${clientId}:${hypothesisKey}`, {
@@ -204,6 +214,41 @@ export function HypothesisReview({
             </p>
           )
         )}
+        {reviewConflict && (
+          <div className="space-y-2 rounded-md border border-clinical-warning/50 p-3 text-sm">
+            <p role="status" className="font-semibold">
+              Uma revisão foi registrada desde que você abriu o formulário. Seu rascunho continua
+              aqui.
+            </p>
+            {reviewConflict.latest && (
+              <>
+                <p>
+                  Revisão v{reviewConflict.latest.version} ·{" "}
+                  {DECISION_LABEL[reviewConflict.latest.decision as ReviewDecision]} ·{" "}
+                  {format(new Date(reviewConflict.latest.created_at), "dd/MM/yyyy HH:mm", {
+                    locale: ptBR,
+                  })}
+                </p>
+                {reviewConflict.latest.note && (
+                  <p className="whitespace-pre-wrap [overflow-wrap:anywhere]">
+                    {reviewConflict.latest.note}
+                  </p>
+                )}
+              </>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11"
+              onClick={() => {
+                observed.current = reviewConflict.observed;
+                setReviewConflict(null);
+              }}
+            >
+              Conferi a revisão mais recente
+            </Button>
+          </div>
+        )}
         <div className="flex flex-wrap gap-2">
           {(Object.keys(DECISION_LABEL) as ReviewDecision[]).map((d) => (
             <label
@@ -238,7 +283,14 @@ export function HypothesisReview({
         <div className="flex flex-wrap items-center gap-3">
           <Button
             className="min-h-11"
-            disabled={!available || !decision || save.isPending}
+            disabled={
+              !available ||
+              !decision ||
+              save.isPending ||
+              q.isLoading ||
+              q.isError ||
+              !!reviewConflict
+            }
             onClick={() => void submit().catch(() => undefined)}
           >
             {save.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
@@ -312,7 +364,6 @@ function EvidenceFacts({ facts, clientId }: { facts: EvidenceFact[]; clientId: s
   return (
     <ul className="mt-1 divide-y divide-border">
       {facts.map((fact, index) => {
-        const personId = fact.source === "genogram_persons" ? fact.recordId : fact.personIds?.[0];
         return (
           <li className="py-2 text-sm" key={`${fact.recordId}-${fact.field}-${index}`}>
             <p className="break-words">
@@ -321,16 +372,20 @@ function EvidenceFacts({ facts, clientId }: { facts: EvidenceFact[]; clientId: s
             {fact.precision && (
               <p className="text-muted-foreground">{precisionNames[fact.precision]}</p>
             )}
-            {personId && (
+            {fact.recordId && (
               <Link
                 to="/app/clientes/$clientId"
                 params={{ clientId }}
-                search={{ tab: "genogram", person: personId }}
+                search={
+                  fact.source === "genogram_relationships"
+                    ? { tab: "genogram", relation: fact.recordId }
+                    : { tab: "genogram", person: fact.recordId }
+                }
                 className="inline-flex min-h-11 items-center text-sm text-primary hover:underline"
               >
                 {fact.source === "genogram_persons"
                   ? "Abrir ficha no mapa"
-                  : "Abrir familiar vinculado"}
+                  : "Abrir vínculo no mapa"}
               </Link>
             )}
           </li>
@@ -348,7 +403,7 @@ export function HypothesisReviewArchive({
   clientId: string;
   patterns: DetectedPattern[];
 }) {
-  const q = useHypothesisReviews(clientId);
+  const q = useQuery(hypothesisReviewsQuery(clientId));
   const rows = q.data ?? [];
   const currentReviewIds = new Set(
     patterns.flatMap((pattern) =>
@@ -358,28 +413,46 @@ export function HypothesisReviewArchive({
   const archived = rows
     .filter((row) => !currentReviewIds.has(row.id))
     .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
-  if (archived.length === 0) return null;
+  if (!q.isError && archived.length === 0) return null;
   return (
-    <details className="rounded-lg border border-border bg-card p-3">
-      <summary className="cursor-pointer font-semibold text-foreground">
-        Revisões de hipóteses anteriores ({archived.length})
-      </summary>
-      <p className="my-2 text-[14px] text-muted-foreground">
-        Estas hipóteses não aparecem com as evidências atuais do caso. As revisões permanecem no
-        histórico.
-      </p>
-      <ol className="space-y-2 text-[14px]">
-        {archived.map((row) => (
-          <li key={row.id} className="rounded border border-border px-3 py-2">
-            <strong>{row.hypothesis_title}</strong>
-            <p>
-              v{row.version} · {DECISION_LABEL[row.decision as ReviewDecision]} ·{" "}
-              {format(new Date(row.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-            </p>
-            {row.note && <p className="mt-1 whitespace-pre-wrap">{row.note}</p>}
-          </li>
-        ))}
-      </ol>
-    </details>
+    <>
+      {q.isError && (
+        <div role="alert" className="flex flex-wrap items-center gap-2 text-sm text-destructive">
+          Não foi possível carregar o histórico completo de revisões.
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-11"
+            disabled={q.isFetching}
+            onClick={() => void q.refetch()}
+          >
+            Tentar novamente
+          </Button>
+        </div>
+      )}
+      {archived.length > 0 && (
+        <details className="rounded-lg border border-border bg-card p-3">
+          <summary className="cursor-pointer font-semibold text-foreground">
+            Revisões de hipóteses anteriores ({archived.length})
+          </summary>
+          <p className="my-2 text-[14px] text-muted-foreground">
+            Estas hipóteses não aparecem com as evidências atuais do caso. As revisões permanecem no
+            histórico.
+          </p>
+          <ol className="space-y-2 text-[14px]">
+            {archived.map((row) => (
+              <li key={row.id} className="rounded border border-border px-3 py-2">
+                <strong>{row.hypothesis_title}</strong>
+                <p>
+                  v{row.version} · {DECISION_LABEL[row.decision as ReviewDecision]} ·{" "}
+                  {format(new Date(row.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                </p>
+                {row.note && <p className="mt-1 whitespace-pre-wrap">{row.note}</p>}
+              </li>
+            ))}
+          </ol>
+        </details>
+      )}
+    </>
   );
 }

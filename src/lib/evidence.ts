@@ -4,7 +4,7 @@
  * sobre os dados reais do caso. Sem padrões detectados → nenhuma hipótese.
  * Nunca atribui causalidade nem confiança numérica.
  */
-import { buildLogicalGraph } from "./geno/build";
+import { buildLogicalGraph, type LogicalGraph } from "./geno/build";
 import {
   detectPatterns,
   type DetectedPattern,
@@ -102,6 +102,26 @@ export function evidenceForCase(persons: PersonRow[], relationships: Relationshi
   return { patterns, hypotheses: buildHypotheses(patterns, persons) };
 }
 
+function pendingParentage(graph: LogicalGraph) {
+  return [...graph.persons.values()]
+    .filter(
+      ({ id, row }) =>
+        !row.parentage_reviewed &&
+        (graph.parentsByChild.get(id)?.length || graph.suggestedParentsByChild.get(id)?.length),
+    )
+    .map(({ id, row }) => ({
+      id,
+      name: row.preferred_name?.trim() || row.full_name.trim() || "Familiar sem nome",
+    }));
+}
+
+export function parentageToReview(persons: PersonRow[], relationships: RelationshipRow[]) {
+  const probandId = persons.find((p) => p.is_proband)?.id;
+  return probandId
+    ? pendingParentage(buildLogicalGraph({ persons, rels: relationships, probandId }))
+    : [];
+}
+
 /** Campos faltantes e filiações a investigar no dossiê. */
 export function informationGaps(
   persons: PersonRow[],
@@ -117,11 +137,16 @@ export function informationGaps(
     const probandId = persons.find((p) => p.is_proband)?.id;
     if (probandId) {
       const graph = buildLogicalGraph({ persons, rels: relationships, probandId });
-      const confirmed =
+      gaps.push(
+        ...pendingParentage(graph).map(
+          (person) => `Confirme a fonte da filiação de ${person.name}.`,
+        ),
+      );
+      const identified =
         graph.parentsByChild.get(probandId)?.filter((item) => item.kind !== "unknown") ?? [];
-      if (confirmed.length < 2) {
+      if (identified.length < 2) {
         gaps.push(
-          confirmed.length === 1
+          identified.length === 1
             ? "Quem é o outro genitor do consultante? Confira a fonte da filiação."
             : "Quais genitores do consultante estão documentados ou foram relatados?",
         );

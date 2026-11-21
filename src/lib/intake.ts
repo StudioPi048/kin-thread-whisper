@@ -143,6 +143,14 @@ export const INTAKE_ANSWER_SOURCE = {
   observation: "Observação da profissional",
 } as const;
 
+export const INTAKE_SECTION_SOURCE = {
+  cliente: "Relato do cliente",
+  familiar: "Relato de familiar",
+  documento: "Documento",
+  observacao: "Observação da profissional",
+  misto: "Fontes mistas",
+} as const;
+
 export type IntakeContextKey = "status" | "source" | "note";
 export type IntakeAnswerContext = Partial<Record<IntakeContextKey, string>>;
 
@@ -162,14 +170,14 @@ export function isIntakeSection(value: unknown): value is IntakeSectionId {
   return INTAKE_SECTIONS.some(({ id }) => id === value);
 }
 
-export function findIntakeQuestions(query: string) {
+export function findIntakeQuestions(query: string, withoutSource?: Partial<ClientIntake>) {
   const normalize = (text: string) =>
     text
       .normalize("NFD")
       .replace(/\p{Diacritic}/gu, "")
       .toLowerCase();
   const term = normalize(query.trim());
-  if (!term) return [];
+  if (!term && !withoutSource) return [];
   const labels: Partial<Record<keyof ClientIntake, string>> = INTAKE_QUESTION_LABELS;
   return INTAKE_SECTIONS.flatMap<{
     section: (typeof INTAKE_SECTIONS)[number];
@@ -178,10 +186,19 @@ export function findIntakeQuestions(query: string) {
   }>((section) => {
     const matches = SECTION_FIELDS[section.id].flatMap((field) => {
       const label = labels[field];
+      if (withoutSource) {
+        const context = answerContext(withoutSource, field);
+        if (
+          context.source?.trim() ||
+          (!isFilled(withoutSource[field]) && !context.status?.trim())
+        ) {
+          return [];
+        }
+      }
       return label && normalize(label).includes(term) ? [{ section, field, label }] : [];
     });
     if (matches.length) return matches;
-    return normalize(section.label).includes(term)
+    return !withoutSource && normalize(section.label).includes(term)
       ? [{ section, field: undefined, label: section.label }]
       : [];
   });

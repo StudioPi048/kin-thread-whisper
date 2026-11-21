@@ -230,6 +230,10 @@
   flex-basis: 100%;
 }
 
+.public-case-after {
+  margin-top: 1rem;
+}
+
 .public-case-launch span {
   color: var(--ink-soft);
   font-size: 0.875rem;

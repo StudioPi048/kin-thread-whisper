@@ -1,4 +1,12 @@
 import { parentLinePatterns } from "@/lib/family-relationships";
+import { readCasePages } from "@/lib/read-case-pages";
+import { editGenogram, type RemovalImpact } from "./genogram-integrity";
+import {
+  findPedigreeRelationship,
+  groupPedigreeChildren,
+  parentageTrackLabel,
+  type PedigreeData,
+} from "./genogram-pedigree";
 import { clinicalIntelQuery, getMappablePersons, invalidateCase } from "@/lib/clinical-intel";
 import {
   lazy,
@@ -110,7 +118,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PersonNode, type PersonNodeData } from "./person-node";
 import { PersonFormDialog } from "./person-form-dialog";
 import { RelationshipFormDialog, type ProposedParentageLink } from "./relationship-form-dialog";
-import { relationshipLabel, relationshipQualifiers } from "@/lib/genogram";
+import { formatDateBR, relationshipLabel, relationshipQualifiers } from "@/lib/genogram";
 import { formatByPrecision, precisionOf } from "@/lib/timeline";
 import { ensureProband } from "@/lib/ensure-proband";
 import type { Database } from "@/integrations/supabase/types";
@@ -161,7 +169,12 @@ const PrintPreview = lazy(() =>
   import("./genogram-print-preview").then((module) => ({ default: module.GenogramPrintPreview })),
 );
 
-type QuickRelative = { personId: string; kind: "Pai" | "Mãe" | "Filho(a)" | "Irmã(o)" };
+type QuickRelative = {
+  personId: string;
+  kind: "Pai" | "Mãe" | "Filho(a)" | "Irmã(o)";
+  parents: { id: string; name: string }[];
+  expected: ReturnType<typeof parentageSnapshot>;
+};
 const quickRelativeChoices = [
   { kind: "Pai", label: "Pai" },
   { kind: "Mãe", label: "Mãe" },
@@ -184,6 +197,7 @@ const personName = (person?: PersonRow) =>
  */
 const UNION_SIZE = 12;
 const MAP_OVERVIEW_PADDING = 0.11;
+const MAP_MIN_ZOOM = 0.0001;
 const UnionNodeComponent = ({ data }: NodeProps) => {
   const d =
     (data as { label?: string; kind?: string; isSingle?: boolean; focused?: boolean }) ?? {};
@@ -456,13 +470,7 @@ function ParentagePaths({ preview, nodes }: { preview: ParentagePreview; nodes: 
  */
 function PedigreeEdge({ style, markerEnd, markerStart, interactionWidth, data }: EdgeProps) {
   const edgeData = data as
-    | {
-        unionId?: string;
-        childIds?: string[];
-        childKinds?: Record<string, string>;
-        suggestedChildIds?: string[];
-        direction?: "up" | "down";
-      }
+    | (PedigreeData & { unionId?: string; childIds?: string[]; direction?: "up" | "down" })
     | undefined;
   const unionId = edgeData?.unionId;
   const childIds = edgeData?.childIds ?? [];
@@ -473,53 +481,58 @@ function PedigreeEdge({ style, markerEnd, markerStart, interactionWidth, data }:
     const union = unionId
       ? (store.nodeLookup.get(unionId) as unknown as Node | undefined)
       : undefined;
-    return { children, union };
+    return { children, union, lookup: store.nodeLookup };
   });
 
   if (!live.union || !live.children.length) return null;
-  const unionX = live.union.position.x;
-  const unionY = live.union.position.y;
   const down = edgeData?.direction === "down";
-  const groups = new Map<string, { x: number; y: number }[]>();
-  for (const node of live.children) {
-    const kind = edgeData?.childKinds?.[node.id] ?? "biological";
-    const isSuggested = edgeData?.suggestedChildIds?.includes(node.id);
-    const key = `${node.position.y}:${isSuggested ? "suggested" : kind}`;
-    const points = groups.get(key) ?? [];
-    points.push({ x: nodeCenterX(node), y: down ? node.position.y - 5 : nodeBottomY(node) + 5 });
-    groups.set(key, points);
-  }
-  return [...groups].map(([key, points], index) => {
-    const crossY = down
-      ? Math.min(...points.map((point) => point.y))
-      : Math.max(...points.map((point) => point.y));
-    const barY = (crossY + unionY) / 2 + (index % 3) * 5;
-    const left = Math.min(unionX, ...points.map((point) => point.x));
-    const right = Math.max(unionX, ...points.map((point) => point.x));
-    const path = [
-      `M ${left} ${barY} H ${right}`,
-      ...points.map(({ x, y }) => `M ${x} ${y} V ${barY}`),
-      `M ${unionX} ${barY} V ${unionY}`,
-    ].join(" ");
+  return groupPedigreeChildren(live.children, (node) => node.position.y, edgeData).map(
+    (group, index) => {
+      const parent = group.parentId ? live.lookup.get(group.parentId) : undefined;
+      const unionX = parent ? nodeCenterX(parent) : live.union!.position.x;
+      const unionY = parent
+        ? down
+          ? nodeBottomY(parent) + 5
+          : parent.position.y - 5
+        : live.union!.position.y;
+      const portOffset = parent ? (unionX < live.union!.position.x ? -6 : 6) : 0;
+      const points = group.children.map((node) => ({
+        x: nodeCenterX(node) + portOffset,
+        y: down ? node.position.y - 5 : nodeBottomY(node) + 5,
+      }));
+      const crossY = down
+        ? Math.min(...points.map((point) => point.y))
+        : Math.max(...points.map((point) => point.y));
+      const barY = (crossY + unionY) / 2 + (index % 3) * 5;
+      const left = Math.min(unionX, ...points.map((point) => point.x));
+      const right = Math.max(unionX, ...points.map((point) => point.x));
+      const path = [
+        `M ${left} ${barY} H ${right}`,
+        ...points.map(({ x, y }) => `M ${x} ${y} V ${barY}`),
+        `M ${unionX} ${barY} V ${unionY}`,
+      ].join(" ");
 
-    const kind = key.split(":")[1];
-    const suggested = kind === "suggested";
-    return (
-      <BaseEdge
-        key={key}
-        path={path}
-        style={{
-          ...style,
-          ...(suggested
-            ? { stroke: "var(--bronze)", strokeDasharray: "4 5" }
-            : { strokeDasharray: parentLinePatterns[kind] }),
-        }}
-        markerEnd={markerEnd}
-        markerStart={markerStart}
-        interactionWidth={interactionWidth}
-      />
-    );
-  });
+      const provisional = group.source !== "explicit";
+      return (
+        <BaseEdge
+          key={group.key}
+          path={path}
+          style={{
+            ...style,
+            ...(provisional
+              ? {
+                  stroke: "var(--bronze)",
+                  strokeDasharray: group.source === "legacy" ? "2 3" : "4 5",
+                }
+              : { strokeDasharray: parentLinePatterns[group.kind] }),
+          }}
+          markerEnd={markerEnd}
+          markerStart={markerStart}
+          interactionWidth={interactionWidth}
+        />
+      );
+    },
+  );
 }
 
 /**
@@ -590,6 +603,7 @@ import {
   placeUnionHub,
   getResolvedParents,
   getSuggestedParents,
+  parentKind,
 } from "@/lib/geno/build";
 
 function GenogramCanvasInner({
@@ -614,16 +628,24 @@ function GenogramCanvasInner({
         .select("*")
         .eq("client_id", clientId)
         .order("updated_at", { ascending: false })
+        .order("id", { ascending: true })
         .limit(1);
       if (error) throw error;
       const layout: LayoutRow | null = data?.[0] ?? null;
       if (!layout) return { layout, positions: [] as NodePositionRow[] };
-      const response = await supabase
-        .from("genogram_node_positions")
-        .select("*")
-        .eq("layout_id", layout.id);
-      if (response.error) throw response.error;
-      return { layout, positions: response.data ?? [] };
+      const positions = await readCasePages(
+        (after, limit) => {
+          const page = supabase
+            .from("genogram_node_positions")
+            .select("*")
+            .eq("layout_id", layout.id)
+            .order("node_id")
+            .limit(limit);
+          return after ? page.gt("node_id", after) : page;
+        },
+        (row) => row.node_id,
+      );
+      return { layout, positions };
     },
   });
 
@@ -689,7 +711,10 @@ function GenogramCanvasInner({
   const [layoutDirty, setLayoutDirty] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [isLayoutFixed, setIsLayoutFixed] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [removalSelection, setRemovalSelection] = useState<{
+    people: string[];
+    links: string[];
+  } | null>(null);
   const [parentageDraft, setParentageDraft] = useState<ParentageDraft | null>(null);
   const canMoveLayout = !isLayoutFixed && !connection && !organizationProposal && !parentageDraft;
   const [pickingParentSlot, setPickingParentSlot] = useState<number | null>(null);
@@ -731,13 +756,15 @@ function GenogramCanvasInner({
   } | null>(null);
   // Revisões do arranjo: um save só limpa o que existia quando começou
   const revRef = useRef(new RevisionTracker());
+  const layoutVersion = useRef<Pick<LayoutRow, "id" | "updated_at"> | null>(null);
   const [dirtyTick, setDirtyTick] = useState(0);
   const [draftStored, setDraftStored] = useState(true);
   const markLayoutDirty = useCallback(() => {
+    if (revRef.current.isClean()) layoutVersion.current = data?.layout ?? null;
     revRef.current.bump();
     setLayoutDirty(true);
     setDirtyTick((t) => t + 1);
-  }, []);
+  }, [data?.layout]);
   const isMobile = useIsMobile();
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -785,7 +812,7 @@ function GenogramCanvasInner({
         getNodesBounds(people),
         width,
         height,
-        0.075,
+        MAP_MIN_ZOOM,
         1.2,
         MAP_OVERVIEW_PADDING,
       );
@@ -861,7 +888,7 @@ function GenogramCanvasInner({
         if (fitted && anchor.overview) {
           void rfInstance.setViewport(fitted);
         } else if (fitted) {
-          const zoom = Math.min(2.5, Math.max(0.075, fitted.zoom * anchor.scale));
+          const zoom = Math.min(2.5, Math.max(MAP_MIN_ZOOM, fitted.zoom * anchor.scale));
           void rfInstance.setViewport({
             x: width * anchor.horizontal - nodeCenterX(node) * zoom,
             y: height * anchor.vertical - ((node.position.y + nodeBottomY(node)) / 2) * zoom,
@@ -947,20 +974,37 @@ function GenogramCanvasInner({
     const union = nodes.find(
       (node) => node.type === "union" && node.data.relationshipId === focusRelationId,
     );
-    if (!union) return;
+    const link = data?.rels.find(({ id }) => id === focusRelationId);
+    const source = link && nodes.find(({ id }) => id === link.from_person_id);
+    const target = link && nodes.find(({ id }) => id === link.to_person_id);
+    if (!union && (!source || !target)) return;
     relationFocusHandled.current = focusRelationId;
     setFocusedRelationshipId(focusRelationId);
     setPanelOpen(false);
     setMobileSheetOpen(false);
-    void rfInstance.setCenter(union.position.x, union.position.y, { zoom: 1 });
-  }, [focusRelationId, nodes, reviewParentagePersonId, rfInstance]);
+    const anchor = union?.position ?? {
+      x: (nodeCenterX(source!) + nodeCenterX(target!)) / 2,
+      y: (source!.position.y + target!.position.y) / 2,
+    };
+    void rfInstance.setCenter(anchor.x, anchor.y, { zoom: union ? 1 : 0.85 });
+  }, [data?.rels, focusRelationId, nodes, reviewParentagePersonId, rfInstance]);
 
   const [printOpen, setPrintOpen] = useState(false);
 
-  const handleQuickAdd = useCallback((personId: string, kind: QuickRelative["kind"]) => {
-    setQuickRelative({ personId, kind });
-    setCreatingPerson(true);
-  }, []);
+  const handleQuickAdd = useCallback(
+    (personId: string, kind: QuickRelative["kind"]) => {
+      const rels = data?.rels ?? [];
+      const parents = rels
+        .filter((link) => link.relationship_type === "parent" && link.to_person_id === personId)
+        .map((link) => ({
+          id: link.from_person_id,
+          name: personName(data?.persons.find(({ id }) => id === link.from_person_id)),
+        }));
+      setQuickRelative({ personId, kind, parents, expected: parentageSnapshot(rels, personId) });
+      setCreatingPerson(true);
+    },
+    [data?.persons, data?.rels],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -1081,43 +1125,64 @@ function GenogramCanvasInner({
     };
   }, [data]);
 
-  const deleteSelected = useMutation({
-    mutationFn: async () => {
-      const nodeIds = nodes
-        .filter((n) => n.type === "person" && n.selected && n.id !== probandId)
-        .map((n) => n.id);
-      const edgeIds = edges
-        .filter(
-          (e) =>
-            e.selected && data?.rels.some((r) => r.id === e.id && r.relationship_type !== "parent"),
-        )
-        .map((e) => e.id);
-      if (nodeIds.length === 0 && edgeIds.length === 0) return;
-      if (edgeIds.length > 0) {
-        const { error } = await supabase
-          .from("genogram_relationships")
-          .delete()
-          .eq("client_id", clientId)
-          .neq("relationship_type", "parent")
-          .in("id", edgeIds);
-        if (error) throw error;
-      }
-      if (nodeIds.length > 0) {
-        const { error } = await supabase
-          .from("genogram_persons")
-          .delete()
-          .eq("client_id", clientId)
-          .eq("is_proband", false)
-          .in("id", nodeIds);
-        if (error) throw error;
-      }
-    },
-    onSuccess: () => {
-      invalidateCase(qc, clientId);
-      toast.success("Removido.");
-    },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
+  const removalImpact = useMutation({
+    mutationFn: (selection: { people: string[]; links: string[] }) =>
+      editGenogram("remove_genogram_selection", {
+        _client_id: clientId,
+        _people: selection.people,
+        _relationships: selection.links,
+      }),
   });
+  const deleteSelected = useMutation({
+    mutationFn: async (impact: RemovalImpact) => {
+      if (!removalSelection) throw new Error("Selecione os itens a remover.");
+      return editGenogram("remove_genogram_selection", {
+        _client_id: clientId,
+        _people: removalSelection.people,
+        _relationships: removalSelection.links,
+        _expected: impact,
+      });
+    },
+    onSuccess: async ({ people, relationships }) => {
+      if (focusedPersonId && removalSelection?.people.includes(focusedPersonId))
+        setFocusedPersonId(null);
+      if (focusedRelationshipId) setFocusedRelationshipId(null);
+      setRemovalSelection(null);
+      await invalidateCase(qc, clientId);
+      toast.success(`Removidos ${people} pessoa(s) e ${relationships} vínculo(s).`);
+    },
+  });
+  function prepareRemoval() {
+    const people =
+      view === "3d"
+        ? focusedPersonId && focusedPersonId !== probandId
+          ? [focusedPersonId]
+          : []
+        : nodes
+            .filter((node) => node.type === "person" && node.selected && node.id !== probandId)
+            .map(({ id }) => id);
+    const links = new Set(
+      edges.flatMap((edge) => {
+        if (!edge.selected) return [];
+        const id = String(edge.data?.relationshipId ?? edge.id);
+        return data?.rels.some((link) => link.id === id && link.relationship_type !== "parent")
+          ? [id]
+          : [];
+      }),
+    );
+    if (
+      focusedRelationshipId &&
+      data?.rels.some(
+        (link) => link.id === focusedRelationshipId && link.relationship_type !== "parent",
+      )
+    )
+      links.add(focusedRelationshipId);
+    if (!people.length && !links.size) return;
+    const selection = { people, links: [...links] };
+    deleteSelected.reset();
+    setRemovalSelection(selection);
+    removalImpact.mutate(selection);
+  }
 
   const applySnapshot = useCallback(
     (snap: Snapshot) => {
@@ -1167,55 +1232,27 @@ function GenogramCanvasInner({
   useEffect(() => {
     if (!userId || !data) return;
     const d = readDraft(userId, clientId);
-    const savedAt = data.layout?.updated_at ? new Date(data.layout.updated_at).getTime() : 0;
-    setPendingDraft(d && d.at > savedAt && Object.keys(d.positions).length ? d.positions : null);
-  }, [userId, clientId, data]);
+    if (layoutDirty) return;
+    setPendingDraft(d && Object.keys(d.positions).length ? d.positions : null);
+  }, [userId, clientId, data, layoutDirty]);
 
   const saveLayout = useMutation({
     mutationFn: async () => {
       const rev = revRef.current.begin();
-      const personPositions = Object.entries(snapshot());
-      const savedAt = new Date().toISOString();
-
-      // Ensure layout exists or create one
-      let layoutId = data?.layout?.id;
-      if (!layoutId) {
-        const { data: newLayout, error: layoutErr } = await supabase
-          .from("genogram_layouts")
-          .insert({ client_id: clientId, name: "Layout Atual", is_fixed: false })
-          .select("*")
-          .single();
-        if (layoutErr) throw layoutErr;
-        layoutId = newLayout.id;
-        qc.setQueryData(["genogram", clientId], {
-          layout: newLayout,
-          positions: [] as NodePositionRow[],
-        });
-      }
-
-      // Prepare positions to upsert
-      const positionsToUpsert = personPositions.map(([nodeId, [x, y]]) => ({
-        layout_id: layoutId,
-        node_id: nodeId,
-        node_type: "person",
+      const positions = Object.entries(snapshot()).map(([id, [x, y]]) => ({
+        id,
         x: Math.round(x),
         y: Math.round(y),
-        layout_mode: "MANUAL",
       }));
-
-      // Upsert node positions using the unique constraint
-      const { error: upsertErr } = await supabase
-        .from("genogram_node_positions")
-        .upsert(positionsToUpsert, { onConflict: "layout_id,node_id" });
-
-      if (upsertErr) throw upsertErr;
-
-      const { error: stampError } = await supabase
-        .from("genogram_layouts")
-        .update({ updated_at: savedAt })
-        .eq("id", layoutId);
-      if (stampError) throw stampError;
-      return { savedAt, rev };
+      const before = layoutVersion.current;
+      const layout = await editGenogram("save_genogram_arrangement", {
+        _client_id: clientId,
+        _layout_id: before?.id ?? null,
+        _expected: before?.updated_at ?? null,
+        _positions: positions,
+      });
+      layoutVersion.current = layout;
+      return { savedAt: layout.updated_at, rev };
     },
     onSuccess: ({ savedAt, rev }) => {
       if (revRef.current.confirm(rev)) {
@@ -1242,30 +1279,52 @@ function GenogramCanvasInner({
       ),
   });
 
-  // Proteção de saída (navegação interna, troca de aba e fechar a aba)
+  const layoutWrite = useRef<Promise<{ savedAt: string; rev: number }> | null>(null);
+  function persistLayout() {
+    if (!layoutWrite.current) {
+      const task = saveLayout.mutateAsync();
+      layoutWrite.current = task;
+      const release = () => {
+        if (layoutWrite.current === task) layoutWrite.current = null;
+      };
+      void task.then(release, release);
+    }
+    return layoutWrite.current;
+  }
+  const saveLayoutInBackground = () => {
+    void persistLayout().catch(() => {});
+  };
+
   useUnsaved(`layout:${clientId}`, {
     label: "Arranjo do genossociograma",
-    isDirty: () => layoutDirty || saveLayout.isPending,
+    isDirty: () => !revRef.current.isClean() || !!layoutWrite.current,
     save: async () => {
-      await saveLayout.mutateAsync();
-      if (!revRef.current.isClean()) await saveLayout.mutateAsync();
-      if (!revRef.current.isClean()) throw new Error("posições mudaram durante o salvamento");
+      await persistLayout();
+      if (!revRef.current.isClean()) await persistLayout();
+      if (!revRef.current.isClean()) throw new Error("As posições mudaram durante o salvamento.");
     },
-    discard: () => {
+    discard: async () => {
+      const active = layoutWrite.current;
+      const confirmed = active
+        ? await active.then(
+            () => true,
+            () => false,
+          )
+        : false;
       revRef.current.reset();
       setLayoutDirty(false);
       if (userId) clearDraft(userId, clientId);
+      if (confirmed) {
+        await layoutQuery.refetch();
+        toast.info("As posições já enviadas foram salvas. As demais foram descartadas.");
+      }
     },
   });
 
-  // Auto-Save Effect (Debounce 2s)
   useEffect(() => {
-    if (!layoutDirty) return;
-    if (saveLayout.isPending || saveLayout.isError) return;
-    const t = setTimeout(() => {
-      saveLayout.mutate();
-    }, 2000);
-    return () => clearTimeout(t);
+    if (!layoutDirty || saveLayout.isPending || saveLayout.isError) return;
+    const timer = window.setTimeout(saveLayoutInBackground, 2000);
+    return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layoutDirty, dirtyTick, saveLayout.isPending, saveLayout.isError]);
 
@@ -1438,7 +1497,7 @@ function GenogramCanvasInner({
   ).length;
   const visibleEdges = showSocialLinks
     ? edges
-    : edges.filter((edge) => !edge.data?.relationshipType);
+    : edges.filter((edge) => !edge.data?.relationshipType || edge.id === focusedRelationshipId);
   const resolvedParents =
     focusedPerson && renderGraph ? getResolvedParents(renderGraph.graph, focusedPerson.id) : [];
   const suggestedParents =
@@ -1547,7 +1606,14 @@ function GenogramCanvasInner({
         kind: link.qualifier ?? "",
         notes: link.notes,
       }));
-    const suggested = seed ? [] : getSuggestedParents(renderGraph.graph, childId);
+    const suggested = seed
+      ? []
+      : [
+          ...getResolvedParents(renderGraph.graph, childId).filter(
+            (parent) => parent.source === "legacy",
+          ),
+          ...getSuggestedParents(renderGraph.graph, childId),
+        ];
     const candidates = new Map(current.map((parent) => [parent.personId, parent]));
     for (const parent of suggested) {
       if (!candidates.has(parent.personId)) {
@@ -1721,25 +1787,7 @@ function GenogramCanvasInner({
   const quickTarget = persons.find((person) => person.id === quickRelative?.personId);
   const quickTag =
     quickTarget?.is_proband && quickRelative?.kind !== "Irmã(o)" ? quickRelative?.kind : undefined;
-  const onCreated = (id: string) => {
-    setFocusedPersonId(id);
-    setPanelOpen(true);
-    if (!quickRelative) return;
-    const relativeIsParent = quickRelative.kind === "Pai" || quickRelative.kind === "Mãe";
-    const from = relativeIsParent
-      ? id
-      : quickRelative.kind === "Filho(a)"
-        ? quickRelative.personId
-        : undefined;
-    setRelDialog({
-      open: true,
-      seed: {
-        from,
-        to: relativeIsParent ? quickRelative.personId : id,
-        type: "parent",
-      },
-    });
-  };
+  const onCreated = (id: string) => locatePerson(id);
 
   const mappedIds = new Set(nodes.filter((node) => node.type === "person").map((node) => node.id));
   const originId = connection?.originId;
@@ -1907,7 +1955,12 @@ function GenogramCanvasInner({
       ? visibleEdges.map((edge) => ({
           ...edge,
           style:
-            focusedRelationshipId && edge.data?.relationshipId === focusedRelationshipId
+            focusedRelationshipId &&
+            (edge.id === focusedRelationshipId ||
+              edge.data?.relationshipId === focusedRelationshipId ||
+              (edge.type === "pedigree" &&
+                edge.data &&
+                findPedigreeRelationship(edge.data as PedigreeData, focusedRelationshipId)))
               ? { ...edge.style, stroke: "var(--bronze)", strokeWidth: 4 }
               : edge.style,
           className: cn(
@@ -2007,6 +2060,16 @@ function GenogramCanvasInner({
           : link.relationship_type === "union"
             ? "Editar união"
             : "Editar vínculo";
+        const unionIdentity =
+          link.relationship_type === "union"
+            ? [
+                link.marriage_order ? `${link.marriage_order}ª união` : null,
+                formatDateBR(link.start_date),
+                link.end_date ? `até ${formatDateBR(link.end_date)}` : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")
+            : "";
         return (
           <li key={link.id}>
             <button
@@ -2019,14 +2082,18 @@ function GenogramCanvasInner({
               <span>
                 {isParentage && isSource
                   ? "Filho ou filha"
-                  : relationshipLabel(link.relationship_type, link.qualifier)}
+                  : [relationshipLabel(link.relationship_type, link.qualifier), unionIdentity]
+                      .filter(Boolean)
+                      .join(" · ")}
               </span>
             </button>
             <Button
               type="button"
               size="icon"
               variant="ghost"
-              aria-label={`${action} com ${personName(other)}`}
+              aria-label={[`${action} com ${personName(other)}`, unionIdentity]
+                .filter(Boolean)
+                .join(" · ")}
               title={action}
               disabled={personActionsBlocked}
               onClick={() => editRelationship(link)}
@@ -2095,9 +2162,6 @@ function GenogramCanvasInner({
           <ul className="geno-dock-parents">
             {directParents.map((parent) => {
               const person = persons.find((row) => row.id === parent.personId);
-              const kind = relationshipQualifiers.parent.find(
-                (item) => item.value === parent.kind,
-              )?.label;
               return (
                 <li key={parent.personId}>
                   <button
@@ -2108,9 +2172,7 @@ function GenogramCanvasInner({
                     {personName(person)}
                   </button>
                   <p className="text-sm text-muted-foreground">
-                    {parent.source === "explicit"
-                      ? kind || "Natureza por confirmar"
-                      : "Sugerido pelo parentesco"}
+                    {parentageTrackLabel(parent.kind, parent.source)}
                   </p>
                 </li>
               );
@@ -2118,6 +2180,9 @@ function GenogramCanvasInner({
           </ul>
         ) : (
           <p className="my-2 text-sm text-muted-foreground">Sem filiação registrada no mapa.</p>
+        )}
+        {directParents.length > 0 && !focusedPerson.parentage_reviewed && (
+          <p className="text-sm text-muted-foreground">Fonte da filiação a confirmar.</p>
         )}
         <div className="geno-dock-review-actions">
           {view === "2d" && reviewAction}
@@ -2518,7 +2583,7 @@ function GenogramCanvasInner({
                   variant="ghost"
                   disabled={saveLayout.isPending || !layoutDirty}
                   onClick={() => {
-                    saveLayout.mutate();
+                    saveLayoutInBackground();
                     setToolsOpen(false);
                   }}
                 >
@@ -2586,13 +2651,21 @@ function GenogramCanvasInner({
                 >
                   <Printer className="size-4" aria-hidden /> Imprimir mapa em A3
                 </Button>
-                {view === "2d" && (selectedPersonCount > 0 || selectedEdgeCount > 0) && (
+                {(focusedRelationshipId ||
+                  (view === "3d"
+                    ? focusedPersonId && focusedPersonId !== probandId
+                    : selectedPersonCount > 0 || selectedEdgeCount > 0)) && (
                   <Button
                     variant="ghost"
-                    disabled={deleteSelected.isPending}
+                    disabled={
+                      deleteSelected.isPending ||
+                      saveLayout.isPending ||
+                      !!parentageDraft ||
+                      !!connection
+                    }
                     className="text-destructive"
                     onClick={() => {
-                      setConfirmDelete(true);
+                      prepareRemoval();
                       setToolsOpen(false);
                     }}
                   >
@@ -2807,7 +2880,7 @@ function GenogramCanvasInner({
                   deleteKeyCode={null}
                   panOnDrag={isMobile}
                   panActivationKeyCode="Space"
-                  minZoom={0.075}
+                  minZoom={MAP_MIN_ZOOM}
                   maxZoom={2.5}
                   proOptions={{ hideAttribution: true }}
                   defaultEdgeOptions={{
@@ -2899,7 +2972,18 @@ function GenogramCanvasInner({
                   <div className="flex items-start justify-between gap-1">
                     <div className="min-w-0 py-1">
                       <strong className="block break-words">
-                        {String(focusedUnionLabel ?? "União")}
+                        {String(
+                          focusedUnionLabel ??
+                            (focusedRelationship.relationship_type === "parent"
+                              ? parentageTrackLabel(
+                                  parentKind(focusedRelationship.qualifier),
+                                  "explicit",
+                                )
+                              : relationshipLabel(
+                                  focusedRelationship.relationship_type,
+                                  focusedRelationship.qualifier,
+                                )),
+                        )}
                       </strong>
                       <p className="break-words text-sm text-muted-foreground">
                         {[focusedRelationship.from_person_id, focusedRelationship.to_person_id]
@@ -2962,7 +3046,7 @@ function GenogramCanvasInner({
                           ? "Arranjo não salvo (rascunho de posições neste navegador)."
                           : "Arranjo não salvo e sem rascunho no navegador — não saia antes de salvar."}
                       </span>
-                      <Button size="sm" className="min-h-11" onClick={() => saveLayout.mutate()}>
+                      <Button size="sm" className="min-h-11" onClick={saveLayoutInBackground}>
                         Tentar salvar de novo
                       </Button>
                     </>
@@ -3165,6 +3249,22 @@ function GenogramCanvasInner({
         }}
         clientId={clientId}
         defaultRelationship={quickTag}
+        quickLink={
+          quickRelative && quickTarget
+            ? {
+                targetId: quickRelative.personId,
+                targetName: personName(quickTarget),
+                direction:
+                  quickRelative.kind === "Irmã(o)"
+                    ? "sibling"
+                    : quickRelative.kind === "Filho(a)"
+                      ? "child"
+                      : "parent",
+                parents: quickRelative.parents,
+                expected: quickRelative.expected,
+              }
+            : undefined
+        }
         defaultGender={
           quickRelative?.kind === "Pai"
             ? "masculino"
@@ -3208,36 +3308,50 @@ function GenogramCanvasInner({
             </span>
           }
         >
-          <PrintPreview
-            open
-            onOpenChange={setPrintOpen}
-            nodes={positionedNodes}
-            edges={visibleEdges}
-          />
+          <PrintPreview open onOpenChange={setPrintOpen} nodes={positionedNodes} edges={edges} />
         </Suspense>
       )}
 
-      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+      <AlertDialog
+        open={!!removalSelection}
+        onOpenChange={(open) => {
+          if (!open && !deleteSelected.isPending) setRemovalSelection(null);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="font-serif text-ink">
-              Remover o que está selecionado?
+              Remover seleção da árvore?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {selectedPersonCount > 0 && selectedEdgeCount > 0
-                ? `Isso apaga ${selectedPersonCount} pessoa(s) e ${selectedEdgeCount} vínculo(s) selecionados. Não pode ser desfeito.`
-                : selectedPersonCount > 0
-                  ? `Isso apaga ${selectedPersonCount} pessoa(s) selecionada(s) e os dados clínicos ligados a elas. Não pode ser desfeito.`
-                  : `Isso apaga ${selectedEdgeCount} vínculo(s) selecionado(s). Não pode ser desfeito.`}
+              {removalImpact.isPending
+                ? "Conferindo pessoas, vínculos e histórico afetados…"
+                : removalImpact.data
+                  ? `Serão removidos ${removalImpact.data.people} pessoa(s), ${removalImpact.data.relationships} vínculo(s) e ${removalImpact.data.reviews} registro(s) do histórico de filiação.`
+                  : "Confira o impacto antes de remover."}
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {(removalImpact.error || deleteSelected.error) && (
+            <p role="alert" className="text-sm text-destructive">
+              {(deleteSelected.error ?? removalImpact.error)?.message}
+            </p>
+          )}
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteSelected.isPending}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => deleteSelected.mutate()}
+              disabled={
+                removalImpact.isPending ||
+                deleteSelected.isPending ||
+                !removalImpact.data ||
+                Boolean(deleteSelected.error)
+              }
+              onClick={(event) => {
+                event.preventDefault();
+                if (removalImpact.data) deleteSelected.mutate(removalImpact.data);
+              }}
               className="bg-clinical-critical text-white hover:bg-clinical-critical/90"
             >
-              Remover
+              {deleteSelected.isPending ? "Removendo…" : "Remover definitivamente"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

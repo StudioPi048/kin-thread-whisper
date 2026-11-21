@@ -116,14 +116,16 @@ export interface OnboardingCounts {
   clients: number;
   persons: number;
   relationships: number;
-  sessions: number;
+  scheduled: number;
+  completed: number;
 }
 export function onboardingSteps(c: OnboardingCounts) {
   const steps = [
     { id: "client", label: "Cadastrar um caso", done: c.clients > 0 },
     { id: "persons", label: "Adicionar familiares", done: c.persons > 0 },
     { id: "rel", label: "Registrar um vínculo", done: c.relationships > 0 },
-    { id: "session", label: "Agendar uma sessão", done: c.sessions > 0 },
+    { id: "schedule", label: "Agendar um atendimento", done: c.scheduled > 0 },
+    { id: "session", label: "Concluir um registro de sessão", done: c.completed > 0 },
   ];
   return { steps, done: steps.filter((s) => s.done).length, total: steps.length };
 }

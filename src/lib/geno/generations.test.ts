@@ -44,7 +44,7 @@ function p(name: string, extra: Partial<PersonRow> = {}): PersonRow {
     ...extra,
   } as PersonRow;
 }
-const par = (from: string, to: string, qualifier: string | null = null) => ({
+const par = (from: string, to: string, qualifier: string | null = "biological") => ({
   id: `r_${from}_${to}`,
   client_id: "c",
   from_person_id: from,

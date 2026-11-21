@@ -3,13 +3,19 @@ import { useQuery } from "@tanstack/react-query";
 import { CalendarPlus, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
-import { DayList, ScheduleDialog, WeekView } from "@/components/agenda/agenda-views";
+import {
+  AppointmentActions,
+  DayList,
+  ScheduleDialog,
+  WeekView,
+} from "@/components/agenda/agenda-views";
 import { usePreferences } from "@/components/account/use-preferences";
 import { GenogramThumbnail } from "@/components/genogram/genogram-thumbnail";
 import { Button } from "@/components/ui/button";
 import { DocumentHeader } from "@/components/ui/document-header";
 import { Input } from "@/components/ui/input";
 import { getAgendaData, type AgendaSessionDTO } from "@/lib/agenda.functions";
+import { agendaSession } from "@/lib/agenda-model";
 import { clinicalIntelQuery } from "@/lib/clinical-intel";
 import { detectPatterns } from "@/lib/patterns";
 import {
@@ -161,7 +167,7 @@ function AgendaPage() {
         </div>
 
         {view === "pending" ? (
-          <PendingRecords userId={user.id} />
+          <PendingRecords userId={user.id} date={date} />
         ) : view === "week" ? (
           <WeekView dateKey={date} onPickDay={(day) => selectDate(day, "day")} />
         ) : query.isPending ? (
@@ -252,12 +258,12 @@ function AgendaPage() {
                     </li>
                   ))}
                 </ul>
-                {query.data.orphanClients.length > 8 && (
+                {query.data.orphanClientCount > query.data.orphanClients.length && (
                   <Link
                     to="/app/clientes"
                     className="inline-flex min-h-11 items-center text-sm font-semibold text-forest hover:underline"
                   >
-                    Ver todos os clientes
+                    Ver clientes · {query.data.orphanClientCount} sem próxima sessão
                   </Link>
                 )}
               </details>
@@ -283,12 +289,12 @@ const RECORD_DATE_LABEL = new Intl.DateTimeFormat("pt-BR", {
   timeStyle: "short",
 });
 
-function PendingRecords({ userId }: { userId: string }) {
+function PendingRecords({ userId, date }: { userId: string; date: string }) {
   const [offset, setOffset] = useState(0);
   const query = useQuery({
     queryKey: ["agenda-pending-records", userId, offset],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("list_pending_clinical_records", {
+      const { data, error } = await supabase.rpc("list_pending_clinical_records_v2", {
         _offset: offset,
         _limit: RECORDS_PAGE_SIZE + 1,
       });
@@ -321,6 +327,7 @@ function PendingRecords({ userId }: { userId: string }) {
                   tab: "sessions",
                   session: record.id,
                   from: "agenda",
+                  agendaDate: date,
                   agendaView: "pending",
                 }}
               >
@@ -336,6 +343,20 @@ function PendingRecords({ userId }: { userId: string }) {
                   {record.overdue ? "Horário em aberto" : "Registro pendente"}
                 </span>
               </Link>
+              {record.overdue && (
+                <div className="px-4 pb-2">
+                  <AppointmentActions
+                    session={agendaSession(
+                      {
+                        ...record,
+                        clients: { full_name: record.client_name, preferred_name: null },
+                      },
+                      browserTz(),
+                      new Date(),
+                    )}
+                  />
+                </div>
+              )}
             </li>
           ))}
         </ul>

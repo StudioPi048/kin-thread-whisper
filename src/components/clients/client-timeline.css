@@ -109,6 +109,26 @@
   padding-inline: clamp(0.7rem, 1.8vw, 1.25rem);
 }
 
+.case-timeline-list-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 0.35rem 0.8rem;
+  padding-block-end: 0.6rem;
+}
+
+.case-timeline-list-group + .case-timeline-list-group {
+  margin-top: 1rem;
+}
+
+.case-timeline-list-group h3 {
+  margin-block: 0 0.35rem;
+  color: var(--forest);
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
 .case-timeline-list h2,
 .case-timeline-overview h2 {
   margin: 0;
@@ -170,6 +190,14 @@
   font-size: 0.875rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.case-timeline-row[data-precision="month"] .case-timeline-row-date,
+.case-timeline-row[data-precision="year"] .case-timeline-row-date,
+.case-timeline-row[data-precision="range"] .case-timeline-row-date,
+.case-timeline-row[data-precision="month_day"] .case-timeline-row-date {
+  font-style: italic;
 }
 
 .case-timeline-row-entry {
@@ -260,6 +288,17 @@
   font-size: 0.9375rem;
   font-weight: 550;
   font-variant-numeric: tabular-nums;
+}
+
+.case-timeline-range-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0 1.2rem 0.65rem;
+}
+
+.case-timeline-range-tools button {
+  max-width: 100%;
 }
 
 .case-timeline-overview-header .case-timeline-compare {
@@ -499,6 +538,11 @@
   margin-top: 0.2rem;
 }
 
+.case-timeline-detail footer p {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .case-timeline-row-detail {
   display: none;
 }
@@ -539,7 +583,8 @@
   }
 
   .case-timeline-overview-header,
-  .case-timeline-overview-detail {
+  .case-timeline-overview-detail,
+  .case-timeline-range-tools {
     padding-inline: 0.7rem;
   }
 

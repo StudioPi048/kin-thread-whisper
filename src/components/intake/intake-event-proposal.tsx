@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { clinicalIntelQuery, getMappablePersons, invalidateCase } from "@/lib/clinical-intel";
 import { formatByPrecision, precisionOf } from "@/lib/timeline";
 import type { IntakeAnswerContext } from "@/lib/intake";
+import { persistIntakeEvent } from "./intake-event-save";
 
 export type IntakeFinding = {
   field: string;
@@ -50,54 +51,60 @@ export function IntakeEventProposal({
   const selected = persons.find((person) => person.id === personId);
 
   const save = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (confirmed?: string) => {
       if (!selected || !eventType.trim() || !description.trim() || !validDate) {
         throw new Error("Confira os campos antes de registrar o acontecimento.");
       }
-      const { data: current, error: readError } = await supabase
-        .from("genogram_persons")
-        .select("life_events, updated_at")
-        .eq("id", personId)
-        .eq("client_id", clientId)
-        .maybeSingle();
-      if (readError || !current) throw new Error("O familiar está indisponível.");
-      const existing = Array.isArray(current.life_events) ? current.life_events : [];
-      if (
-        existing.some(
-          (event) =>
-            event && typeof event === "object" && !Array.isArray(event) && event.id === recordId,
-        )
-      )
-        return;
-      const { data, error } = await supabase
-        .from("genogram_persons")
-        .update({
-          life_events: [
-            ...existing,
-            {
-              id: recordId,
-              type: eventType.trim(),
-              description: description.trim(),
-              date: dateText,
-              source: "intake",
-              source_field: finding.field,
-              source_label: finding.label,
-              source_status: finding.context.status ?? "",
-              source_type: finding.context.source ?? "",
-              source_note: finding.context.note?.trim() ?? "",
-            },
-          ],
-        })
-        .eq("id", personId)
-        .eq("client_id", clientId)
-        .eq("updated_at", current.updated_at)
-        .select("id")
-        .maybeSingle();
-      if (error || !data)
-        throw new Error("O registro não foi gravado. Confira a ficha e tente de novo.");
+      return persistIntakeEvent(
+        {
+          read: async () => {
+            const { data, error } = await supabase
+              .from("genogram_persons")
+              .select("life_events, updated_at")
+              .eq("id", personId)
+              .eq("client_id", clientId)
+              .maybeSingle();
+            if (error) throw error;
+            if (!data) throw new Error("O familiar está indisponível.");
+            return {
+              events: Array.isArray(data.life_events) ? data.life_events : [],
+              revision: data.updated_at,
+            };
+          },
+          update: async (events, revision) => {
+            const { data, error } = await supabase
+              .from("genogram_persons")
+              .update({ life_events: events })
+              .eq("id", personId)
+              .eq("client_id", clientId)
+              .eq("updated_at", revision)
+              .select("id")
+              .maybeSingle();
+            if (error) throw error;
+            return Boolean(data);
+          },
+        },
+        {
+          id: recordId,
+          type: eventType.trim(),
+          description: description.trim(),
+          date: dateText,
+          source: "intake",
+          source_field: finding.field,
+          source_label: finding.label,
+          source_status: finding.context.status ?? "",
+          source_type: finding.context.source ?? "",
+          source_note: finding.context.note?.trim() ?? "",
+        },
+        confirmed,
+      );
     },
-    onSuccess: () => invalidateCase(qc, clientId),
+    onSuccess: (outcome) => {
+      if (outcome.kind === "saved") return invalidateCase(qc, clientId);
+    },
   });
+  const saved = save.data?.kind === "saved" && !save.isPending;
+  const possibleDuplicate = save.data?.kind === "duplicate" ? save.data : null;
 
   return (
     <Dialog
@@ -109,11 +116,11 @@ export function IntakeEventProposal({
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>
-            {save.isSuccess ? "Acontecimento registrado" : "Propor acontecimento da anamnese"}
+            {saved ? "Acontecimento registrado" : "Propor acontecimento da anamnese"}
           </DialogTitle>
           <DialogDescription>{finding.label}</DialogDescription>
         </DialogHeader>
-        {save.isSuccess ? (
+        {saved ? (
           <div className="flex flex-wrap gap-2">
             <Button asChild className="min-h-11">
               <Link
@@ -134,7 +141,7 @@ export function IntakeEventProposal({
             className="grid gap-3"
             onSubmit={(event) => {
               event.preventDefault();
-              save.mutate();
+              if (!possibleDuplicate) save.mutate(undefined);
             }}
           >
             <label className="grid gap-1.5 text-sm font-medium">
@@ -144,7 +151,10 @@ export function IntakeEventProposal({
                 className="min-h-11 min-w-0 rounded-md border border-input bg-card px-3 text-base"
                 value={personId}
                 disabled={save.isPending || people.isLoading}
-                onChange={(event) => setPerson(event.target.value)}
+                onChange={(event) => {
+                  setPerson(event.target.value);
+                  save.reset();
+                }}
               >
                 <option value="">
                   {people.isLoading ? "Carregando…" : "Selecione um familiar"}
@@ -183,7 +193,10 @@ export function IntakeEventProposal({
                 maxLength={120}
                 disabled={save.isPending}
                 placeholder="Ex.: Mudança de cidade"
-                onChange={(event) => setEventType(event.target.value)}
+                onChange={(event) => {
+                  setEventType(event.target.value);
+                  save.reset();
+                }}
               />
             </label>
             <label className="grid gap-1.5 text-sm font-medium">
@@ -194,7 +207,10 @@ export function IntakeEventProposal({
                 aria-invalid={!validDate}
                 maxLength={24}
                 disabled={save.isPending}
-                onChange={(event) => setDate(event.target.value)}
+                onChange={(event) => {
+                  setDate(event.target.value);
+                  save.reset();
+                }}
               />
             </label>
             <p id={fieldId} className="text-sm text-muted-foreground">
@@ -208,7 +224,10 @@ export function IntakeEventProposal({
                 required
                 value={description}
                 disabled={save.isPending}
-                onChange={(event) => setDescription(event.target.value)}
+                onChange={(event) => {
+                  setDescription(event.target.value);
+                  save.reset();
+                }}
                 rows={4}
               />
             </label>
@@ -217,20 +236,52 @@ export function IntakeEventProposal({
                 {save.error.message}
               </p>
             )}
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="submit"
-                className="min-h-11"
-                disabled={
-                  !selected ||
-                  !eventType.trim() ||
-                  !description.trim() ||
-                  !validDate ||
-                  save.isPending
-                }
+            {possibleDuplicate && (
+              <section
+                aria-label="Possíveis duplicatas"
+                className="space-y-2 rounded-md border border-clinical-warning/50 p-3 text-sm"
               >
-                {save.isPending ? "Registrando…" : "Confirmar no dossiê"}
-              </Button>
+                <p role="status" className="font-semibold">
+                  Já existe acontecimento semelhante para este familiar.
+                </p>
+                <ul className="max-h-36 space-y-2 overflow-auto">
+                  {possibleDuplicate.duplicates.map((entry, index) => (
+                    <li key={entry.id ?? index} className="[overflow-wrap:anywhere]">
+                      <strong>{entry.type}</strong> ·{" "}
+                      {formatByPrecision(entry.date || null, precisionOf(entry.date))}
+                      {entry.description && (
+                        <p className="line-clamp-3 text-muted-foreground">{entry.description}</p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+            <div className="flex flex-wrap gap-2">
+              {possibleDuplicate ? (
+                <Button
+                  type="button"
+                  className="min-h-11"
+                  disabled={save.isPending}
+                  onClick={() => save.mutate(possibleDuplicate.signature)}
+                >
+                  Registrar como outro acontecimento
+                </Button>
+              ) : (
+                <Button
+                  type="submit"
+                  className="min-h-11"
+                  disabled={
+                    !selected ||
+                    !eventType.trim() ||
+                    !description.trim() ||
+                    !validDate ||
+                    save.isPending
+                  }
+                >
+                  {save.isPending ? "Registrando…" : "Confirmar no dossiê"}
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="outline"

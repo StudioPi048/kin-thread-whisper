@@ -1,9 +1,9 @@
 import { invalidateSessionViews } from "@/lib/session-state";
 import { deleteClientDossier, pendingDossierDeletionsKey } from "@/lib/delete-client-dossier";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { readClientListPreferences, writePref } from "@/lib/recent-activity";
-import { foldSearch } from "@/lib/client-index";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { readWorkspaceClientPage } from "@/lib/workspace-client-search";
+import { createFileRoute, Link, useLocation } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   MoreHorizontal,
@@ -45,6 +45,8 @@ import {
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { ClientFormDialog } from "@/components/clients/client-form-dialog";
+import { ReactivationConflictDialog } from "@/components/agenda/agenda-views";
+import { readReactivationConflicts, type ReactivationConflict } from "@/lib/agenda-model";
 import { calcAge } from "@/lib/clients";
 import type { Database } from "@/integrations/supabase/types";
 import "@/components/archive/work-desk.css";
@@ -77,6 +79,16 @@ function ClientesIndex() {
   // Visualização e aba são preferências. A busca fica somente nesta tela.
   const [tab, setTab] = useState<"active" | "archived">("active");
   const [query, setQuery] = useState("");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(0);
+  const pageSize = 24;
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSearch(query.trim());
+      setPage(0);
+    }, 200);
+    return () => window.clearTimeout(timer);
+  }, [query]);
   const searchInput = useRef<HTMLInputElement>(null);
   const [viewMode, setViewMode] = useState<"cards" | "list">("list");
   const [prefsLoadedFor, setPrefsLoadedFor] = useState<string | null>(null);
@@ -91,6 +103,10 @@ function ClientesIndex() {
     if (prefsLoadedFor === user.id) writePref(user.id, "clients-filters", { tab, viewMode });
   }, [prefsLoadedFor, user.id, tab, viewMode]);
   const [creating, setCreating] = useState(false);
+  const newCase = useLocation({ select: ({ hash }) => hash === "novo-cliente" });
+  useEffect(() => {
+    if (newCase) setCreating(true);
+  }, [newCase]);
   const [editing, setEditing] = useState<ClientSummary | null>(null);
   const [deleting, setDeleting] = useState<ClientSummary | null>(null);
   const editQuery = useQuery({
@@ -112,48 +128,32 @@ function ClientesIndex() {
     },
   });
 
-  const {
-    data: clients = [],
-    isLoading,
-    isError,
-    refetch,
-  } = useQuery({
-    queryKey: ["clients", user.id, tab],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("clients")
-        .select(
-          "id, full_name, preferred_name, birth_date, birthplace, email, phone, presenting_complaint, consent_given_at, tags, status",
-        )
-        .eq("professional_id", user.id)
-        .eq("status", tab)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data ?? [];
-    },
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["clients", user.id, tab, search, page],
+    queryFn: () =>
+      readWorkspaceClientPage(supabase, {
+        status: tab,
+        search,
+        offset: page * pageSize,
+        limit: pageSize,
+        details: true,
+      }),
   });
+  const filtered = data?.clients ?? [];
+  const total = data?.total ?? 0;
+  useEffect(() => {
+    if (data && page > 0 && page * pageSize >= data.total) {
+      setPage(Math.floor(Math.max(0, data.total - 1) / pageSize));
+    }
+  }, [data, page]);
 
-  const filtered = useMemo(() => {
-    const q = foldSearch(query);
-    if (!q) return clients;
-    return clients.filter((c) => {
-      const hay = [
-        c.full_name,
-        c.preferred_name,
-        c.email,
-        c.birthplace,
-        c.phone,
-        c.presenting_complaint,
-        (c.tags ?? []).join(" "),
-      ]
-        .filter(Boolean)
-        .join(" ");
-      return foldSearch(hay).includes(q);
-    });
-  }, [clients, query]);
-
+  const [reactivation, setReactivation] = useState<{
+    id: string;
+    name: string;
+    conflicts: ReactivationConflict[];
+  } | null>(null);
   const setStatus = useMutation({
-    mutationFn: async (input: { id: string; status: "active" | "archived" }) => {
+    mutationFn: async (input: { id: string; status: "active" | "archived"; name: string }) => {
       const { data, error } = await supabase
         .from("clients")
         .update({ status: input.status })
@@ -165,6 +165,7 @@ function ClientesIndex() {
       if (!data) throw new Error("Não foi possível alterar o status do dossiê.");
     },
     onSuccess: (_d, v) => {
+      setReactivation(null);
       qc.invalidateQueries({ queryKey: ["clients"] });
       qc.invalidateQueries({ queryKey: ["all-clients-search"] });
       qc.invalidateQueries({ queryKey: ["genograms-list"] });
@@ -178,7 +179,14 @@ function ClientesIndex() {
           : "Dossiê reativado. Os atendimentos voltam à Agenda.",
       );
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
+    onError: (error, { id, name }) => {
+      const conflicts = readReactivationConflicts(error);
+      if (conflicts) setReactivation({ id, name, conflicts });
+      else
+        toast.error(
+          error instanceof Error ? error.message : "Não foi possível alterar o status do dossiê.",
+        );
+    },
   });
 
   const remove = useMutation({
@@ -209,7 +217,11 @@ function ClientesIndex() {
   });
 
   function toggleArchive(client: ClientSummary) {
-    setStatus.mutate({ id: client.id, status: client.status === "active" ? "archived" : "active" });
+    setStatus.mutate({
+      id: client.id,
+      name: client.preferred_name || client.full_name,
+      status: client.status === "active" ? "archived" : "active",
+    });
   }
 
   function clearSearch() {
@@ -230,13 +242,23 @@ function ClientesIndex() {
 
       <div className="work-clients-controls">
         <div role="group" aria-label="Status dos dossiês" className="work-client-filters">
-          <button type="button" aria-pressed={tab === "active"} onClick={() => setTab("active")}>
+          <button
+            type="button"
+            aria-pressed={tab === "active"}
+            onClick={() => {
+              setTab("active");
+              setPage(0);
+            }}
+          >
             Em acompanhamento
           </button>
           <button
             type="button"
             aria-pressed={tab === "archived"}
-            onClick={() => setTab("archived")}
+            onClick={() => {
+              setTab("archived");
+              setPage(0);
+            }}
           >
             Arquivados
           </button>
@@ -281,7 +303,7 @@ function ClientesIndex() {
         </div>
       </div>
 
-      {isLoading ? (
+      {isLoading || query.trim() !== search ? (
         <div className="work-client-loading" role="status">
           <p>Carregando dossiês…</p>
           <div className="work-skeleton" aria-hidden />
@@ -298,8 +320,10 @@ function ClientesIndex() {
       ) : (
         <>
           <p role="status" className="work-client-count">
-            {filtered.length} {filtered.length === 1 ? "dossiê" : "dossiês"}
-            {hasQuery && ` de ${clients.length}`}
+            {total} {total === 1 ? "dossiê" : "dossiês"}
+            {filtered.length > 0 &&
+              total > pageSize &&
+              ` · ${page * pageSize + 1}–${page * pageSize + filtered.length}`}
           </p>
           {filtered.length === 0 ? (
             <EmptyState
@@ -392,9 +416,35 @@ function ClientesIndex() {
         </>
       )}
 
+      {!isError && !isLoading && query.trim() === search && (page > 0 || data?.hasMore) && (
+        <nav className="my-4 flex gap-2" aria-label="Páginas de dossiês">
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-11"
+            disabled={page === 0}
+            onClick={() => setPage(page - 1)}
+          >
+            Anterior
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-11"
+            disabled={!data?.hasMore}
+            onClick={() => setPage(page + 1)}
+          >
+            Próxima
+          </Button>
+        </nav>
+      )}
+
       <ClientFormDialog
         open={creating}
-        onOpenChange={setCreating}
+        onOpenChange={(open) => {
+          setCreating(open);
+          if (!open && newCase) void navigate({ hash: "", replace: true });
+        }}
         professionalId={user.id}
         onCreated={(clientId) =>
           void navigate({
@@ -404,6 +454,19 @@ function ClientesIndex() {
           })
         }
       />
+      {reactivation && (
+        <ReactivationConflictDialog
+          key={reactivation.id}
+          clientId={reactivation.id}
+          clientName={reactivation.name}
+          conflicts={reactivation.conflicts}
+          checking={setStatus.isPending}
+          onRetry={() =>
+            setStatus.mutate({ id: reactivation.id, name: reactivation.name, status: "active" })
+          }
+          onClose={() => setReactivation(null)}
+        />
+      )}
       {editing && editQuery.data && (
         <ClientFormDialog
           open

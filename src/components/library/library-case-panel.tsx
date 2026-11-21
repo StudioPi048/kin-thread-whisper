@@ -8,6 +8,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import {
   EDITORIAL_SOURCE,
   buildLibraryItems,
+  libraryProvenance,
   type Entry,
   type LibraryItem,
 } from "@/components/library/catalog";
@@ -17,9 +18,12 @@ import { relatedLibraryItem, searchLibrary } from "@/lib/library-search";
 export function LibraryCasePanel({ reference }: { reference?: string }) {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<LibraryItem | null>(null);
+  const [trail, setTrail] = useState<LibraryItem[]>([]);
   const [visible, setVisible] = useState(false);
   const articleRef = useRef<HTMLHeadingElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const originKey = useRef<string | null>(null);
+  const resultsRef = useRef<HTMLUListElement>(null);
   const entriesQ = useQuery({
     queryKey: ["library-entries"],
     queryFn: async () => {
@@ -33,14 +37,25 @@ export function LibraryCasePanel({ reference }: { reference?: string }) {
   const openRelated = (term: string) => {
     const related = relatedLibraryItem(items, term);
     if (related) {
+      if (!open || related.key === open.key) return;
+      setTrail((current) => [...current, open]);
       setOpen(related);
     } else {
+      setTrail([]);
+      originKey.current = null;
       setQ(term);
       setOpen(null);
     }
   };
   useEffect(() => {
-    if (visible) (open ? articleRef.current : searchRef.current)?.focus();
+    if (!visible) return;
+    if (open) articleRef.current?.focus();
+    else {
+      const result = Array.from(resultsRef.current?.querySelectorAll("button") ?? []).find(
+        (button) => button.dataset.libraryKey === originKey.current,
+      );
+      (result ?? searchRef.current)?.focus();
+    }
   }, [visible, open]);
 
   return (
@@ -48,7 +63,11 @@ export function LibraryCasePanel({ reference }: { reference?: string }) {
       open={visible}
       onOpenChange={(visible) => {
         setVisible(visible);
-        if (visible) setOpen(items.find((item) => item.key === reference) ?? null);
+        if (visible) {
+          setTrail([]);
+          originKey.current = null;
+          setOpen(items.find((item) => item.key === reference) ?? null);
+        }
       }}
     >
       <SheetTrigger asChild>
@@ -71,17 +90,28 @@ export function LibraryCasePanel({ reference }: { reference?: string }) {
         </SheetHeader>
         {open ? (
           <div className="mt-4 space-y-3">
-            <Button variant="ghost" className="min-h-11" onClick={() => setOpen(null)}>
-              <ChevronLeft className="mr-1 size-4" /> Voltar aos resultados
+            <Button
+              variant="ghost"
+              className="min-h-11 whitespace-normal text-left"
+              onClick={() => {
+                setOpen(trail.at(-1) ?? null);
+                setTrail((current) => current.slice(0, -1));
+              }}
+            >
+              <ChevronLeft className="mr-1 size-4" />{" "}
+              {trail.length ? `Voltar a ${trail.at(-1)?.title}` : "Voltar aos resultados"}
             </Button>
             <p className="text-[13px] font-semibold text-muted-foreground">{open.category}</p>
             <h3 ref={articleRef} tabIndex={-1} className="font-serif text-2xl font-semibold">
               {open.title}
             </h3>
             <p className="text-[14px] text-muted-foreground">{open.meta}</p>
+            <p className="text-[14px] text-muted-foreground">
+              <strong>Fonte</strong> · {open.source ?? EDITORIAL_SOURCE}
+            </p>
             {open.illustrative && (
               <p className="rounded-md border border-clinical-warning/40 bg-clinical-warning/10 p-2 text-[14px] font-semibold">
-                Conteúdo ilustrativo
+                Paráfrase ilustrativa
               </p>
             )}
             <p className="whitespace-pre-wrap text-[15px] leading-7">
@@ -94,9 +124,6 @@ export function LibraryCasePanel({ reference }: { reference?: string }) {
                 ))}
               </ul>
             )}
-            <p className="text-[14px] text-muted-foreground">
-              <strong>Fonte:</strong> {open.source ?? EDITORIAL_SOURCE}
-            </p>
             {open.term && (
               <section className="border-t border-border pt-4">
                 <h4 className="mb-2 text-[15px] font-semibold">Conceitos relacionados</h4>
@@ -109,7 +136,7 @@ export function LibraryCasePanel({ reference }: { reference?: string }) {
                       className="min-h-11 h-auto whitespace-normal"
                       onClick={() => openRelated(term)}
                     >
-                      {term}
+                      {relatedLibraryItem(items, term) ? term : `Buscar por ${term}`}
                     </Button>
                   ))}
                 </div>
@@ -157,16 +184,24 @@ export function LibraryCasePanel({ reference }: { reference?: string }) {
                       : "Nenhum resultado."}
               </p>
             )}
-            <ul className="space-y-2">
+            <ul className="space-y-2" ref={resultsRef}>
               {shown.map((x) => (
                 <li key={x.key}>
                   <button
                     type="button"
-                    onClick={() => setOpen(x)}
+                    data-library-key={x.key}
+                    onClick={() => {
+                      originKey.current = x.key;
+                      setTrail([]);
+                      setOpen(x);
+                    }}
                     className="w-full rounded-md border border-border p-3 text-left hover:bg-secondary focus-visible:outline-2 focus-visible:outline-ring"
                   >
                     <span className="text-[13px] text-muted-foreground">{x.category}</span>
                     <span className="block text-[15px] font-semibold">{x.title}</span>
+                    <span className="block text-[13px] text-muted-foreground">
+                      {libraryProvenance(x)}
+                    </span>
                     <span className="line-clamp-2 block text-[14px] text-muted-foreground">
                       {x.body}
                     </span>

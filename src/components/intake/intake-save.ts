@@ -1,5 +1,6 @@
 import {
   calculateCompletion,
+  intakeBirthTimeInput,
   type ClientIntake,
   type IntakeContextKey,
   type IntakeSectionId,
@@ -26,21 +27,90 @@ type IntakeChanges = IntakeFields &
       string | null
     >
   >;
-export type IntakeEdits = Record<string, { revision: number; value: Json }>;
+type IntakeCursor = Pick<IntakeFields, "last_section_edited" | "last_field_edited">;
+type IntakeEdit = { revision: number; value: Json; expected: Json; cursor?: IntakeCursor };
+export type IntakeEdits = Record<string, IntakeEdit>;
+export type IntakeConflicts = Record<string, { previous: Json; current: Json }>;
 type IntakePatch = IntakeFields & Pick<Partial<ClientIntake>, "section_sources" | "field_context">;
 type IntakeSavePatch = IntakePatch & { completion_percentage: number };
 
-export function captureIntakeEdits(changes: IntakeChanges, revision: number): IntakeEdits {
+function jsonObject(value: Json | undefined) {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+}
+
+function savedValue(row: Partial<ClientIntake> | null | undefined, key: string): Json {
+  if (key.startsWith("context:")) {
+    const [, field, attribute] = key.split(":");
+    return jsonObject(jsonObject(row?.field_context)[field])[attribute] ?? null;
+  }
+  if (key.startsWith("source:")) {
+    return jsonObject(row?.section_sources)[key.slice("source:".length)] ?? null;
+  }
+  return row?.[key as keyof ClientIntake] ?? null;
+}
+
+function equalJson(a: Json | undefined, b: Json | undefined): boolean {
+  if (a === b) return true;
+  if (!a || !b || typeof a !== "object" || typeof b !== "object") return false;
+  if (Array.isArray(a)) {
+    return (
+      Array.isArray(b) && a.length === b.length && a.every((entry, i) => equalJson(entry, b[i]))
+    );
+  }
+  if (Array.isArray(b)) return false;
+  return (
+    Object.keys(a).length === Object.keys(b).length &&
+    Object.entries(a).every(([key, value]) => Object.hasOwn(b, key) && equalJson(value, b[key]))
+  );
+}
+
+function sameValue(key: string, saved: Json, proposed: Json) {
+  if (key === "birth_datetime" && typeof saved === "string" && typeof proposed === "string") {
+    const civil = intakeBirthTimeInput(saved);
+    if (civil) return civil === intakeBirthTimeInput(proposed);
+  }
+  return equalJson(saved, proposed);
+}
+
+export function captureIntakeEdits(
+  changes: IntakeChanges,
+  revision: number,
+  current?: Partial<ClientIntake> | null,
+  pending: IntakeEdits = {},
+): IntakeEdits {
+  const { last_field_edited, last_section_edited, ...fields } = changes;
+  const cursor = last_field_edited ? { last_field_edited, last_section_edited } : undefined;
   return Object.fromEntries(
-    Object.entries(changes).flatMap(([key, value]) =>
-      value === undefined ? [] : [[key, { revision, value }]],
+    Object.entries(fields).flatMap(([key, value]) =>
+      value === undefined
+        ? []
+        : [
+            [
+              key,
+              {
+                revision,
+                value,
+                expected: pending[key] ? pending[key].expected : savedValue(current, key),
+                ...(cursor ? { cursor } : {}),
+              },
+            ],
+          ],
     ),
   );
 }
 
-export function acknowledgeIntakeEdits(pending: IntakeEdits, saved: IntakeEdits): IntakeEdits {
+export function acknowledgeIntakeEdits(
+  pending: IntakeEdits,
+  saved: IntakeEdits,
+  row?: ClientIntake | null,
+): IntakeEdits {
   return Object.fromEntries(
-    Object.entries(pending).filter(([key, edit]) => edit.revision !== saved[key]?.revision),
+    Object.entries(pending).flatMap(([key, edit]) => {
+      const accepted = saved[key];
+      if (!accepted) return [[key, edit]];
+      if (edit.revision === accepted.revision) return [];
+      return [[key, row === undefined ? edit : { ...edit, expected: savedValue(row, key) }]];
+    }),
   );
 }
 
@@ -48,14 +118,14 @@ export function intakePatch(current: Partial<ClientIntake> | null | undefined, e
   const fields: Array<[string, Json]> = [];
   let sources: Record<string, Json | undefined> | undefined;
   let context: Record<string, Json | undefined> | undefined;
-  for (const [key, { value }] of Object.entries(edits)) {
+  let latest: IntakeEdit | undefined;
+  for (const [key, edit] of Object.entries(edits)) {
+    const { value, cursor } = edit;
+    if (cursor && (!latest || latest.revision < edit.revision)) latest = edit;
     if (key.startsWith("context:")) {
       const [, field, attribute] = key.split(":");
-      const saved = current?.field_context;
-      context ??= saved && typeof saved === "object" && !Array.isArray(saved) ? { ...saved } : {};
-      const previous = context[field];
-      const next =
-        previous && typeof previous === "object" && !Array.isArray(previous) ? { ...previous } : {};
+      context ??= { ...jsonObject(current?.field_context) };
+      const next = { ...jsonObject(context[field]) };
       if (value === null) delete next[attribute];
       else next[attribute] = value;
       if (Object.keys(next).length) context[field] = next;
@@ -67,15 +137,12 @@ export function intakePatch(current: Partial<ClientIntake> | null | undefined, e
       continue;
     }
 
-    if (!sources) {
-      const saved = current?.section_sources;
-      sources = saved && typeof saved === "object" && !Array.isArray(saved) ? { ...saved } : {};
-    }
+    sources ??= { ...jsonObject(current?.section_sources) };
     const section = key.slice("source:".length);
     if (value === null) delete sources[section];
     else sources[section] = value;
   }
-  const patch: IntakePatch = Object.fromEntries(fields);
+  const patch: IntakePatch = { ...Object.fromEntries(fields), ...latest?.cursor };
   if (sources) patch.section_sources = sources;
   if (context) patch.field_context = context;
   return patch;
@@ -87,17 +154,42 @@ type IntakeWriter = {
   update: (patch: IntakeSavePatch, previous: ClientIntake) => Promise<ClientIntake | null>;
 };
 
-export async function persistIntakeEdits(writer: IntakeWriter, edits: IntakeEdits) {
-  // On a competing write, re-read and merge only the fields from this edit.
+export type IntakeSaveResult = {
+  row: ClientIntake | null;
+  accepted: IntakeEdits;
+  conflicts: IntakeConflicts;
+  wrote: boolean;
+};
+
+export async function persistIntakeEdits(
+  writer: IntakeWriter,
+  edits: IntakeEdits,
+): Promise<IntakeSaveResult> {
+  // O CAS da linha impede que outra transação passe entre a comparação e a escrita.
   for (let attempt = 0; attempt < 3; attempt++) {
     const previous = await writer.read();
-    const patch = intakePatch(previous, edits);
+    const accepted: IntakeEdits = {};
+    const conflicts: IntakeConflicts = {};
+    let hasWrite = false;
+    for (const [key, edit] of Object.entries(edits)) {
+      const current = savedValue(previous, key);
+      const alreadySaved = sameValue(key, current, edit.value);
+      if (alreadySaved || equalJson(current, edit.expected)) {
+        accepted[key] = edit;
+        hasWrite ||= !alreadySaved;
+      } else {
+        conflicts[key] = { previous: edit.expected, current };
+      }
+    }
+    if (!hasWrite) return { row: previous, accepted, conflicts, wrote: false };
+
+    const patch = intakePatch(previous, accepted);
     const payload = {
       ...patch,
       completion_percentage: calculateCompletion({ ...previous, ...patch }),
     };
     const saved = previous ? await writer.update(payload, previous) : await writer.insert(payload);
-    if (saved) return saved;
+    if (saved) return { row: saved, accepted, conflicts, wrote: true };
   }
   throw new Error("A anamnese mudou durante o salvamento. Tente salvar de novo.");
 }

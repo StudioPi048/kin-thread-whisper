@@ -79,6 +79,8 @@ import {
 import { deleteClientDossier, pendingDossierDeletionsKey } from "@/lib/delete-client-dossier";
 import { supabase } from "@/integrations/supabase/client";
 import { ClientFormDialog } from "@/components/clients/client-form-dialog";
+import { ReactivationConflictDialog } from "@/components/agenda/agenda-views";
+import { readReactivationConflicts, type ReactivationConflict } from "@/lib/agenda-model";
 import { ClinicalIntelligencePanel } from "@/components/clients/clinical-intelligence-panel";
 
 import { recordVisit, writePref } from "@/lib/recent-activity";
@@ -188,6 +190,8 @@ function ClientDossierPage() {
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportAudio, setExportAudio] = useState(false);
   const [avatar, setAvatar] = useState<{ path: string; url: string } | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
@@ -338,28 +342,31 @@ function ClientDossierPage() {
     },
   });
 
+  const [reactivation, setReactivation] = useState<{
+    clientId: string;
+    conflicts: ReactivationConflict[];
+  } | null>(null);
   const toggleArchive = useMutation({
-    mutationFn: async () => {
-      if (!client) return;
-      const next = client.status === "active" ? "archived" : "active";
+    mutationFn: async ({ id, status }: { id: string; status: "archived" | "active" }) => {
       const { data, error } = await supabase
         .from("clients")
-        .update({ status: next })
-        .eq("id", client.id)
+        .update({ status })
+        .eq("id", id)
         .eq("professional_id", user.id)
         .select("id")
         .maybeSingle();
       if (error) throw error;
       if (!data) throw new Error("Não foi possível alterar o status do dossiê.");
-      return next;
+      return status;
     },
-    onSuccess: (next) => {
+    onSuccess: (next, { id }) => {
+      setReactivation(null);
       qc.invalidateQueries({ queryKey: ["clients"] });
-      qc.invalidateQueries({ queryKey: ["client", clientId] });
+      qc.invalidateQueries({ queryKey: ["client", id] });
       qc.invalidateQueries({ queryKey: ["all-clients-search"] });
       qc.invalidateQueries({ queryKey: ["genograms-list"] });
       qc.invalidateQueries({ queryKey: ["timelines-list"] });
-      void invalidateSessionViews(qc, clientId);
+      void invalidateSessionViews(qc, id);
       void qc.invalidateQueries({ queryKey: ["mesa-clients"] });
       toast.success(
         next === "archived"
@@ -367,19 +374,40 @@ function ClientDossierPage() {
           : "Dossiê reativado. Os atendimentos voltam à Agenda.",
       );
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
+    onError: (error, { id }) => {
+      const conflicts = readReactivationConflicts(error);
+      if (conflicts) setReactivation({ clientId: id, conflicts });
+      else
+        toast.error(
+          error instanceof Error ? error.message : "Não foi possível alterar o status do dossiê.",
+        );
+    },
   });
 
   const exportCase = useMutation({
-    mutationFn: async () => {
-      const [{ exportDossierData }, { readExportPage, downloadJson }] = await Promise.all([
-        import("@/lib/data-export"),
-        import("@/lib/download-export"),
-      ]);
+    mutationFn: async (includeAudio: boolean) => {
+      const [
+        { exportDossierData, packageDossier },
+        { readExportPage, downloadJson, readDossierAudio },
+      ] = await Promise.all([import("@/lib/data-export"), import("@/lib/download-export")]);
       const data = await exportDossierData(readExportPage, user.id, clientId);
-      downloadJson(data, `genealiz-dossie-${clientId}.json`);
+      const pack = await packageDossier(
+        data,
+        includeAudio
+          ? (path, sessionId, grantId) => readDossierAudio(clientId, path, sessionId, grantId)
+          : undefined,
+      );
+      downloadJson(pack, `genealiz-dossie-${clientId}.json`);
+      return pack.manifest.media.filter((file) => includeAudio && file.state !== "included").length;
     },
-    onSuccess: () => toast.success("Arquivo JSON do dossiê gerado."),
+    onSuccess: (pendingMedia) => {
+      setExportOpen(false);
+      if (pendingMedia)
+        toast.info(
+          `Dossiê exportado. ${pendingMedia} gravações indisponíveis estão indicadas no manifesto.`,
+        );
+      else toast.success("Arquivo JSON do dossiê gerado.");
+    },
     onError: (error) => toast.error(error.message),
   });
 
@@ -553,10 +581,14 @@ function ClientDossierPage() {
                   <DropdownMenuItem
                     className="min-h-11"
                     disabled={exportCase.isPending}
-                    onSelect={() => exportCase.mutate()}
+                    onSelect={() => {
+                      setExportAudio(false);
+                      exportCase.reset();
+                      setExportOpen(true);
+                    }}
                   >
                     <Download className="size-4" aria-hidden />
-                    {exportCase.isPending ? "Exportando…" : "Exportar dossiê em JSON"}
+                    Exportar dossiê em JSON
                   </DropdownMenuItem>
                   <DropdownMenuItem className="min-h-11" onSelect={() => setReportOpen(true)}>
                     <Download className="size-4" aria-hidden /> Preparar relatório PDF
@@ -565,7 +597,12 @@ function ClientDossierPage() {
                   <DropdownMenuItem
                     className="min-h-11"
                     disabled={toggleArchive.isPending}
-                    onSelect={() => toggleArchive.mutate()}
+                    onSelect={() =>
+                      toggleArchive.mutate({
+                        id: client.id,
+                        status: client.status === "active" ? "archived" : "active",
+                      })
+                    }
                   >
                     {client.status === "active" ? (
                       <Archive aria-hidden />
@@ -1019,6 +1056,17 @@ function ClientDossierPage() {
         professionalId={user.id}
         editing={client}
       />
+      {reactivation?.clientId === client.id && (
+        <ReactivationConflictDialog
+          key={client.id}
+          clientId={client.id}
+          clientName={client.preferred_name || client.full_name}
+          conflicts={reactivation.conflicts}
+          checking={toggleArchive.isPending}
+          onRetry={() => toggleArchive.mutate({ id: client.id, status: "active" })}
+          onClose={() => setReactivation(null)}
+        />
+      )}
       {reportOpen && (
         <Suspense
           fallback={
@@ -1035,6 +1083,51 @@ function ClientDossierPage() {
           />
         </Suspense>
       )}
+
+      <AlertDialog
+        open={exportOpen}
+        onOpenChange={(open) => !exportCase.isPending && setExportOpen(open)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Exportar dossiê em JSON</AlertDialogTitle>
+            <AlertDialogDescription>
+              A cópia inclui fichas, filiações, posições do mapa, anamnese, sessões e autorizações.
+              Baixe o arquivo em um dispositivo de confiança.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <label className="flex min-h-11 items-start gap-3 text-sm">
+            <input
+              type="checkbox"
+              checked={exportAudio}
+              onChange={(event) => setExportAudio(event.target.checked)}
+              disabled={exportCase.isPending}
+              className="mt-1 size-4"
+            />
+            <span>
+              Incluir gravações com autorização vigente. O manifesto indica os arquivos disponíveis
+              e pendentes.
+            </span>
+          </label>
+          {exportCase.error && (
+            <p role="alert" className="text-sm text-destructive">
+              {exportCase.error.message}
+            </p>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={exportCase.isPending}>Voltar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={exportCase.isPending}
+              onClick={(event) => {
+                event.preventDefault();
+                exportCase.mutate(exportAudio);
+              }}
+            >
+              {exportCase.isPending ? "Preparando arquivo…" : "Baixar dossiê"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={deleting} onOpenChange={(open) => !remove.isPending && setDeleting(open)}>
         <AlertDialogContent>

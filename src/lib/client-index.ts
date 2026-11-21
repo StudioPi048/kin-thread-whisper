@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { readWorkspaceClientPage } from "@/lib/workspace-client-search";
 
 export function foldSearch(value: string) {
   return value
@@ -28,28 +29,9 @@ export function nameSearchPattern(value: string) {
     .join(".*");
 }
 
-export async function readClientNamePage(
-  userId: string,
-  search: string,
-  from: number,
-  size: number,
-) {
-  const pattern = nameSearchPattern(search);
-  if (search.trim() && !pattern) return { clients: [], hasMore: false };
-
-  let request = supabase
-    .from("clients")
-    .select("id, full_name, preferred_name")
-    .eq("professional_id", userId)
-    .eq("status", "active");
-  if (pattern) {
-    request = request.or(`full_name.imatch."${pattern}",preferred_name.imatch."${pattern}"`);
+export function readClientNamePage(_userId: string, search: string, from: number, size: number) {
+  if (search.trim() && !nameSearchPattern(search)) {
+    return Promise.resolve({ clients: [], total: 0, hasMore: false });
   }
-  const { data, error } = await request
-    .order("full_name")
-    .order("id")
-    .range(from, from + size);
-  if (error) throw error;
-  const rows = data ?? [];
-  return { clients: rows.slice(0, size), hasMore: rows.length > size };
+  return readWorkspaceClientPage(supabase, { search, offset: from, limit: size });
 }

@@ -204,6 +204,13 @@ export function appointmentDurationMin(row: {
   return null;
 }
 
+export function agendaBoundaryDelay(startISO: string | undefined, now = Date.now()) {
+  const start = Date.parse(startISO ?? "");
+  if (!Number.isFinite(start)) return null;
+  // Both the browser and the database should have crossed the appointment boundary.
+  return Math.min(2_147_483_647, Math.max(250, start - now + 250));
+}
+
 export function formatDurationMinutes(minutes: number): string {
   const hours = Math.floor(minutes / 60);
   const remainder = minutes % 60;

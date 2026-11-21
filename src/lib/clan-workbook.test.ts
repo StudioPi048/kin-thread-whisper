@@ -87,6 +87,63 @@ describe("conciliação da planilha do clã", () => {
     ]);
   });
 
+  it("valida a árvore final para qualquer ordem das substituições de filiação", () => {
+    const { persons, rels } = consultanteFamily();
+    const [first, second, third] = persons.slice(-3);
+    const stored = {
+      ...rels.find((link) => link.relationship_type === "parent")!,
+      from_person_id: second.id,
+      to_person_id: first.id,
+    };
+    const rows = [
+      [first.id, second.id, "parent", "biological"],
+      [third.id, first.id, "parent", "biological"],
+    ];
+    const preview = (links: string[][]) =>
+      planClanWorkbook({
+        peopleSheet: peopleWith([]),
+        linksSheet: linksWith(links),
+        existingPeople: persons,
+        existingLinks: [stored],
+        choices: {},
+        replaceParentage: true,
+      });
+    expect(preview(rows).blocking).toBe(false);
+    expect(preview([...rows].reverse()).blocking).toBe(false);
+    expect(preview([...rows, [second.id, third.id, "parent", "biological"]]).blocking).toBe(true);
+  });
+
+  it("permite trocar ordinais do mesmo casal e aponta uma ordem repetida", () => {
+    const { persons, rels } = consultanteFamily();
+    const union = rels.find(({ relationship_type }) => relationship_type === "union")!;
+    const existingLinks = [
+      { ...union, marriage_order: 1 },
+      { ...union, id: "another-union", marriage_order: 2 },
+    ];
+    const preview = (orders: number[]) =>
+      planClanWorkbook({
+        peopleSheet: peopleWith([]),
+        linksSheet: {
+          name: "Vínculos",
+          header: ["ID do vínculo", "Origem", "Destino", "Tipo", "Natureza", "Ordem da união"],
+          rows: orders.map((order, index) => [
+            existingLinks[index].id,
+            union.from_person_id,
+            union.to_person_id,
+            "union",
+            union.qualifier ?? "",
+            String(order),
+          ]),
+        },
+        existingPeople: persons,
+        existingLinks,
+        choices: {},
+        replaceParentage: false,
+      });
+    expect(preview([2, 1]).blocking).toBe(false);
+    expect(preview([2]).blocking).toBe(true);
+  });
+
   it("reabre a exportação da árvore inteira sem criar nem alterar familiares", async () => {
     const { persons, rels } = consultanteFamily();
     persons[5].birth_date_partial = "1923–1925";

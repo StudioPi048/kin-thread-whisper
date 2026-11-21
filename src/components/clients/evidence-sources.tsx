@@ -56,6 +56,16 @@ export function EvidenceSources({
               <strong className="text-ink">{fields[fact.field]}</strong> · {factValue(fact)}
             </span>
             <span className="flex flex-wrap gap-x-3">
+              {fact.source === "genogram_relationships" && (
+                <Link
+                  to="/app/clientes/$clientId"
+                  params={{ clientId }}
+                  search={{ tab: "genogram", relation: fact.recordId }}
+                  className="inline-flex min-h-11 items-center text-forest underline underline-offset-4"
+                >
+                  Abrir vínculo no mapa
+                </Link>
+              )}
               {(fact.personIds ?? [fact.recordId]).map((id) => (
                 <Link
                   key={id}

@@ -23,6 +23,10 @@ vi.mock("@/integrations/supabase/client", () => ({
 const userId = "01000000-0000-4000-8000-000000000001";
 const caseId = "01000000-0000-4000-8000-000000000002";
 const otherCaseId = "01000000-0000-4000-8000-000000000003";
+const relationIds = [
+  "01000000-0000-4000-8000-000000000004",
+  "01000000-0000-4000-8000-000000000005",
+];
 
 afterEach(cleanup);
 window.scrollTo = () => {};
@@ -44,7 +48,13 @@ it("conserva revisões durante a comparação e protege um rascunho ao mudar de 
       occupation: "Ofício teste",
       health_conditions: ["Condição teste"],
     })),
-    relationships: [],
+    relationships: relationIds.map((id, index) => ({
+      id,
+      from_person_id: "0",
+      to_person_id: "1",
+      relationship_type: "emotional",
+      qualifier: index === 0 ? "rupture" : "conflict",
+    })),
   });
   queryClient.setQueryData(["hypothesis-reviews", caseId], []);
   const root = createRootRouteWithContext<{ user: { id: string } }>()({ component: Outlet });
@@ -67,6 +77,16 @@ it("conserva revisões durante a comparação e protege um rascunho ao mudar de 
 
   const health = await screen.findByRole("checkbox", { name: /condição de saúde recorrente/i });
   const work = screen.getByRole("checkbox", { name: /profissão repetida/i });
+  const relationships = screen
+    .getByRole("checkbox", { name: /2 vínculos com ruptura ou conflito/i })
+    .closest("li")!;
+  fireEvent.click(within(relationships).getByText(/registros consultados/i));
+  const sources = within(relationships).getAllByRole("link", { name: "Abrir vínculo no mapa" });
+  expect(
+    sources.map((link) =>
+      new URL(link.getAttribute("href")!, "https://teste.invalid").searchParams.get("relation"),
+    ),
+  ).toEqual(relationIds);
   fireEvent.click(health);
   fireEvent.click(screen.getByRole("button", { name: /ver hipóteses/i }));
   const review = screen
