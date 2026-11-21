@@ -1,4 +1,5 @@
 import { readDossierReport, type ExportPageReader } from "@/lib/data-export";
+import { splitFamilyRecords } from "@/lib/clinical-intel";
 import { buildLogicalGraph } from "@/lib/geno/build";
 import { buildCaseTimeline, formatByPrecision, yearRange } from "@/lib/timeline";
 import { CLINICAL_LABEL, clinicalStatusOf } from "@/lib/session-state";
@@ -30,11 +31,12 @@ export async function prepareDossierReport(
 ): Promise<DossierReport> {
   const includeNotes = options.sessions && options.includeNotes && !options.reducedIdentity;
   const source = await readDossierReport(read, userId, clientId, { ...options, includeNotes });
-  const persons = source.persons as unknown as PersonRow[];
-  const relationships = source.links as unknown as RelationshipRow[];
+  const allPersons = source.persons as unknown as PersonRow[];
+  const allRelationships = source.links as unknown as RelationshipRow[];
+  const { persons, relationships } = splitFamilyRecords(allPersons, allRelationships);
   const graph = buildLogicalGraph({
-    persons,
-    rels: relationships,
+    persons: allPersons,
+    rels: allRelationships,
     probandId: persons.find((person) => person.is_proband)?.id,
   });
   const displayed = new Map(

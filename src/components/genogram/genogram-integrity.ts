@@ -11,6 +11,27 @@ export type RemovalImpact = {
 };
 
 type EditorCalls = {
+  set_genogram_person_archived: {
+    args: {
+      _client_id: string;
+      _person_id: string;
+      _expected: string;
+      _archived: boolean;
+    };
+    result: Tables<"genogram_persons">;
+  };
+  remove_nonparental_genogram_relationship: {
+    args: {
+      _client_id: string;
+      _relationship_id: string;
+      _expected: string;
+    };
+    result: string;
+  };
+  undo_genogram_relationship_removal: {
+    args: { _client_id: string; _removal_id: string };
+    result: string;
+  };
   save_genogram_arrangement: {
     args: {
       _client_id: string;
@@ -43,7 +64,7 @@ type EditorCalls = {
   };
 };
 
-/** Narrows the JSONB replies to the editor's three contracts. */
+/** Narrows the replies to the editor's mutation contracts. */
 export async function editGenogram<K extends keyof EditorCalls>(
   name: K,
   args: EditorCalls[K]["args"],

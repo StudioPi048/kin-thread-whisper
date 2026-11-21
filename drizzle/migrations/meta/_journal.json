@@ -162,6 +162,13 @@
       "when": 1795220006000,
       "tag": "0023_clan_parentage_workbook",
       "breakpoints": false
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1795220007000,
+      "tag": "0024_genogram_archive",
+      "breakpoints": false
     }
   ]
 }

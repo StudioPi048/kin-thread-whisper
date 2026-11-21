@@ -26,6 +26,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { relationshipQualifiers, relationshipTypes, type RelationshipType } from "@/lib/genogram";
 import type { Database } from "@/integrations/supabase/types";
+import { editGenogram } from "./genogram-integrity";
 
 type PersonRow = Database["public"]["Tables"]["genogram_persons"]["Row"];
 type RelRow = Database["public"]["Tables"]["genogram_relationships"]["Row"];
@@ -40,6 +41,7 @@ interface Props {
   editing?: RelRow | null;
   seed?: { from?: string; to?: string; type?: RelationshipType; qualifier?: string };
   onReviewParentage: (childId: string, seed: ProposedParentageLink) => void;
+  onRemoved?: (id: string) => void;
 }
 
 interface FormState {
@@ -68,6 +70,7 @@ export function RelationshipFormDialog({
   editing,
   seed,
   onReviewParentage,
+  onRemoved,
 }: Props) {
   const qc = useQueryClient();
   const [v, setV] = useState<FormState>(empty);
@@ -196,30 +199,37 @@ export function RelationshipFormDialog({
     },
   });
 
-  const removal = useMutation({
-    mutationFn: async () => {
-      if (!editing) return;
-      if (editing.relationship_type === "parent")
-        throw new Error("Abra a revisão de filiação para remover este vínculo.");
-      const { data, error } = await supabase
-        .from("genogram_relationships")
-        .delete()
-        .eq("client_id", clientId)
-        .neq("relationship_type", "parent")
-        .eq("id", editing.id)
-        .eq("updated_at", editing.updated_at)
-        .select("id")
-        .maybeSingle();
-      if (error) throw error;
-      if (!data)
-        throw new Error(
-          "O vínculo mudou ou já foi removido em outra aba. Reabra a ficha para conferir.",
-        );
-    },
+  const undoRemoval = useMutation({
+    mutationFn: (removalId: string) =>
+      editGenogram("undo_genogram_relationship_removal", {
+        _client_id: clientId,
+        _removal_id: removalId,
+      }),
     onSuccess: async () => {
       await invalidateCase(qc, clientId);
-      toast.success("Vínculo removido.");
+      toast.success("Vínculo restaurado no mapa.");
+    },
+    onError: (error) => toast.error(error.message),
+  });
+  const removal = useMutation({
+    mutationFn: async () => {
+      if (!editing) throw new Error("Selecione o vínculo a remover.");
+      if (editing.relationship_type === "parent")
+        throw new Error("Abra a revisão de filiação para remover este vínculo.");
+      const removalId = await editGenogram("remove_nonparental_genogram_relationship", {
+        _client_id: clientId,
+        _relationship_id: editing.id,
+        _expected: editing.updated_at,
+      });
+      return { removalId, relationshipId: editing.id };
+    },
+    onSuccess: async ({ removalId, relationshipId }) => {
+      await invalidateCase(qc, clientId);
       onOpenChange(false);
+      onRemoved?.(relationshipId);
+      toast.success("Vínculo removido.", {
+        action: { label: "Desfazer", onClick: () => undoRemoval.mutate(removalId) },
+      });
     },
     onError: (error) =>
       toast.error(
@@ -454,8 +464,8 @@ export function RelationshipFormDialog({
 
         {confirmRemoval && (
           <div className="border-t border-border px-5 py-3 text-sm text-foreground" role="alert">
-            Remover este vínculo registrado? As pessoas continuam cadastradas. Confira também o
-            parentesco da planilha, que pode sugerir novamente uma ligação.
+            As pessoas permanecem cadastradas. O vínculo registrado pode ser restaurado no Arquivo
+            do mapa.
           </div>
         )}
         <SheetFooter className="border-t border-border bg-card px-5 py-4 sm:px-7">

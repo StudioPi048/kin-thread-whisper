@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ChevronLeft, ListFilter, MapPin, RefreshCw, ZoomIn } from "lucide-react";
 
-import { clinicalIntelQuery, getMappablePersons } from "@/lib/clinical-intel";
+import { clinicalIntelQuery, getGenogramTopology, getMappablePersons } from "@/lib/clinical-intel";
 import { buildLogicalGraph } from "@/lib/geno/build";
 import { Button } from "@/components/ui/button";
 import {
@@ -61,9 +61,11 @@ export function ClientTimeline({ clientId, focusEvent }: Props) {
   const all = useMemo(() => {
     if (!q.data) return [];
     const rels = q.data.relationships;
-    const persons = getMappablePersons(q.data.persons, rels);
-    const probandId = persons.find((person) => person.is_proband)?.id;
-    const graph = buildLogicalGraph({ persons, rels, probandId });
+    const graph = buildLogicalGraph({
+      ...getGenogramTopology(q.data),
+      probandId: q.data.persons.find((person) => person.is_proband)?.id,
+    });
+    const persons = Array.from(graph.persons.values(), ({ row }) => row);
     const byId = new Map(persons.map((person) => [person.id, person]));
     const counts = new Map<string, number>();
     for (const person of persons) {

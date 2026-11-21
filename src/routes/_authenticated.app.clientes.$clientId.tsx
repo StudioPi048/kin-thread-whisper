@@ -303,7 +303,10 @@ function ClientDossierPage() {
     [intelQ.data],
   );
   const gaps = useMemo(
-    () => (intelQ.data ? informationGaps(intelQ.data.persons, intelQ.data.relationships) : []),
+    () =>
+      intelQ.data
+        ? informationGaps(intelQ.data.persons, intelQ.data.relationships, undefined, intelQ.data)
+        : [],
     [intelQ.data],
   );
 

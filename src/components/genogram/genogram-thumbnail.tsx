@@ -1,7 +1,7 @@
 import { personSymbol } from "./person-symbol";
 import { useMemo } from "react";
 import { buildLogicalGraph, layoutGraph, NODE_W } from "@/lib/geno/build";
-import { getMappablePersons } from "@/lib/clinical-intel";
+import { getGenogramTopology, splitFamilyRecords } from "@/lib/clinical-intel";
 import type { PersonRow, RelationshipRow } from "@/lib/patterns";
 /** Read-only projection of the SAME graph engine; never persists or invents a relationship. */
 export function GenogramThumbnail({
@@ -13,8 +13,7 @@ export function GenogramThumbnail({
 }) {
   const { graph, placement, box } = useMemo(() => {
     const graph = buildLogicalGraph({
-      persons: getMappablePersons(persons, rels),
-      rels,
+      ...getGenogramTopology(splitFamilyRecords(persons, rels)),
       probandId: persons.find((p) => p.is_proband)?.id,
     });
     const placement = layoutGraph(graph);
@@ -34,7 +33,7 @@ export function GenogramThumbnail({
       className="gv-map-thumbnail"
       viewBox={box}
       role="img"
-      aria-label={`Prévia do genossociograma com ${persons.length} pessoas`}
+      aria-label={`Prévia do genossociograma com ${graph.persons.size} pessoas`}
     >
       <g stroke="var(--color-muted-foreground)" strokeWidth="3" fill="none">
         {[...graph.unions].map(([id, u]) => {

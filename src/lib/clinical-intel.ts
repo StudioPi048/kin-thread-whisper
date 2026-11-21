@@ -7,6 +7,8 @@ export interface ClinicalIntelData {
   client: { full_name: string; presenting_complaint: string | null } | null;
   persons: PersonRow[];
   relationships: RelationshipRow[];
+  archivedPersons?: PersonRow[];
+  archivedRelationships?: RelationshipRow[];
 }
 
 /** Etiquetas e gênero de um modelo vazio não representam uma pessoa cadastrada. */
@@ -33,8 +35,7 @@ export function hasFamilyRecordData(person: PersonRow) {
   );
 }
 
-/** Fichas com vínculos explícitos continuam no mapa mesmo sem nome ou data. */
-export function getMappablePersons(persons: PersonRow[], relationships: RelationshipRow[]) {
+function mapRecords(persons: readonly PersonRow[], relationships: readonly RelationshipRow[]) {
   const linkedIds = new Set(
     relationships.flatMap((relationship) => [
       relationship.from_person_id,
@@ -42,6 +43,40 @@ export function getMappablePersons(persons: PersonRow[], relationships: Relation
     ]),
   );
   return persons.filter((person) => linkedIds.has(person.id) || hasFamilyRecordData(person));
+}
+
+/** Fichas ativas com vínculos explícitos continuam no mapa mesmo sem nome ou data. */
+export function getMappablePersons(persons: PersonRow[], relationships: RelationshipRow[]) {
+  return mapRecords(persons, relationships).filter((person) => !person.archived_at);
+}
+
+export function splitFamilyRecords(persons: PersonRow[], relationships: RelationshipRow[]) {
+  const archivedPersons = persons.filter((person) => person.archived_at);
+  if (archivedPersons.length === 0)
+    return { persons, relationships, archivedPersons, archivedRelationships: [] };
+  const archivedIds = new Set(archivedPersons.map(({ id }) => id));
+  const archivedRelationships: RelationshipRow[] = [];
+  const visibleRelationships: RelationshipRow[] = [];
+  for (const link of relationships) {
+    const touchesArchive =
+      archivedIds.has(link.from_person_id) || archivedIds.has(link.to_person_id);
+    (touchesArchive ? archivedRelationships : visibleRelationships).push(link);
+  }
+  return {
+    persons: persons.filter(({ id }) => !archivedIds.has(id)),
+    relationships: visibleRelationships,
+    archivedPersons,
+    archivedRelationships,
+  };
+}
+
+/** A linhagem registrada orienta gerações mesmo quando uma ficha está arquivada. */
+export function getGenogramTopology(family: Omit<ClinicalIntelData, "client">) {
+  const rels = [...family.relationships, ...(family.archivedRelationships ?? [])];
+  return {
+    persons: mapRecords([...family.persons, ...(family.archivedPersons ?? [])], rels),
+    rels,
+  };
 }
 
 /** Única queryFn/queryKey para evidências de um caso — mesmo formato em todas as telas. */
@@ -84,8 +119,7 @@ export const clinicalIntelQuery = (clientId: string) =>
       if (clientRes.error) throw clientRes.error;
       return {
         client: clientRes.data,
-        persons: persons as PersonRow[],
-        relationships: relationships as RelationshipRow[],
+        ...splitFamilyRecords(persons, relationships),
       };
     },
   });
@@ -101,8 +135,10 @@ export function invalidateCase(qc: QueryClient, clientId: string) {
       "genogram-count",
       "client-genogram-count",
       "genogram-gallery-preview",
+      "genogram-removed-relationships",
     ].map((key) => qc.invalidateQueries({ queryKey: [key, clientId] })),
     qc.invalidateQueries({ queryKey: ["genograms-list"] }),
     qc.invalidateQueries({ queryKey: ["timelines-list"] }),
+    qc.invalidateQueries({ queryKey: ["mesa-onboarding-counts"] }),
   ]);
 }

@@ -8,6 +8,7 @@ import {
 } from "../../src/lib/parentage-review";
 import type { ClanWorkbookWrite } from "../../src/lib/clan-workbook";
 import { appointmentDurationMin } from "../../src/lib/scheduling";
+import type { Tables } from "../../src/integrations/supabase/types";
 const uid = "00000000-0000-4000-8000-000000000001";
 export const cid = "00000000-0000-4000-8000-000000000002";
 const now = new Date();
@@ -175,6 +176,7 @@ function makeFixtureFamily(depth = 4) {
   const ids = new Map(sample.persons.map((person, index) => [person.id, personId(index + 100)]));
   const people = sample.persons.map((person) => ({
     ...person,
+    archived_at: null,
     client_id: familyClient,
     id: ids.get(person.id)!,
     created_at: fixtureStamp,
@@ -195,7 +197,7 @@ const fixtureFamily = makeFixtureFamily();
 const db: Record<string, any[]> = {
   clients,
   genogram_persons: [
-    ...persons.map((person) => ({ ...person, updated_at: fixtureStamp })),
+    ...persons.map((person) => ({ ...person, archived_at: null, updated_at: fixtureStamp })),
     ...fixtureFamily.people,
   ],
   genogram_relationships: [
@@ -203,6 +205,7 @@ const db: Record<string, any[]> = {
     ...fixtureFamily.links,
   ],
   genogram_parentage_reviews: [],
+  genogram_removed_relationships: [],
   hypothesis_reviews: [],
   dossier_deletion_jobs: [],
   clinical_sessions: [...sessions, syntheticReviewSession],
@@ -230,6 +233,7 @@ const familyFixtureTables = [
   "genogram_persons",
   "genogram_relationships",
   "genogram_parentage_reviews",
+  "genogram_removed_relationships",
 ];
 const persistedFixtureTables = [
   ...familyFixtureTables,
@@ -275,6 +279,79 @@ function persistFixtureFamily() {
     JSON.stringify(Object.fromEntries(persistedFixtureTables.map((table) => [table, db[table]]))),
   );
 }
+
+type FixtureRelationship = Tables<"genogram_relationships">;
+
+function fixtureOwnsDossier(clientId: unknown) {
+  return db.clients.some((row) => row.id === clientId && row.professional_id === uid);
+}
+
+function fixtureHasEndpoints(
+  relationship: Pick<FixtureRelationship, "client_id" | "from_person_id" | "to_person_id">,
+  activeOnly = false,
+) {
+  return [relationship.from_person_id, relationship.to_person_id].every((id) =>
+    db.genogram_persons.some(
+      (row) =>
+        row.client_id === relationship.client_id &&
+        row.id === id &&
+        (!activeOnly || !row.archived_at),
+    ),
+  );
+}
+
+function recordFixtureRelationshipRemovals(
+  relationships: FixtureRelationship[],
+  deletedPeople = new Set<string>(),
+) {
+  const removedAt = new Date().toISOString();
+  const removals = relationships
+    .filter(
+      (row) =>
+        row.relationship_type !== "parent" &&
+        fixtureHasEndpoints(row) &&
+        !deletedPeople.has(row.from_person_id) &&
+        !deletedPeople.has(row.to_person_id),
+    )
+    .map((row) => ({
+      id: crypto.randomUUID(),
+      client_id: row.client_id,
+      snapshot: structuredClone(row),
+      removed_at: removedAt,
+      restored_at: null,
+    }));
+  db.genogram_removed_relationships.push(...removals);
+  return removals;
+}
+
+function conflictsWithFixtureRelationship(
+  current: FixtureRelationship,
+  restored: FixtureRelationship,
+) {
+  if (current.client_id !== restored.client_id) return false;
+  if (current.id === restored.id) return true;
+  if (restored.clan_reference && current.clan_reference === restored.clan_reference) return true;
+  if (current.relationship_type !== restored.relationship_type) return false;
+  const sameOrder =
+    current.from_person_id === restored.from_person_id &&
+    current.to_person_id === restored.to_person_id;
+  if (restored.relationship_type !== "union") {
+    return (
+      sameOrder &&
+      (current.qualifier ?? null) === (restored.qualifier ?? null) &&
+      (current.start_date ?? null) === (restored.start_date ?? null) &&
+      (current.end_date ?? null) === (restored.end_date ?? null) &&
+      (current.notes ?? null) === (restored.notes ?? null)
+    );
+  }
+  const reversed =
+    current.from_person_id === restored.to_person_id &&
+    current.to_person_id === restored.from_person_id;
+  return (
+    (sameOrder || reversed) && (current.marriage_order ?? 0) === (restored.marriage_order ?? 0)
+  );
+}
+
 function fixtureReactivationConflicts(clientId: string) {
   const now = Date.now();
   const slots = db.clinical_sessions
@@ -448,6 +525,21 @@ class Query {
             }).then(resolve, reject);
           }
         }
+        if (
+          this.table === "genogram_relationships" &&
+          rows.some((row) => {
+            const next = { ...row, ...this.payload };
+            return (
+              ["client_id", "from_person_id", "to_person_id", "relationship_type"].some(
+                (key) => row[key] !== next[key],
+              ) && !fixtureHasEndpoints(next, true)
+            );
+          })
+        ) {
+          return Promise.resolve(
+            fixtureError("Restaure os familiares envolvidos antes de alterar o vínculo."),
+          ).then(resolve, reject);
+        }
         const touchedAt = new Date().toISOString();
         const touchDate = [
           "client_intakes",
@@ -485,7 +577,10 @@ class Query {
         db[this.table] = this.rows.map((row) => updated.get(row) ?? row);
         rows = [...updated.values()];
       }
-      if (this.mutation === "delete") db[this.table] = this.rows.filter((r) => !rows.includes(r));
+      if (this.mutation === "delete") {
+        if (this.table === "genogram_relationships") recordFixtureRelationshipRemovals(rows);
+        db[this.table] = this.rows.filter((r) => !rows.includes(r));
+      }
       if (this.mutation === "insert" || this.mutation === "upsert") {
         rows = (Array.isArray(this.payload) ? this.payload : [this.payload]).map((v: any) => ({
           id: crypto.randomUUID(),
@@ -498,8 +593,17 @@ class Query {
           ...(this.table === "clinical_sessions"
             ? { session_date: new Date().toISOString(), summary_stale: false }
             : {}),
+          ...(this.table === "genogram_persons" ? { archived_at: null } : {}),
           ...v,
         }));
+        if (
+          this.table === "genogram_relationships" &&
+          rows.some((row) => !fixtureHasEndpoints(row, true))
+        ) {
+          return Promise.resolve(
+            fixtureError("Restaure os familiares envolvidos antes de criar o vínculo."),
+          ).then(resolve, reject);
+        }
         const remaining =
           this.mutation === "upsert" && this.table === "genogram_node_positions"
             ? this.rows.filter(
@@ -752,6 +856,8 @@ function importFixtureWorkbook(args: Record<string, unknown>) {
       if (item.person_id && (!existing || existing.updated_at !== item.expected_updated_at)) {
         throw new Error("A pessoa mudou desde a prévia.");
       }
+      if (existing?.archived_at)
+        throw new Error("Restaure o familiar antes de alterar a planilha.");
       if (keys.has(item.key) && keys.get(item.key) !== item.person_id)
         throw new Error("ID já em uso.");
       if (existing) {
@@ -773,6 +879,7 @@ function importFixtureWorkbook(args: Record<string, unknown>) {
           life_events: [],
           is_deceased: false,
           is_proband: false,
+          archived_at: null,
           ...item.patch,
           id,
           client_id: clientId,
@@ -808,6 +915,8 @@ function importFixtureWorkbook(args: Record<string, unknown>) {
         clan_reference: existing?.clan_reference ?? link.key,
         updated_at: now,
       };
+      if (!fixtureHasEndpoints(record, true))
+        throw new Error("Restaure os familiares envolvidos antes de importar o vínculo.");
       if (existing) Object.assign(existing, record);
       else db.genogram_relationships.push({ ...record, id: crypto.randomUUID(), created_at: now });
     }
@@ -1003,6 +1112,69 @@ export const supabase: any = {
       persistFixtureFamily();
       return fixtureResult(layout);
     }
+    if (name === "set_genogram_person_archived") {
+      if (!fixtureOwnsDossier(args._client_id)) return fixtureError("Dossiê indisponível.");
+      const person = db.genogram_persons.find(
+        (row) => row.client_id === args._client_id && row.id === args._person_id,
+      );
+      if (!person || person.is_proband || person.updated_at !== args._expected)
+        return fixtureError("O familiar mudou ou está indisponível. Atualize o mapa.");
+      if (Boolean(person.archived_at) === args._archived) return fixtureResult(person);
+      const changedAt = new Date(
+        Math.max(Date.now(), Date.parse(person.updated_at) + 1),
+      ).toISOString();
+      const changed = {
+        ...person,
+        archived_at: args._archived ? changedAt : null,
+        updated_at: changedAt,
+      };
+      db.genogram_persons = db.genogram_persons.map((row) => (row === person ? changed : row));
+      persistFixtureFamily();
+      return fixtureResult(changed);
+    }
+    if (name === "remove_nonparental_genogram_relationship") {
+      if (!fixtureOwnsDossier(args._client_id)) return fixtureError("Dossiê indisponível.");
+      const relationship = db.genogram_relationships.find(
+        (row) =>
+          row.client_id === args._client_id &&
+          row.id === args._relationship_id &&
+          row.relationship_type !== "parent" &&
+          row.updated_at === args._expected,
+      );
+      if (!relationship)
+        return fixtureError("O vínculo mudou ou já foi removido. Atualize o mapa.");
+      const [removal] = recordFixtureRelationshipRemovals([relationship]);
+      if (!removal) return fixtureError("Uma das pessoas do vínculo está indisponível.");
+      db.genogram_relationships = db.genogram_relationships.filter((row) => row !== relationship);
+      persistFixtureFamily();
+      return fixtureResult(removal.id);
+    }
+    if (name === "undo_genogram_relationship_removal") {
+      if (!fixtureOwnsDossier(args._client_id)) return fixtureError("Dossiê indisponível.");
+      const removal = db.genogram_removed_relationships.find(
+        (row) => row.client_id === args._client_id && row.id === args._removal_id,
+      );
+      if (!removal) return fixtureError("Remoção indisponível.");
+      const snapshot: FixtureRelationship = removal.snapshot;
+      if (removal.restored_at) {
+        return db.genogram_relationships.some(
+          (row) => row.id === snapshot.id && row.client_id === snapshot.client_id,
+        )
+          ? fixtureResult(snapshot.id)
+          : fixtureError("O vínculo foi removido novamente. Abra a remoção mais recente.");
+      }
+      if (!fixtureHasEndpoints(snapshot, true))
+        return fixtureError("Restaure os familiares envolvidos antes de recuperar o vínculo.");
+      if (db.genogram_relationships.some((row) => conflictsWithFixtureRelationship(row, snapshot)))
+        return fixtureError("Já existe um vínculo equivalente no mapa.");
+      const restoredAt = new Date(
+        Math.max(Date.now(), Date.parse(snapshot.updated_at) + 1),
+      ).toISOString();
+      db.genogram_relationships.push({ ...snapshot, updated_at: restoredAt });
+      removal.restored_at = restoredAt;
+      persistFixtureFamily();
+      return fixtureResult(snapshot.id);
+    }
     if (name === "remove_genogram_selection") {
       const peopleIds = new Set(args._people as string[]);
       const linkIds = new Set(args._relationships as string[]);
@@ -1043,6 +1215,7 @@ export const supabase: any = {
           return fixtureError(
             "Os vínculos ou a seleção mudaram. Confira novamente antes de remover.",
           );
+        recordFixtureRelationshipRemovals(eligibleLinks, peopleIds);
         db.genogram_relationships = db.genogram_relationships.filter((row) => !links.includes(row));
         db.genogram_parentage_reviews = db.genogram_parentage_reviews.filter(
           (row) => !reviews.includes(row),
@@ -1058,7 +1231,11 @@ export const supabase: any = {
     if (name === "create_genogram_relative") {
       const clientId = args._client_id;
       const targetId = String(args._target_id);
-      if (!db.genogram_persons.some((row) => row.client_id === clientId && row.id === targetId))
+      if (
+        !db.genogram_persons.some(
+          (row) => row.client_id === clientId && row.id === targetId && !row.archived_at,
+        )
+      )
         return fixtureError("Dossiê ou familiar indisponível.");
       const id = crypto.randomUUID();
       const now = new Date().toISOString();
@@ -1066,6 +1243,7 @@ export const supabase: any = {
         ...(args._person as object),
         client_id: clientId,
         id,
+        archived_at: null,
         is_proband: false,
         parentage_reviewed: false,
         created_at: now,
@@ -1200,6 +1378,7 @@ export const supabase: any = {
         "genogram_persons",
         "genogram_relationships",
         "genogram_parentage_reviews",
+        "genogram_removed_relationships",
         "genogram_layouts",
       ]) {
         db[table] = db[table].filter((row) => row.client_id !== id);
@@ -1230,13 +1409,23 @@ export const supabase: any = {
         (row) => row.id === args._client_id && row.professional_id === uid,
       );
       if (!client) return fixtureResult(null);
+      const people = db.genogram_persons.filter(
+        (row) => row.client_id === client.id && !row.archived_at,
+      );
+      const activeIds = new Set(people.map((row) => row.id));
       const reviews = new Map<string, unknown>();
       for (const row of db.genogram_parentage_reviews) {
-        if (row.client_id === client.id) reviews.set(row.child_id, row);
+        if (row.client_id === client.id && activeIds.has(row.child_id))
+          reviews.set(row.child_id, row);
       }
       return fixtureResult({
-        persons: db.genogram_persons.filter((row) => row.client_id === client.id),
-        relationships: db.genogram_relationships.filter((row) => row.client_id === client.id),
+        persons: people,
+        relationships: db.genogram_relationships.filter(
+          (row) =>
+            row.client_id === client.id &&
+            activeIds.has(row.from_person_id) &&
+            activeIds.has(row.to_person_id),
+        ),
         reviews: [...reviews.values()],
       });
     }
@@ -1255,6 +1444,7 @@ export const supabase: any = {
         (row) =>
           row.client_id !== args._client_id ||
           row.is_proband ||
+          row.archived_at ||
           row.parentage_reviewed ||
           row.full_name.trim() ||
           !candidates.has(row.id) ||

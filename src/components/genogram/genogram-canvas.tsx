@@ -7,7 +7,12 @@ import {
   parentageTrackLabel,
   type PedigreeData,
 } from "./genogram-pedigree";
-import { clinicalIntelQuery, getMappablePersons, invalidateCase } from "@/lib/clinical-intel";
+import {
+  clinicalIntelQuery,
+  getGenogramTopology,
+  getMappablePersons,
+  invalidateCase,
+} from "@/lib/clinical-intel";
 import {
   lazy,
   Suspense,
@@ -62,6 +67,7 @@ import {
   Lock,
   Unlock,
   AlertTriangle,
+  Archive,
   RotateCcw,
   Layers,
   Undo2,
@@ -137,6 +143,7 @@ import {
 import { buildRenderGraph } from "./render-graph";
 import { MapNavigator } from "./map-navigator";
 import { MapPersonSearch } from "./map-person-search";
+import { MapArchive } from "./map-archive";
 import type { SpatialCamera, SpatialCameraHandle } from "./genogram-spatial-view";
 import {
   parentageSources,
@@ -746,10 +753,11 @@ function GenogramCanvasInner({
     [data?.persons, data?.rels],
   );
   const probandId = qualifiedPersons.find((p) => p.is_proband)?.id;
-  const renderGraph = useMemo(
-    () => (data ? buildRenderGraph(qualifiedPersons, data.rels, probandId, data.positions) : null),
-    [data, qualifiedPersons, probandId],
-  );
+  const renderGraph = useMemo(() => {
+    if (!data || !familyQuery.data) return null;
+    const { persons, rels } = getGenogramTopology(familyQuery.data);
+    return buildRenderGraph(persons, rels, probandId, data.positions);
+  }, [data, familyQuery.data, probandId]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
@@ -769,6 +777,21 @@ function GenogramCanvasInner({
   }>();
   const [connection, setConnection] = useState<{ originId: string | null } | null>(null);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
+  const [archiveTarget, setArchiveTarget] = useState<PersonRow | null>(null);
+  const archivedParentLinks = familyQuery.data?.archivedRelationships;
+  const hasArchivedParent = useCallback(
+    (id: string) =>
+      archivedParentLinks?.some(
+        (link) => link.relationship_type === "parent" && link.to_person_id === id,
+      ) ?? false,
+    [archivedParentLinks],
+  );
+  const explainArchivedParent = () => {
+    toast.info("Restaure o genitor arquivado para revisar a filiação.", {
+      action: { label: "Abrir arquivo", onClick: () => setArchiveOpen(true) },
+    });
+  };
   useEffect(() => {
     if (!connection) return;
     const leave = (event: KeyboardEvent) => {
@@ -1137,6 +1160,12 @@ function GenogramCanvasInner({
 
   const handleQuickAdd = useCallback(
     (personId: string, kind: QuickRelative["kind"]) => {
+      if ((kind === "Pai" || kind === "Mãe") && hasArchivedParent(personId)) {
+        toast.info("Restaure o genitor arquivado antes de registrar outro na filiação.", {
+          action: { label: "Abrir arquivo", onClick: () => setArchiveOpen(true) },
+        });
+        return;
+      }
       const rels = data?.rels ?? [];
       const parents = rels
         .filter((link) => link.relationship_type === "parent" && link.to_person_id === personId)
@@ -1147,7 +1176,7 @@ function GenogramCanvasInner({
       setQuickRelative({ personId, kind, parents, expected: parentageSnapshot(rels, personId) });
       setCreatingPerson(true);
     },
-    [data?.persons, data?.rels],
+    [data?.persons, data?.rels, hasArchivedParent],
   );
 
   useEffect(() => {
@@ -1308,7 +1337,14 @@ function GenogramCanvasInner({
       if (focusedRelationshipId) setFocusedRelationshipId(null);
       setRemovalSelection(null);
       await invalidateCase(qc, clientId);
-      toast.success(`Removidos ${people} pessoa(s) e ${relationships} vínculo(s).`);
+      toast.success(
+        `Removidos ${people} pessoa(s) e ${relationships} vínculo(s).`,
+        removalSelection?.links.length
+          ? {
+              action: { label: "Ver arquivo", onClick: () => setArchiveOpen(true) },
+            }
+          : undefined,
+      );
     },
   });
   function prepareRemoval() {
@@ -1453,6 +1489,33 @@ function GenogramCanvasInner({
   const saveLayoutInBackground = () => {
     void persistLayout().catch(() => {});
   };
+  const archivePerson = useMutation({
+    mutationFn: async (person: PersonRow) => {
+      if (layoutWrite.current || !revRef.current.isClean()) await persistLayout();
+      if (!revRef.current.isClean())
+        throw new Error("Salve as últimas posições antes de arquivar.");
+      return editGenogram("set_genogram_person_archived", {
+        _client_id: clientId,
+        _person_id: person.id,
+        _expected: person.updated_at,
+        _archived: true,
+      });
+    },
+    onSuccess: async ({ id }) => {
+      setArchiveTarget(null);
+      setFocusedPersonId((current) => (current === id ? null : current));
+      setReaderPersonId((current) => (current === id ? null : current));
+      setFocusedRelationshipId(null);
+      setPanelOpen(false);
+      setMobileSheetOpen(false);
+      setOrganizationProposal(null);
+      await invalidateCase(qc, clientId);
+      toast.success("Familiar arquivado.", {
+        action: { label: "Ver arquivo", onClick: () => setArchiveOpen(true) },
+      });
+    },
+    onError: async () => invalidateCase(qc, clientId),
+  });
 
   useUnsaved(`layout:${clientId}`, {
     label: "Arranjo do genossociograma",
@@ -1753,6 +1816,10 @@ function GenogramCanvasInner({
     if (confirmParentage.isPending || undoParentage.isPending || !data || !renderGraph) return;
     if (!data.persons.some((person) => person.id === childId)) return;
     if (parentageDraft) return;
+    if (hasArchivedParent(childId)) {
+      explainArchivedParent();
+      return;
+    }
     reviewMapContext.current = {
       viewport: rfInstance.getViewport(),
       frame: mapFrame2D.current,
@@ -2229,7 +2296,9 @@ function GenogramCanvasInner({
       onClick={(event) => startParentageReview(focusedPerson.id, event.currentTarget)}
     >
       <Link2 className="size-4" aria-hidden />
-      {directParents.length ? "Revisar filiação" : "Definir filiação"}
+      {directParents.length || hasArchivedParent(focusedPerson.id)
+        ? "Revisar filiação"
+        : "Definir filiação"}
     </Button>
   );
   const personActions = focusedPerson && (
@@ -2252,6 +2321,22 @@ function GenogramCanvasInner({
       >
         <Link2 className="size-4" aria-hidden /> Conectar a…
       </Button>
+      {!focusedPerson.is_proband && focusedPerson.id !== renderGraph?.graph.probandId && (
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="min-h-11"
+          disabled={personActionsBlocked}
+          onClick={() => {
+            archivePerson.reset();
+            setMobileSheetOpen(false);
+            setArchiveTarget(focusedPerson);
+          }}
+        >
+          <Archive className="size-4" aria-hidden /> Arquivar familiar
+        </Button>
+      )}
     </>
   );
   const renderRecordedLinks = (links: RelRow[]) => (
@@ -2385,8 +2470,22 @@ function GenogramCanvasInner({
               );
             })}
           </ul>
-        ) : (
+        ) : !hasArchivedParent(focusedPerson.id) ? (
           <p className="my-2 text-sm text-muted-foreground">Sem filiação registrada no mapa.</p>
+        ) : null}
+        {hasArchivedParent(focusedPerson.id) && (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="min-h-11 whitespace-normal text-left"
+            onClick={() => {
+              setMobileSheetOpen(false);
+              setArchiveOpen(true);
+            }}
+          >
+            <Archive className="size-4" aria-hidden /> Genitor arquivado · Ver arquivo
+          </Button>
         )}
         {directParents.length > 0 && !focusedPerson.parentage_reviewed && (
           <p className="text-sm text-muted-foreground">Fonte da filiação a confirmar.</p>
@@ -2851,6 +2950,16 @@ function GenogramCanvasInner({
                     <Table2 className="size-4" aria-hidden /> Abrir planilha
                   </Button>
                 )}
+                <Button
+                  variant="ghost"
+                  disabled={!!parentageDraft || !!connection}
+                  onClick={() => {
+                    setToolsOpen(false);
+                    setArchiveOpen(true);
+                  }}
+                >
+                  <Archive className="size-4" aria-hidden /> Arquivo do mapa
+                </Button>
                 <Button
                   variant="ghost"
                   disabled={!qualifiedCount}
@@ -3547,10 +3656,57 @@ function GenogramCanvasInner({
         persons={persons}
         seed={relDialog.seed}
         editing={relDialog.editing}
+        onRemoved={(id) => setFocusedRelationshipId((current) => (current === id ? null : current))}
         onReviewParentage={(childId, seed) => {
           startParentageReview(childId, undefined, seed);
         }}
       />
+      <MapArchive
+        open={archiveOpen}
+        onOpenChange={setArchiveOpen}
+        clientId={clientId}
+        people={persons}
+        archivedPeople={familyQuery.data?.archivedPersons ?? []}
+        small={usesInspectorSheet}
+      />
+      <AlertDialog
+        open={!!archiveTarget}
+        onOpenChange={(open) => {
+          if (!open && !archivePerson.isPending) {
+            setArchiveTarget(null);
+            if (usesInspectorSheet && focusedPersonId) setMobileSheetOpen(true);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-serif text-ink [overflow-wrap:anywhere]">
+              Arquivar {archiveTarget ? personName(archiveTarget) : "familiar"}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              O familiar sai do mapa e da planilha ativa. A ficha, os vínculos e a posição serão
+              preservados. Restaure o familiar no Arquivo do mapa.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {archivePerson.error && (
+            <p role="alert" className="text-sm text-destructive">
+              {archivePerson.error.message}
+            </p>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={archivePerson.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={archivePerson.isPending}
+              onClick={(event) => {
+                event.preventDefault();
+                if (archiveTarget) archivePerson.mutate(archiveTarget);
+              }}
+            >
+              {archivePerson.isPending ? "Arquivando…" : "Arquivar familiar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {printOpen && (
         <Suspense
@@ -3579,7 +3735,9 @@ function GenogramCanvasInner({
               {removalImpact.isPending
                 ? "Conferindo pessoas, vínculos e histórico afetados…"
                 : removalImpact.data
-                  ? `Serão removidos ${removalImpact.data.people} pessoa(s), ${removalImpact.data.relationships} vínculo(s) e ${removalImpact.data.reviews} registro(s) do histórico de filiação.`
+                  ? removalImpact.data.people
+                    ? `Serão removidos ${removalImpact.data.people} pessoa(s), ${removalImpact.data.relationships} vínculo(s) e ${removalImpact.data.reviews} registro(s) do histórico de filiação. Use a ficha para arquivar uma pessoa e guardar seu histórico.`
+                    : `Serão removidos ${removalImpact.data.relationships} vínculo(s). Você pode restaurá-los no Arquivo do mapa.`
                   : "Confira o impacto antes de remover."}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -3603,7 +3761,11 @@ function GenogramCanvasInner({
               }}
               className="bg-clinical-critical text-white hover:bg-clinical-critical/90"
             >
-              {deleteSelected.isPending ? "Removendo…" : "Remover definitivamente"}
+              {deleteSelected.isPending
+                ? "Removendo…"
+                : removalSelection?.people.length
+                  ? "Remover definitivamente"
+                  : "Remover vínculos"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

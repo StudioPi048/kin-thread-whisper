@@ -295,7 +295,8 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
   const preparation = useQuery({ ...clinicalIntelQuery(clientId), enabled: Boolean(preparing) });
   const openQuestions = useMemo(() => {
     if (!preparing || !preparation.data) return [];
-    return informationGaps(preparation.data.persons, preparation.data.relationships).slice(0, 3);
+    const family = preparation.data;
+    return informationGaps(family.persons, family.relationships, undefined, family).slice(0, 3);
   }, [preparing, preparation.data]);
 
   // Poll while any session is processing

@@ -84,7 +84,10 @@ function IaClinicaPage() {
     [evidenceData],
   );
   const missingParentage = useMemo(
-    () => (evidenceData ? parentageToReview(evidenceData.persons, evidenceData.relationships) : []),
+    () =>
+      evidenceData
+        ? parentageToReview(evidenceData.persons, evidenceData.relationships, evidenceData)
+        : [],
     [evidenceData],
   );
   const patterns = new Map(ev?.patterns.map((pattern) => [pattern.id, pattern]));

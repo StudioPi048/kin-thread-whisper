@@ -1,5 +1,6 @@
 import {
   clinicalIntelQuery,
+  getGenogramTopology,
   getMappablePersons,
   invalidateCase,
   type ClinicalIntelData,
@@ -11,6 +12,7 @@ import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import {
+  Archive,
   Loader2,
   Plus,
   Trash2,
@@ -226,6 +228,15 @@ export function ClanSpreadsheet({
   const { data: family, isLoading, isError, refetch } = useQuery(familyQuery);
   const persons = family?.persons;
   const relationships = family?.relationships;
+  const childrenWithArchivedParent = useMemo(
+    () =>
+      new Set(
+        (family?.archivedRelationships ?? [])
+          .filter(({ relationship_type }) => relationship_type === "parent")
+          .map(({ to_person_id }) => to_person_id),
+      ),
+    [family?.archivedRelationships],
+  );
 
   const savePerson = useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: TablesUpdate<"genogram_persons"> }) => {
@@ -234,6 +245,7 @@ export function ClanSpreadsheet({
         .update(patch)
         .eq("client_id", clientId)
         .eq("id", id)
+        .is("archived_at", null)
         .select()
         .single();
       if (error) throw error;
@@ -292,28 +304,32 @@ export function ClanSpreadsheet({
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao adicionar"),
   });
 
-  const removePerson = useMutation({
+  const archivePerson = useMutation({
     mutationFn: async (id: string) => {
       await queueRef.current!.flush();
-      const { error } = await supabase
-        .from("genogram_persons")
-        .delete()
-        .eq("client_id", clientId)
-        .eq("id", id)
-        .eq("is_proband", false);
-      if (error) throw error;
+      const latest = await qc.fetchQuery({ ...familyQuery, staleTime: 0 });
+      const person = latest.persons.find((item) => item.id === id && !item.is_proband);
+      if (!person) throw new Error("Familiar indisponível. Atualize a planilha.");
+      const { error } = await supabase.rpc("set_genogram_person_archived", {
+        _client_id: clientId,
+        _person_id: id,
+        _expected: person.updated_at,
+        _archived: true,
+      });
+      if (error) throw new Error(error.message);
     },
-    onSuccess: () => invalidateCase(qc, clientId),
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao remover pessoa"),
+    onSuccess: async () => {
+      await invalidateCase(qc, clientId);
+      toast.success("Familiar arquivado. Você pode restaurá-lo pelo mapa.");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao arquivar familiar"),
   });
 
   const removeEmptyPersons = useMutation({
     mutationFn: async () => {
       await queueRef.current!.flush();
       const latest = await qc.fetchQuery({ ...familyQuery, staleTime: 0 });
-      const keepIds = new Set(
-        getMappablePersons(latest.persons, latest.relationships).map(({ id }) => id),
-      );
+      const keepIds = new Set(getGenogramTopology(latest).persons.map(({ id }) => id));
       const candidates = latest.persons
         .filter((person) => !person.parentage_reviewed && !keepIds.has(person.id))
         .map(({ id, updated_at }) => ({ id, updated_at }));
@@ -343,10 +359,25 @@ export function ClanSpreadsheet({
   const deleteAllPersons = useMutation({
     mutationFn: async () => {
       await queueRef.current!.flush();
+      const latest = await qc.fetchQuery({ ...familyQuery, staleTime: 0 });
+      const activeRelatives = new Set(
+        latest.persons.filter((person) => !person.is_proband).map(({ id }) => id),
+      );
+      if (
+        latest.archivedRelationships?.some(
+          (link) =>
+            activeRelatives.has(link.from_person_id) || activeRelatives.has(link.to_person_id),
+        )
+      ) {
+        throw new Error(
+          "Há vínculos com familiares arquivados. Restaure essas fichas pelo mapa ou arquive as pessoas da planilha.",
+        );
+      }
       const { error } = await supabase
         .from("genogram_persons")
         .delete()
         .eq("client_id", clientId)
+        .is("archived_at", null)
         .eq("is_proband", false);
       if (error) throw error;
     },
@@ -463,14 +494,11 @@ export function ClanSpreadsheet({
   const [onlyPending, setOnlyPending] = useState(false);
   const hasDrafts = Object.keys(drafts).length > 0;
   const graph = useMemo(() => {
-    const rels = relationships ?? [];
-    const mappable = getMappablePersons(persons ?? [], rels);
     return buildLogicalGraph({
-      persons: mappable,
-      rels,
-      probandId: mappable.find((person) => person.is_proband)?.id,
+      ...getGenogramTopology(family ?? { persons: [], relationships: [] }),
+      probandId: family?.persons.find((person) => person.is_proband)?.id,
     });
-  }, [persons, relationships]);
+  }, [family]);
   const warningByPersonId = useMemo(
     () => new Map(graph.warnings.map((warning) => [warning.personId, warning.message])),
     [graph],
@@ -612,7 +640,7 @@ export function ClanSpreadsheet({
   );
   const hasRegisteredLinks = !!(structuredImport
     ? importPreview?.snapshot?.relationships.length
-    : relationships?.length);
+    : relationships?.length || family?.archivedRelationships?.length);
   const previewRows = useMemo(
     () =>
       [...analysis]
@@ -700,7 +728,7 @@ export function ClanSpreadsheet({
         return data;
       }
       const latest = await qc.fetchQuery({ ...familyQuery, staleTime: 0 });
-      if (importReplace && latest.relationships.length) {
+      if (importReplace && (latest.relationships.length || latest.archivedRelationships?.length)) {
         throw new Error("Há vínculos registrados. Adicione as linhas ou edite a planilha atual.");
       }
       const currentAnalysis = analyzeImport(
@@ -873,11 +901,11 @@ export function ClanSpreadsheet({
   const isChangingRows =
     addPerson.isPending ||
     addTemplate.isPending ||
-    removePerson.isPending ||
+    archivePerson.isPending ||
     removeEmptyPersons.isPending ||
     deleteAllPersons.isPending;
   const isRemovingRows =
-    removePerson.isPending || removeEmptyPersons.isPending || deleteAllPersons.isPending;
+    archivePerson.isPending || removeEmptyPersons.isPending || deleteAllPersons.isPending;
 
   return (
     <div className="min-w-0 space-y-4 pb-12">
@@ -1118,14 +1146,20 @@ export function ClanSpreadsheet({
                                       : "text-muted-foreground"
                                   }
                                 >
-                                  {warning ??
-                                    (pending
-                                      ? "Filiação a revisar"
-                                      : names.length
-                                        ? relationLabel
-                                        : "Sem filiação informada")}
+                                  {childrenWithArchivedParent.has(r.id)
+                                    ? "Há genitor arquivado."
+                                    : (warning ??
+                                      (pending
+                                        ? "Filiação a revisar"
+                                        : names.length
+                                          ? relationLabel
+                                          : "Sem filiação informada"))}
                                 </p>
-                                {onReviewParentage ? (
+                                {childrenWithArchivedParent.has(r.id) ? (
+                                  <p className="text-muted-foreground">
+                                    Restaure o genitor pelo mapa para revisar a filiação.
+                                  </p>
+                                ) : onReviewParentage ? (
                                   <Button
                                     type="button"
                                     variant="link"
@@ -1212,17 +1246,17 @@ export function ClanSpreadsheet({
                               disabled={isChangingRows || isError}
                               onClick={async () => {
                                 const ok = await askConfirm({
-                                  title: "Remover pessoa?",
-                                  description: `Remover ${r.full_name || "esta pessoa"} da planilha e do mapa? Os vínculos registrados com esta pessoa também serão removidos.`,
-                                  confirmLabel: "Remover",
-                                  destructive: true,
+                                  title: "Arquivar familiar?",
+                                  description: `Arquivar ${r.full_name || "esta pessoa"}? A ficha e os vínculos ficam disponíveis para restauração no mapa.`,
+                                  confirmLabel: "Arquivar",
+                                  destructive: false,
                                 });
-                                if (ok) removePerson.mutate(r.id);
+                                if (ok) archivePerson.mutate(r.id);
                               }}
-                              className="rounded h-11 w-11 flex items-center justify-center text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                              aria-label={`Remover ${r.full_name || `linha ${i + 1}`}`}
+                              className="rounded h-11 w-11 flex items-center justify-center text-muted-foreground transition-colors hover:bg-forest-soft/40 hover:text-forest"
+                              aria-label={`Arquivar ${r.full_name || `linha ${i + 1}`}`}
                             >
-                              <Trash2 className="size-4" />
+                              <Archive className="size-4" />
                             </button>
                           )}
                         </td>
@@ -1360,7 +1394,7 @@ export function ClanSpreadsheet({
                 const ok = await askConfirm({
                   title: "Remover todos os familiares?",
                   description:
-                    "Os familiares e seus vínculos serão removidos da planilha e do mapa. O cadastro do consulente será mantido.",
+                    "Os familiares ativos e seus vínculos serão removidos da planilha e do mapa. A ação é definitiva para os registros ativos.",
                   confirmLabel: "Remover familiares",
                   destructive: true,
                 });

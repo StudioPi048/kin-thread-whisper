@@ -7,6 +7,7 @@ export type ExportTable =
   | "client_intakes"
   | "genogram_persons"
   | "genogram_relationships"
+  | "genogram_removed_relationships"
   | "genogram_parentage_reviews"
   | "genogram_layouts"
   | "genogram_node_positions"
@@ -59,6 +60,7 @@ const caseTables = [
   "client_intakes",
   "genogram_persons",
   "genogram_relationships",
+  "genogram_removed_relationships",
   "genogram_parentage_reviews",
   "genogram_layouts",
   "clinical_sessions",
@@ -193,7 +195,7 @@ export async function readDossierReport(
           read,
           "genogram_persons",
           filter,
-          "id, client_id, full_name, preferred_name, relationship_to_proband, gender, is_proband, birth_order, birth_date, death_date, is_deceased, parentage_reviewed" +
+          "id, client_id, full_name, preferred_name, relationship_to_proband, gender, is_proband, birth_order, birth_date, death_date, is_deceased, parentage_reviewed, archived_at" +
             (scope.timeline ? ", birth_date_partial, death_date_partial, life_events, notes" : ""),
         )
       : [],

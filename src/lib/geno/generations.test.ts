@@ -149,6 +149,47 @@ describe("filiação revisada e etiquetas legadas", () => {
 });
 
 describe("gerações resolvidas só por filiação explícita (sem tags)", () => {
+  it("arquiva um genitor sem deslocar gerações ou sugerir parentes substitutos", () => {
+    const consultante = p("Consultante", { is_proband: true });
+    const irma = p("Irmã registrada pelo genitor em comum");
+    const pai = p("Pai registrado", { relationship_to_proband: "Pai" });
+    const mae = p("Mãe registrada", { relationship_to_proband: "Mãe" });
+    const avo = p("Avô registrado");
+    const outroPai = p("Outra ficha com etiqueta de pai", { relationship_to_proband: "Pai" });
+    const companheira = p("Companheira");
+    const persons = [consultante, irma, pai, mae, avo, outroPai, companheira];
+    const rels = [
+      par(pai.id, consultante.id),
+      par(mae.id, consultante.id),
+      par(pai.id, irma.id),
+      par(avo.id, pai.id),
+      { ...par(pai.id, mae.id, "marriage"), relationship_type: "union" },
+      { ...par(consultante.id, companheira.id, "marriage"), relationship_type: "union" },
+    ];
+    const original = buildLogicalGraph({ persons, rels });
+    const archived = buildLogicalGraph({
+      persons: persons.map((person) =>
+        person.id === pai.id ? { ...person, archived_at: "2026-11-21T17:30:00Z" } : person,
+      ),
+      rels,
+    });
+
+    expect(archived.persons.has(pai.id)).toBe(false);
+    expect(archived.topRowIds).toEqual(new Set([consultante.id, irma.id]));
+    for (const visible of archived.persons.values()) {
+      expect(visible.generation).toBe(original.persons.get(visible.id)?.generation);
+    }
+    expect(getResolvedParents(archived, consultante.id).map(({ personId }) => personId)).toEqual([
+      mae.id,
+    ]);
+    expect(getResolvedParents(archived, irma.id)).toEqual([]);
+    expect(getSuggestedParents(archived, consultante.id)).toEqual([]);
+    expect([...archived.unions.values()].every(({ partners }) => !partners.includes(pai.id))).toBe(
+      true,
+    );
+    expect(checkLayoutInvariants(archived, layoutGraph(archived))).toEqual([]);
+  });
+
   it("três gerações, relações embaralhadas: cliente/irmão 0, pais 1, avós 2", () => {
     for (const seed of [1, 3, 11, 42]) {
       const f = threeGen();

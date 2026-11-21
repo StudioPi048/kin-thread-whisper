@@ -166,8 +166,16 @@ function AppHome() {
           .from("genogram_persons")
           .select("id", count)
           .eq("is_proband", false)
+          .is("archived_at", null)
           .neq("full_name", ""),
-        supabase.from("genogram_relationships").select("id", count),
+        supabase
+          .from("genogram_relationships")
+          .select(
+            "id, origin:genogram_persons!genogram_relationships_from_person_id_fkey!inner(id), target:genogram_persons!genogram_relationships_to_person_id_fkey!inner(id)",
+            count,
+          )
+          .is("origin.archived_at", null)
+          .is("target.archived_at", null),
         supabase
           .from("clinical_sessions")
           .select("id", count)

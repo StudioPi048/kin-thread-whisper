@@ -585,6 +585,7 @@ export type Database = {
       }
       genogram_persons: {
         Row: {
+          archived_at?: string | null
           birth_date: string | null
           birth_date_partial?: string | null
           birth_order: number | null
@@ -615,6 +616,7 @@ export type Database = {
           vices: string | null
         }
         Insert: {
+          archived_at?: string | null
           birth_date?: string | null
           birth_date_partial?: string | null
           birth_order?: number | null
@@ -645,6 +647,7 @@ export type Database = {
           vices?: string | null
         }
         Update: {
+          archived_at?: string | null
           birth_date?: string | null
           birth_date_partial?: string | null
           birth_order?: number | null
@@ -833,6 +836,26 @@ export type Database = {
             columns: ["to_person_id"]
             isOneToOne: false
             referencedRelation: "genogram_persons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      genogram_removed_relationships: {
+        Row: {
+          id: string
+          client_id: string
+          snapshot: Json
+          removed_at: string
+          restored_at: string | null
+        }
+        Insert: never
+        Update: never
+        Relationships: [
+          {
+            foreignKeyName: "genogram_removed_relationships_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
         ]
@@ -1165,6 +1188,18 @@ export type Database = {
       remove_genogram_selection: {
         Args: { _client_id: string; _people: string[]; _relationships: string[]; _expected?: Json }
         Returns: Json
+      }
+      set_genogram_person_archived: {
+        Args: { _client_id: string; _person_id: string; _expected: string; _archived: boolean }
+        Returns: Json
+      }
+      remove_nonparental_genogram_relationship: {
+        Args: { _client_id: string; _relationship_id: string; _expected: string }
+        Returns: string
+      }
+      undo_genogram_relationship_removal: {
+        Args: { _client_id: string; _removal_id: string }
+        Returns: string
       }
       save_genogram_arrangement: {
         Args: { _client_id: string; _layout_id: string | null; _expected: string | null; _positions: Json }

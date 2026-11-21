@@ -1,4 +1,4 @@
-import { getMappablePersons } from "@/lib/clinical-intel";
+import { getGenogramTopology, splitFamilyRecords } from "@/lib/clinical-intel";
 import { buildLogicalGraph, getResolvedParents, type PersonEntity } from "@/lib/geno/build";
 import type { PersonRow, RelationshipRow } from "@/lib/patterns";
 import { smartNormalizeRelationship } from "@/lib/relationship-normalizer";
@@ -57,8 +57,9 @@ export function summarizeCaseGenogram(
   persons: PersonRow[],
   relationships: RelationshipRow[],
 ): ClientGenogramDTO {
-  const mappable = getMappablePersons(persons, relationships);
-  const graph = buildLogicalGraph({ persons: mappable, rels: relationships });
+  const family = splitFamilyRecords(persons, relationships);
+  const graph = buildLogicalGraph(getGenogramTopology(family));
+  const mappable = Array.from(graph.persons.values(), ({ row }) => row);
   const root = graph.probandId ? graph.persons.get(graph.probandId) : undefined;
   const probandId =
     root &&
@@ -131,13 +132,17 @@ export function summarizeCaseGenogram(
     if (proband && parents.length < 2) {
       alerts.push({
         severity: "warn",
-        message: `Filiação do consulente: ${parents.length}/2 genitores registrados.`,
+        message: family.archivedPersons.length
+          ? `Filiação do consulente: ${parents.length}/2 genitores no mapa ativo.`
+          : `Filiação do consulente: ${parents.length}/2 genitores registrados.`,
       });
     }
     if (proband && grandparents.length < 4) {
       alerts.push({
         severity: "info",
-        message: `Filiação dos pais: ${grandparents.length}/4 avós ligados ao consulente.`,
+        message: family.archivedPersons.length
+          ? `Filiação dos pais: ${grandparents.length}/4 avós no mapa ativo.`
+          : `Filiação dos pais: ${grandparents.length}/4 avós ligados ao consulente.`,
       });
     }
     const missingBirth = mappable.filter((p) => !p.birth_date).length;

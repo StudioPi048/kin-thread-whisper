@@ -312,7 +312,9 @@ export function buildLogicalGraph({
     parentsByChild: new Map(),
     suggestedParentsByChild: new Map(),
   };
-  if (!persons.length) return g;
+  const activePersons = persons.filter((person) => !person.archived_at);
+  if (!activePersons.length) return g;
+  const archivedIds = new Set(persons.filter((person) => person.archived_at).map(({ id }) => id));
 
   const byId = new Map(persons.map((p) => [p.id, p]));
   const byRole = new Map<string, PersonRow[]>();
@@ -322,13 +324,13 @@ export function buildLogicalGraph({
     group.push(p);
     byRole.set(role, group);
   }
-  const flagged = persons.filter((p) => p.is_proband);
-  const tagged = byRole.get("Consulente") ?? [];
+  const flagged = activePersons.filter((p) => p.is_proband);
+  const tagged = (byRole.get("Consulente") ?? []).filter((person) => !person.archived_at);
   const proband =
-    (probandId ? byId.get(probandId) : undefined) ??
+    (probandId && !archivedIds.has(probandId) ? byId.get(probandId) : undefined) ??
     flagged.sort(comparePersons)[0] ??
     tagged.sort(comparePersons)[0] ??
-    [...persons].sort(comparePersons)[0];
+    activePersons.sort(comparePersons)[0];
   g.probandId = proband.id;
   g.topRowIds.add(proband.id);
   if (!probandId && (flagged.length > 1 || (flagged.length === 0 && tagged.length !== 1))) {
@@ -640,6 +642,31 @@ export function buildLogicalGraph({
       id,
       "sem ligação confirmada com a árvore do consulente. Informe a filiação por pessoa na planilha.",
     );
+  }
+
+  // Resolve blood siblings, ancestor generations and legacy hints before
+  // hiding an archived person. Hiding a card must never create a new parent.
+  if (archivedIds.size) {
+    for (const id of archivedIds) {
+      g.persons.delete(id);
+      g.positions.delete(id);
+      g.topRowIds.delete(id);
+      g.pendingPersonIds.delete(id);
+    }
+    g.warnings = g.warnings.filter(({ personId }) => !archivedIds.has(personId));
+    for (const records of [g.parentsByChild, g.suggestedParentsByChild]) {
+      for (const [childId, parents] of records) {
+        const visibleParents = parents.filter(({ personId }) => !archivedIds.has(personId));
+        if (archivedIds.has(childId) || !visibleParents.length) records.delete(childId);
+        else if (visibleParents.length !== parents.length) records.set(childId, visibleParents);
+      }
+    }
+    for (const [key, links] of unionRels) {
+      const [link] = links;
+      if (archivedIds.has(link.from_person_id) || archivedIds.has(link.to_person_id)) {
+        unionRels.delete(key);
+      }
+    }
   }
 
   const displayChildren = new Set([

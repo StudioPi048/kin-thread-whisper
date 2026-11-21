@@ -5,6 +5,7 @@
  * Nunca atribui causalidade nem confiança numérica.
  */
 import { buildLogicalGraph, type LogicalGraph } from "./geno/build";
+import { getGenogramTopology, type ClinicalIntelData } from "./clinical-intel";
 import {
   detectPatterns,
   type DetectedPattern,
@@ -102,10 +103,21 @@ export function evidenceForCase(persons: PersonRow[], relationships: Relationshi
   return { patterns, hypotheses: buildHypotheses(patterns, persons) };
 }
 
-function pendingParentage(graph: LogicalGraph) {
+type ArchivedFamily = Pick<ClinicalIntelData, "archivedPersons" | "archivedRelationships">;
+
+function childrenWithArchivedParent(archive?: ArchivedFamily) {
+  return new Set(
+    (archive?.archivedRelationships ?? [])
+      .filter(({ relationship_type }) => relationship_type === "parent")
+      .map(({ to_person_id }) => to_person_id),
+  );
+}
+
+function pendingParentage(graph: LogicalGraph, archivedParentIds: ReadonlySet<string>) {
   return [...graph.persons.values()]
     .filter(
       ({ id, row }) =>
+        !archivedParentIds.has(id) &&
         !row.parentage_reviewed &&
         (graph.parentsByChild.get(id)?.length || graph.suggestedParentsByChild.get(id)?.length),
     )
@@ -115,10 +127,20 @@ function pendingParentage(graph: LogicalGraph) {
     }));
 }
 
-export function parentageToReview(persons: PersonRow[], relationships: RelationshipRow[]) {
+export function parentageToReview(
+  persons: PersonRow[],
+  relationships: RelationshipRow[],
+  archive?: ArchivedFamily,
+) {
   const probandId = persons.find((p) => p.is_proband)?.id;
   return probandId
-    ? pendingParentage(buildLogicalGraph({ persons, rels: relationships, probandId }))
+    ? pendingParentage(
+        buildLogicalGraph({
+          ...getGenogramTopology({ persons, relationships, ...archive }),
+          probandId,
+        }),
+        childrenWithArchivedParent(archive),
+      )
     : [];
 }
 
@@ -127,6 +149,7 @@ export function informationGaps(
   persons: PersonRow[],
   relationships?: RelationshipRow[],
   now = new Date(),
+  archive?: ArchivedFamily,
 ): string[] {
   const gaps: string[] = [];
   const name = (p: PersonRow) => p.preferred_name || p.full_name;
@@ -136,15 +159,19 @@ export function informationGaps(
   if (relationships) {
     const probandId = persons.find((p) => p.is_proband)?.id;
     if (probandId) {
-      const graph = buildLogicalGraph({ persons, rels: relationships, probandId });
+      const graph = buildLogicalGraph({
+        ...getGenogramTopology({ persons, relationships, ...archive }),
+        probandId,
+      });
+      const archivedParentIds = childrenWithArchivedParent(archive);
       gaps.push(
-        ...pendingParentage(graph).map(
+        ...pendingParentage(graph, archivedParentIds).map(
           (person) => `Confirme a fonte da filiação de ${person.name}.`,
         ),
       );
       const identified =
         graph.parentsByChild.get(probandId)?.filter((item) => item.kind !== "unknown") ?? [];
-      if (identified.length < 2) {
+      if (identified.length < 2 && !archivedParentIds.has(probandId)) {
         gaps.push(
           identified.length === 1
             ? "Quem é o outro genitor do consultante? Confira a fonte da filiação."

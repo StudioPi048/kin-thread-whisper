@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DocumentHeader } from "@/components/ui/document-header";
 import { buildLogicalGraph, validateGraph } from "@/lib/geno/build";
-import { getMappablePersons } from "@/lib/clinical-intel";
+import { getGenogramTopology, splitFamilyRecords } from "@/lib/clinical-intel";
 import { readClientNamePage } from "@/lib/client-index";
 import { readPref } from "@/lib/recent-activity";
 import { ArchiveEmptyState } from "@/components/ui/archive-empty-state";
@@ -51,15 +51,14 @@ async function readPreview(clientId: string) {
         .range(from, to),
     ),
   ]);
-  const persons = getMappablePersons(raw, rels);
+  const topology = getGenogramTopology(splitFamilyRecords(raw, rels));
   const graph = buildLogicalGraph({
-    persons,
-    rels,
-    probandId: persons.find((p) => p.is_proband)?.id,
+    ...topology,
+    probandId: topology.persons.find((p) => p.is_proband)?.id,
   });
   return {
-    persons,
-    rels,
+    ...topology,
+    peopleCount: graph.persons.size,
     generations: new Set(Array.from(graph.persons.values(), (person) => person.generation)).size,
     pending: graph.pendingPersonIds.size,
     consistent: validateGraph(graph).ok,
@@ -91,8 +90,7 @@ function MapRecord({ client, userId }: { client: CardClient; userId: string }) {
           {preview.data && (
             <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-soft">
               <GitBranch size={16} aria-hidden />
-              {preview.data.persons.length}{" "}
-              {preview.data.persons.length === 1 ? "pessoa" : "pessoas"}
+              {preview.data.peopleCount} {preview.data.peopleCount === 1 ? "pessoa" : "pessoas"}
               {" · "}
               {preview.data.generations} {preview.data.generations === 1 ? "geração" : "gerações"}
               {preview.data.pending > 0
