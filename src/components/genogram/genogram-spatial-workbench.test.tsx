@@ -358,6 +358,66 @@ it.each([
   expect(peopleOnMap()).toEqual(initialPeople);
 });
 
+it("enquadra o cartão completo de um nome longo a 320 px sem mudar as gerações", () => {
+  const boardWidth = 267;
+  const boardHeight = 298;
+  const renderedHeight = 342;
+  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(boardWidth);
+  vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(boardHeight);
+  vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(function (
+    this: HTMLElement,
+  ) {
+    return this.hasAttribute("data-reading-card") ? renderedHeight : 0;
+  });
+  const family = consultanteFamily(8);
+  const furthest = family.persons.reduce((best, person) =>
+    person.full_name.length > best.full_name.length ? person : best,
+  );
+  const personId = furthest.id;
+  const { nodes, edges } = buildRenderGraph(family.persons, family.rels, family.probandId);
+  const layout = buildSpatialLayout(nodes, edges);
+  const camera = createRef<SpatialCameraHandle>();
+  render(
+    <GenogramSpatialView
+      workbench
+      nodes={nodes}
+      edges={edges}
+      cameraRef={camera}
+      onSelectPerson={vi.fn()}
+      selectedPersonId={personId}
+      focusRequest={{ personId }}
+    />,
+  );
+
+  const plaque = spatial().querySelector<HTMLButtonElement>(`[data-person-id="${personId}"]`)!;
+  expect(plaque.querySelector(".geno-spatial-person-name")?.textContent).toBe(furthest.full_name);
+  const view = camera.current!.read()!;
+  expect(view.readingCard).toEqual({ id: personId, height: renderedHeight });
+  const { y, height } = projectSpatialPeople(layout, view, {
+    id: personId,
+    height: renderedHeight,
+  }).people.find(({ id }) => id === personId)!;
+  const top = boardHeight / 2 + view.y + y * view.zoom;
+  const bottom = top + height * view.zoom;
+  expect(top).toBeGreaterThan(0);
+  expect(bottom).toBeLessThan(boardHeight);
+  expect(
+    Number.parseFloat(plaque.style.getPropertyValue("--plaque-name-size")) *
+      Number.parseFloat(plaque.style.getPropertyValue("--plaque-scale")),
+  ).toBeGreaterThanOrEqual(12);
+  const people = peopleOnMap();
+  expect(people).toHaveLength(515);
+  expect(
+    people
+      .filter(({ generation }) => generation === 0)
+      .map(({ name }) => name)
+      .sort(),
+  ).toEqual(["Consultante", "Irmã", "Irmão"]);
+  fireEvent.click(screen.getByRole("button", { name: "Árvore inteira em 3D" }));
+  expect(camera.current!.read()?.readingCard).toBeUndefined();
+  expect(peopleOnMap()).toEqual(people);
+});
+
 it("realinha a pessoa em leitura quando a ficha reduz o espaço do board", () => {
   const width = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(768);
   const height = vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(520);
@@ -365,10 +425,10 @@ it("realinha a pessoa em leitura quando a ficha reduz o espaço do board", () =>
   vi.stubGlobal(
     "ResizeObserver",
     class {
-      constructor(callback: () => void) {
-        resize = callback;
+      constructor(private readonly callback: () => void) {}
+      observe(element: Element) {
+        if (element.classList.contains("geno-spatial-viewport")) resize = this.callback;
       }
-      observe() {}
       disconnect() {}
     },
   );

@@ -36,10 +36,12 @@ const UNION_SEPARATION = 32;
 type SpatialPoint = SpatialPoint2D & { z: number };
 export type SpatialAngles = { yaw: number; pitch: number };
 export type SpatialBranch = "paternal" | "maternal" | "common";
+type MeasuredCard = { id: string; height: number };
 type SpatialLayoutOptions = {
   separateLinks?: boolean;
   expandedPersonId?: string | null;
   parentagePreview?: ParentagePreview | null;
+  measuredCard?: MeasuredCard;
 };
 
 type SpatialPerson = SpatialPoint & {
@@ -265,6 +267,7 @@ function reserveRail(rails: Map<string, Span[][]>, key: string, span: Span) {
 export function projectSpatialPeople(
   layout: ReturnType<typeof buildSpatialLayout>,
   angles: SpatialAngles,
+  measuredCard?: MeasuredCard,
 ) {
   const rows = new Map(
     layout.rows.map(([_, row]) => {
@@ -274,7 +277,8 @@ export function projectSpatialPeople(
           ...person,
           ...camera,
           width: SPATIAL_CARD_WIDTH * camera.scale,
-          height: person.height * camera.scale,
+          height:
+            (measuredCard?.id === person.id ? measuredCard.height : person.height) * camera.scale,
         };
       });
       const anchor = projected.findIndex((person) => person.data.is_proband);
@@ -303,9 +307,14 @@ export function projectSpatialLayout(
   layout: ReturnType<typeof buildSpatialLayout>,
   angles: SpatialAngles,
   selectedId?: string | null,
-  { separateLinks = false, expandedPersonId, parentagePreview }: SpatialLayoutOptions = {},
+  {
+    separateLinks = false,
+    expandedPersonId,
+    parentagePreview,
+    measuredCard,
+  }: SpatialLayoutOptions = {},
 ) {
-  const { people, rows } = projectSpatialPeople(layout, angles);
+  const { people, rows } = projectSpatialPeople(layout, angles, measuredCard);
   const peopleById = new Map(people.map((person) => [person.id, person]));
   const coordinatedUnions = layout.unions
     .filter((union) => !union.single && union.partners.includes(expandedPersonId ?? ""))

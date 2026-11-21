@@ -5,6 +5,7 @@ import {
   useEffect,
   useId,
   useImperativeHandle,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -99,10 +100,12 @@ type Frame = { width: number; height: number; controls: number };
 type Camera = SpatialAngles & { x: number; y: number; zoom: number };
 type Framing = "auto" | "panorama" | "reading";
 type FocusTarget = NonNullable<GenogramSpatialViewProps["focusRequest"]>;
+type ReadingCard = { id: string; height: number | null };
 export type SpatialCamera = Camera & {
   branch: MapBranch | null;
   familyFocusId: string | null;
   framing: Framing;
+  readingCard?: ReadingCard;
 };
 export type SpatialCameraHandle = {
   read: () => SpatialCamera | undefined;
@@ -188,15 +191,20 @@ const HEADER_SPACE = 10;
 const FAMILY_NAME_TARGET = 12;
 const PANORAMA_NAME_THRESHOLD = 10;
 const LARGE_TREE = 100;
+const MIN_PLAQUE_NAME_SIZE = 16;
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 function plaqueNameLimit(name: string) {
   const longestWord = name.split(/\s+/).reduce((length, word) => Math.max(length, word.length), 1);
-  return clamp(252 / longestWord, 16, SPATIAL_MAX_NAME_SIZE);
+  return clamp(252 / longestWord, MIN_PLAQUE_NAME_SIZE, SPATIAL_MAX_NAME_SIZE);
 }
 
 function plaqueNameSize(name: string, scale: number, family: boolean) {
-  return clamp((family ? FAMILY_NAME_TARGET : 10) / scale, 16, plaqueNameLimit(name));
+  return clamp(
+    (family ? FAMILY_NAME_TARGET : 10) / scale,
+    MIN_PLAQUE_NAME_SIZE,
+    plaqueNameLimit(name),
+  );
 }
 
 function confirmedFamilies(layout: Layout) {
@@ -327,8 +335,9 @@ function centerPerson(
 function fitPersonForReading(camera: Camera, person: ProjectedPerson, frame: Frame) {
   const availableWidth = Math.max(frame.width - FRAME_MARGIN * 2, 1);
   const availableHeight = Math.max(frame.height - frame.controls - FRAME_MARGIN * 2, 1);
-  const nameLimit = plaqueNameLimit(spatialPersonLabel(person.data).name);
-  const readableZoom = FAMILY_NAME_TARGET / (nameLimit * person.scale);
+  // At this scale the minimum font still reads at 12px, with more line width
+  // for long names than a smaller card using the largest world-space font.
+  const readableZoom = FAMILY_NAME_TARGET / (MIN_PLAQUE_NAME_SIZE * person.scale);
   const zoom = Math.min(
     Math.max(camera.zoom, 1.08 / person.scale),
     availableWidth / person.width,
@@ -338,6 +347,20 @@ function fitPersonForReading(camera: Camera, person: ProjectedPerson, frame: Fra
   const centered = centerPerson(camera, person, zoom, frame.controls);
   if (person.height * zoom <= availableHeight) return centered;
   return { ...centered, y: FRAME_MARGIN - frame.height / 2 - person.y * zoom };
+}
+
+function frameMeasuredCard(camera: Camera, person: ProjectedPerson, height: number, frame: Frame) {
+  const margin = Math.min(FRAME_MARGIN, frame.height * 0.04);
+  const availableHeight = Math.max(1, frame.height - frame.controls - HEADER_SPACE - 2 * margin);
+  const availableWidth = Math.max(1, frame.width - 2 * FRAME_MARGIN);
+  const zoom = Math.min(
+    Math.max(camera.zoom, 1.08 / person.scale),
+    availableWidth / person.width,
+    availableHeight / height,
+    MAX_ZOOM,
+  );
+  const next = centerPerson(camera, { ...person, height }, zoom, frame.controls);
+  return next.x === camera.x && next.y === camera.y && next.zoom === camera.zoom ? camera : next;
 }
 
 function zoomAt(camera: Camera, zoom: number, anchor: Pointer): Camera {
@@ -492,6 +515,7 @@ export function GenogramSpatialView({
   const [frame, setFrame] = useState<Frame>({ width: 0, height: 0, controls: 0 });
   const [spatialToolsOpen, setSpatialToolsOpen] = useState(false);
   const [manualCamera, setManualCamera] = useState<Camera | null>(null);
+  const [readingCard, setReadingCard] = useState<ReadingCard | null>(null);
   const [fitAngles, setFitAngles] = useState<SpatialAngles>(FRONT_ANGLES);
   const [localBranch, setLocalBranch] = useState<MapBranch | null>(null);
   const [familyFocusId, setFamilyFocusId] = useState<string | null>(null);
@@ -608,8 +632,19 @@ export function GenogramSpatialView({
         separateLinks,
         expandedPersonId,
         parentagePreview,
+        measuredCard: readingCard?.height
+          ? { id: readingCard.id, height: readingCard.height }
+          : undefined,
       }),
-    [layout, angles, selectedPersonId, separateLinks, expandedPersonId, parentagePreview],
+    [
+      layout,
+      angles,
+      selectedPersonId,
+      separateLinks,
+      expandedPersonId,
+      parentagePreview,
+      readingCard,
+    ],
   );
   const names = useMemo(
     () => display.people.map((person) => ({ person, ...spatialPersonLabel(person.data) })),
@@ -643,6 +678,7 @@ export function GenogramSpatialView({
   const fitAutomatically = useCallback(
     ({ yaw, pitch }: SpatialAngles) => {
       readingFocus.current = null;
+      setReadingCard(null);
       cancelCameraUpdates();
       setFitAngles((current) =>
         current.yaw === yaw && current.pitch === pitch
@@ -678,8 +714,22 @@ export function GenogramSpatialView({
     cameraRef,
     () => ({
       read: () =>
-        hasFrame ? { ...camera, branch, familyFocusId: scopedFamilyId, framing } : undefined,
-      restore: ({ branch: savedBranch, familyFocusId, framing, ...savedCamera }) => {
+        hasFrame
+          ? {
+              ...camera,
+              branch,
+              familyFocusId: scopedFamilyId,
+              framing,
+              readingCard: readingCard ?? undefined,
+            }
+          : undefined,
+      restore: ({
+        branch: savedBranch,
+        familyFocusId,
+        framing,
+        readingCard: savedCard,
+        ...savedCamera
+      }) => {
         // The workbench restores its controlled branch in the same update.
         // Keep that transition from overwriting the exact captured framing.
         readingFocus.current = null;
@@ -688,6 +738,7 @@ export function GenogramSpatialView({
         if (highlightedBranch === undefined) setLocalBranch(savedBranch);
         setFraming(framing);
         setFamilyFocusId(familyFocusId);
+        setReadingCard(savedCard ?? null);
         setManualCamera(savedCamera);
       },
       readAnchor: () => {
@@ -724,6 +775,7 @@ export function GenogramSpatialView({
       hasFrame,
       highlightedBranch,
       personById,
+      readingCard,
       scopedFamilyId,
       scopedIds,
       selectedPersonId,
@@ -778,6 +830,13 @@ export function GenogramSpatialView({
         const other = personById.get(id);
         return other && other !== person ? [other] : [];
       });
+      setReadingCard((current) =>
+        related.length
+          ? null
+          : current?.id === person.id
+            ? current
+            : { id: person.id, height: null },
+      );
       changeCamera((current) =>
         related.length
           ? fitProjectedPeople([person, ...related], frame, current)
@@ -802,6 +861,29 @@ export function GenogramSpatialView({
     if (previous && previous.frame !== frame) frameReadingTarget(previous.target);
   }, [focusRequest, frame, frameReadingTarget, hasFrame, personById]);
 
+  useLayoutEffect(() => {
+    const id = readingCard?.id;
+    const button = id && cardRefs.current.get(id);
+    const person = id && personById.get(id);
+    if (!hasFrame || !button || !person) return;
+    const measure = () => {
+      const height = button.offsetHeight;
+      if (!height) return;
+      // Only one plaque is measured. The same height keeps connector ends
+      // attached without changing any of the graph's generation positions.
+      setReadingCard((current) =>
+        current?.id === id && current.height !== height ? { id, height } : current,
+      );
+      if (readingFocus.current?.target.personId === id) {
+        changeCamera((current) => frameMeasuredCard(current, person, height * person.scale, frame));
+      }
+    };
+    const observer = new ResizeObserver(measure);
+    observer.observe(button, { box: "border-box" });
+    measure();
+    return () => observer.disconnect();
+  }, [changeCamera, frame, hasFrame, personById, readingCard?.id]);
+
   useEffect(() => {
     if (!focusedRelationshipId) {
       const previousId = lastRelationshipFocus.current;
@@ -824,6 +906,7 @@ export function GenogramSpatialView({
       : (union?.partners ?? [route.edge.source, route.edge.target]);
     lastRelationshipFocus.current = focusedRelationshipId;
     readingFocus.current = null;
+    setReadingCard(null);
     setChosenRoute(route.id);
     setChosenUnion(null);
     changeCamera((current) =>
@@ -856,6 +939,12 @@ export function GenogramSpatialView({
       fitAutomatically(angles);
       return;
     }
+    if (person.id === selectedPersonId && !focusedRelationshipId) {
+      readingFocus.current = { target: { personId: person.id }, frame };
+      setReadingCard((current) =>
+        current?.id === person.id ? current : { id: person.id, height: null },
+      );
+    }
     changeCamera((current) => {
       const fitted = fitProjectedPeople(display.people, frame, current);
       const zoom = clamp(
@@ -877,9 +966,11 @@ export function GenogramSpatialView({
     changeCamera,
     display.people,
     fitAutomatically,
+    focusedRelationshipId,
     frame,
     hasFrame,
     minZoom,
+    selectedPersonId,
     viewAnchor,
   ]);
 
@@ -1235,6 +1326,7 @@ export function GenogramSpatialView({
         : undefined;
   const focusRoute = (route: SpatialRoute) => {
     readingFocus.current = null;
+    setReadingCard(null);
     const ids = new Set(peopleOnRoute(route, unionById));
     changeCamera((current) =>
       fitProjectedPeople(
@@ -1440,8 +1532,10 @@ export function GenogramSpatialView({
         const birth = formatDateBR(data.birth_date);
         const death = formatDateBR(data.death_date);
         const plaqueScale = person.scale * plaqueZoom;
+        const isReadingCard = readingCard?.id === person.id;
         const readName =
           reading ||
+          isReadingCard ||
           person.id === selectedPersonId ||
           person.id === tabPersonId ||
           (!!scopedFamilyId && !!scopedIds?.has(person.id));
@@ -1494,11 +1588,12 @@ export function GenogramSpatialView({
                 left: person.x,
                 top: person.y,
                 "--plaque-width": `${SPATIAL_CARD_WIDTH}px`,
-                "--plaque-height": `${person.height / person.scale}px`,
+                "--plaque-height": `${isReadingCard ? SPATIAL_CARD_HEIGHT : person.height / person.scale}px`,
                 "--plaque-scale": plaqueScale,
                 "--person-scale": person.scale,
-                "--plaque-name-size": `${plaqueNameSize(name, plaqueScale, readName)}px`,
-                "--plaque-role-size": `${clamp(8 / plaqueScale, 14, SPATIAL_MAX_ROLE_SIZE)}px`,
+                // Keep the measured plaque's typography independent of its camera fit.
+                "--plaque-name-size": `${isReadingCard ? MIN_PLAQUE_NAME_SIZE : plaqueNameSize(name, plaqueScale, readName)}px`,
+                "--plaque-role-size": `${isReadingCard ? 14 : clamp(8 / plaqueScale, 14, SPATIAL_MAX_ROLE_SIZE)}px`,
                 "--depth-x": `${-16 * Math.sin(angles.yaw)}px`,
                 "--depth-y": `${9 * Math.sin(angles.pitch)}px`,
               } as CSSProperties
@@ -1506,6 +1601,7 @@ export function GenogramSpatialView({
             aria-pressed={person.id === selectedPersonId}
             aria-label={label}
             data-reference={data.is_proband || undefined}
+            data-reading-card={isReadingCard || undefined}
             data-branch={person.branch}
             data-branch-muted={
               (!!scopedIds && !scopedIds.has(person.id) && !parentageRole) || undefined
@@ -1516,7 +1612,7 @@ export function GenogramSpatialView({
             data-connecting={person.id === connectionOriginId || undefined}
             title={compact ? name : undefined}
           >
-            {compact ? (
+            {compact && !isReadingCard ? (
               <span
                 className="geno-spatial-person-mark"
                 data-symbol={personSymbol(data)}
@@ -1544,6 +1640,7 @@ export function GenogramSpatialView({
       parentagePreview,
       plaqueZoom,
       reading,
+      readingCard?.id,
       scopedFamilyId,
       scopedIds,
       selectedPersonId,

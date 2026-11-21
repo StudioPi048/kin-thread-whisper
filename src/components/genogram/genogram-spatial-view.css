@@ -290,7 +290,7 @@
   text-align: left;
 }
 
-.geno-spatial-viewport[data-compact-panorama] .geno-spatial-person {
+.geno-spatial-viewport[data-compact-panorama] .geno-spatial-person:not([data-reading-card]) {
   grid-template-columns: 1fr;
   place-items: center;
   box-shadow: none;
@@ -302,7 +302,9 @@
   background: var(--gold-soft);
 }
 
-.geno-spatial-viewport[data-compact-panorama] .geno-spatial-person-label {
+.geno-spatial-viewport[data-compact-panorama]
+  .geno-spatial-person:not([data-reading-card])
+  .geno-spatial-person-label {
   position: absolute;
   width: 1px;
   height: 1px;
