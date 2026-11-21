@@ -1,4 +1,5 @@
-import { Crosshair, Focus, MapPinned } from "lucide-react";
+import { useState } from "react";
+import { Crosshair, MapPinned } from "lucide-react";
 import { getNodesBounds, type Node } from "@xyflow/react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -12,33 +13,18 @@ export function MapNavigator({
   nodes,
   focusId,
   branch,
-  showScopes = true,
   onBranch,
   onLocate,
-  onFit,
 }: {
-  nodes: Node[];
+  nodes: readonly Node[];
   focusId?: string;
   branch: MapBranch | null;
-  showScopes?: boolean;
   onBranch: (branch: MapBranch | null) => void;
   onLocate: (id: string) => void;
-  onFit: () => void;
 }) {
-  const people = nodes.filter((node) => node.type === "person");
-  const bounds = getNodesBounds(people);
-  const generations = new Map<number, Node>();
-  for (const node of people) {
-    const generation = Number(node.data.generation);
-    const previous = generations.get(generation);
-    const middle = bounds.x + bounds.width / 2;
-    if (!previous || Math.abs(node.position.x - middle) < Math.abs(previous.position.x - middle)) {
-      generations.set(generation, node);
-    }
-  }
-
+  const [open, setOpen] = useState(false);
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -50,63 +36,127 @@ export function MapNavigator({
           <MapPinned className="size-4" aria-hidden />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="geno-map-navigator" align="start">
-        <h3>Panorama da família</h3>
-        <div className="geno-map-navigator-plot" aria-hidden="true">
-          {people.map((node) => {
-            const data = node.data as PersonNodeData;
-            return (
-              <span
-                key={node.id}
-                data-current={node.id === focusId || undefined}
-                data-muted={(!!branch && data.branchId !== branch && !data.is_proband) || undefined}
-                data-branch={String(data.branchId)}
-                style={{
-                  left: `${6 + (88 * (node.position.x - bounds.x)) / Math.max(1, bounds.width)}%`,
-                  top: `${9 + (82 * (node.position.y - bounds.y)) / Math.max(1, bounds.height)}%`,
-                }}
-              />
-            );
-          })}
-        </div>
-        {showScopes && (
-          <div className="geno-map-navigator-actions">
-            <Button type="button" size="sm" variant="outline" onClick={onFit}>
-              <Focus className="size-4" aria-hidden /> Árvore inteira
+      <PopoverContent
+        className="geno-map-navigator"
+        align="end"
+        collisionPadding={8}
+        aria-label="Panorama da família"
+      >
+        <MapNavigatorContent
+          nodes={nodes}
+          focusId={focusId}
+          branch={branch}
+          onBranch={(next) => {
+            setOpen(false);
+            onBranch(next);
+          }}
+          onLocate={(id) => {
+            setOpen(false);
+            onLocate(id);
+          }}
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function MapNavigatorContent({
+  nodes,
+  focusId,
+  branch,
+  onBranch,
+  onLocate,
+}: {
+  nodes: readonly Node[];
+  focusId?: string;
+  branch: MapBranch | null;
+  onBranch: (branch: MapBranch | null) => void;
+  onLocate: (id: string) => void;
+}) {
+  const people = nodes.filter((node) => node.type === "person");
+  const bounds = getNodesBounds(people);
+  const generations = new Map<string, { level: number; people: Node[] }>();
+  const inScope = people.filter(
+    (node) => !branch || node.data.branchId === branch || node.data.is_proband,
+  );
+  for (const node of inScope) {
+    const level = Number(node.data.generation);
+    const title = generationTitle(level, node.data.lane);
+    const generation = generations.get(title);
+    if (generation) generation.people.push(node);
+    else generations.set(title, { level, people: [node] });
+  }
+  const centerX = (node: Node) => node.position.x + (node.measured?.width ?? node.width ?? 0) / 2;
+
+  return (
+    <>
+      <h3>
+        Panorama da família
+        <small>
+          {people.length} {people.length === 1 ? "familiar" : "familiares"}
+        </small>
+      </h3>
+      <div
+        className="geno-map-navigator-plot"
+        data-dense={people.length > 100 || undefined}
+        aria-hidden="true"
+      >
+        {people.map((node) => {
+          const data = node.data as PersonNodeData;
+          return (
+            <span
+              key={node.id}
+              data-current={node.id === focusId || undefined}
+              data-muted={(!!branch && data.branchId !== branch && !data.is_proband) || undefined}
+              data-branch={String(data.branchId)}
+              data-reference={data.is_proband || undefined}
+              style={{
+                left: `${6 + (88 * (centerX(node) - bounds.x)) / Math.max(1, bounds.width)}%`,
+                top: `${9 + (82 * (node.position.y - bounds.y)) / Math.max(1, bounds.height)}%`,
+              }}
+            />
+          );
+        })}
+      </div>
+      <div className="geno-map-navigator-actions">
+        {branches
+          .filter((item) => people.some((node) => node.data.branchId === item))
+          .map((item) => (
+            <Button
+              key={item}
+              type="button"
+              size="sm"
+              variant={branch === item ? "forest" : "outline"}
+              aria-pressed={branch === item}
+              onClick={() => onBranch(branch === item ? null : item)}
+            >
+              {mapBranchNames[item]}
             </Button>
-            {branches
-              .filter((item) => people.some((node) => node.data.branchId === item))
-              .map((item) => (
-                <Button
-                  key={item}
-                  type="button"
-                  size="sm"
-                  variant={branch === item ? "forest" : "outline"}
-                  aria-pressed={branch === item}
-                  onClick={() => onBranch(branch === item ? null : item)}
-                >
-                  {mapBranchNames[item]}
-                </Button>
-              ))}
-          </div>
-        )}
-        <div className="geno-map-navigator-generations">
-          {[...generations]
-            .sort(([first], [second]) => first - second)
-            .map(([generation, node]) => (
+          ))}
+      </div>
+      <div className="geno-map-navigator-generations">
+        {[...generations]
+          .sort(([, first], [, second]) => first.level - second.level)
+          .map(([title, { people: row }]) => {
+            const { x, width } = getNodesBounds(row);
+            const distance = (node: Node) => Math.abs(centerX(node) - (x + width / 2));
+            const person =
+              row.find((node) => node.data.is_proband) ??
+              row.reduce((best, next) => (distance(next) < distance(best) ? next : best));
+            return (
               <Button
-                key={generation}
+                key={title}
                 type="button"
                 size="sm"
                 variant="ghost"
-                onClick={() => onLocate(node.id)}
+                onClick={() => onLocate(person.id)}
               >
-                <Crosshair className="size-4" aria-hidden />{" "}
-                {generationTitle(generation, node.data.lane)}
+                <Crosshair className="size-4" aria-hidden /> {title}
+                <small>{row.length}</small>
               </Button>
-            ))}
-        </div>
-      </PopoverContent>
-    </Popover>
+            );
+          })}
+      </div>
+    </>
   );
 }

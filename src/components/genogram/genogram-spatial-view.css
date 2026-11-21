@@ -94,7 +94,8 @@
 }
 
 .geno-spatial-viewport[data-touch-navigation],
-.geno-spatial-viewport[data-moving-person] {
+.geno-spatial-viewport[data-moving-person],
+.geno-editor-expanded .geno-spatial-viewport {
   touch-action: none;
 }
 
@@ -117,6 +118,10 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
+}
+
+.geno-spatial-people {
+  transform-origin: top left;
 }
 
 .geno-spatial-guide {
@@ -272,7 +277,7 @@
   width: var(--plaque-width);
   min-height: var(--plaque-height);
   padding: 11px 12px 11px 7px;
-  transform: scale(var(--plaque-scale)) translateX(-50%);
+  transform: translateX(var(--move-preview-x, 0px)) scale(var(--person-scale)) translateX(-50%);
   transform-origin: top left;
   border: 1px solid var(--input);
   border-radius: 10px;
@@ -283,6 +288,60 @@
   cursor: pointer;
   pointer-events: auto;
   text-align: left;
+}
+
+.geno-spatial-viewport[data-compact-panorama] .geno-spatial-person {
+  grid-template-columns: 1fr;
+  place-items: center;
+  box-shadow: none;
+  padding: 0;
+  background: var(--branch-material, var(--forest-mist));
+}
+
+.geno-spatial-viewport[data-compact-panorama] .geno-spatial-person[data-reference] {
+  background: var(--gold-soft);
+}
+
+.geno-spatial-viewport[data-compact-panorama] .geno-spatial-person-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.geno-spatial-person-mark {
+  width: 26px;
+  height: 26px;
+  background: var(--branch-ink, var(--forest));
+}
+
+.geno-spatial-person-mark[data-symbol="feminino"] {
+  border-radius: 50%;
+}
+
+.geno-spatial-person-mark[data-symbol="aborto"] {
+  clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+}
+
+.geno-spatial-person-mark[data-symbol="outro"] {
+  transform: rotate(45deg);
+}
+
+.geno-spatial-viewport[data-compact-panorama] .geno-spatial-link {
+  stroke-width: 0.85;
+}
+
+.geno-spatial-viewport[data-compact-panorama] .geno-spatial-link-current {
+  stroke-width: 1.6;
+}
+
+.geno-spatial-viewport[data-compact-panorama] .geno-spatial-link-hit {
+  pointer-events: none;
+}
+
+.geno-spatial-viewport[data-compact-panorama] .geno-spatial-ruler {
+  display: none;
 }
 
 .geno-spatial-person[data-branch="paternal"],

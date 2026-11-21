@@ -3,6 +3,7 @@ export type MapViewAnchor = {
   horizontal: number;
   vertical: number;
   scale: number;
+  personWidth?: number;
   overview?: boolean;
 };
 

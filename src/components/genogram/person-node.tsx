@@ -1,6 +1,6 @@
 import { personSymbol } from "./person-symbol";
 import { memo } from "react";
-import { Handle, Position, useStore, type NodeProps } from "@xyflow/react";
+import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { Plus } from "lucide-react";
 import {
   DropdownMenu,
@@ -26,6 +26,7 @@ export interface PersonNodeData {
   relationship_to_proband?: string | null;
   connecting?: boolean;
   connectionOrigin?: boolean;
+  keyboardReachable?: boolean;
   onChooseConnection?: () => void;
   onQuickAdd?: (relativeType: string) => void;
   [key: string]: unknown;
@@ -33,8 +34,6 @@ export interface PersonNodeData {
 
 function PersonNodeComponent({ data, selected }: NodeProps) {
   const d = data as unknown as PersonNodeData;
-  const zoom = useStore((store) => store.transform[2]);
-  const overview = zoom < 0.72;
   const gender = personSymbol(d);
   const isMale = gender === "masculino";
   const isFemale = gender === "feminino";
@@ -50,7 +49,7 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
     .split(/\s+/)
     .reduce((length, word) => Math.max(length, word.length), 1);
   // Aperte a fonte de palavras longas antes de recorrer à quebra de sobrenomes.
-  const nameSize = Math.max(16, Math.min(28, 211 / longestWord, 12 / Math.max(zoom, 0.15)));
+  const nameSize = Math.max(15, Math.min(22, 211 / longestWord));
   const dates = personDatesLabel(d.birth_date, d.death_date);
 
   return (
@@ -112,6 +111,7 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
                   className="size-7 rounded-full border-2 border-white shadow-dossier [&_svg]:size-3.5"
                   title="Adicionar parente"
                   aria-label="Adicionar parente"
+                  tabIndex={d.keyboardReachable === false ? -1 : undefined}
                   onClick={(e) => e.stopPropagation()}
                 >
                   <Plus />
@@ -237,16 +237,14 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
         />
       </div>
 
-      <div
-        className="atlas-person-info"
-        style={overview ? { minHeight: 46, paddingInline: 5 } : undefined}
-      >
+      <div className="atlas-person-info">
         {d.connecting && (
           <button
             type="button"
             className="nodrag nopan absolute inset-0 rounded-[inherit] focus-visible:ring-2 focus-visible:ring-forest"
             aria-label={`Escolher ${displayName} para vínculo`}
             aria-pressed={d.connectionOrigin}
+            tabIndex={d.keyboardReachable === false ? -1 : undefined}
             onClick={(event) => {
               event.stopPropagation();
               d.onChooseConnection?.();
@@ -260,9 +258,9 @@ function PersonNodeComponent({ data, selected }: NodeProps) {
         >
           {displayName}
         </p>
-        {!overview && dates && <p className="atlas-person-dates tabular-nums">{dates}</p>}
-        {!overview && d.is_proband && displayName.toLocaleLowerCase("pt-BR") !== "consultante" && (
-          <span className="text-xs text-bronze">Consultante</span>
+        {dates && <p className="atlas-person-dates tabular-nums">{dates}</p>}
+        {d.is_proband && displayName.toLocaleLowerCase("pt-BR") !== "consultante" && (
+          <span className="geno-person-role text-xs text-bronze">Consultante</span>
         )}
       </div>
     </div>

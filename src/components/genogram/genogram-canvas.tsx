@@ -13,7 +13,6 @@ import {
   Suspense,
   useCallback,
   useEffect,
-  useId,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -23,16 +22,17 @@ import {
   Background,
   BackgroundVariant,
   BaseEdge,
+  ControlButton,
   Controls,
   ReactFlow,
   ReactFlowProvider,
   ViewportPortal,
   useEdgesState,
+  useNodesInitialized,
   useNodesState,
   useReactFlow,
   useStore,
   useUpdateNodeInternals,
-  getNodesBounds,
   getViewportForBounds,
   type Connection,
   type Edge,
@@ -71,9 +71,10 @@ import {
   Crosshair,
   Box,
   Focus,
+  Plus,
+  Minus,
   Ellipsis,
   GitBranch,
-  Search,
   ScanText,
   PanelRightClose,
   PanelRightOpen,
@@ -135,6 +136,7 @@ import {
 } from "./map-view-context";
 import { buildRenderGraph } from "./render-graph";
 import { MapNavigator } from "./map-navigator";
+import { MapPersonSearch } from "./map-person-search";
 import type { SpatialCamera, SpatialCameraHandle } from "./genogram-spatial-view";
 import {
   parentageSources,
@@ -197,8 +199,11 @@ const personName = (person?: PersonRow) =>
  * com a linha do casal.
  */
 const UNION_SIZE = 12;
-const MAP_OVERVIEW_PADDING = 0.11;
+const MAP_OVERVIEW_PADDING = { top: "64px", bottom: "20px", x: "18px" } as const;
 const MAP_MIN_ZOOM = 0.0001;
+const MAP_MAX_ZOOM = 2.5;
+const MAP_READING_ZOOM = 1.1;
+type MapFrame2D = { ids?: ReadonlySet<string> };
 const UnionNodeComponent = ({ data }: NodeProps) => {
   const d =
     (data as { label?: string; kind?: string; isSingle?: boolean; focused?: boolean }) ?? {};
@@ -211,7 +216,7 @@ const UnionNodeComponent = ({ data }: NodeProps) => {
       {d.label && (
         <div
           className={cn(
-            "absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-card/95 px-1.5 py-0.5 text-[14px] font-bold uppercase tracking-[0.08em] text-forest shadow-sm",
+            "geno-union-label absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-card/95 px-1.5 py-0.5 text-[14px] font-bold uppercase tracking-[0.08em] text-forest shadow-sm",
             d.focused && "ring-2 ring-forest",
           )}
           style={{ top: -22 }}
@@ -414,6 +419,72 @@ function nodeBottomY(node: Node | undefined): number {
   return node.position.y + measured;
 }
 
+function personBounds(people: readonly Node[]) {
+  let left = Infinity;
+  let right = -Infinity;
+  let top = Infinity;
+  let bottom = -Infinity;
+  for (const person of people) {
+    const width = person.measured?.width ?? person.width ?? NODE_W;
+    left = Math.min(left, person.position.x);
+    right = Math.max(right, person.position.x + width);
+    top = Math.min(top, person.position.y);
+    bottom = Math.max(bottom, nodeBottomY(person));
+  }
+  return { x: left, y: top, width: right - left, height: bottom - top };
+}
+
+function personViewport(
+  person: Node,
+  width: number,
+  height: number,
+  requestedZoom: number,
+  horizontal = 0.5,
+  vertical = 0.5,
+): Viewport {
+  const worldWidth = person.measured?.width ?? person.width ?? NODE_W;
+  const worldHeight = nodeBottomY(person) - person.position.y;
+  const marginX = Math.min(18, width / 10);
+  const marginY = Math.min(18, height / 10);
+  const zoom = Math.max(
+    MAP_MIN_ZOOM,
+    Math.min(
+      requestedZoom,
+      MAP_MAX_ZOOM,
+      (width - marginX * 2) / worldWidth,
+      (height - marginY * 2) / worldHeight,
+    ),
+  );
+  const halfWidth = (worldWidth * zoom) / 2;
+  const halfHeight = (worldHeight * zoom) / 2;
+  const x = Math.max(
+    marginX + halfWidth,
+    Math.min(width - marginX - halfWidth, width * horizontal),
+  );
+  const y = Math.max(
+    marginY + halfHeight,
+    Math.min(height - marginY - halfHeight, height * vertical),
+  );
+  return {
+    x: x - nodeCenterX(person) * zoom,
+    y: y - (person.position.y + worldHeight / 2) * zoom,
+    zoom,
+  };
+}
+
+function mapMotionDuration(duration: number) {
+  if (
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
+    document.documentElement.dataset.reduceMotion === "true"
+  )
+    return 0;
+  return duration;
+}
+
+function sameNodes(previous: readonly unknown[], next: readonly unknown[]) {
+  return previous.length === next.length && previous.every((node, i) => node === next[i]);
+}
+
 function nodeUnionY(node: Node | undefined): number {
   if (!node) return 0;
   return node.position.y + nodeShapeSize(node) / 2;
@@ -474,29 +545,42 @@ function PedigreeEdge({ style, markerEnd, markerStart, interactionWidth, data }:
     | (PedigreeData & { unionId?: string; childIds?: string[]; direction?: "up" | "down" })
     | undefined;
   const unionId = edgeData?.unionId;
-  const childIds = edgeData?.childIds ?? [];
-  const live = useStore((store) => {
-    const children = childIds
-      .map((id) => store.nodeLookup.get(id) as unknown as Node | undefined)
-      .filter((node): node is Node => Boolean(node));
-    const union = unionId
-      ? (store.nodeLookup.get(unionId) as unknown as Node | undefined)
-      : undefined;
-    return { children, union, lookup: store.nodeLookup };
-  });
-
-  if (!live.union || !live.children.length) return null;
+  const childIds = edgeData?.childIds;
+  const parentIds = useMemo(
+    () => [
+      ...new Set(
+        Object.values(edgeData?.parentsByChild ?? {}).flatMap((links) =>
+          links.map(({ personId }) => personId),
+        ),
+      ),
+    ],
+    [edgeData?.parentsByChild],
+  );
+  // Compare only the nodes this path follows so that pan and zoom don't reroute it.
+  const nodePositions = useStore(
+    (store) => [
+      unionId ? store.nodeLookup.get(unionId) : undefined,
+      ...(childIds ?? []).map((id) => store.nodeLookup.get(id)),
+      ...parentIds.map((id) => store.nodeLookup.get(id)),
+    ],
+    sameNodes,
+  );
+  const union = nodePositions[0];
+  const childCount = childIds?.length ?? 0;
+  const children = nodePositions.slice(1, 1 + childCount).filter((node) => node !== undefined);
+  const parents = nodePositions.slice(1 + childCount);
+  if (!union || !children.length) return null;
   const down = edgeData?.direction === "down";
-  return groupPedigreeChildren(live.children, (node) => node.position.y, edgeData).map(
+  return groupPedigreeChildren(children, (node) => node.position.y, edgeData).map(
     (group, index) => {
-      const parent = group.parentId ? live.lookup.get(group.parentId) : undefined;
-      const unionX = parent ? nodeCenterX(parent) : live.union!.position.x;
+      const parent = group.parentId ? parents[parentIds.indexOf(group.parentId)] : undefined;
+      const unionX = parent ? nodeCenterX(parent) : union.position.x;
       const unionY = parent
         ? down
           ? nodeBottomY(parent) + 5
           : parent.position.y - 5
-        : live.union!.position.y;
-      const portOffset = parent ? (unionX < live.union!.position.x ? -6 : 6) : 0;
+        : union.position.y;
+      const portOffset = parent ? (unionX < union.position.x ? -6 : 6) : 0;
       const points = group.children.map((node) => ({
         x: nodeCenterX(node) + portOffset,
         y: down ? node.position.y - 5 : nodeBottomY(node) + 5,
@@ -543,21 +627,20 @@ function PedigreeEdge({ style, markerEnd, markerStart, interactionWidth, data }:
  */
 function PartnerEdge({ style, interactionWidth, data }: EdgeProps) {
   const edgeData = data as { personId?: string; unionId?: string } | undefined;
-  const live = useStore((store) => ({
-    person: edgeData?.personId
-      ? (store.nodeLookup.get(edgeData.personId) as unknown as Node | undefined)
-      : undefined,
-    union: edgeData?.unionId
-      ? (store.nodeLookup.get(edgeData.unionId) as unknown as Node | undefined)
-      : undefined,
-  }));
-  if (!live.person || !live.union) return null;
-  const px = nodeCenterX(live.person);
-  const py = nodeUnionY(live.person);
-  const ux = live.union.position.x;
-  const uy = live.union.position.y;
+  const [person, union] = useStore(
+    (store) => [
+      edgeData?.personId ? store.nodeLookup.get(edgeData.personId) : undefined,
+      edgeData?.unionId ? store.nodeLookup.get(edgeData.unionId) : undefined,
+    ],
+    sameNodes,
+  );
+  if (!person || !union) return null;
+  const px = nodeCenterX(person);
+  const py = nodeUnionY(person);
+  const ux = union.position.x;
+  const uy = union.position.y;
 
-  const shapeSize = nodeShapeSize(live.person);
+  const shapeSize = nodeShapeSize(person);
   const R = shapeSize / 2;
   const safeGap = 2;
 
@@ -566,7 +649,7 @@ function PartnerEdge({ style, interactionWidth, data }: EdgeProps) {
     const startX = px < ux ? px + R + safeGap : px - R - safeGap;
     path = `M ${startX} ${uy} L ${ux} ${uy}`;
   } else {
-    const startY = py < uy ? nodeBottomY(live.person) + safeGap : py - R - safeGap;
+    const startY = py < uy ? nodeBottomY(person) + safeGap : py - R - safeGap;
     path = `M ${px} ${startY} L ${px} ${uy} L ${ux} ${uy}`;
   }
 
@@ -742,12 +825,16 @@ function GenogramCanvasInner({
     source: ParentageSource;
   } | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+  const plane2DRef = useRef<HTMLDivElement>(null);
+  const mapFrame2D = useRef<MapFrame2D | null>({});
+  const cameraSize2D = useRef({ width: 0, height: 0 });
+  const pendingPerson2D = useRef<{ id: string; zoom: number } | null>(null);
   const reviewTriggerRef = useRef<HTMLElement | null>(null);
   const reviewEditTriggerRef = useRef<HTMLButtonElement | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
-  const locateId = useId();
   const reviewMapContext = useRef<{
     viewport: Viewport;
+    frame: MapFrame2D | null;
     anchor?: MapViewAnchor;
     spatialCamera?: SpatialCamera;
     branch: MapBranch | null;
@@ -766,7 +853,7 @@ function GenogramCanvasInner({
     setLayoutDirty(true);
     setDirtyTick((t) => t + 1);
   }, [data?.layout]);
-  const isMobile = useIsMobile();
+  const usesInspectorSheet = useIsMobile(900);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [userId, setUserId] = useState<string>("");
@@ -804,6 +891,7 @@ function GenogramCanvasInner({
     setIsLayoutFixed(data?.layout?.is_fixed ?? false);
   }, [data?.layout?.is_fixed]);
   const rfInstance = useReactFlow();
+  const nodesMeasured = useNodesInitialized();
   const connecting = connection !== null;
   const previousConnecting = useRef(connecting);
   const updateNodeInternals = useUpdateNodeInternals();
@@ -817,11 +905,15 @@ function GenogramCanvasInner({
   }, [connecting, rfInstance, updateNodeInternals]);
 
   const fitViewport2D = useCallback(
-    (width: number, height: number) => {
-      const people = rfInstance.getNodes().filter((node) => node.type === "person");
-      if (!width || !height || !people.length) return;
+    (width: number, height: number, ids?: ReadonlySet<string>) => {
+      if (!width || !height) return;
+      const people = rfInstance
+        .getNodes()
+        .filter((node) => node.type === "person" && (!ids || ids.has(node.id)))
+        .map((node) => rfInstance.getInternalNode(node.id) ?? node);
+      if (!people.length) return;
       return getViewportForBounds(
-        getNodesBounds(people),
+        personBounds(people),
         width,
         height,
         MAP_MIN_ZOOM,
@@ -832,30 +924,70 @@ function GenogramCanvasInner({
     [rfInstance],
   );
 
+  const fitPeople2D = useCallback(
+    (ids?: ReadonlySet<string>) => {
+      const stage = stageRef.current;
+      if (!stage || !rfInstance.viewportInitialized) return false;
+      const { clientWidth: width, clientHeight: height } = stage;
+      const fitted = fitViewport2D(width, height, ids);
+      if (!fitted) return false;
+      pendingPerson2D.current = null;
+      mapFrame2D.current = { ids };
+      cameraSize2D.current = { width, height };
+      void rfInstance.setViewport(fitted);
+      return true;
+    },
+    [fitViewport2D, rfInstance],
+  );
+
+  const placePendingPerson2D = useCallback(() => {
+    const requested = pendingPerson2D.current;
+    const stage = stageRef.current;
+    const node = requested && rfInstance.getInternalNode(requested.id);
+    if (!stage || !requested || !node || !rfInstance.viewportInitialized) return;
+    const { clientWidth: width, clientHeight: height } = stage;
+    if (!width || !height) return;
+    const zoom = Math.max(requested.zoom, rfInstance.getZoom());
+    pendingPerson2D.current = null;
+    mapFrame2D.current = null;
+    const resized = width !== cameraSize2D.current.width || height !== cameraSize2D.current.height;
+    cameraSize2D.current = { width, height };
+    void rfInstance.setViewport(personViewport(node, width, height, zoom), {
+      duration: resized ? 0 : mapMotionDuration(200),
+    });
+  }, [rfInstance]);
+
+  const framePerson2D = useCallback(
+    (id: string, zoom = MAP_READING_ZOOM) => {
+      pendingPerson2D.current = { id, zoom };
+      requestAnimationFrame(placePendingPerson2D);
+    },
+    [placePendingPerson2D],
+  );
+
   useEffect(() => {
     const stage = stageRef.current;
     if (!stage) return;
-    let width = stage.clientWidth;
-    let height = stage.clientHeight;
     const observer = new ResizeObserver(() => {
-      const nextWidth = stage.clientWidth;
-      const nextHeight = stage.clientHeight;
-      if (nextWidth === width && nextHeight === height) return;
-      const previousFit = fitViewport2D(width, height);
-      width = nextWidth;
-      height = nextHeight;
-      if (!previousFit) return;
+      if (!rfInstance.viewportInitialized) return;
+      const { width, height } = cameraSize2D.current;
+      const { clientWidth: nextWidth, clientHeight: nextHeight } = stage;
+      if (!nextWidth || !nextHeight || (nextWidth === width && nextHeight === height)) return;
+      if (pendingPerson2D.current) return;
+      const frame = mapFrame2D.current;
+      if (frame && fitPeople2D(frame.ids)) return;
+      cameraSize2D.current = { width: nextWidth, height: nextHeight };
+      if (!width || !height) return;
       const viewport = rfInstance.getViewport();
-      const stillInOverview =
-        Math.abs(viewport.x - previousFit.x) < 9 &&
-        Math.abs(viewport.y - previousFit.y) < 9 &&
-        Math.abs(viewport.zoom / previousFit.zoom - 1) < 0.06;
-      const nextFit = stillInOverview && fitViewport2D(width, height);
-      if (nextFit) void rfInstance.setViewport(nextFit);
+      void rfInstance.setViewport({
+        x: viewport.x + (nextWidth - width) / 2,
+        y: viewport.y + (nextHeight - height) / 2,
+        zoom: viewport.zoom,
+      });
     });
     observer.observe(stage);
     return () => observer.disconnect();
-  }, [fitViewport2D, rfInstance]);
+  }, [fitPeople2D, rfInstance]);
 
   function readAnchor2D() {
     const stage = stageRef.current;
@@ -882,7 +1014,7 @@ function GenogramCanvasInner({
       Math.abs(viewport.x - fitted.x) < width * 0.035 &&
       Math.abs(viewport.y - fitted.y) < height * 0.035 &&
       Math.abs(viewport.zoom / fitted.zoom - 1) < 0.06;
-    return anchor ? { ...anchor, overview } : undefined;
+    return anchor ? { ...anchor, overview, personWidth: NODE_W * viewport.zoom } : undefined;
   }
 
   function switchMap(next: "2d" | "3d") {
@@ -892,20 +1024,21 @@ function GenogramCanvasInner({
       setHasOpenedSpatial(true);
     } else {
       const anchor = spatialCameraRef.current?.readAnchor();
-      const node = anchor && rfInstance.getNode(anchor.personId);
+      const node = anchor && rfInstance.getInternalNode(anchor.personId);
       const stage = stageRef.current;
       if (anchor && node && stage) {
         const { clientWidth: width, clientHeight: height } = stage;
-        const fitted = fitViewport2D(width, height);
-        if (fitted && anchor.overview) {
-          void rfInstance.setViewport(fitted);
-        } else if (fitted) {
-          const zoom = Math.min(2.5, Math.max(MAP_MIN_ZOOM, fitted.zoom * anchor.scale));
-          void rfInstance.setViewport({
-            x: width * anchor.horizontal - nodeCenterX(node) * zoom,
-            y: height * anchor.vertical - ((node.position.y + nodeBottomY(node)) / 2) * zoom,
-            zoom,
-          });
+        if (anchor.overview) fitPeople2D();
+        else {
+          const fitted = fitViewport2D(width, height);
+          const scale = anchor.personWidth
+            ? anchor.personWidth / NODE_W
+            : (fitted?.zoom ?? 1) * anchor.scale;
+          mapFrame2D.current = null;
+          cameraSize2D.current = { width, height };
+          void rfInstance.setViewport(
+            personViewport(node, width, height, scale, anchor.horizontal, anchor.vertical),
+          );
         }
       }
     }
@@ -924,16 +1057,22 @@ function GenogramCanvasInner({
     setMapBranch(previous.branch);
     if (previous.spatialCamera) spatialCameraRef.current?.restore(previous.spatialCamera);
     else if (view === "3d") setSpatialAnchor(previous.anchor);
-    requestAnimationFrame(() => void rfInstance.setViewport(previous.viewport));
+    mapFrame2D.current = previous.frame;
+    pendingPerson2D.current = null;
+    requestAnimationFrame(() => {
+      if (!previous.frame || !fitPeople2D(previous.frame.ids))
+        void rfInstance.setViewport(previous.viewport);
+    });
   }
   const openPerson = useCallback(
     (id: string) => {
       setFocusedRelationshipId(null);
       setFocusedPersonId(id);
       setPanelOpen(true);
-      if (isMobile) setMobileSheetOpen(true);
+      if (view === "2d" && (!panelOpen || rfInstance.getZoom() < 0.55)) framePerson2D(id);
+      if (usesInspectorSheet) setMobileSheetOpen(true);
     },
-    [isMobile],
+    [framePerson2D, usesInspectorSheet, panelOpen, rfInstance, view],
   );
 
   const locatePerson = useCallback(
@@ -943,18 +1082,9 @@ function GenogramCanvasInner({
       setReaderPersonId(id);
       if (revealInspector) setPanelOpen(true);
       setFocusRequest({ personId: id });
-      const reduced =
-        window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
-        document.documentElement.dataset.reduceMotion === "true";
-      const node = rfInstance.getNode(id);
-      if (node) {
-        void rfInstance.setCenter(nodeCenterX(node), (node.position.y + nodeBottomY(node)) / 2, {
-          duration: reduced ? 0 : 200,
-          zoom: 1.1,
-        });
-      }
+      framePerson2D(id);
     },
-    [rfInstance],
+    [framePerson2D],
   );
 
   const focusedOnceRef = useRef<string | null>(null);
@@ -969,11 +1099,11 @@ function GenogramCanvasInner({
       !nodes.some((node) => node.id === focusPersonId)
     )
       return;
-    const timer = window.setTimeout(() => {
+    const frame = requestAnimationFrame(() => {
       focusedOnceRef.current = focusPersonId;
       locatePerson(focusPersonId);
-    }, 160);
-    return () => window.clearTimeout(timer);
+    });
+    return () => cancelAnimationFrame(frame);
   }, [focusPersonId, focusRelationId, nodes, locatePerson, reviewParentagePersonId]);
 
   const relationFocusHandled = useRef<string | undefined>(undefined);
@@ -998,6 +1128,8 @@ function GenogramCanvasInner({
       x: (nodeCenterX(source!) + nodeCenterX(target!)) / 2,
       y: (source!.position.y + target!.position.y) / 2,
     };
+    mapFrame2D.current = null;
+    pendingPerson2D.current = null;
     void rfInstance.setCenter(anchor.x, anchor.y, { zoom: union ? 1 : 0.85 });
   }, [data?.rels, focusRelationId, nodes, reviewParentagePersonId, rfInstance]);
 
@@ -1063,15 +1195,30 @@ function GenogramCanvasInner({
       });
     });
     setEdges(renderGraph.edges);
-    if (mapInitialized.current) return;
-    const people = next.filter((node) => node.type === "person");
-    if (!people.length) return;
-    const timer = window.setTimeout(() => {
-      mapInitialized.current = true;
-      void rfInstance.fitView({ nodes: people, padding: MAP_OVERVIEW_PADDING, maxZoom: 1.2 });
-    }, 100);
-    return () => window.clearTimeout(timer);
-  }, [renderGraph, withQuickAdd, setNodes, setEdges, rfInstance]);
+  }, [renderGraph, withQuickAdd, setNodes, setEdges]);
+
+  useEffect(() => {
+    if (!rfInstance.viewportInitialized || !nodesMeasured) return;
+    if (mapInitialized.current && !pendingPerson2D.current) return;
+    let cancelled = false;
+    let frame: number;
+    void (document.fonts?.ready ?? Promise.resolve()).then(() => {
+      if (cancelled) return;
+      frame = requestAnimationFrame(() => {
+        if (pendingPerson2D.current) {
+          placePendingPerson2D();
+          if (!pendingPerson2D.current) mapInitialized.current = true;
+        } else if (!mapInitialized.current) {
+          // A deep link can already have focused the relationship before the first fit.
+          mapInitialized.current = mapFrame2D.current === null || fitPeople2D();
+        }
+      });
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(frame);
+    };
+  }, [nodes, nodesMeasured, fitPeople2D, placePendingPerson2D, rfInstance.viewportInitialized]);
 
   const onNodesChangeCustom = useCallback(
     (changes: NodeChange[]) => {
@@ -1450,6 +1597,7 @@ function GenogramCanvasInner({
   const undoParentage = useMutation({
     mutationFn: async (reviewId: string) => {
       const viewport = rfInstance.getViewport();
+      const frame = mapFrame2D.current;
       const spatialCamera = spatialCameraRef.current?.read();
       const { data, error } = await supabase.rpc("undo_parentage_review", {
         _client_id: clientId,
@@ -1457,15 +1605,19 @@ function GenogramCanvasInner({
       });
       if (error) throw new Error(error.message);
       if (!data) throw new Error("O servidor não confirmou o desfazer.");
-      return { viewport, spatialCamera, branch: mapBranch };
+      return { viewport, frame, spatialCamera, branch: mapBranch };
     },
-    onSuccess: async ({ viewport, spatialCamera, branch }, reviewId) => {
+    onSuccess: async ({ viewport, frame, spatialCamera, branch }, reviewId) => {
       await invalidateCase(qc, clientId);
       setConfirmedParentage((saved) => (saved?.reviewId === reviewId ? null : saved));
       void qc.invalidateQueries({ queryKey: ["genogram-parentage-review", clientId] });
       setMapBranch(branch);
       if (spatialCamera) spatialCameraRef.current?.restore(spatialCamera);
-      requestAnimationFrame(() => void rfInstance.setViewport(viewport));
+      mapFrame2D.current = frame;
+      pendingPerson2D.current = null;
+      requestAnimationFrame(() => {
+        if (!frame || !fitPeople2D(frame.ids)) void rfInstance.setViewport(viewport);
+      });
       toast.success("Filiação anterior restaurada.");
     },
     onError: (error) => {
@@ -1603,6 +1755,7 @@ function GenogramCanvasInner({
     if (parentageDraft) return;
     reviewMapContext.current = {
       viewport: rfInstance.getViewport(),
+      frame: mapFrame2D.current,
       anchor: readAnchor2D(),
       spatialCamera: spatialCameraRef.current?.read(),
       branch: mapBranch,
@@ -1716,17 +1869,13 @@ function GenogramCanvasInner({
     const reduced =
       window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
       document.documentElement.dataset.reduceMotion === "true";
-    const stage = stageRef.current?.getBoundingClientRect();
-    const people = rfInstance.getNodes().filter(({ id }) => included.has(id));
-    if (!stage?.width || !stage.height || !people.length) return;
-    const viewport = getViewportForBounds(
-      getNodesBounds(people),
-      stage.width,
-      stage.height,
-      0.075,
-      1.02,
-      0.27,
-    );
+    const stage = stageRef.current;
+    if (!stage) return;
+    const { clientWidth: width, clientHeight: height } = stage;
+    const viewport = fitViewport2D(width, height, included);
+    if (!viewport) return;
+    pendingPerson2D.current = null;
+    mapFrame2D.current = { ids: included };
     void rfInstance.setViewport(viewport, { duration: reduced ? 0 : 210 });
   };
 
@@ -1736,7 +1885,7 @@ function GenogramCanvasInner({
       ...parentagePreview.previousParentIds,
       ...parentagePreview.proposedParentIds,
     ]);
-    if (isMobile) setReviewCollapsed(true);
+    if (usesInspectorSheet) setReviewCollapsed(true);
     requestAnimationFrame(() => {
       stageRef.current?.scrollIntoView({ block: "nearest" });
       stageRef.current?.focus({ preventScroll: true });
@@ -1809,10 +1958,27 @@ function GenogramCanvasInner({
     setPickingParentSlot(null);
     setConnection({ originId: id });
   };
-  const selectBranch = useCallback((branch: MapBranch | null) => {
-    setOrganizationProposal(null);
-    setMapBranch(branch);
-  }, []);
+  const selectBranch = useCallback(
+    (branch: MapBranch | null) => {
+      setOrganizationProposal(null);
+      setMapBranch(branch);
+      if (view !== "2d") return;
+      const ids = branch
+        ? new Set(
+            rfInstance
+              .getNodes()
+              .filter(
+                (node) =>
+                  node.type === "person" &&
+                  (node.data.branchId === branch || node.data.generation === 0),
+              )
+              .map(({ id }) => id),
+          )
+        : undefined;
+      fitPeople2D(ids);
+    },
+    [fitPeople2D, rfInstance, view],
+  );
 
   const selectPair = useCallback(
     (firstId: string, secondId: string) => {
@@ -1930,16 +2096,20 @@ function GenogramCanvasInner({
     })),
   ];
 
+  const largeMap = qualifiedPersons.length >= 100;
+  const keyboardPerson = focusedPersonId ?? probandId;
   const interactiveNodes = useMemo(
     () =>
       positionedNodes.map((node): Node => {
-        if (node.type !== "person") return { ...node, connectable: false };
+        if (node.type !== "person") return { ...node, connectable: false, focusable: false };
         const data = node.data as PersonNodeData;
         const name = data.full_name?.trim() || data.preferred_name?.trim() || "Pessoa sem nome";
         return {
           ...node,
+          focusable: !largeMap || node.id === keyboardPerson,
           className: cn(
             node.className,
+            focusedPersonId === node.id && "geno-map-current-person",
             mapBranch && data.branchId !== mapBranch && !data.is_proband && "geno-map-muted-person",
             overlappingCards.has(node.id) && "geno-map-overlap",
           ),
@@ -1954,11 +2124,22 @@ function GenogramCanvasInner({
             ...data,
             connecting: connection !== null,
             connectionOrigin: node.id === originId,
+            keyboardReachable: !largeMap || node.id === keyboardPerson,
             onChooseConnection: () => activatePerson(node.id),
           },
         };
       }),
-    [positionedNodes, connection, originId, activatePerson, mapBranch, overlappingCards],
+    [
+      positionedNodes,
+      connection,
+      originId,
+      activatePerson,
+      mapBranch,
+      overlappingCards,
+      largeMap,
+      keyboardPerson,
+      focusedPersonId,
+    ],
   );
 
   const branchById = new Map(positionedNodes.map((node) => [node.id, node.data.branchId]));
@@ -2002,11 +2183,25 @@ function GenogramCanvasInner({
 
   function fitAllPeople() {
     setFocusRequest(undefined);
+    setMapBranch(null);
     if (view === "3d") setSpatialFitRequest((request) => request + 1);
-    void rfInstance.fitView({
-      nodes: rfInstance.getNodes().filter((node) => node.type === "person"),
-      padding: MAP_OVERVIEW_PADDING,
-      maxZoom: 1.2,
+    fitPeople2D();
+  }
+
+  function zoomMap2D(closer: boolean) {
+    const current = rfInstance.getZoom();
+    const factor = current < 0.65 ? 1.72 : 1.25;
+    const stage = stageRef.current;
+    const overview = stage && fitViewport2D(stage.clientWidth, stage.clientHeight)?.zoom;
+    const target = current * (closer ? factor : 1 / factor);
+    if (!closer && overview && target <= overview && current >= overview) {
+      fitAllPeople();
+      return;
+    }
+    pendingPerson2D.current = null;
+    mapFrame2D.current = null;
+    void rfInstance.zoomTo(Math.max(MAP_MIN_ZOOM, Math.min(MAP_MAX_ZOOM, target)), {
+      duration: mapMotionDuration(135),
     });
   }
 
@@ -2016,7 +2211,7 @@ function GenogramCanvasInner({
   }
   function locateRelative(id: string) {
     locatePerson(id);
-    if (isMobile) setMobileSheetOpen(false);
+    if (usesInspectorSheet) setMobileSheetOpen(false);
   }
   function editFocusedPerson() {
     if (!focusedPerson) return;
@@ -2373,7 +2568,7 @@ function GenogramCanvasInner({
       onPickParent={(slot) => {
         setConnection(null);
         setPickingParentSlot(slot);
-        if (isMobile) setReviewCollapsed(true);
+        if (usesInspectorSheet) setReviewCollapsed(true);
         requestAnimationFrame(() => {
           stageRef.current?.scrollIntoView({ block: "nearest" });
           stageRef.current?.focus({ preventScroll: true });
@@ -2387,7 +2582,7 @@ function GenogramCanvasInner({
       ref={rootRef}
       className={cn(
         "atlas-genogram geno-workbench",
-        !panelOpen && !parentageDraft && "gv-panel-collapsed",
+        (usesInspectorSheet || (!panelOpen && !parentageDraft)) && "gv-panel-collapsed",
         parentageDraft && "geno-editor-reviewing",
         pickingParentSlot !== null && "geno-parentage-picking",
         isFullscreen && "geno-editor-expanded",
@@ -2444,43 +2639,43 @@ function GenogramCanvasInner({
         </div>
 
         <div className="geno-editor-navigation">
-          <div className="geno-editor-find">
-            <label htmlFor={locateId} className="sr-only">
-              Localizar familiar
-            </label>
-            <Search className="size-4 shrink-0" aria-hidden />
-            <select
-              id={locateId}
-              value=""
-              onChange={(event) => {
-                const id = event.currentTarget.value;
-                if (!id) return;
-                if (connection || pickingParentSlot !== null) activatePerson(id);
-                else locatePerson(id);
-              }}
+          <MapPersonSearch
+            nodes={positionedNodes}
+            label={
+              pickingParentSlot !== null
+                ? "Escolher genitor"
+                : connection
+                  ? "Escolher familiar"
+                  : "Localizar familiar"
+            }
+            onChoose={(id) => {
+              if (connection || pickingParentSlot !== null) activatePerson(id);
+              else locatePerson(id);
+            }}
+          />
+          {qualifiedCount > 0 && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="geno-editor-fit"
+              aria-label="Árvore inteira"
+              title="Enquadrar a árvore inteira"
+              onClick={fitAllPeople}
             >
-              <option value="">
-                {pickingParentSlot !== null
-                  ? "Escolher genitor…"
-                  : connection
-                    ? "Escolher familiar…"
-                    : "Localizar familiar…"}
-              </option>
-              {persons
-                .filter((person) => mappedIds.has(person.id))
-                .map((person) => {
-                  const name = person.full_name?.trim() || personName(person);
-                  const role = person.is_proband ? "Consultante" : person.relationship_to_proband;
-                  return (
-                    <option key={person.id} value={person.id}>
-                      {name}
-                      {role && role !== name ? " · " + role : ""}
-                      {person.birth_date ? " · " + person.birth_date.slice(0, 4) : ""}
-                    </option>
-                  );
-                })}
-            </select>
-          </div>
+              <Focus className="size-4" aria-hidden />
+              <span>Árvore inteira</span>
+            </Button>
+          )}
+          {qualifiedCount > 0 && !connection && pickingParentSlot === null && (
+            <MapNavigator
+              nodes={positionedNodes}
+              focusId={focusedPerson?.id}
+              branch={mapBranch}
+              onBranch={selectBranch}
+              onLocate={(id) => locatePerson(id, false)}
+            />
+          )}
         </div>
 
         <div className="geno-editor-tools">
@@ -2504,15 +2699,19 @@ function GenogramCanvasInner({
               size="sm"
               variant="ghost"
               className="geno-editor-header-tool"
-              aria-label={isMobile ? "Abrir ficha" : panelOpen ? "Recolher ficha" : "Mostrar ficha"}
-              title={isMobile ? "Abrir ficha" : panelOpen ? "Recolher ficha" : "Mostrar ficha"}
-              aria-expanded={isMobile ? mobileSheetOpen : panelOpen}
+              aria-label={
+                usesInspectorSheet ? "Abrir ficha" : panelOpen ? "Recolher ficha" : "Mostrar ficha"
+              }
+              title={
+                usesInspectorSheet ? "Abrir ficha" : panelOpen ? "Recolher ficha" : "Mostrar ficha"
+              }
+              aria-expanded={usesInspectorSheet ? mobileSheetOpen : panelOpen}
               onClick={() => {
-                if (isMobile) setMobileSheetOpen(true);
+                if (usesInspectorSheet) setMobileSheetOpen(true);
                 else setPanelOpen((current) => !current);
               }}
             >
-              {!isMobile && panelOpen ? (
+              {!usesInspectorSheet && panelOpen ? (
                 <PanelRightClose className="size-4" aria-hidden />
               ) : (
                 <PanelRightOpen className="size-4" aria-hidden />
@@ -2746,7 +2945,7 @@ function GenogramCanvasInner({
             </Button>
           </div>
         )}
-        {isMobile && parentageDraft && reviewCollapsed && pickingParentSlot === null && (
+        {usesInspectorSheet && parentageDraft && reviewCollapsed && pickingParentSlot === null && (
           <div className="geno-parentage-feedback">
             <span>
               Prévia de filiação ·{" "}
@@ -2795,7 +2994,42 @@ function GenogramCanvasInner({
           </div>
         )}
         {/* ── CANVAS ──────── */}
-        <div className="atlas-map-stage" ref={stageRef} tabIndex={-1} aria-label="Mapa da família">
+        <div
+          className="atlas-map-stage"
+          ref={stageRef}
+          role="region"
+          tabIndex={view === "2d" ? 0 : -1}
+          aria-label="Mapa da família"
+          aria-keyshortcuts={view === "2d" ? "ArrowLeft ArrowRight ArrowUp ArrowDown" : undefined}
+          onKeyDown={(event) => {
+            if (
+              view !== "2d" ||
+              event.target !== event.currentTarget ||
+              event.metaKey ||
+              event.ctrlKey
+            )
+              return;
+            const { clientWidth, clientHeight } = event.currentTarget;
+            const dx =
+              event.key === "ArrowRight"
+                ? -clientWidth / 4
+                : event.key === "ArrowLeft"
+                  ? clientWidth / 4
+                  : 0;
+            const dy =
+              event.key === "ArrowDown"
+                ? -clientHeight / 4
+                : event.key === "ArrowUp"
+                  ? clientHeight / 4
+                  : 0;
+            if (!dx && !dy) return;
+            event.preventDefault();
+            pendingPerson2D.current = null;
+            mapFrame2D.current = null;
+            const current = rfInstance.getViewport();
+            void rfInstance.setViewport({ ...current, x: current.x + dx, y: current.y + dy });
+          }}
+        >
           {familyQuery.isError || layoutQuery.isError ? (
             <section
               className="flex h-full flex-col items-center justify-center gap-3 p-6"
@@ -2852,7 +3086,9 @@ function GenogramCanvasInner({
                 }}
               >
                 <ReactFlow
+                  ref={plane2DRef}
                   className="geno-drafting-plane"
+                  data-map-detail="full"
                   nodes={interactiveNodes.map((node) => {
                     if (reviewHighlights.has(node.id))
                       return { ...node, className: cn(node.className, "geno-parentage-highlight") };
@@ -2865,6 +3101,17 @@ function GenogramCanvasInner({
                   edgeTypes={edgeTypes}
                   onNodesChange={onNodesChangeCustom}
                   onEdgesChange={onEdgesChange}
+                  onMove={(event, viewport) => {
+                    if (event) {
+                      pendingPerson2D.current = null;
+                      mapFrame2D.current = null;
+                    }
+                    const plane = plane2DRef.current;
+                    if (!plane) return;
+                    const detail =
+                      viewport.zoom < 0.2 ? "structure" : viewport.zoom < 0.72 ? "compact" : "full";
+                    if (plane.dataset.mapDetail !== detail) plane.dataset.mapDetail = detail;
+                  }}
                   onNodeDoubleClick={onNodeDoubleClick}
                   onNodeDragStart={() => {
                     dragStartRef.current = positionsRef.current;
@@ -2889,11 +3136,15 @@ function GenogramCanvasInner({
                   nodesDraggable={canMoveLayout}
                   nodesConnectable={!!connection}
                   elementsSelectable={!connection}
+                  edgesFocusable={!largeMap}
                   deleteKeyCode={null}
-                  panOnDrag={isMobile}
+                  panOnDrag
                   panActivationKeyCode="Space"
+                  preventScrolling={isFullscreen}
+                  zoomOnScroll={isFullscreen}
+                  zoomActivationKeyCode="Control"
                   minZoom={MAP_MIN_ZOOM}
-                  maxZoom={2.5}
+                  maxZoom={MAP_MAX_ZOOM}
                   proOptions={{ hideAttribution: true }}
                   defaultEdgeOptions={{
                     type: "step",
@@ -2902,14 +3153,6 @@ function GenogramCanvasInner({
                   ariaLabelConfig={{
                     "node.a11yDescription.default":
                       "Pressione Enter ou Espaço para abrir a ficha. Com a pessoa selecionada, use as setas esquerda e direita para ajustar a posição.",
-                    "controls.zoomIn.ariaLabel": "Aproximar mapa",
-                    "controls.zoomOut.ariaLabel": "Afastar mapa",
-                    "controls.fitView.ariaLabel": "Enquadrar mapa",
-                  }}
-                  fitView
-                  fitViewOptions={{
-                    padding: MAP_OVERVIEW_PADDING,
-                    nodes: nodes.filter((n) => n.type === "person"),
                   }}
                 >
                   <Background
@@ -2925,11 +3168,31 @@ function GenogramCanvasInner({
                     className="geno-editor-map-controls"
                     position="top-left"
                     showInteractive={false}
-                    fitViewOptions={{
-                      nodes: nodes.filter((n) => n.type === "person"),
-                      padding: MAP_OVERVIEW_PADDING,
-                    }}
-                  />
+                    showFitView={false}
+                    showZoom={false}
+                  >
+                    <ControlButton
+                      title="Aproximar mapa"
+                      aria-label="Aproximar mapa"
+                      onClick={() => zoomMap2D(true)}
+                    >
+                      <Plus aria-hidden />
+                    </ControlButton>
+                    <ControlButton
+                      title="Afastar mapa"
+                      aria-label="Afastar mapa"
+                      onClick={() => zoomMap2D(false)}
+                    >
+                      <Minus aria-hidden />
+                    </ControlButton>
+                    <ControlButton
+                      title="Enquadrar mapa"
+                      aria-label="Enquadrar mapa"
+                      onClick={fitAllPeople}
+                    >
+                      <Focus aria-hidden />
+                    </ControlButton>
+                  </Controls>
                 </ReactFlow>
               </div>
               {hasOpenedSpatial && (
@@ -3188,29 +3451,6 @@ function GenogramCanvasInner({
                     <p>Linha tracejada · confira a natureza do vínculo na ficha</p>
                   </PopoverContent>
                 </Popover>
-                <MapNavigator
-                  nodes={positionedNodes}
-                  focusId={focusedPerson?.id}
-                  branch={mapBranch}
-                  showScopes={view === "2d"}
-                  onBranch={selectBranch}
-                  onLocate={locatePerson}
-                  onFit={fitAllPeople}
-                />
-                {view === "2d" && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    className="geno-editor-fit"
-                    aria-label="Árvore inteira"
-                    title="Enquadrar a árvore inteira"
-                    onClick={fitAllPeople}
-                  >
-                    <Focus className="size-4" aria-hidden />
-                    <span>Árvore inteira</span>
-                  </Button>
-                )}
                 <Button
                   size="icon"
                   variant={mapReading ? "forest" : "ghost"}
@@ -3228,9 +3468,9 @@ function GenogramCanvasInner({
             )}
           </div>
         )}
-        {isMobile && !reviewCollapsed && reviewPanel}
+        {usesInspectorSheet && !reviewCollapsed && reviewPanel}
       </div>
-      {isMobile ? (
+      {usesInspectorSheet ? (
         <Sheet open={mobileSheetOpen} onOpenChange={setMobileSheetOpen}>
           <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto">
             <SheetHeader className="sr-only">

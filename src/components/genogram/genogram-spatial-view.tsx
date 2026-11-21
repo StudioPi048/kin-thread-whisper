@@ -1,5 +1,6 @@
 import { parentLinePatterns } from "@/lib/family-relationships";
 import {
+  memo,
   useCallback,
   useEffect,
   useId,
@@ -8,7 +9,14 @@ import {
   useRef,
   useState,
 } from "react";
-import type { CSSProperties, KeyboardEvent, PointerEvent, Ref } from "react";
+import type {
+  CSSProperties,
+  FocusEvent,
+  KeyboardEvent,
+  MouseEvent,
+  PointerEvent,
+  Ref,
+} from "react";
 import type { Edge, Node } from "@xyflow/react";
 import {
   Box,
@@ -48,6 +56,7 @@ import { personSymbol } from "./person-symbol";
 import {
   buildSpatialLayout,
   projectSpatialLayout,
+  projectSpatialPeople,
   spatialPersonLabel,
   type SpatialAngles,
   SPATIAL_CARD_HEIGHT,
@@ -88,7 +97,13 @@ interface GenogramSpatialViewProps {
 
 type Frame = { width: number; height: number; controls: number };
 type Camera = SpatialAngles & { x: number; y: number; zoom: number };
-export type SpatialCamera = Camera & { branch: MapBranch | null; familyFocusId: string | null };
+type Framing = "auto" | "panorama" | "reading";
+type FocusTarget = NonNullable<GenogramSpatialViewProps["focusRequest"]>;
+export type SpatialCamera = Camera & {
+  branch: MapBranch | null;
+  familyFocusId: string | null;
+  framing: Framing;
+};
 export type SpatialCameraHandle = {
   read: () => SpatialCamera | undefined;
   restore: (camera: SpatialCamera) => void;
@@ -99,7 +114,6 @@ type Layout = ReturnType<typeof buildSpatialLayout>;
 type ProjectedPerson = ReturnType<typeof projectSpatialLayout>["people"][number];
 type SpatialRoute = ReturnType<typeof projectSpatialLayout>["routes"][number];
 type ProjectedUnion = ReturnType<typeof projectSpatialLayout>["unions"][number];
-type MovePreview = { id: string; deltaX: number };
 
 function describeRoute(route: SpatialRoute, names: Map<string, string>, union?: ProjectedUnion) {
   const displayNames = (ids: string[]) =>
@@ -133,6 +147,14 @@ function describeRoute(route: SpatialRoute, names: Map<string, string>, union?: 
   };
 }
 
+function peopleOnRoute(route: SpatialRoute, unions: Map<string, ProjectedUnion>) {
+  if (!route.unionId) return [route.edge.source, route.edge.target];
+  return [
+    ...(route.childIds ?? []),
+    ...(route.parentId ? [route.parentId] : (unions.get(route.unionId)?.partners ?? [])),
+  ];
+}
+
 function sameRoute(a: SpatialRoute | undefined, b: SpatialRoute) {
   return (
     a?.id === b.id ||
@@ -164,6 +186,8 @@ const FRAME_MARGIN = 24;
 const CONTROLS_SPACE = 70;
 const HEADER_SPACE = 10;
 const FAMILY_NAME_TARGET = 12;
+const PANORAMA_NAME_THRESHOLD = 10;
+const LARGE_TREE = 100;
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 function plaqueNameLimit(name: string) {
@@ -173,10 +197,6 @@ function plaqueNameLimit(name: string) {
 
 function plaqueNameSize(name: string, scale: number, family: boolean) {
   return clamp((family ? FAMILY_NAME_TARGET : 10) / scale, 16, plaqueNameLimit(name));
-}
-
-function fitCamera(layout: Layout, frame: Frame, angles: SpatialAngles): Camera {
-  return fitProjectedPeople(projectSpatialLayout(layout, angles).people, frame, angles);
 }
 
 function confirmedFamilies(layout: Layout) {
@@ -263,11 +283,14 @@ function fitProjectedPeople(
   const right = Math.max(...projected.map(({ x, width }) => x + width / 2));
   const top = Math.min(...projected.map(({ y }) => y));
   const bottom = Math.max(...projected.map(({ y, height }) => y + height));
-  const rulerWidth = frame.width >= 690 ? 120 : 0;
+  const widthZoom = Math.max(1, frame.width - 2 * FRAME_MARGIN) / (right - left);
+  const heightZoom =
+    Math.max(1, frame.height - HEADER_SPACE - frame.controls - FRAME_MARGIN) / (bottom - top);
+  const rulerWidth = frame.width >= 690 && Math.min(widthZoom, heightZoom) >= 0.38 ? 120 : 0;
   const zoom = Math.min(
     1.14,
     Math.max(1, frame.width - rulerWidth - 2 * FRAME_MARGIN) / (right - left),
-    Math.max(1, frame.height - HEADER_SPACE - frame.controls - FRAME_MARGIN) / (bottom - top),
+    heightZoom,
   );
   const fitted = {
     x: (-(left + right) * zoom + rulerWidth) / 2,
@@ -299,6 +322,22 @@ function centerPerson(
     x: -person.x * zoom,
     y: -(person.y + person.height / 2) * zoom + (HEADER_SPACE - controls) / 2,
   };
+}
+
+function fitPersonForReading(camera: Camera, person: ProjectedPerson, frame: Frame) {
+  const availableWidth = Math.max(frame.width - FRAME_MARGIN * 2, 1);
+  const availableHeight = Math.max(frame.height - frame.controls - FRAME_MARGIN * 2, 1);
+  const nameLimit = plaqueNameLimit(spatialPersonLabel(person.data).name);
+  const readableZoom = FAMILY_NAME_TARGET / (nameLimit * person.scale);
+  const zoom = Math.min(
+    Math.max(camera.zoom, 1.08 / person.scale),
+    availableWidth / person.width,
+    Math.max(availableHeight / person.height, readableZoom),
+    MAX_ZOOM,
+  );
+  const centered = centerPerson(camera, person, zoom, frame.controls);
+  if (person.height * zoom <= availableHeight) return centered;
+  return { ...centered, y: FRAME_MARGIN - frame.height / 2 - person.y * zoom };
 }
 
 function zoomAt(camera: Camera, zoom: number, anchor: Pointer): Camera {
@@ -341,8 +380,15 @@ function outlinePoints(values: { x: number; y: number }[]) {
   return values.map(({ x, y }) => `${x.toFixed(2)},${y.toFixed(2)}`).join(" ");
 }
 
-function SpatialSymbol({ person, angles }: { person: PersonNodeData; angles: SpatialAngles }) {
-  const type = personSymbol(person);
+const SpatialSymbol = memo(function SpatialSymbol({
+  type,
+  deceased,
+  angles,
+}: {
+  type: string;
+  deceased: boolean;
+  angles: SpatialAngles;
+}) {
   const silhouette = solidOutlines[type] ?? diamond;
   const angle = angles.yaw;
   const pitch = angles.pitch;
@@ -386,12 +432,10 @@ function SpatialSymbol({ person, angles }: { person: PersonNodeData; angles: Spa
         />
       ))}
       <polygon points={outlinePoints(front)} className="geno-spatial-face" />
-      {(person.is_deceased || person.death_date) && (
-        <polyline points={mark} className="geno-spatial-death" />
-      )}
+      {deceased && <polyline points={mark} className="geno-spatial-death" />}
     </svg>
   );
-}
+});
 
 const foldText = (value: string) =>
   value
@@ -432,6 +476,7 @@ export function GenogramSpatialView({
   const directoryInput = useRef<HTMLInputElement>(null);
   const pointers = useRef(new Map<number, Pointer>());
   const lastFocus = useRef<GenogramSpatialViewProps["focusRequest"]>(undefined);
+  const readingFocus = useRef<{ target: FocusTarget; frame: Frame } | null>(null);
   const lastFit = useRef(fitRequest);
   const lastAnchor = useRef<MapViewAnchor>(undefined);
   const lastRelationshipFocus = useRef<string | null>(null);
@@ -450,13 +495,12 @@ export function GenogramSpatialView({
   const [fitAngles, setFitAngles] = useState<SpatialAngles>(FRONT_ANGLES);
   const [localBranch, setLocalBranch] = useState<MapBranch | null>(null);
   const [familyFocusId, setFamilyFocusId] = useState<string | null>(null);
-  const [framing, setFraming] = useState<"auto" | "panorama" | "reading">("auto");
+  const [framing, setFraming] = useState<Framing>("auto");
   const [dragging, setDragging] = useState(false);
   const [panMode, setPanMode] = useState(true);
   const [touchNavigation, setTouchNavigation] = useState(false);
   const [navigationPersonId, setNavigationPersonId] = useState<string | null>(null);
   const [moveMode, setMoveMode] = useState(false);
-  const [movePreview, setMovePreview] = useState<MovePreview | null>(null);
   const [separateLinks, setSeparateLinks] = useState(false);
   const [unionsOpen, setUnionsOpen] = useState(false);
   const [openedPersonId, setOpenedPersonId] = useState<string | null>(null);
@@ -465,6 +509,8 @@ export function GenogramSpatialView({
   const [directoryOpen, setDirectoryOpen] = useState(false);
   const [directoryMode, setDirectoryMode] = useState<"people" | "links">("people");
   const [query, setQuery] = useState("");
+  const cameraUpdates = useRef<((current: Camera) => Camera)[]>([]);
+  const cameraFrame = useRef<number | null>(null);
   const layout = useMemo(() => buildSpatialLayout(nodes, edges), [nodes, edges]);
   const families = useMemo(() => confirmedFamilies(layout), [layout]);
   const selectedHasFamily = useMemo(
@@ -495,9 +541,13 @@ export function GenogramSpatialView({
   const expandedPersonId =
     unionsOpen && unionMembers.some(({ id }) => id === openedPersonId) ? openedPersonId : null;
   const positionMode = moveMode && !!canMovePeople && !!onMovePerson;
-  const frontPeople = useMemo(() => projectSpatialLayout(layout, FRONT_ANGLES).people, [layout]);
+  const frontPeople = useMemo(() => projectSpatialPeople(layout, FRONT_ANGLES).people, [layout]);
   const reading =
-    framing === "reading" || (framing === "auto" && frame.width > 0 && frame.width < 690);
+    framing === "reading" ||
+    (framing === "auto" &&
+      layout.people.length < LARGE_TREE &&
+      frame.width > 0 &&
+      frame.width < 690);
   const fitted = useMemo(
     () => fitProjectedPeople(frontPeople, frame, FRONT_ANGLES),
     [frontPeople, frame],
@@ -505,7 +555,7 @@ export function GenogramSpatialView({
   const scopedFit = useMemo(() => {
     if (!scopedIds && !reading && fitAngles === FRONT_ANGLES) return fitted;
     const people =
-      fitAngles === FRONT_ANGLES ? frontPeople : projectSpatialLayout(layout, fitAngles).people;
+      fitAngles === FRONT_ANGLES ? frontPeople : projectSpatialPeople(layout, fitAngles).people;
     const scoped = scopedIds ? people.filter(({ id }) => scopedIds.has(id)) : people;
     const readingAnchor =
       reading &&
@@ -520,55 +570,97 @@ export function GenogramSpatialView({
     );
   }, [branch, fitAngles, fitted, frame, frontPeople, layout, reading, scopedFamilyId, scopedIds]);
   const camera = manualCamera ?? scopedFit;
-  const minZoom = Math.min(0.16, fitted.zoom);
+  const angles = useMemo(
+    () => ({ yaw: camera.yaw, pitch: camera.pitch }),
+    [camera.yaw, camera.pitch],
+  );
+  const compact = camera.zoom * SPATIAL_MAX_NAME_SIZE < PANORAMA_NAME_THRESHOLD;
+  const minZoom = Math.min(0.16, fitted.zoom, scopedFit.zoom);
   const changeCamera = useCallback(
     (update: (current: Camera) => Camera) =>
       setManualCamera((current) => update(current ?? scopedFit)),
     [scopedFit],
   );
+  const cancelCameraUpdates = useCallback(() => {
+    if (cameraFrame.current !== null) cancelAnimationFrame(cameraFrame.current);
+    cameraFrame.current = null;
+    cameraUpdates.current = [];
+  }, []);
+  const scheduleCameraUpdate = useCallback(
+    (update: (current: Camera) => Camera) => {
+      readingFocus.current = null;
+      cameraUpdates.current.push(update);
+      if (cameraFrame.current !== null) return;
+      cameraFrame.current = requestAnimationFrame(() => {
+        const updates = cameraUpdates.current;
+        cameraUpdates.current = [];
+        cameraFrame.current = null;
+        changeCamera((current) => updates.reduce((value, next) => next(value), current));
+      });
+    },
+    [changeCamera],
+  );
+  useEffect(() => cancelCameraUpdates, [cancelCameraUpdates]);
 
   const display = useMemo(
     () =>
-      projectSpatialLayout(layout, { yaw: camera.yaw, pitch: camera.pitch }, selectedPersonId, {
+      projectSpatialLayout(layout, angles, selectedPersonId, {
         separateLinks,
         expandedPersonId,
         parentagePreview,
       }),
-    [
-      layout,
-      camera.yaw,
-      camera.pitch,
-      selectedPersonId,
-      separateLinks,
-      expandedPersonId,
-      parentagePreview,
-    ],
+    [layout, angles, selectedPersonId, separateLinks, expandedPersonId, parentagePreview],
   );
   const names = useMemo(
     () => display.people.map((person) => ({ person, ...spatialPersonLabel(person.data) })),
     [display.people],
   );
-  const namedPeople = names.filter(({ name, relationship }) =>
-    foldText(`${name} ${relationship}`).includes(foldText(query.trim())),
+  const nameById = useMemo(
+    () => new Map(names.map(({ person, name }) => [person.id, name])),
+    [names],
   );
+  const personById = useMemo(
+    () => new Map(display.people.map((person) => [person.id, person])),
+    [display.people],
+  );
+  const routeById = useMemo(
+    () => new Map(display.routes.map((route) => [route.id, route])),
+    [display.routes],
+  );
+  const unionById = useMemo(
+    () => new Map(display.unions.map((union) => [union.id, union])),
+    [display.unions],
+  );
+  const namedPeople = useMemo(() => {
+    if (!directoryOpen || directoryMode !== "people") return [];
+    const term = foldText(query.trim());
+    return term
+      ? names.filter(({ name, relationship }) => foldText(`${name} ${relationship}`).includes(term))
+      : names;
+  }, [directoryOpen, directoryMode, names, query]);
   const hasFrame = frame.width > 0 && frame.height > 0;
 
-  const fitAutomatically = useCallback(({ yaw, pitch }: SpatialAngles) => {
-    setFitAngles((current) =>
-      current.yaw === yaw && current.pitch === pitch
-        ? current
-        : yaw === FRONT_ANGLES.yaw && pitch === FRONT_ANGLES.pitch
-          ? FRONT_ANGLES
-          : { yaw, pitch },
-    );
-    setManualCamera(null);
-  }, []);
+  const fitAutomatically = useCallback(
+    ({ yaw, pitch }: SpatialAngles) => {
+      readingFocus.current = null;
+      cancelCameraUpdates();
+      setFitAngles((current) =>
+        current.yaw === yaw && current.pitch === pitch
+          ? current
+          : yaw === FRONT_ANGLES.yaw && pitch === FRONT_ANGLES.pitch
+            ? FRONT_ANGLES
+            : { yaw, pitch },
+      );
+      setManualCamera(null);
+    },
+    [cancelCameraUpdates],
+  );
 
   const changeBranch = useCallback(
     (
       nextBranch: MapBranch | null,
       angles: SpatialAngles,
-      nextFraming: "reading" | "panorama" = nextBranch ? "reading" : "panorama",
+      nextFraming: "reading" | "panorama" = "panorama",
     ) => {
       if (onBranchChange) onBranchChange(nextBranch);
       else setLocalBranch(nextBranch);
@@ -585,17 +677,21 @@ export function GenogramSpatialView({
   useImperativeHandle(
     cameraRef,
     () => ({
-      read: () => (hasFrame ? { ...camera, branch, familyFocusId: scopedFamilyId } : undefined),
-      restore: ({ branch: savedBranch, familyFocusId, ...savedCamera }) => {
+      read: () =>
+        hasFrame ? { ...camera, branch, familyFocusId: scopedFamilyId, framing } : undefined,
+      restore: ({ branch: savedBranch, familyFocusId, framing, ...savedCamera }) => {
         // The workbench restores its controlled branch in the same update.
         // Keep that transition from overwriting the exact captured framing.
+        readingFocus.current = null;
+        cancelCameraUpdates();
         previousBranch.current = savedBranch;
         if (highlightedBranch === undefined) setLocalBranch(savedBranch);
+        setFraming(framing);
         setFamilyFocusId(familyFocusId);
         setManualCamera(savedCamera);
       },
       readAnchor: () => {
-        const fitted = fitCamera(layout, frame, camera);
+        const fitted = fitProjectedPeople(display.people, frame, camera);
         const anchor = readMapViewAnchor(
           display.people.map(({ id, x, y, height }) => ({
             id,
@@ -608,21 +704,28 @@ export function GenogramSpatialView({
           selectedPersonId,
         );
         const overview =
+          !scopedIds &&
           Math.abs(camera.x - fitted.x) < frame.width * 0.035 &&
           Math.abs(camera.y - fitted.y) < frame.height * 0.035 &&
           Math.abs(camera.zoom / fitted.zoom - 1) < 0.06;
-        return anchor ? { ...anchor, overview } : undefined;
+        const person = anchor && personById.get(anchor.personId);
+        return anchor && person
+          ? { ...anchor, overview, personWidth: person.width * camera.zoom }
+          : undefined;
       },
     }),
     [
       branch,
       camera,
+      cancelCameraUpdates,
       display.people,
       frame,
+      framing,
       hasFrame,
       highlightedBranch,
-      layout,
+      personById,
       scopedFamilyId,
+      scopedIds,
       selectedPersonId,
     ],
   );
@@ -638,44 +741,66 @@ export function GenogramSpatialView({
     previousBranch.current = branch;
     // The panorama outside the 3D viewport can also change the active branch.
     setFamilyFocusId(null);
-    if (branch) setFraming("reading");
+    if (branch) setFraming("panorama");
     fitAutomatically(camera);
   }, [branch, camera, fitAutomatically]);
 
   useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
-    const resize = () =>
-      setFrame({
+    const resize = () => {
+      const next = {
         width: viewport.clientWidth,
         height: viewport.clientHeight,
         controls: workbench ? 0 : CONTROLS_SPACE,
-      });
+      };
+      setFrame((current) =>
+        current.width === next.width &&
+        current.height === next.height &&
+        current.controls === next.controls
+          ? current
+          : next,
+      );
+    };
     const observer = new ResizeObserver(resize);
     observer.observe(viewport);
     resize();
     return () => observer.disconnect();
   }, [workbench]);
 
+  const frameReadingTarget = useCallback(
+    (target: FocusTarget) => {
+      const person = personById.get(target.personId);
+      if (!person) return;
+      cancelCameraUpdates();
+      readingFocus.current = { target, frame };
+      const related = (target.relatedPersonIds ?? []).flatMap((id) => {
+        const other = personById.get(id);
+        return other && other !== person ? [other] : [];
+      });
+      changeCamera((current) =>
+        related.length
+          ? fitProjectedPeople([person, ...related], frame, current)
+          : fitPersonForReading(current, person, frame),
+      );
+    },
+    [cancelCameraUpdates, changeCamera, frame, personById],
+  );
+
   useEffect(() => {
-    if (!hasFrame || !focusRequest || focusRequest === lastFocus.current) return;
-    const requested = display.people.find(({ id }) => id === focusRequest.personId);
-    if (!requested) return;
-    lastFocus.current = focusRequest;
-    const related = display.people.filter(
-      ({ id }) => focusRequest.relatedPersonIds?.includes(id) && id !== requested.id,
-    );
-    changeCamera((current) =>
-      related.length
-        ? fitProjectedPeople([requested, ...related], frame, current)
-        : centerPerson(
-            current,
-            requested,
-            Math.max(1.08 / requested.scale, current.zoom),
-            frame.controls,
-          ),
-    );
-  }, [changeCamera, focusRequest, frame, hasFrame, display.people]);
+    if (!hasFrame) return;
+    if (
+      focusRequest &&
+      lastFocus.current !== focusRequest &&
+      personById.has(focusRequest.personId)
+    ) {
+      lastFocus.current = focusRequest;
+      frameReadingTarget(focusRequest);
+      return;
+    }
+    const previous = readingFocus.current;
+    if (previous && previous.frame !== frame) frameReadingTarget(previous.target);
+  }, [focusRequest, frame, frameReadingTarget, hasFrame, personById]);
 
   useEffect(() => {
     if (!focusedRelationshipId) {
@@ -698,6 +823,7 @@ export function GenogramSpatialView({
       ? [pedigree.childId, pedigree.parent.personId]
       : (union?.partners ?? [route.edge.source, route.edge.target]);
     lastRelationshipFocus.current = focusedRelationshipId;
+    readingFocus.current = null;
     setChosenRoute(route.id);
     setChosenUnion(null);
     changeCamera((current) =>
@@ -723,13 +849,22 @@ export function GenogramSpatialView({
     const person = display.people.find(({ id }) => id === viewAnchor.personId);
     if (!person) return;
     lastAnchor.current = viewAnchor;
+    readingFocus.current = null;
     if (viewAnchor.overview) {
-      setManualCamera(null);
+      setFamilyFocusId(null);
+      setFraming("panorama");
+      fitAutomatically(angles);
       return;
     }
     changeCamera((current) => {
-      const fitted = fitCamera(layout, frame, current);
-      const zoom = clamp(fitted.zoom * viewAnchor.scale, minZoom, MAX_ZOOM);
+      const fitted = fitProjectedPeople(display.people, frame, current);
+      const zoom = clamp(
+        viewAnchor.personWidth
+          ? viewAnchor.personWidth / person.width
+          : fitted.zoom * viewAnchor.scale,
+        minZoom,
+        MAX_ZOOM,
+      );
       return {
         ...current,
         zoom,
@@ -737,7 +872,16 @@ export function GenogramSpatialView({
         y: frame.height * (viewAnchor.vertical - 0.5) - (person.y + person.height / 2) * zoom,
       };
     });
-  }, [changeCamera, display.people, frame, hasFrame, layout, minZoom, viewAnchor]);
+  }, [
+    angles,
+    changeCamera,
+    display.people,
+    fitAutomatically,
+    frame,
+    hasFrame,
+    minZoom,
+    viewAnchor,
+  ]);
 
   useEffect(() => {
     const viewport = viewportRef.current;
@@ -751,23 +895,24 @@ export function GenogramSpatialView({
         y: event.clientY - rect.top - rect.height / 2,
       };
       const factor = Math.exp(clamp(-event.deltaY * 0.008, -0.28, 0.28));
-      changeCamera((current) =>
+      scheduleCameraUpdate((current) =>
         zoomAt(current, clamp(current.zoom * factor, minZoom, MAX_ZOOM), pivot),
       );
     };
     viewport.addEventListener("wheel", onWheel, { passive: false });
     return () => viewport.removeEventListener("wheel", onWheel);
-  }, [changeCamera, minZoom]);
+  }, [scheduleCameraUpdate, minZoom]);
 
-  function rotate(yaw: number, pitch = 0) {
-    changeCamera((current) => {
+  function rotate(yaw: number, pitch = 0, updateCamera = changeCamera) {
+    readingFocus.current = null;
+    updateCamera((current) => {
       const angles = {
         yaw: clamp(current.yaw + yaw, -SPATIAL_MAX_YAW, SPATIAL_MAX_YAW),
         pitch: clamp(current.pitch + pitch, 0, SPATIAL_MAX_PITCH),
       };
       if (angles.pitch === current.pitch && angles.yaw === current.yaw) return current;
-      const before = projectSpatialLayout(layout, current, selectedPersonId);
-      const pivot = before.people.reduce<ProjectedPerson | undefined>((closest, item) => {
+      const before = projectSpatialPeople(layout, current).people;
+      const pivot = before.reduce<ProjectedPerson | undefined>((closest, item) => {
         const distance = (person: ProjectedPerson) =>
           Math.hypot(
             person.x * current.zoom + current.x,
@@ -775,8 +920,8 @@ export function GenogramSpatialView({
           );
         return !closest || distance(item) < distance(closest) ? item : closest;
       }, undefined);
-      const after = projectSpatialLayout(layout, angles, selectedPersonId);
-      const destination = after.people.find((person) => person.id === pivot?.id);
+      const after = projectSpatialPeople(layout, angles).people;
+      const destination = after.find((person) => person.id === pivot?.id);
       if (!destination || !pivot) return { ...current, ...angles };
       return {
         ...current,
@@ -787,25 +932,20 @@ export function GenogramSpatialView({
     });
   }
 
-  function pan(x: number, y: number) {
-    changeCamera((current) => ({ ...current, x: current.x + x, y: current.y + y }));
+  function pan(x: number, y: number, updateCamera = changeCamera) {
+    readingFocus.current = null;
+    updateCamera((current) => ({ ...current, x: current.x + x, y: current.y + y }));
   }
 
   function zoomBy(factor: number) {
+    readingFocus.current = null;
     changeCamera((current) =>
       zoomAt(current, clamp(current.zoom * factor, minZoom, MAX_ZOOM), { x: 0, y: 0 }),
     );
   }
 
   function focusPerson(person: ProjectedPerson) {
-    changeCamera((current) =>
-      centerPerson(
-        current,
-        person,
-        clamp(Math.max(current.zoom, 1.06 / person.scale), minZoom, MAX_ZOOM),
-        frame.controls,
-      ),
-    );
+    frameReadingTarget({ personId: person.id });
   }
 
   function handleKey(event: KeyboardEvent<HTMLDivElement>) {
@@ -878,6 +1018,8 @@ export function GenogramSpatialView({
       if (!person.moved && Math.abs(distance) < 5) return;
       if (!person.moved) {
         event.currentTarget.setPointerCapture(event.pointerId);
+        readingFocus.current = null;
+        cancelCameraUpdates();
         setManualCamera(camera);
         setDragging(true);
         person.moved = true;
@@ -885,7 +1027,8 @@ export function GenogramSpatialView({
       }
       const deltaX = distance / person.scale;
       person.deltaX = getMovePersonDelta?.(person.id, deltaX) ?? deltaX;
-      setMovePreview({ id: person.id, deltaX: person.deltaX });
+      const projectedDelta = person.deltaX * Math.cos(camera.yaw) * SPATIAL_X_SCALE;
+      cardRefs.current.get(person.id)?.style.setProperty("--move-preview-x", `${projectedDelta}px`);
       return;
     }
     const prev = pointers.current.get(event.pointerId);
@@ -903,7 +1046,7 @@ export function GenogramSpatialView({
         y: (prev.y + other.y) / 2 - rect.top - rect.height / 2,
       };
       const ratio = previousDistance > 8 ? distance / previousDistance : 1;
-      changeCamera((current) => {
+      scheduleCameraUpdate((current) => {
         const zoomed = zoomAt(current, clamp(current.zoom * ratio, minZoom, MAX_ZOOM), pivot);
         return {
           ...zoomed,
@@ -912,9 +1055,9 @@ export function GenogramSpatialView({
         };
       });
     } else if (event.shiftKey || panMode) {
-      pan(next.x - prev.x, next.y - prev.y);
+      pan(next.x - prev.x, next.y - prev.y, scheduleCameraUpdate);
     } else {
-      rotate((next.x - prev.x) * 0.006, (next.y - prev.y) * 0.005);
+      rotate((next.x - prev.x) * 0.006, (next.y - prev.y) * 0.005, scheduleCameraUpdate);
     }
   }
 
@@ -922,7 +1065,7 @@ export function GenogramSpatialView({
     const person = dragPerson.current;
     if (person?.pointerId === event.pointerId) {
       dragPerson.current = null;
-      setMovePreview(null);
+      cardRefs.current.get(person.id)?.style.removeProperty("--move-preview-x");
       if (event.type === "pointerup" && positionMode && person.moved && person.deltaX) {
         onMovePerson?.(person.id, person.deltaX);
       }
@@ -935,10 +1078,12 @@ export function GenogramSpatialView({
     const x = frame.width / 2 + camera.x + person.x * camera.zoom;
     const y = frame.height / 2 + camera.y + person.y * camera.zoom;
     if (
+      person.scale * camera.zoom * plaqueNameLimit(spatialPersonLabel(person.data).name) <
+        PANORAMA_NAME_THRESHOLD ||
       x - (person.width / 2) * camera.zoom < 0 ||
       x + (person.width / 2) * camera.zoom > frame.width ||
       y < HEADER_SPACE ||
-      y + person.height * camera.zoom > frame.height - CONTROLS_SPACE
+      y + person.height * camera.zoom > frame.height - frame.controls
     )
       focusPerson(person);
   }
@@ -1024,16 +1169,46 @@ export function GenogramSpatialView({
     setNavigationPersonId(next.id);
     cardRefs.current.get(next.id)?.focus({ preventScroll: true });
   }
+  function plaqueFromTarget(target: EventTarget) {
+    const card = target instanceof Element && target.closest<HTMLButtonElement>("[data-person-id]");
+    return card ? personById.get(card.dataset.personId ?? "") : undefined;
+  }
+  function clickPlaque(event: MouseEvent<HTMLDivElement>) {
+    const person = plaqueFromTarget(event.target);
+    if (!person || (event.detail && skipPersonClick.current)) return;
+    if (!parentagePreview && !connectionOriginId && !positionMode) {
+      readingFocus.current = { target: { personId: person.id }, frame };
+      revealCard(person);
+    }
+    selectPerson(person.id);
+  }
+  function focusPlaque(event: FocusEvent<HTMLDivElement>) {
+    const person = plaqueFromTarget(event.target);
+    if (!person) return;
+    setNavigationPersonId(person.id);
+    if (event.target.matches(":focus-visible")) {
+      revealCard(person);
+      onFocusPerson?.(person.id);
+    }
+  }
+  function navigatePlaques(event: KeyboardEvent<HTMLDivElement>) {
+    const person = plaqueFromTarget(event.target);
+    if (!person || !["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) return;
+    event.preventDefault();
+    if (positionMode && (event.key === "ArrowLeft" || event.key === "ArrowRight")) {
+      onMovePerson?.(person.id, event.key === "ArrowLeft" ? -26 : 26);
+    } else {
+      navigateCard(person, event.key);
+    }
+  }
   const hasSuggestions = display.routes.some((route) => route.suggested);
   const shownUnions = display.unions.filter((union) => union.expanded);
-  const nameById = new Map(names.map(({ person, name }) => [person.id, name]));
   const scopeName = scopedFamilyId
     ? `Família de ${nameById.get(scopedFamilyId)}`
     : branch
       ? mapBranchNames[branch]
       : "Árvore inteira";
-  const unionById = new Map(display.unions.map((union) => [union.id, union]));
-  const activeRoute = display.routes.find(({ id }) => id === chosenRoute);
+  const activeRoute = chosenRoute ? routeById.get(chosenRoute) : undefined;
   const focusedParent =
     activeRoute && focusedRelationshipId && pedigreeForRoute(activeRoute, focusedRelationshipId);
   const activeRouteDescription = focusedParent
@@ -1058,15 +1233,9 @@ export function GenogramSpatialView({
           typeof contextRoute.edge.data?.relationshipType === "string"
         ? contextRoute.edge.id
         : undefined;
-  const routePeople = (route: SpatialRoute) =>
-    route.unionId
-      ? [
-          ...(route.childIds ?? []),
-          ...(route.parentId ? [route.parentId] : (unionById.get(route.unionId)?.partners ?? [])),
-        ]
-      : [route.edge.source, route.edge.target];
   const focusRoute = (route: SpatialRoute) => {
-    const ids = new Set(routePeople(route));
+    readingFocus.current = null;
+    const ids = new Set(peopleOnRoute(route, unionById));
     changeCamera((current) =>
       fitProjectedPeople(
         display.people.filter(({ id }) => ids.has(id)),
@@ -1087,40 +1256,161 @@ export function GenogramSpatialView({
             .flatMap(({ childIds }) => childIds ?? [])
         : [];
   const highlightedUnion = expandedUnion?.id ?? activeRoute?.unionId;
-  const routeIsActive = (route: SpatialRoute) =>
-    parentagePreview
-      ? false
-      : activeRoute?.parentId
-        ? route.id === activeRoute.id
-        : highlightedUnion
-          ? route.unionId === highlightedUnion
-          : activeRoute
-            ? route.id === activeRoute.id
-            : route.highlighted;
-  const routeIsMuted = (route: SpatialRoute) =>
-    parentagePreview ||
-    ((activeRoute || expandedUnion) && !routeIsActive(route)) ||
-    (scopedIds &&
-      !routeIsActive(route) &&
-      (!branch || scopedFamilyId || route.branch !== branch) &&
-      routePeople(route).filter((id) => scopedIds.has(id)).length < 2)
-      ? true
-      : undefined;
-  const routeClass = (route: SpatialRoute) =>
-    cn(
-      "geno-spatial-link",
-      routeIsActive(route) && "geno-spatial-link-current",
-      route.suggested && "geno-spatial-link-suggested",
-      !["pedigree", "partner"].includes(route.edge.type ?? "") && "geno-spatial-link-social",
+  const drawing = useMemo(() => {
+    const routeIsActive = (route: SpatialRoute) =>
+      parentagePreview
+        ? false
+        : activeRoute?.parentId
+          ? route.id === activeRoute.id
+          : highlightedUnion
+            ? route.unionId === highlightedUnion
+            : activeRoute
+              ? route.id === activeRoute.id
+              : route.highlighted;
+    const routeIsMuted = (route: SpatialRoute) =>
+      parentagePreview ||
+      ((activeRoute || expandedUnion) && !routeIsActive(route)) ||
+      (scopedIds &&
+        !routeIsActive(route) &&
+        (!branch || scopedFamilyId || route.branch !== branch) &&
+        peopleOnRoute(route, unionById).filter((id) => scopedIds.has(id)).length < 2)
+        ? true
+        : undefined;
+    const routeClass = (route: SpatialRoute) =>
+      cn(
+        "geno-spatial-link",
+        routeIsActive(route) && "geno-spatial-link-current",
+        route.suggested && "geno-spatial-link-suggested",
+        !["pedigree", "partner"].includes(route.edge.type ?? "") && "geno-spatial-link-social",
+      );
+    const routeDash = ({ edge, parentKind, parentSource, suggested }: SpatialRoute) =>
+      parentSource === "legacy"
+        ? "2 3"
+        : suggested
+          ? "4 5"
+          : ((parentKind && parentLinePatterns[parentKind]) ??
+            edge.style?.strokeDasharray ??
+            (edge.type === "pedigree" || edge.type === "partner" ? undefined : "3 5"));
+    return (
+      <>
+        {Array.from(display.rows, ([rowY, row]) => {
+          const left = row[0].x - row[0].width / 2 - 20;
+          const right = row.at(-1)!.x + row.at(-1)!.width / 2 + 20;
+          const guideY = rowY + 31;
+          return (
+            <path
+              key={rowY}
+              d={`M ${left} ${guideY} H ${right}`}
+              className="geno-spatial-guide"
+              vectorEffect="non-scaling-stroke"
+            />
+          );
+        })}
+        {display.routes.map((route) => (
+          <path
+            key={route.id}
+            d={route.path}
+            data-branch={route.branch}
+            data-suggested={route.suggested || undefined}
+            data-muted={routeIsMuted(route)}
+            data-rendered-route={route.id}
+            className={routeClass(route)}
+            vectorEffect="non-scaling-stroke"
+            strokeDasharray={routeDash(route)}
+          />
+        ))}
+        {display.routes.flatMap((route) =>
+          route.bridgePaths.map((path, index) => (
+            <g
+              key={`${route.id}-bridge-${index}`}
+              data-bridge={route.id}
+              data-branch={route.branch}
+              data-muted={routeIsMuted(route)}
+            >
+              <path
+                d={path}
+                className="geno-spatial-bridge-clearance"
+                vectorEffect="non-scaling-stroke"
+              />
+              <path
+                d={path}
+                className={routeClass(route)}
+                vectorEffect="non-scaling-stroke"
+                strokeDasharray={routeDash(route)}
+              />
+            </g>
+          )),
+        )}
+        {!positionMode &&
+          !connectionOriginId &&
+          display.routes.map((route) => (
+            <path
+              key={`${route.id}-hit`}
+              d={[route.path, ...route.bridgePaths].join(" ")}
+              className="geno-spatial-link-hit"
+              data-route-id={route.id}
+              vectorEffect="non-scaling-stroke"
+            />
+          ))}
+        {display.unions
+          .filter((union) => !union.single)
+          .map((union) => (
+            <g
+              key={union.id}
+              data-branch={union.branch}
+              data-union-id={union.id}
+              data-expanded={union.expanded || undefined}
+              data-active={highlightedUnion === union.id || undefined}
+              transform={`translate(${union.x} ${union.y})`}
+            >
+              {union.label && <title>{union.label}</title>}
+              {union.hubOffset && union.label && (
+                <text x="8" y="-7" className="geno-spatial-union-label">
+                  {union.label}
+                </text>
+              )}
+              <path d="M 0 -6 L 6 0 L 0 6 L -6 0 Z" className="geno-spatial-union" />
+              {union.kind === "divorcio" && (
+                <path d="M -8 7 L -2 -7 M 0 7 L 6 -7" className="geno-spatial-break" />
+              )}
+            </g>
+          ))}
+        {display.parentageTracks.map(({ role, paths }) => (
+          <g key={role} data-parentage-track={role} className="geno-spatial-parentage-track">
+            {paths.map((path, index) => (
+              <path
+                key={index}
+                d={path}
+                className="geno-spatial-parentage-clearance"
+                vectorEffect="non-scaling-stroke"
+              />
+            ))}
+            {paths.map((path, index) => (
+              <path
+                key={index}
+                d={path}
+                className="geno-spatial-parentage-line"
+                data-parentage-preview={role === "previous" ? "current" : role}
+                vectorEffect="non-scaling-stroke"
+              />
+            ))}
+          </g>
+        ))}
+      </>
     );
-  const routeDash = ({ edge, parentKind, parentSource, suggested }: SpatialRoute) =>
-    parentSource === "legacy"
-      ? "2 3"
-      : suggested
-        ? "4 5"
-        : ((parentKind && parentLinePatterns[parentKind]) ??
-          edge.style?.strokeDasharray ??
-          (edge.type === "pedigree" || edge.type === "partner" ? undefined : "3 5"));
+  }, [
+    activeRoute,
+    branch,
+    connectionOriginId,
+    display,
+    expandedUnion,
+    highlightedUnion,
+    parentagePreview,
+    positionMode,
+    scopedFamilyId,
+    scopedIds,
+    unionById,
+  ]);
   const bridgeStatus = display.bridgeCount
     ? `${display.bridgeCount} ${display.bridgeCount === 1 ? "cruzamento separado" : "cruzamentos separados"}`
     : "Nenhum cruzamento entre os vínculos visíveis";
@@ -1141,6 +1431,125 @@ export function GenogramSpatialView({
           return [{ route, title, detail }];
         })
       : [];
+
+  const plaqueZoom = camera.zoom;
+  const plaques = useMemo(
+    () =>
+      names.map(({ person, name, relationship }) => {
+        const data = person.data;
+        const birth = formatDateBR(data.birth_date);
+        const death = formatDateBR(data.death_date);
+        const plaqueScale = person.scale * plaqueZoom;
+        const readName =
+          reading ||
+          person.id === selectedPersonId ||
+          person.id === tabPersonId ||
+          (!!scopedFamilyId && !!scopedIds?.has(person.id));
+        const isSubject = parentagePreview?.childId === person.id;
+        const isPrevious =
+          parentagePreview?.phase === "draft" &&
+          parentagePreview.previousParentIds.includes(person.id);
+        const isProposed = parentagePreview?.proposedParentIds.includes(person.id);
+        const parentageRole = isSubject
+          ? "subject"
+          : isProposed && parentagePreview?.phase === "confirmed"
+            ? "confirmed"
+            : isPrevious && isProposed
+              ? "retained"
+              : isPrevious
+                ? "previous"
+                : isProposed
+                  ? "proposed"
+                  : undefined;
+        const roleLabel =
+          parentageRole &&
+          {
+            subject: "Pessoa cuja filiação está em revisão",
+            retained: "Genitor comum à filiação atual e à proposta",
+            previous: "Genitor atual",
+            proposed: "Genitor proposto",
+            confirmed: "Genitor confirmado",
+          }[parentageRole];
+        const label = [
+          name,
+          relationship,
+          birth && `Nascimento ${birth}`,
+          death ? `Falecimento ${death}` : data.is_deceased && "Falecimento registrado",
+          roleLabel,
+        ]
+          .filter(Boolean)
+          .join(", ");
+        return (
+          <button
+            key={person.id}
+            type="button"
+            ref={(element) => {
+              if (element) cardRefs.current.set(person.id, element);
+              else cardRefs.current.delete(person.id);
+            }}
+            tabIndex={person.id === tabPersonId ? 0 : -1}
+            className="geno-spatial-person"
+            style={
+              {
+                left: person.x,
+                top: person.y,
+                "--plaque-width": `${SPATIAL_CARD_WIDTH}px`,
+                "--plaque-height": `${person.height / person.scale}px`,
+                "--plaque-scale": plaqueScale,
+                "--person-scale": person.scale,
+                "--plaque-name-size": `${plaqueNameSize(name, plaqueScale, readName)}px`,
+                "--plaque-role-size": `${clamp(8 / plaqueScale, 14, SPATIAL_MAX_ROLE_SIZE)}px`,
+                "--depth-x": `${-16 * Math.sin(angles.yaw)}px`,
+                "--depth-y": `${9 * Math.sin(angles.pitch)}px`,
+              } as CSSProperties
+            }
+            aria-pressed={person.id === selectedPersonId}
+            aria-label={label}
+            data-reference={data.is_proband || undefined}
+            data-branch={person.branch}
+            data-branch-muted={
+              (!!scopedIds && !scopedIds.has(person.id) && !parentageRole) || undefined
+            }
+            data-person-id={person.id}
+            data-generation={person.generation}
+            data-parentage-person={parentageRole}
+            data-connecting={person.id === connectionOriginId || undefined}
+            title={compact ? name : undefined}
+          >
+            {compact ? (
+              <span
+                className="geno-spatial-person-mark"
+                data-symbol={personSymbol(data)}
+                aria-hidden="true"
+              />
+            ) : (
+              <SpatialSymbol
+                type={personSymbol(data)}
+                deceased={!!(data.is_deceased || data.death_date)}
+                angles={angles}
+              />
+            )}
+            <span className="geno-spatial-person-label">
+              <span className="geno-spatial-person-name">{name}</span>
+              {relationship && <span className="geno-spatial-person-role">{relationship}</span>}
+            </span>
+          </button>
+        );
+      }),
+    [
+      angles,
+      compact,
+      connectionOriginId,
+      names,
+      parentagePreview,
+      plaqueZoom,
+      reading,
+      scopedFamilyId,
+      scopedIds,
+      selectedPersonId,
+      tabPersonId,
+    ],
+  );
 
   const spatialFeatureButtons = (
     <>
@@ -1218,6 +1627,7 @@ export function GenogramSpatialView({
           <div className="geno-spatial-scopes" role="group" aria-label="Explorar ramos da família">
             <button
               type="button"
+              aria-label="Árvore inteira em 3D"
               aria-pressed={!scopedIds && !reading}
               onClick={() => changeBranch(null, camera)}
             >
@@ -1391,6 +1801,7 @@ export function GenogramSpatialView({
         <div
           ref={viewportRef}
           className="geno-spatial-viewport"
+          data-compact-panorama={compact || undefined}
           data-dragging={dragging}
           data-moving-person={positionMode || undefined}
           data-touch-navigation={touchNavigation || undefined}
@@ -1410,117 +1821,18 @@ export function GenogramSpatialView({
           )}
           {hasFrame && (
             <>
-              <svg className="geno-spatial-geometry" width="100%" height="100%" aria-hidden="true">
-                <g transform={`translate(${x} ${y}) scale(${camera.zoom})`}>
-                  {Array.from(display.rows, ([rowY, row]) => {
-                    const left = row[0].x - row[0].width / 2 - 20;
-                    const right = row.at(-1)!.x + row.at(-1)!.width / 2 + 20;
-                    const guideY = rowY + 31;
-                    return (
-                      <path
-                        key={rowY}
-                        d={`M ${left} ${guideY} H ${right}`}
-                        className="geno-spatial-guide"
-                        vectorEffect="non-scaling-stroke"
-                      />
-                    );
-                  })}
-                  {display.routes.map((route) => (
-                    <path
-                      key={route.id}
-                      d={route.path}
-                      data-branch={route.branch}
-                      data-suggested={route.suggested || undefined}
-                      data-muted={routeIsMuted(route)}
-                      data-rendered-route={route.id}
-                      className={routeClass(route)}
-                      vectorEffect="non-scaling-stroke"
-                      strokeDasharray={routeDash(route)}
-                    />
-                  ))}
-                  {display.routes.flatMap((route) =>
-                    route.bridgePaths.map((path, index) => (
-                      <g
-                        key={`${route.id}-bridge-${index}`}
-                        data-bridge={route.id}
-                        data-branch={route.branch}
-                        data-muted={routeIsMuted(route)}
-                      >
-                        <path
-                          d={path}
-                          className="geno-spatial-bridge-clearance"
-                          vectorEffect="non-scaling-stroke"
-                        />
-                        <path
-                          d={path}
-                          className={routeClass(route)}
-                          vectorEffect="non-scaling-stroke"
-                          strokeDasharray={routeDash(route)}
-                        />
-                      </g>
-                    )),
-                  )}
-                  {!positionMode &&
-                    !connectionOriginId &&
-                    display.routes.map((route) => (
-                      <path
-                        key={`${route.id}-hit`}
-                        d={[route.path, ...route.bridgePaths].join(" ")}
-                        className="geno-spatial-link-hit"
-                        data-route-id={route.id}
-                        vectorEffect="non-scaling-stroke"
-                        onClick={() => followRoute(route)}
-                      />
-                    ))}
-                  {display.unions
-                    .filter((union) => !union.single)
-                    .map((union) => (
-                      <g
-                        key={union.id}
-                        data-branch={union.branch}
-                        data-union-id={union.id}
-                        data-expanded={union.expanded || undefined}
-                        data-active={highlightedUnion === union.id || undefined}
-                        transform={`translate(${union.x} ${union.y})`}
-                      >
-                        {union.label && <title>{union.label}</title>}
-                        {union.hubOffset && union.label && (
-                          <text x="8" y="-7" className="geno-spatial-union-label">
-                            {union.label}
-                          </text>
-                        )}
-                        <path d="M 0 -6 L 6 0 L 0 6 L -6 0 Z" className="geno-spatial-union" />
-                        {union.kind === "divorcio" && (
-                          <path d="M -8 7 L -2 -7 M 0 7 L 6 -7" className="geno-spatial-break" />
-                        )}
-                      </g>
-                    ))}
-                  {display.parentageTracks.map(({ role, paths }) => (
-                    <g
-                      key={role}
-                      data-parentage-track={role}
-                      className="geno-spatial-parentage-track"
-                    >
-                      {paths.map((path, index) => (
-                        <path
-                          key={index}
-                          d={path}
-                          className="geno-spatial-parentage-clearance"
-                          vectorEffect="non-scaling-stroke"
-                        />
-                      ))}
-                      {paths.map((path, index) => (
-                        <path
-                          key={index}
-                          d={path}
-                          className="geno-spatial-parentage-line"
-                          data-parentage-preview={role === "previous" ? "current" : role}
-                          vectorEffect="non-scaling-stroke"
-                        />
-                      ))}
-                    </g>
-                  ))}
-                </g>
+              <svg
+                className="geno-spatial-geometry"
+                width="100%"
+                height="100%"
+                aria-hidden="true"
+                onClick={(event) => {
+                  const routeId = (event.target as SVGElement).dataset.routeId;
+                  const route = routeId ? routeById.get(routeId) : undefined;
+                  if (route) followRoute(route);
+                }}
+              >
+                <g transform={`translate(${x} ${y}) scale(${camera.zoom})`}>{drawing}</g>
               </svg>
               <div className="geno-spatial-ruler" aria-hidden="true">
                 {Array.from(display.rows, ([rowY, row]) => (
@@ -1533,122 +1845,14 @@ export function GenogramSpatialView({
                   </span>
                 ))}
               </div>
-              <div className="geno-spatial-people">
-                {names.map(({ person, name, relationship }) => {
-                  const data = person.data;
-                  const birth = formatDateBR(data.birth_date);
-                  const death = formatDateBR(data.death_date);
-                  const plaqueScale = person.scale * camera.zoom;
-                  const inFocusedFamily = !!scopedFamilyId && !!scopedIds?.has(person.id);
-                  const isSubject = parentagePreview?.childId === person.id;
-                  const isPrevious =
-                    parentagePreview?.phase === "draft" &&
-                    parentagePreview.previousParentIds.includes(person.id);
-                  const isProposed = parentagePreview?.proposedParentIds.includes(person.id);
-                  const parentageRole = isSubject
-                    ? "subject"
-                    : isProposed && parentagePreview?.phase === "confirmed"
-                      ? "confirmed"
-                      : isPrevious && isProposed
-                        ? "retained"
-                        : isPrevious
-                          ? "previous"
-                          : isProposed
-                            ? "proposed"
-                            : undefined;
-                  const roleLabel =
-                    parentageRole &&
-                    {
-                      subject: "Pessoa cuja filiação está em revisão",
-                      retained: "Genitor comum à filiação atual e à proposta",
-                      previous: "Genitor atual",
-                      proposed: "Genitor proposto",
-                      confirmed: "Genitor confirmado",
-                    }[parentageRole];
-                  const label = [
-                    name,
-                    relationship,
-                    birth && `Nascimento ${birth}`,
-                    death ? `Falecimento ${death}` : data.is_deceased && "Falecimento registrado",
-                    roleLabel,
-                  ]
-                    .filter(Boolean)
-                    .join(", ");
-                  return (
-                    <button
-                      key={person.id}
-                      type="button"
-                      ref={(element) => {
-                        if (element) cardRefs.current.set(person.id, element);
-                        else cardRefs.current.delete(person.id);
-                      }}
-                      tabIndex={person.id === tabPersonId ? 0 : -1}
-                      className="geno-spatial-person"
-                      style={
-                        {
-                          left:
-                            x +
-                            (person.x +
-                              (movePreview?.id === person.id
-                                ? movePreview.deltaX * Math.cos(camera.yaw) * SPATIAL_X_SCALE
-                                : 0)) *
-                              camera.zoom,
-                          top: y + person.y * camera.zoom,
-                          "--plaque-width": `${SPATIAL_CARD_WIDTH}px`,
-                          "--plaque-height": `${person.height / person.scale}px`,
-                          "--plaque-scale": plaqueScale,
-                          "--plaque-name-size": `${plaqueNameSize(name, plaqueScale, inFocusedFamily || reading)}px`,
-                          "--plaque-role-size": `${clamp(8 / plaqueScale, 14, SPATIAL_MAX_ROLE_SIZE)}px`,
-                          "--depth-x": `${-16 * Math.sin(camera.yaw)}px`,
-                          "--depth-y": `${9 * Math.sin(camera.pitch)}px`,
-                        } as CSSProperties
-                      }
-                      aria-pressed={person.id === selectedPersonId}
-                      aria-label={label}
-                      data-reference={data.is_proband || undefined}
-                      data-branch={person.branch}
-                      data-branch-muted={
-                        (!!scopedIds && !scopedIds.has(person.id) && !parentageRole) || undefined
-                      }
-                      data-person-id={person.id}
-                      data-generation={person.generation}
-                      data-parentage-person={parentageRole}
-                      data-connecting={person.id === connectionOriginId || undefined}
-                      onClick={(event) => {
-                        if (event.detail && skipPersonClick.current) return;
-                        selectPerson(person.id);
-                      }}
-                      onFocus={(event) => {
-                        setNavigationPersonId(person.id);
-                        if (event.currentTarget.matches(":focus-visible")) {
-                          revealCard(person);
-                          onFocusPerson?.(person.id);
-                        }
-                      }}
-                      onKeyDown={(event) => {
-                        if (
-                          !["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)
-                        )
-                          return;
-                        event.preventDefault();
-                        if (
-                          positionMode &&
-                          (event.key === "ArrowLeft" || event.key === "ArrowRight")
-                        )
-                          onMovePerson?.(person.id, event.key === "ArrowLeft" ? -26 : 26);
-                        else navigateCard(person, event.key);
-                      }}
-                    >
-                      <SpatialSymbol person={data} angles={camera} />
-                      <span className="geno-spatial-person-label">
-                        <span className="geno-spatial-person-name">{name}</span>
-                        {relationship && (
-                          <span className="geno-spatial-person-role">{relationship}</span>
-                        )}
-                      </span>
-                    </button>
-                  );
-                })}
+              <div
+                className="geno-spatial-people"
+                style={{ transform: `translate(${x}px, ${y}px) scale(${camera.zoom})` }}
+                onClick={clickPlaque}
+                onFocus={focusPlaque}
+                onKeyDown={navigatePlaques}
+              >
+                {plaques}
               </div>
             </>
           )}
@@ -1902,7 +2106,13 @@ export function GenogramSpatialView({
                 Focar pessoa
               </button>
             )}
-            <span aria-hidden="true">{panMode ? "Arraste para mover" : "Arraste para girar"}</span>
+            <span aria-hidden="true">
+              {compact && !positionMode
+                ? "Selecione uma pessoa para aproximar"
+                : panMode
+                  ? "Arraste para mover"
+                  : "Arraste para girar"}
+            </span>
           </div>
         </div>
       </div>

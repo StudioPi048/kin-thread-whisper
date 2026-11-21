@@ -1,10 +1,15 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { createRef } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { supabase } from "@/integrations/supabase/client";
+import { consultanteFamily } from "@/lib/geno/fixtures";
 import { GenogramCanvas } from "./genogram-canvas";
+import { buildSpatialLayout, projectSpatialPeople } from "./genogram-spatial-layout";
+import { GenogramSpatialView, type SpatialCameraHandle } from "./genogram-spatial-view";
 import { PersonFormDialog } from "./person-form-dialog";
+import { buildRenderGraph } from "./render-graph";
 
 vi.mock("@/integrations/supabase/client", () => import("../../../design/preview/client"));
 const { refreshHandles } = vi.hoisted(() => ({ refreshHandles: vi.fn() }));
@@ -260,7 +265,7 @@ it("abre o board estreito em escala de leitura, com ficha e panorama fora da esc
     "true",
   );
   const scope = within(screen.getByRole("group", { name: "Explorar ramos da família" }));
-  fireEvent.click(scope.getByRole("button", { name: "Árvore inteira" }));
+  fireEvent.click(scope.getByRole("button", { name: "Árvore inteira em 3D" }));
   expect(effectiveSize()).toBeLessThan(12);
   expect(peopleOnMap()).toEqual(initialPeople);
   fireEvent.click(screen.getByRole("button", { name: "Abrir ficha de Consultante" }));
@@ -273,6 +278,127 @@ it("abre o board estreito em escala de leitura, com ficha e panorama fora da esc
   fireEvent.click(scope.getByRole("button", { name: "Ler do topo" }));
   expect(effectiveSize()).toBeGreaterThanOrEqual(11.99);
   expect(peopleOnMap()).toEqual(initialPeople);
+});
+
+it.each([
+  [6, 131, 1440],
+  [8, 515, 320],
+])("enquadra %i gerações no board sem perder os %i nomes", (depth, size, width) => {
+  const height = 720;
+  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(width);
+  const family = consultanteFamily(depth);
+  const { nodes, edges } = buildRenderGraph(family.persons, family.rels, family.probandId);
+  const layout = buildSpatialLayout(nodes, edges);
+  const camera = createRef<SpatialCameraHandle>();
+  const onSelectPerson = vi.fn();
+  render(
+    <GenogramSpatialView
+      workbench
+      nodes={nodes}
+      edges={edges}
+      cameraRef={camera}
+      onSelectPerson={onSelectPerson}
+    />,
+  );
+
+  const initialPeople = peopleOnMap();
+  expect(initialPeople).toHaveLength(size);
+  expect(
+    initialPeople
+      .filter(({ generation }) => generation === 0)
+      .map(({ name }) => name)
+      .sort(),
+  ).toEqual(["Consultante", "Irmã", "Irmão"]);
+  const verifyFrame = (ids: ReadonlySet<string>) => {
+    const view = camera.current!.read()!;
+    const people = projectSpatialPeople(layout, view).people.filter(({ id }) => ids.has(id));
+    const screenX = width / 2 + view.x;
+    const screenY = height / 2 + view.y;
+    const lowerX = Math.min(
+      ...people.map((person) => screenX + (person.x - person.width / 2) * view.zoom),
+    );
+    const upperX = Math.max(
+      ...people.map((person) => screenX + (person.x + person.width / 2) * view.zoom),
+    );
+    const lowerY = Math.min(...people.map((person) => screenY + person.y * view.zoom));
+    const upperY = Math.max(
+      ...people.map((person) => screenY + (person.y + person.height) * view.zoom),
+    );
+    expect(lowerX).toBeGreaterThanOrEqual(0);
+    expect(upperX).toBeLessThanOrEqual(width);
+    expect(lowerY).toBeGreaterThanOrEqual(0);
+    expect(upperY).toBeLessThanOrEqual(height);
+  };
+  const allIds = new Set(family.persons.map(({ id }) => id));
+  expect(camera.current!.readAnchor()?.overview).toBe(true);
+  verifyFrame(allIds);
+  fireEvent.click(screen.getByRole("button", { name: "Vista em perspectiva" }));
+  verifyFrame(allIds);
+  fireEvent.click(screen.getByRole("button", { name: "Ramo materno" }));
+  verifyFrame(
+    new Set(
+      layout.people
+        .filter(({ branch, generation }) => branch === "maternal" || generation === 0)
+        .map(({ id }) => id),
+    ),
+  );
+  expect(camera.current!.readAnchor()?.overview).toBe(false);
+  const distantPerson = family.persons.at(-1)!;
+  const plaque = spatial().querySelector<HTMLButtonElement>(
+    `[data-person-id="${distantPerson.id}"]`,
+  )!;
+  fireEvent.click(plaque);
+  expect(onSelectPerson).toHaveBeenCalledWith(distantPerson.id);
+  expect(plaque.querySelector(".geno-spatial-person-name")?.textContent).toBe(
+    distantPerson.full_name,
+  );
+  expect(spatial().hasAttribute("data-compact-panorama")).toBe(false);
+  fireEvent.click(screen.getByRole("button", { name: "Árvore inteira em 3D" }));
+  verifyFrame(allIds);
+  expect(peopleOnMap()).toEqual(initialPeople);
+});
+
+it("realinha a pessoa em leitura quando a ficha reduz o espaço do board", () => {
+  const width = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(768);
+  const height = vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(520);
+  let resize: () => void = () => {};
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      constructor(callback: () => void) {
+        resize = callback;
+      }
+      observe() {}
+      disconnect() {}
+    },
+  );
+  const family = consultanteFamily();
+  const personId = family.persons.at(-1)!.id;
+  const { nodes, edges } = buildRenderGraph(family.persons, family.rels, family.probandId);
+  const layout = buildSpatialLayout(nodes, edges);
+  const camera = createRef<SpatialCameraHandle>();
+  render(
+    <GenogramSpatialView
+      workbench
+      nodes={nodes}
+      edges={edges}
+      cameraRef={camera}
+      onSelectPerson={vi.fn()}
+      selectedPersonId={personId}
+      focusRequest={{ personId }}
+    />,
+  );
+  const original = camera.current!.read()!;
+  act(() => {
+    width.mockReturnValue(430);
+    height.mockReturnValue(280);
+    resize();
+  });
+  const resized = camera.current!.read()!;
+  const person = projectSpatialPeople(layout, resized).people.find(({ id }) => id === personId)!;
+  expect(resized.zoom).toBeLessThan(original.zoom);
+  expect(140 + resized.y + person.y * resized.zoom).toBeGreaterThanOrEqual(0);
+  expect(spatial().hasAttribute("data-compact-panorama")).toBe(false);
 });
 
 it("abre pelo ID da união e mantém o vínculo em foco no 2D e no 3D", async () => {
@@ -327,7 +453,7 @@ it("explora os ramos em 3D, edita por ID no mapa e desfaz sem mudar o restante d
   expect(topNames).toEqual(["Consultante", "Irmã", "Irmão"]);
 
   const branches = within(screen.getByRole("group", { name: "Explorar ramos da família" }));
-  const overview = branches.getByRole("button", { name: "Árvore inteira" });
+  const overview = branches.getByRole("button", { name: "Árvore inteira em 3D" });
   const paternal = branches.getByRole("button", { name: "Ramo paterno" });
   const maternal = branches.getByRole("button", { name: "Ramo materno" });
 

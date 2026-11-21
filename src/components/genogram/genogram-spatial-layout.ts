@@ -262,11 +262,9 @@ function reserveRail(rails: Map<string, Span[][]>, key: string, span: Span) {
   return lane;
 }
 
-export function projectSpatialLayout(
+export function projectSpatialPeople(
   layout: ReturnType<typeof buildSpatialLayout>,
   angles: SpatialAngles,
-  selectedId?: string | null,
-  { separateLinks = false, expandedPersonId, parentagePreview }: SpatialLayoutOptions = {},
 ) {
   const rows = new Map(
     layout.rows.map(([_, row]) => {
@@ -298,7 +296,16 @@ export function projectSpatialLayout(
       return [projected[0].y, projected] as const;
     }),
   );
-  const people = Array.from(rows.values()).flat();
+  return { rows, people: Array.from(rows.values()).flat() };
+}
+
+export function projectSpatialLayout(
+  layout: ReturnType<typeof buildSpatialLayout>,
+  angles: SpatialAngles,
+  selectedId?: string | null,
+  { separateLinks = false, expandedPersonId, parentagePreview }: SpatialLayoutOptions = {},
+) {
+  const { people, rows } = projectSpatialPeople(layout, angles);
   const peopleById = new Map(people.map((person) => [person.id, person]));
   const coordinatedUnions = layout.unions
     .filter((union) => !union.single && union.partners.includes(expandedPersonId ?? ""))
