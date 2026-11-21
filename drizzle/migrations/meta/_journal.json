@@ -85,6 +85,34 @@
       "when": 1795205000000,
       "tag": "0012_dossier_deletion_jobs",
       "breakpoints": false
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1795210000000,
+      "tag": "0013_session_audio_recovery",
+      "breakpoints": false
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1795210001000,
+      "tag": "0014_clan_union_order",
+      "breakpoints": false
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1795210002000,
+      "tag": "0015_timeline_case_name_search",
+      "breakpoints": false
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1795210003000,
+      "tag": "0016_pending_appointments",
+      "breakpoints": false
     }
   ]
 }

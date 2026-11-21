@@ -44,6 +44,10 @@ function wrapLines(text: string, maximum: number) {
 
 function selectPage(nodes: Node[], edges: Edge[], branch?: MapBranch) {
   if (!branch) return { nodes, edges };
+  const nodeById = new Map(nodes.map((node) => [node.id, node]));
+  const branchPeople = nodes
+    .filter((node) => node.type === "person" && node.data.branchId === branch)
+    .map(({ id }) => id);
   const people = new Set(
     nodes
       .filter(
@@ -52,6 +56,30 @@ function selectPage(nodes: Node[], edges: Edge[], branch?: MapBranch) {
       )
       .map(({ id }) => id),
   );
+  const partnersByUnion = new Map<string, Edge[]>();
+  const originsByChild = new Map<string, string[]>();
+  for (const edge of edges) {
+    if (edge.type === "partner") {
+      const partners = partnersByUnion.get(edge.target) ?? [];
+      partnersByUnion.set(edge.target, [...partners, edge]);
+    } else if (edge.type === "pedigree") {
+      for (const id of (edge.data?.childIds as string[] | undefined) ?? []) {
+        const origins = originsByChild.get(id) ?? [];
+        originsByChild.set(id, [...origins, edge.source]);
+      }
+    }
+  }
+  // Close shared ancestry reached from this branch. The other branch's
+  // parents can still appear beside the consultante's parents as context.
+  for (const child of branchPeople) {
+    for (const union of originsByChild.get(child) ?? []) {
+      for (const { source: parent } of partnersByUnion.get(union) ?? []) {
+        if (people.has(parent) || nodeById.get(parent)?.data.branchId !== "other") continue;
+        people.add(parent);
+        branchPeople.push(parent);
+      }
+    }
+  }
   const children = edges.flatMap((edge) => {
     if (edge.type !== "pedigree") return [];
     const childIds =
@@ -61,13 +89,11 @@ function selectPage(nodes: Node[], edges: Edge[], branch?: MapBranch) {
       : [];
   });
   const unionIds = new Set(children.map(({ source }) => source));
-  const partners = edges.filter(
-    (edge) => edge.type === "partner" && (unionIds.has(edge.target) || people.has(edge.source)),
-  );
-  for (const partner of partners) {
-    people.add(partner.source);
-    unionIds.add(partner.target);
+  for (const [id, partners] of partnersByUnion) {
+    if (partners.some((edge) => people.has(edge.source))) unionIds.add(id);
   }
+  const partners = [...unionIds].flatMap((id) => partnersByUnion.get(id) ?? []);
+  for (const partner of partners) people.add(partner.source);
   return {
     nodes: nodes.filter(({ id }) => people.has(id) || unionIds.has(id)),
     edges: [

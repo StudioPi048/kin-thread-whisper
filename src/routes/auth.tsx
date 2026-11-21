@@ -14,7 +14,7 @@ import { workspaceDestination } from "@/lib/auth-destination";
 import { verifiedWorkspaceUser, withAuthCheckTimeout } from "@/lib/workspace-auth";
 
 const searchSchema = z.object({
-  mode: z.enum(["signin", "signup", "recover", "reset"]).optional(),
+  mode: z.enum(["signin", "signup", "recover", "reset"]).optional().catch(undefined),
   redirect: z.unknown().optional().transform(workspaceDestination),
   reauth: z.literal(true).optional().catch(undefined),
 });
@@ -506,7 +506,7 @@ function AuthPage() {
                 Lembrou a senha?{" "}
                 <button
                   type="button"
-                  className="font-bold text-forest hover:text-forest transition-colors underline-offset-4 hover:underline"
+                  className="inline-flex min-h-11 items-center px-1 font-bold text-forest underline-offset-4 hover:underline"
                   onClick={() => changeMode("signin")}
                 >
                   Entrar
@@ -517,7 +517,7 @@ function AuthPage() {
                 Não tem conta?{" "}
                 <button
                   type="button"
-                  className="font-bold text-forest hover:text-forest transition-colors underline-offset-4 hover:underline"
+                  className="inline-flex min-h-11 items-center px-1 font-bold text-forest underline-offset-4 hover:underline"
                   onClick={() => changeMode("signup")}
                 >
                   Criar conta
@@ -528,7 +528,7 @@ function AuthPage() {
                 Já tem conta?{" "}
                 <button
                   type="button"
-                  className="font-bold text-forest hover:text-forest transition-colors underline-offset-4 hover:underline"
+                  className="inline-flex min-h-11 items-center px-1 font-bold text-forest underline-offset-4 hover:underline"
                   onClick={() => changeMode("signin")}
                 >
                   Entrar

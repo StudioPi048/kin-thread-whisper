@@ -71,3 +71,31 @@ export function readTranscriptReviews(raw: unknown): Record<string, TranscriptRe
     }),
   );
 }
+
+export function transcriptForSummary(transcript: string, segments: unknown, rawReviews: unknown) {
+  const reviews = readTranscriptReviews(rawReviews);
+  if (!Object.values(reviews).some(({ decision }) => decision !== "confirmed"))
+    return transcript.trim();
+  return transcriptPassages(transcript, segments)
+    .flatMap(({ index, text }) => {
+      const review = reviews[index];
+      if (review?.decision === "excluded") return [];
+      if (review?.decision === "corrected") return [review.correction.trim() || text];
+      return [text];
+    })
+    .join("\n\n");
+}
+
+type TranscriptCheckpoint = { text: string; segments: ReturnType<typeof parseTimedTranscript> };
+
+export async function prepareSessionTranscript(
+  checkpoint: TranscriptCheckpoint | null,
+  transcribe: () => Promise<TranscriptCheckpoint>,
+  persist: (transcript: TranscriptCheckpoint) => Promise<void>,
+) {
+  if (checkpoint?.text.trim()) return checkpoint;
+  const transcript = await transcribe();
+  if (!transcript.text.trim()) throw new Error("Transcrição vazia");
+  await persist(transcript);
+  return transcript;
+}

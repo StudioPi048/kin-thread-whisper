@@ -697,11 +697,15 @@ function TimelineEventDetail({
         <Link
           to="/app/clientes/$clientId"
           params={{ clientId }}
-          search={{ tab: "genogram", person: item.personId }}
+          search={
+            item.relationshipId
+              ? { tab: "genogram", relation: item.relationshipId }
+              : { tab: "genogram", person: item.personId }
+          }
           className="inline-flex min-h-11 items-center gap-1.5 font-semibold text-forest hover:underline"
         >
           <MapPin className="size-4" aria-hidden />{" "}
-          {item.kind === "union" ? "Ver vínculo no mapa" : "Ver no mapa"}
+          {item.relationshipId ? "Ver vínculo no mapa" : "Ver no mapa"}
         </Link>
         {item.sourceTab && (
           <Link

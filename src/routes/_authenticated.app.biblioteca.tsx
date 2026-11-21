@@ -71,6 +71,10 @@ function BibliotecaPage() {
     },
   });
   const items = useMemo(() => buildLibraryItems(entries ?? []), [entries]);
+  const availableThemes = useMemo(
+    () => THEMES.filter((topic) => searchLibrary(items, topic.name).length > 0),
+    [items],
+  );
   const shown = searchLibrary(items, q, category);
   // Trecho aberto vive na URL (?item=ID) — dá para voltar a ele; só o ID é lembrado.
   const selected = itemKey ? (items.find((x) => x.key === itemKey) ?? null) : null;
@@ -182,7 +186,7 @@ function BibliotecaPage() {
               Buscar por tema <ChevronDown size={16} aria-hidden />
             </summary>
             <div className="mt-1 flex flex-wrap gap-x-3">
-              {THEMES.map((topic) => (
+              {availableThemes.map((topic) => (
                 <button
                   key={topic.name}
                   type="button"

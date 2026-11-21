@@ -49,6 +49,7 @@ type SpatialUnion = SpatialPoint & {
   partners: string[];
   kind?: string;
   label?: string;
+  hubOffset?: number;
   branch: SpatialBranch;
   single: boolean;
 };
@@ -152,12 +153,26 @@ export function buildSpatialLayout(nodes: Node[], edges: Edge[]) {
   const rowPosition = new Map<number, number>();
   let bottom = -SPATIAL_ROW_GAP;
   let previousGeneration = 0;
+  const extraSpaceByRow = new Map<number, number>();
+  for (const node of nodes) {
+    const { generation, hubOffset } = node.data;
+    if (node.type === "union" && typeof generation === "number" && typeof hubOffset === "number") {
+      extraSpaceByRow.set(
+        generation,
+        Math.max(extraSpaceByRow.get(generation) ?? 0, hubOffset + 26),
+      );
+    }
+  }
   for (const [generation, row] of sorted) {
     row.sort((a, b) => a.x - b.x || a.id.localeCompare(b.id));
     const y = rows.length
       ? Math.max(
           generation * SPATIAL_ROW_GAP,
-          bottom + (generation - previousGeneration >= 1 ? 58 : 39),
+          bottom +
+            Math.max(
+              generation - previousGeneration >= 1 ? 58 : 39,
+              extraSpaceByRow.get(generation) ?? 0,
+            ),
         )
       : generation * SPATIAL_ROW_GAP;
     for (const person of row) person.y = y;
@@ -200,6 +215,7 @@ export function buildSpatialLayout(nodes: Node[], edges: Edge[]) {
       single: node.data.isSingle === true || partners.length === 1,
       kind: typeof node.data.kind === "string" ? node.data.kind : undefined,
       label: typeof node.data.label === "string" ? node.data.label : undefined,
+      hubOffset: typeof node.data.hubOffset === "number" ? node.data.hubOffset : undefined,
     });
   }
   return { people, rows, unions, edges: visibleEdges };
@@ -298,6 +314,8 @@ export function projectSpatialLayout(
     let y = corresponding.length
       ? corresponding[0].y + SPATIAL_SYMBOL_CENTER * corresponding[0].scale
       : projected.y;
+    if (union.hubOffset && corresponding.length)
+      y = corresponding[0].y - (12 + union.hubOffset) * corresponding[0].scale;
     const rank = expandedRanks.get(union.id);
     const expanded = rank !== undefined;
     let z = union.z;
@@ -478,9 +496,10 @@ export function projectSpatialLayout(
         person.id === expandedPersonId && rank !== undefined
           ? person.x + (rank / (coordinatedUnions.length - 1) - 0.5) * person.width * 0.5
           : person.x;
-      const strokes = union.expanded
-        ? [[{ x: port, y: person.y }, { x: port, y: union.y }, union]]
-        : [[{ x, y }, { x, y: railY }, { x: union.x, y: railY }, union]];
+      const strokes =
+        union.expanded || union.hubOffset
+          ? [[{ x: port, y: person.y }, { x: port, y: union.y }, union]]
+          : [[{ x, y }, { x, y: railY }, { x: union.x, y: railY }, union]];
       const highlighted = selectedUnions.has(union.id);
       const suggested = edge.data?.suggested === true;
       routes.push({

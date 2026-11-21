@@ -62,6 +62,8 @@ export interface PersonEntity {
 
 export interface UnionEntity {
   id: string;
+  relationshipId?: string;
+  hubOffset?: number;
   partners: string[]; // 1 ou 2 personIds; um pode ser sintético "unknown"
   children: string[];
   kind: UnionKind;
@@ -198,7 +200,8 @@ export function unionKindLabel(kind: UnionKind, order?: number | null): string {
     namoro: "Namoro",
     desconhecido: "União",
   };
-  if (kind === "casamento" && order && order > 1) return `${order}º casamento`;
+  if (order && order > 0)
+    return kind === "casamento" ? `${order}º casamento` : `${map[kind]} · ${order}ª união`;
   return map[kind];
 }
 
@@ -354,7 +357,7 @@ export function buildLogicalGraph({
   const declaredChildren = new Set(reviewedChildren);
   const childrenWithRecords = new Set<string>();
   const invalidChildren = new Set<string>();
-  const unionRels = new Map<string, RelRow>();
+  const unionRels = new Map<string, RelRow[]>();
   const siblings = new Map<string, Set<string>>();
   const ambiguousSiblingPairs = new Set<string>();
   for (const r of [...rels].sort((a, b) => a.id.localeCompare(b.id))) {
@@ -393,7 +396,10 @@ export function buildLogicalGraph({
     )
       continue;
     if (r.relationship_type === "union") {
-      unionRels.set(pairKey([from.id, to.id]), r);
+      const key = pairKey([from.id, to.id]);
+      const unions = unionRels.get(key) ?? [];
+      unions.push(r);
+      unionRels.set(key, unions);
     } else if (r.relationship_type === "sibling") {
       if (r.qualifier !== "biological" && r.qualifier !== "twin") {
         ambiguousSiblingPairs.add(pairKey([from.id, to.id]));
@@ -551,7 +557,7 @@ export function buildLogicalGraph({
 
   // A reprodução de uma segunda união pode ligar um ascendente a mais de um
   // ramo. Canonizamos a geração uma vez por pessoa, a partir das filiações.
-  resolveGenerations(g, unionRels, siblings);
+  resolveGenerations(g, [...unionRels.values()].flat(), siblings);
 
   // "Irmã(o) do Pai/Mãe" é um papel inequívoco na planilha, mas não
   // confirma que a irmandade é plena. A árvore apresenta o par candidato
@@ -635,6 +641,7 @@ export function buildLogicalGraph({
     ...g.parentsByChild.keys(),
     ...g.suggestedParentsByChild.keys(),
   ]);
+  const attachedUnions = new Set<string>();
   for (const child of displayChildren) {
     const suggested = getSuggestedParents(g, child);
     const parents = [...getResolvedParents(g, child), ...suggested];
@@ -643,19 +650,30 @@ export function buildLogicalGraph({
     const parentIds = parents.map((p) => p.personId);
     const key = pairKey(parentIds);
     const direction = person.lane === "descendant" ? "down" : "up";
+    const relations = unionRels.get(key) ?? [];
+    // Filiação registra IDs dos pais, mas não identifica o casamento. Se o
+    // mesmo par tem mais de uma união, use uma junção de filiação do par.
+    const relation = relations.length === 1 ? relations[0] : undefined;
     const id =
-      (legacyUnionIds.get(key) ?? `u_exp_${key.replace(/\|/g, "_")}`) +
+      (relation
+        ? `union:${relation.id}`
+        : (legacyUnionIds.get(key) ?? `u_exp_${key.replace(/\|/g, "_")}`)) +
       (direction === "down" ? "_desc" : "");
+    if (relation) attachedUnions.add(relation.id);
     const kids = g.unions.get(id)?.children ?? [];
     if (!g.unions.has(id)) {
-      const relation = unionRels.get(key);
       const kind = deriveUnionKind(relation);
       g.unions.set(id, {
         id,
+        relationshipId: relation?.id,
         partners: parentIds,
         children: kids,
         kind,
-        label: relation ? unionKindLabel(kind, relation.marriage_order) : "",
+        label: relation
+          ? unionKindLabel(kind, relation.marriage_order)
+          : relations.length > 1
+            ? "Filiação"
+            : "",
         generation: Math.max(...parentIds.map((p) => g.persons.get(p)!.generation)),
         branchId: person.branchId,
         direction,
@@ -672,24 +690,37 @@ export function buildLogicalGraph({
       ...(suggested.length > 0 ? { suggested: true } : {}),
     });
   }
-  // Alguns casais não têm filhos registrados. Preservamos uniões explicitadas
-  // sem convertê-las em filiação, inclusive cônjuge do consulente.
-  for (const [key, rel] of unionRels) {
-    if ([...g.unions.values()].some((u) => pairKey(u.partners) === key)) continue;
-    const id = `u_exp_${key.replace(/\|/g, "_")}`;
-    const partners = [rel.from_person_id, rel.to_person_id];
-    const kind = deriveUnionKind(rel);
-    g.unions.set(id, {
-      id,
-      partners,
-      children: [],
-      kind,
-      label: unionKindLabel(kind, rel.marriage_order),
-      generation: Math.max(...partners.map((p) => g.persons.get(p)!.generation)),
-      branchId: "other",
-      direction: "up",
-    });
-    for (const personId of partners) g.edges.push({ kind: "partner", personId, unionId: id });
+  for (const relations of unionRels.values()) {
+    const ordered = relations.sort(
+      (a, b) =>
+        (a.marriage_order ?? Infinity) - (b.marriage_order ?? Infinity) ||
+        (a.start_date ?? "").localeCompare(b.start_date ?? "") ||
+        a.id.localeCompare(b.id),
+    );
+    for (const [index, rel] of ordered.entries()) {
+      if (attachedUnions.has(rel.id)) continue;
+      const id = `union:${rel.id}`;
+      const partners = [rel.from_person_id, rel.to_person_id];
+      const kind = deriveUnionKind(rel);
+      g.unions.set(id, {
+        id,
+        relationshipId: rel.id,
+        ...(ordered.length > 1
+          ? { hubOffset: (index + 1) * Math.min(24, 110 / ordered.length) }
+          : {}),
+        partners,
+        children: [],
+        kind,
+        label: unionKindLabel(kind, rel.marriage_order),
+        generation: Math.max(...partners.map((p) => g.persons.get(p)!.generation)),
+        branchId:
+          g.persons.get(partners[0])!.branchId === g.persons.get(partners[1])!.branchId
+            ? g.persons.get(partners[0])!.branchId
+            : "other",
+        direction: "up",
+      });
+      for (const personId of partners) g.edges.push({ kind: "partner", personId, unionId: id });
+    }
   }
 
   for (const u of g.unions.values()) {
@@ -700,7 +731,7 @@ export function buildLogicalGraph({
 
 function resolveGenerations(
   g: LogicalGraph,
-  unionRels: Map<string, RelRow>,
+  unionRels: readonly RelRow[],
   siblings: Map<string, Set<string>>,
 ) {
   const parentsOf = (id: string) => getResolvedParents(g, id).map((p) => p.personId);
@@ -733,7 +764,7 @@ function resolveGenerations(
   }
   const descending = reach(g.topRowIds, children.get);
   const social = new Set<string>(siblings.keys());
-  for (const rel of unionRels.values()) {
+  for (const rel of unionRels) {
     if (g.topRowIds.has(rel.from_person_id)) social.add(rel.to_person_id);
     if (g.topRowIds.has(rel.to_person_id)) social.add(rel.from_person_id);
   }
@@ -846,17 +877,6 @@ export function validateGraph(g: LogicalGraph): ValidationResult {
     }
   }
 
-  // Parceiro repetido: mesma dupla em duas uniões distintas
-  const pairSeen = new Map<string, string>();
-  for (const [uid, u] of g.unions) {
-    if (u.partners.length !== 2) continue;
-    const key = [...u.partners].sort().join("|");
-    if (pairSeen.has(key) && pairSeen.get(key) !== uid) {
-      errors.push(`Mesma dupla aparece em duas uniões (${uid} e ${pairSeen.get(key)}).`);
-    }
-    pairSeen.set(key, uid);
-  }
-
   return { ok: errors.length === 0, errors };
 }
 
@@ -880,7 +900,7 @@ type Point = { x: number; y: number };
 
 /** Centro do encaixe; a vista subtrai metade do tamanho do nó para renderizá-lo. */
 export function placeUnionHub(
-  union: Pick<UnionEntity, "partners" | "direction">,
+  union: Pick<UnionEntity, "partners" | "direction" | "hubOffset">,
   positions: ReadonlyMap<string, Point>,
 ): Point | null {
   const partners = union.partners.flatMap((id) => {
@@ -897,13 +917,16 @@ export function placeUnionHub(
       y >= position.y &&
       y <= position.y + NODE_H,
   );
-  if (partners.length === 1 || blocked) {
+  if (partners.length === 1 || blocked || union.hubOffset) {
     return {
       x,
       y:
         union.direction === "up"
-          ? Math.min(...partners.map((partner) => partner.y)) - 12
-          : Math.max(...partners.map((partner) => partner.y)) + NODE_H + 12,
+          ? Math.min(...partners.map((partner) => partner.y)) - 12 - (union.hubOffset ?? 0)
+          : Math.max(...partners.map((partner) => partner.y)) +
+            NODE_H +
+            12 +
+            (union.hubOffset ?? 0),
     };
   }
   return { x, y };
@@ -949,14 +972,18 @@ export function layoutGraph(g: LogicalGraph): Placement {
       };
       return order(a) - order(b) || comparePersons(g.persons.get(a)!.row, g.persons.get(b)!.row);
     });
+  const hasOnlyPartnerGroup = (personId: string, union: UnionEntity) => {
+    const pair = pairKey(union.partners);
+    return (participants.get(personId) ?? []).every(
+      (item) => !item.partners.includes(personId) || pairKey(item.partners) === pair,
+    );
+  };
   const singleCouples = [...g.unions.values()].filter(
     (union) =>
       union.direction === "up" &&
       union.partners.length === 2 &&
       union.children.length > 0 &&
-      union.partners.every(
-        (id) => participants.get(id)?.filter((item) => item.partners.includes(id)).length === 1,
-      ),
+      union.partners.every((id) => hasOnlyPartnerGroup(id, union)),
   );
   const partnersShareRow = (union: UnionEntity) =>
     union.partners.every((id) => g.persons.get(id)!.generation === union.generation);
@@ -1305,9 +1332,7 @@ export function layoutGraph(g: LogicalGraph): Placement {
     .sort((a, b) => a.generation - b.generation);
   for (const union of ancestry) {
     const movable = union.partners.every(
-      (id) =>
-        !keptPositions.has(id) &&
-        participants.get(id)?.filter((item) => item.partners.includes(id)).length === 1,
+      (id) => !keptPositions.has(id) && hasOnlyPartnerGroup(id, union),
     );
     if (!movable) continue;
     const hub = placeUnionHub(union, personPos)!;

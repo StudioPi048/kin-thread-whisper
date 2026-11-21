@@ -601,6 +601,7 @@
 .dossier-session-record,
 .dossier-session-consents {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.9rem;
 }
 
@@ -653,9 +654,36 @@
 }
 
 .dossier-session-capture {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
   padding: 0.95rem 1.05rem;
   border-block: 1px solid var(--border);
   background: var(--archive);
+}
+
+.dossier-session-select {
+  flex: 0 1 26rem;
+  max-inline-size: 100%;
+}
+
+.dossier-session-entry-head > * {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 30rem) {
+  .dossier-session-select {
+    flex-basis: 100%;
+  }
+
+  .dossier-session-record button,
+  .dossier-session-consents button,
+  .dossier-session-entry-head button {
+    height: auto;
+    max-inline-size: 100%;
+    white-space: normal;
+  }
 }
 
 .dossier-consent-list {

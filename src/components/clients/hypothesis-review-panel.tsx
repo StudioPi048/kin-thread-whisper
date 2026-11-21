@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { History, Loader2, RefreshCw } from "lucide-react";
@@ -8,6 +8,7 @@ import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { useUnsaved } from "@/components/unsaved/unsaved-guard";
 import type { DetectedPattern, EvidenceFact } from "@/lib/patterns";
 import {
   DECISION_LABEL,
@@ -21,6 +22,8 @@ import {
 } from "@/lib/hypothesis-review";
 
 const reviewsKey = (clientId: string) => ["hypothesis-reviews", clientId] as const;
+
+type ReviewDraft = { decision: ReviewDecision | ""; note: string; fingerprint: string };
 
 function useHypothesisReviews(clientId: string) {
   return useQuery({
@@ -45,11 +48,13 @@ export function HypothesisReview({
   hypothesisKey,
   title,
   pattern,
+  available,
 }: {
   clientId: string;
   hypothesisKey: string;
   title: string;
   pattern: DetectedPattern;
+  available: boolean;
 }) {
   const qc = useQueryClient();
   const q = useHypothesisReviews(clientId);
@@ -58,21 +63,23 @@ export function HypothesisReview({
   const latest = rows[0] ?? null;
   const stale = isStale(latest, fp);
   const diff = latest && stale ? compareReviewEvidence(latest, pattern) : null;
-  const [draft, setDraft] = useState<{
-    decision: ReviewDecision | "";
-    note: string;
-    fingerprint: string;
-  }>({ decision: "", note: "", fingerprint: fp });
+  const [draft, setDraftState] = useState<ReviewDraft>({ decision: "", note: "", fingerprint: fp });
+  const draftRef = useRef(draft);
+  const setDraft = (update: (current: ReviewDraft) => ReviewDraft) => {
+    draftRef.current = update(draftRef.current);
+    setDraftState(draftRef.current);
+  };
   const decision = draft.fingerprint === fp ? draft.decision : "";
   const needsDecision = Boolean(draft.decision && draft.fingerprint !== fp);
   const [showHistory, setShowHistory] = useState(false);
+  const pendingSave = useRef<Promise<void> | null>(null);
 
   const save = useMutation({
     mutationFn: async ({
       submitted,
       snapshot,
     }: {
-      submitted: typeof draft;
+      submitted: ReviewDraft;
       snapshot: ReturnType<typeof evidenceSnapshot>;
     }) => {
       if (!submitted.decision) throw new Error("Escolha uma decisão.");
@@ -98,6 +105,33 @@ export function HypothesisReview({
       );
       qc.invalidateQueries({ queryKey: reviewsKey(clientId) });
     },
+  });
+
+  const isDirty = () => Boolean(draftRef.current.decision || draftRef.current.note);
+  const submit = (): Promise<void> => {
+    if (pendingSave.current) return pendingSave.current;
+    const submitted = draftRef.current;
+    if (!available || !submitted.decision || submitted.fingerprint !== fp) {
+      return Promise.reject(new Error("Confira as evidências atuais e escolha uma decisão."));
+    }
+    pendingSave.current = save
+      .mutateAsync({ submitted, snapshot: evidenceSnapshot(pattern) })
+      .then(() => undefined)
+      .finally(() => {
+        pendingSave.current = null;
+      });
+    return pendingSave.current;
+  };
+  const discard = async () => {
+    await pendingSave.current?.catch(() => undefined);
+    setDraft(() => ({ decision: "", note: "", fingerprint: fp }));
+    save.reset();
+  };
+  useUnsaved(`review:${clientId}:${hypothesisKey}`, {
+    label: `Revisão · ${title}`,
+    isDirty,
+    save: submit,
+    discard,
   });
 
   const name = `rev-${hypothesisKey}`;
@@ -158,10 +192,17 @@ export function HypothesisReview({
       </details>
       <fieldset className="space-y-2">
         <legend className="text-[15px] font-semibold">Registrar revisão</legend>
-        {needsDecision && (
+        {!available ? (
           <p role="status" className="text-[14px] text-clinical-warning">
-            As evidências foram atualizadas. Confira os dados e escolha a decisão de novo.
+            A hipótese deixou de aparecer com as evidências atuais. Você pode consultar ou descartar
+            este rascunho.
           </p>
+        ) : (
+          needsDecision && (
+            <p role="status" className="text-[14px] text-clinical-warning">
+              As evidências foram atualizadas. Confira os dados e escolha a decisão de novo.
+            </p>
+          )
         )}
         <div className="flex flex-wrap gap-2">
           {(Object.keys(DECISION_LABEL) as ReviewDecision[]).map((d) => (
@@ -174,6 +215,7 @@ export function HypothesisReview({
                 name={name}
                 value={d}
                 checked={decision === d}
+                disabled={!available}
                 onChange={() =>
                   setDraft((current) => ({ ...current, decision: d, fingerprint: fp }))
                 }
@@ -190,17 +232,28 @@ export function HypothesisReview({
           id={`${name}-note`}
           value={draft.note}
           onChange={(e) => setDraft((current) => ({ ...current, note: e.target.value }))}
+          readOnly={!available}
           className="min-h-[72px] text-[15px]"
         />
         <div className="flex flex-wrap items-center gap-3">
           <Button
             className="min-h-11"
-            disabled={!decision || save.isPending}
-            onClick={() => save.mutate({ submitted: draft, snapshot: evidenceSnapshot(pattern) })}
+            disabled={!available || !decision || save.isPending}
+            onClick={() => void submit().catch(() => undefined)}
           >
             {save.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
             {save.isError ? "Tentar salvar de novo" : "Salvar revisão"}
           </Button>
+          {(draft.note || draft.decision) && (
+            <Button
+              variant="ghost"
+              className="min-h-11"
+              disabled={save.isPending}
+              onClick={discard}
+            >
+              Descartar rascunho
+            </Button>
+          )}
           {save.isError && (
             <span role="alert" className="text-[14px] text-destructive">
               Não salvo: {save.error instanceof Error ? save.error.message : "erro"}. Sua escolha

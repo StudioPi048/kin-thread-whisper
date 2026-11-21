@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { CalendarPlus, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
 import { DayList, ScheduleDialog, WeekView } from "@/components/agenda/agenda-views";
 import { usePreferences } from "@/components/account/use-preferences";
@@ -19,7 +20,7 @@ import {
   shiftDateKey,
 } from "@/lib/scheduling";
 
-type AgendaView = "day" | "week";
+type AgendaView = "day" | "week" | "pending";
 
 export const Route = createFileRoute("/_authenticated/app/agenda")({
   component: AgendaPage,
@@ -27,7 +28,9 @@ export const Route = createFileRoute("/_authenticated/app/agenda")({
     ...(typeof search.date === "string" && isCivilDateKey(search.date)
       ? { date: search.date }
       : {}),
-    ...(search.view === "day" || search.view === "week" ? { view: search.view } : {}),
+    ...(search.view === "day" || search.view === "week" || search.view === "pending"
+      ? { view: search.view }
+      : {}),
   }),
 });
 
@@ -80,8 +83,16 @@ function AgendaPage() {
     <div className="archive-agenda-page">
       <DocumentHeader
         breadcrumb="Agenda"
-        title={date === today ? "Agenda de hoje" : "Agenda"}
-        subtitle={<span className="capitalize">{dateLabel}</span>}
+        title={
+          view === "pending" ? "Registros pendentes" : date === today ? "Agenda de hoje" : "Agenda"
+        }
+        subtitle={
+          view === "pending" ? (
+            "Atendimentos que ainda precisam de registro ou decisão."
+          ) : (
+            <span className="capitalize">{dateLabel}</span>
+          )
+        }
         illustration={<img src="/assets/genealiz/acervo/relogio.webp" alt="" decoding="async" />}
         actions={
           <Button className="min-h-11" onClick={() => setSchedule({})}>
@@ -97,7 +108,7 @@ function AgendaPage() {
             aria-label="Visualização da agenda"
             className="flex items-center gap-1.5"
           >
-            {(["day", "week"] as const).map((option) => (
+            {(["day", "week", "pending"] as const).map((option) => (
               <Button
                 key={option}
                 variant={view === option ? "default" : "ghost"}
@@ -105,49 +116,53 @@ function AgendaPage() {
                 aria-pressed={view === option}
                 onClick={() => selectDate(date, option)}
               >
-                {option === "day" ? "Dia" : "Semana"}
+                {option === "day" ? "Dia" : option === "week" ? "Semana" : "Pendências"}
               </Button>
             ))}
           </div>
-          <div
-            role="group"
-            aria-label="Navegar pelas datas"
-            className="flex min-w-0 flex-wrap items-center gap-1"
-          >
-            <Button
-              size="icon"
-              variant="ghost"
-              className="min-h-11 min-w-11"
-              aria-label={view === "week" ? "Semana anterior" : "Dia anterior"}
-              onClick={() => selectDate(shiftDateKey(date, -changeSize))}
+          {view !== "pending" && (
+            <div
+              role="group"
+              aria-label="Navegar pelas datas"
+              className="flex min-w-0 flex-wrap items-center gap-1"
             >
-              <ChevronLeft aria-hidden />
-            </Button>
-            <Input
-              type="date"
-              aria-label="Data da agenda"
-              value={date}
-              onChange={(event) => selectDate(event.target.value)}
-              className="min-h-11 w-auto min-w-0"
-            />
-            <Button
-              size="icon"
-              variant="ghost"
-              className="min-h-11 min-w-11"
-              aria-label={view === "week" ? "Próxima semana" : "Próximo dia"}
-              onClick={() => selectDate(shiftDateKey(date, changeSize))}
-            >
-              <ChevronRight aria-hidden />
-            </Button>
-            {date !== today && (
-              <Button variant="outline" className="min-h-11" onClick={() => selectDate(today)}>
-                Hoje
+              <Button
+                size="icon"
+                variant="ghost"
+                className="min-h-11 min-w-11"
+                aria-label={view === "week" ? "Semana anterior" : "Dia anterior"}
+                onClick={() => selectDate(shiftDateKey(date, -changeSize))}
+              >
+                <ChevronLeft aria-hidden />
               </Button>
-            )}
-          </div>
+              <Input
+                type="date"
+                aria-label="Data da agenda"
+                value={date}
+                onChange={(event) => selectDate(event.target.value)}
+                className="min-h-11 w-auto min-w-0"
+              />
+              <Button
+                size="icon"
+                variant="ghost"
+                className="min-h-11 min-w-11"
+                aria-label={view === "week" ? "Próxima semana" : "Próximo dia"}
+                onClick={() => selectDate(shiftDateKey(date, changeSize))}
+              >
+                <ChevronRight aria-hidden />
+              </Button>
+              {date !== today && (
+                <Button variant="outline" className="min-h-11" onClick={() => selectDate(today)}>
+                  Hoje
+                </Button>
+              )}
+            </div>
+          )}
         </div>
 
-        {view === "week" ? (
+        {view === "pending" ? (
+          <PendingRecords userId={user.id} />
+        ) : view === "week" ? (
           <WeekView dateKey={date} onPickDay={(day) => selectDate(day, "day")} />
         ) : query.isPending ? (
           <p role="status" className="p-4 text-sm text-muted-foreground">
@@ -219,7 +234,7 @@ function AgendaPage() {
                       <Link
                         to="/app/clientes/$clientId"
                         params={{ clientId: client.id }}
-                        search={{ from: "agenda", agendaDate: date }}
+                        search={{ from: "agenda", agendaDate: date, agendaView: view }}
                         className="inline-flex min-h-11 items-center break-words text-forest hover:underline"
                       >
                         {client.name}
@@ -259,6 +274,95 @@ function AgendaPage() {
         />
       )}
     </div>
+  );
+}
+
+const RECORDS_PAGE_SIZE = 30;
+const RECORD_DATE_LABEL = new Intl.DateTimeFormat("pt-BR", {
+  dateStyle: "short",
+  timeStyle: "short",
+});
+
+function PendingRecords({ userId }: { userId: string }) {
+  const [offset, setOffset] = useState(0);
+  const query = useQuery({
+    queryKey: ["agenda-pending-records", userId, offset],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("list_pending_clinical_records", {
+        _offset: offset,
+        _limit: RECORDS_PAGE_SIZE + 1,
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  if (query.isPending) return <p role="status">Carregando pendências…</p>;
+  if (query.isError)
+    return (
+      <div role="alert" className="flex flex-wrap items-center gap-2">
+        Não foi possível carregar os registros pendentes.
+        <Button variant="outline" onClick={() => void query.refetch()}>
+          Tentar de novo
+        </Button>
+      </div>
+    );
+  const records = query.data.slice(0, RECORDS_PAGE_SIZE);
+  return (
+    <section aria-label="Atendimentos pendentes" className="space-y-3">
+      {records.length ? (
+        <ul className="divide-y divide-border border-y border-border bg-card">
+          {records.map((record) => (
+            <li key={record.id}>
+              <Link
+                className="flex min-h-11 flex-wrap items-center justify-between gap-2 px-4 py-2 hover:bg-accent"
+                to="/app/clientes/$clientId"
+                params={{ clientId: record.client_id }}
+                search={{
+                  tab: "sessions",
+                  session: record.id,
+                  from: "agenda",
+                  agendaView: "pending",
+                }}
+              >
+                <span>
+                  <strong>{record.client_name}</strong>
+                  {record.title && ` · ${record.title}`}
+                </span>
+                <span>
+                  <time dateTime={record.session_date}>
+                    {RECORD_DATE_LABEL.format(new Date(record.session_date))}
+                  </time>
+                  {" · "}
+                  {record.overdue ? "Horário em aberto" : "Registro pendente"}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>Nenhum registro pendente nesta página.</p>
+      )}
+      {(offset > 0 || query.data.length > RECORDS_PAGE_SIZE) && (
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            className="min-h-11"
+            disabled={offset === 0}
+            onClick={() => setOffset(offset - RECORDS_PAGE_SIZE)}
+          >
+            Anterior
+          </Button>
+          <Button
+            variant="outline"
+            className="min-h-11"
+            disabled={query.data.length <= RECORDS_PAGE_SIZE}
+            onClick={() => setOffset(offset + RECORDS_PAGE_SIZE)}
+          >
+            Próxima
+          </Button>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -305,7 +409,12 @@ function CasePreparation({ session }: { session: AgendaSessionDTO }) {
             <Link
               to="/app/clientes/$clientId"
               params={{ clientId: session.clientId }}
-              search={{ tab: "genogram", from: "agenda", agendaDate: session.dateKey }}
+              search={{
+                tab: "genogram",
+                from: "agenda",
+                agendaDate: session.dateKey,
+                agendaView: "day",
+              }}
             >
               Genossociograma
             </Link>
@@ -314,7 +423,12 @@ function CasePreparation({ session }: { session: AgendaSessionDTO }) {
             <Link
               to="/app/clientes/$clientId"
               params={{ clientId: session.clientId }}
-              search={{ tab: "patterns", from: "agenda", agendaDate: session.dateKey }}
+              search={{
+                tab: "patterns",
+                from: "agenda",
+                agendaDate: session.dateKey,
+                agendaView: "day",
+              }}
             >
               Padrões do caso
             </Link>

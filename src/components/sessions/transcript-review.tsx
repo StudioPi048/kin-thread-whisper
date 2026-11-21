@@ -105,7 +105,7 @@ export function TranscriptReview({
         .eq("id", sessionId)
         .eq("client_id", clientId)
         .eq("updated_at", draft.updatedAt)
-        .eq("status", "ready")
+        .in("status", ["ready", "error"])
         .select("id")
         .maybeSingle();
       if (error || !data) {

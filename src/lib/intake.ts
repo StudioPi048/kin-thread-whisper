@@ -323,3 +323,14 @@ export function sectionCompletion(intake: Partial<ClientIntake>, id: IntakeSecti
   ).length;
   return { filled, unknown, total: fields.length };
 }
+
+/** O horário de nascimento registra a hora civil relatada, sem um fuso de origem. */
+export function intakeBirthTimeInput(stored: string) {
+  const value = /^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/.exec(stored);
+  return value ? `${value[1]}T${value[2]}` : "";
+}
+
+export function intakeBirthTimeStorage(value: string) {
+  // Os valores legados enviados sem fuso eram gravados em UTC no PostgreSQL.
+  return value ? `${value}:00Z` : null;
+}

@@ -2,6 +2,7 @@ import { IntakeEventProposal, type IntakeFinding } from "./intake-event-proposal
 import { useUnsaved } from "@/components/unsaved/unsaved-guard";
 import { createContext, useContext, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Loader2, Plus, Save, Trash2, CheckCircle2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,8 @@ import {
   answerContext,
   findIntakeQuestions,
   isIntakeSection,
+  intakeBirthTimeInput,
+  intakeBirthTimeStorage,
   type IntakeContextKey,
   calculateCompletion,
   sectionCompletion as calcSectionCompletion,
@@ -177,10 +180,14 @@ function CaseIntakeForm({ clientId, professionalId, focusQuestion }: Props) {
     label: "Anamnese",
     isDirty: () => queue.hasPending(),
     save: () => queue.flush(),
-    discard: () => {
-      queue.discard();
+    discard: async () => {
+      const sent = await queue.discardAndWait();
       setPending({});
       save.reset();
+      if (sent)
+        toast.info(
+          "O envio em andamento da Anamnese foi confirmado. As outras alterações foram descartadas.",
+        );
     },
   });
   useEffect(() => () => queue.discard(), [queue]);
@@ -662,6 +669,7 @@ function TextField(props: {
   const value = (props.draft[props.field] as string | number | null | undefined) ?? "";
   const id = useId();
   const textual = !props.type || props.type === "text";
+  const inputValue = props.type === "datetime-local" ? intakeBirthTimeInput(String(value)) : value;
   return (
     <Field
       id={id}
@@ -681,17 +689,15 @@ function TextField(props: {
       <Input
         id={id}
         type={props.type ?? "text"}
-        value={value as string}
-        onChange={(e) =>
-          props.update({
-            [props.field]:
-              props.type === "number"
-                ? e.target.value === ""
-                  ? null
-                  : Number(e.target.value)
-                : e.target.value,
-          } as Partial<ClientIntake>)
-        }
+        value={inputValue}
+        onChange={(e) => {
+          const value = e.target.value;
+          let stored: string | number | null = value;
+          if (props.type === "datetime-local") stored = intakeBirthTimeStorage(value);
+          if (props.type === "date") stored = value || null;
+          if (props.type === "number") stored = value ? Number(value) : null;
+          props.update({ [props.field]: stored } as Partial<ClientIntake>);
+        }}
       />
     </Field>
   );

@@ -80,6 +80,10 @@ export function UnsavedProvider({ children }: { children: ReactNode }) {
                     <li key={l}>{l}</li>
                   ))}
                 </ul>
+                <p>
+                  Descartar remove as edições pendentes. Se um envio já começou, aguarde a
+                  confirmação.
+                </p>
                 {error && (
                   <p role="alert" className="font-semibold text-destructive">
                     {error}

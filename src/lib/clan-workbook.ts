@@ -20,6 +20,7 @@ type VitalColumn = "birth_date" | "death_date";
 
 const PERSON_ID = "ID da pessoa";
 const CONSULTANTE = "consultante";
+const UNION_ORDER = "Ordem da união";
 const LINK_HEADERS = [
   "ID do vínculo",
   "Origem",
@@ -29,6 +30,7 @@ const LINK_HEADERS = [
   "Início",
   "Fim",
   "Observações",
+  UNION_ORDER,
 ] as const;
 const TYPES: Record<string, RelationshipType> = {
   parent: "parent",
@@ -99,6 +101,8 @@ type RelationWrite = {
   start_date: string | null;
   end_date: string | null;
   notes: string | null;
+  marriage_order?: number | null;
+  marriage_order_present?: boolean;
 };
 type ParentageWrite = {
   child_key: string;
@@ -197,6 +201,17 @@ export function planClanWorkbook({
       });
       continue;
     }
+    if (!problems.length && direct && !direct.full_name.trim() && !name.trim()) {
+      people.push({
+        line: item.line,
+        key,
+        name: direct.relationship_to_proband ?? "Pessoa sem nome",
+        state: "keep",
+        changes: ["Espaço reservado preservado. Informe um nome para importar dados nesta linha."],
+        candidates: [],
+      });
+      continue;
+    }
     if (!item.record || item.status === "error") problems.push(...item.messages);
     if (problems.length || !item.record) {
       people.push({
@@ -247,6 +262,21 @@ export function planClanWorkbook({
         parseClanVitalDate("death_date", /^(sim|x|falecid[oa])$/i.test(death) ? "" : death),
       );
       patch.is_deceased = true;
+    }
+    const combinedBirth = "birth_date" in patch ? patch.birth_date : chosen?.birth_date;
+    const combinedDeath = "death_date" in patch ? patch.death_date : chosen?.death_date;
+    if (combinedBirth && combinedDeath && combinedBirth > combinedDeath) {
+      people.push({
+        line: item.line,
+        key,
+        name,
+        state: "error",
+        changes: [
+          "Confira as colunas Nascimento e Falecimento. O falecimento deve ocorrer a partir do nascimento.",
+        ],
+        candidates: [],
+      });
+      continue;
     }
     const deceased = normalize(cellValue(peopleSheet, row, "Falecido"));
     if (!death && (deceased === "sim" || deceased === "nao"))
@@ -345,6 +375,9 @@ export function planClanWorkbook({
   >();
   const linkIds = new Set<string>();
   const explicitLinkKeys = new Set<string>();
+  const hasUnionOrder = linksSheet?.header.some(
+    (header) => normalize(header) === normalize(UNION_ORDER),
+  );
   const resolveId = (key: string) =>
     byKey.get(key)?.id ?? byId.get(key)?.id ?? (labelByKey.has(key) ? `new:${key}` : "");
   const label = (key: string) => labelByKey.get(key) ?? byId.get(key)?.full_name ?? key;
@@ -428,6 +461,25 @@ export function planClanWorkbook({
     const endDate = end.kind === "exact" ? end.iso : null;
     const notes = cellValue(linksSheet, row, "Observações") || null;
     const linkKey = cellValue(linksSheet, row, "ID do vínculo");
+    const rawOrder = cellValue(linksSheet, row, UNION_ORDER);
+    const marriageOrder = rawOrder ? Number(rawOrder) : null;
+    const hasOrderValue = type === "union" && hasUnionOrder;
+    if (
+      rawOrder &&
+      (type !== "union" ||
+        !/^\d+$/.test(rawOrder) ||
+        !Number.isSafeInteger(marriageOrder) ||
+        marriageOrder! < 1 ||
+        marriageOrder! > 2147483647)
+    ) {
+      relations.push({
+        line,
+        name,
+        state: "error",
+        detail: "Informe um número inteiro positivo na coluna Ordem da união, somente para uniões.",
+      });
+      continue;
+    }
     const existing = existingLinks.find(
       (link) => linkKey && (link.id === linkKey || link.clan_reference === linkKey),
     );
@@ -455,7 +507,7 @@ export function planClanWorkbook({
       continue;
     }
     if (linkKey) explicitLinkKeys.add(linkKey);
-    const identical = existingLinks.find(
+    const matches = existingLinks.filter(
       (link) =>
         link.relationship_type === type &&
         link.from_person_id === resolveId(from) &&
@@ -463,8 +515,19 @@ export function planClanWorkbook({
         link.qualifier === qualifier &&
         link.start_date === startDate &&
         link.end_date === endDate &&
-        link.notes === notes,
+        link.notes === notes &&
+        (!hasOrderValue || link.marriage_order === marriageOrder),
     );
+    if (!existing && matches.length > 1) {
+      relations.push({
+        line,
+        name,
+        state: "error",
+        detail: "Há mais de um vínculo semelhante. Informe o ID do vínculo ou a ordem da união.",
+      });
+      continue;
+    }
+    const identical = existing ? matches.find(({ id }) => id === existing.id) : matches[0];
     const target = existing ?? identical;
     if (target && linkIds.has(target.id)) {
       relations.push({
@@ -491,6 +554,7 @@ export function planClanWorkbook({
         start_date: startDate,
         end_date: endDate,
         notes,
+        ...(hasOrderValue ? { marriage_order: marriageOrder, marriage_order_present: true } : {}),
       });
     }
   }
@@ -584,7 +648,32 @@ export function planClanWorkbook({
 export async function createClanWorkbook(people: Person[], relationships: Relation[]) {
   const XLSX = await import("xlsx");
   const workbook = XLSX.utils.book_new();
-  const keys = new Map(people.map((person) => [person.id, getClanPersonKey(person)]));
+  const linkedIds = new Set(
+    relationships.flatMap((link) => [link.from_person_id, link.to_person_id]),
+  );
+  const exportedPeople = people.filter(
+    (person) =>
+      person.is_proband ||
+      linkedIds.has(person.id) ||
+      person.is_deceased ||
+      person.health_conditions.length > 0 ||
+      [
+        person.full_name.trim(),
+        person.preferred_name,
+        person.birth_date,
+        person.birth_date_partial,
+        person.death_date,
+        person.death_date_partial,
+        person.gestational_weeks,
+        person.cause_of_death,
+        person.occupation,
+        person.temperament,
+        person.vices,
+        person.birth_order,
+        person.notes,
+      ].some((value) => value != null && value !== ""),
+  );
+  const keys = new Map(exportedPeople.map((person) => [person.id, getClanPersonKey(person)]));
   XLSX.utils.book_append_sheet(
     workbook,
     XLSX.utils.aoa_to_sheet([
@@ -596,7 +685,7 @@ export async function createClanWorkbook(people: Person[], relationships: Relati
         "Falecido",
         "Causa do falecimento",
       ],
-      ...people.map((person) => [
+      ...exportedPeople.map((person) => [
         getClanPersonKey(person),
         person.full_name,
         person.relationship_to_proband ?? "",
@@ -633,6 +722,7 @@ export async function createClanWorkbook(people: Person[], relationships: Relati
                 link.start_date ?? "",
                 link.end_date ?? "",
                 link.notes ?? "",
+                link.marriage_order ?? "",
               ],
             ]
           : [],

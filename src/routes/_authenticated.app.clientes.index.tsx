@@ -1,3 +1,4 @@
+import { invalidateSessionViews } from "@/lib/session-state";
 import { deleteClientDossier, pendingDossierDeletionsKey } from "@/lib/delete-client-dossier";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { readClientListPreferences, writePref } from "@/lib/recent-activity";
@@ -167,7 +168,15 @@ function ClientesIndex() {
       qc.invalidateQueries({ queryKey: ["clients"] });
       qc.invalidateQueries({ queryKey: ["all-clients-search"] });
       qc.invalidateQueries({ queryKey: ["genograms-list"] });
-      toast.success(v.status === "archived" ? "Dossiê arquivado." : "Dossiê reativado.");
+      void invalidateSessionViews(qc, v.id);
+      void qc.invalidateQueries({ queryKey: ["client", v.id] });
+      void qc.invalidateQueries({ queryKey: ["mesa-clients"] });
+      void qc.invalidateQueries({ queryKey: ["timelines-list"] });
+      toast.success(
+        v.status === "archived"
+          ? "Dossiê arquivado. Os atendimentos ficam no dossiê e saem da Agenda."
+          : "Dossiê reativado. Os atendimentos voltam à Agenda.",
+      );
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });

@@ -61,6 +61,9 @@ interface GenogramSpatialViewProps {
   workbench?: boolean;
   onSelectPerson: (id: string) => void;
   selectedPersonId?: string | null;
+  focusedRelationshipId?: string | null;
+  onDismissRelationship?: () => void;
+  onOpenPerson?: (id: string) => void;
   connectionOriginId?: string | null;
   parentagePreview?: ParentagePreview | null;
   focusRequest?: { personId: string; relatedPersonIds?: readonly string[] };
@@ -367,6 +370,9 @@ export function GenogramSpatialView({
   workbench = false,
   onSelectPerson,
   selectedPersonId,
+  focusedRelationshipId,
+  onDismissRelationship,
+  onOpenPerson,
   connectionOriginId,
   parentagePreview,
   focusRequest,
@@ -392,6 +398,7 @@ export function GenogramSpatialView({
   const lastFocus = useRef<GenogramSpatialViewProps["focusRequest"]>(undefined);
   const lastFit = useRef(fitRequest);
   const lastAnchor = useRef<MapViewAnchor>(undefined);
+  const lastRelationshipFocus = useRef<string | null>(null);
   const dragPerson = useRef<{
     id: string;
     pointerId: number;
@@ -407,6 +414,7 @@ export function GenogramSpatialView({
   const [fitAngles, setFitAngles] = useState<SpatialAngles>(FRONT_ANGLES);
   const [localBranch, setLocalBranch] = useState<MapBranch | null>(null);
   const [familyFocusId, setFamilyFocusId] = useState<string | null>(null);
+  const [framing, setFraming] = useState<"auto" | "panorama" | "reading">("auto");
   const [dragging, setDragging] = useState(false);
   const [panMode, setPanMode] = useState(true);
   const [moveMode, setMoveMode] = useState(false);
@@ -467,21 +475,29 @@ export function GenogramSpatialView({
     [nodes, edges, layout, movePreview],
   );
   const frontPeople = useMemo(() => projectSpatialLayout(layout, FRONT_ANGLES).people, [layout]);
+  const reading =
+    framing === "reading" || (framing === "auto" && frame.width > 0 && frame.width < 690);
   const fitted = useMemo(
     () => fitProjectedPeople(frontPeople, frame, FRONT_ANGLES),
     [frontPeople, frame],
   );
   const scopedFit = useMemo(() => {
-    if (!scopedIds && fitAngles === FRONT_ANGLES) return fitted;
+    if (!scopedIds && !reading && fitAngles === FRONT_ANGLES) return fitted;
     const people =
       fitAngles === FRONT_ANGLES ? frontPeople : projectSpatialLayout(layout, fitAngles).people;
+    const scoped = scopedIds ? people.filter(({ id }) => scopedIds.has(id)) : people;
+    const readingAnchor =
+      reading &&
+      (branch
+        ? scoped.find(({ branch: side }) => side === branch)
+        : scoped.find(({ data }) => data.is_proband));
     return fitProjectedPeople(
-      scopedIds ? people.filter(({ id }) => scopedIds.has(id)) : people,
+      scoped,
       frame,
       fitAngles,
-      scopedFamilyId,
+      scopedFamilyId ?? (readingAnchor ? readingAnchor.id : null),
     );
-  }, [fitAngles, fitted, frame, frontPeople, layout, scopedFamilyId, scopedIds]);
+  }, [branch, fitAngles, fitted, frame, frontPeople, layout, reading, scopedFamilyId, scopedIds]);
   const camera = manualCamera ?? scopedFit;
   const minZoom = Math.min(0.16, fitted.zoom);
   const changeCamera = useCallback(
@@ -529,15 +545,21 @@ export function GenogramSpatialView({
   }, []);
 
   const changeBranch = useCallback(
-    (nextBranch: MapBranch | null, angles: SpatialAngles) => {
+    (
+      nextBranch: MapBranch | null,
+      angles: SpatialAngles,
+      nextFraming: "reading" | "panorama" = nextBranch ? "reading" : "panorama",
+    ) => {
       if (onBranchChange) onBranchChange(nextBranch);
       else setLocalBranch(nextBranch);
       setFamilyFocusId(null);
+      setFraming(nextFraming);
       setChosenRoute(null);
       setChosenUnion(null);
+      onDismissRelationship?.();
       fitAutomatically(angles);
     },
-    [onBranchChange, fitAutomatically],
+    [onBranchChange, onDismissRelationship, fitAutomatically],
   );
 
   useImperativeHandle(
@@ -596,6 +618,7 @@ export function GenogramSpatialView({
     previousBranch.current = branch;
     // The panorama outside the 3D viewport can also change the active branch.
     setFamilyFocusId(null);
+    if (branch) setFraming("reading");
     fitAutomatically(camera);
   }, [branch, camera, fitAutomatically]);
 
@@ -635,22 +658,55 @@ export function GenogramSpatialView({
   }, [changeCamera, focusRequest, frame, hasFrame, display.people]);
 
   useEffect(() => {
+    if (!focusedRelationshipId) {
+      const previousId = lastRelationshipFocus.current;
+      if (previousId) {
+        setChosenRoute((current) => {
+          const route = display.routes.find(({ id }) => id === current);
+          return route?.edge.data?.relationshipId === previousId ? null : current;
+        });
+      }
+      lastRelationshipFocus.current = null;
+      return;
+    }
+    if (!hasFrame || lastRelationshipFocus.current === focusedRelationshipId) return;
+    const route = display.routes.find(
+      (item) => item.edge.data?.relationshipId === focusedRelationshipId,
+    );
+    const union = route && display.unions.find(({ id }) => id === route.unionId);
+    if (!route || !union) return;
+    lastRelationshipFocus.current = focusedRelationshipId;
+    setChosenRoute(route.id);
+    setChosenUnion(null);
+    changeCamera((current) =>
+      fitProjectedPeople(
+        display.people.filter(({ id }) => union.partners.includes(id)),
+        frame,
+        current,
+        union.partners[0],
+      ),
+    );
+  }, [
+    changeCamera,
+    display.people,
+    display.routes,
+    display.unions,
+    focusedRelationshipId,
+    frame,
+    hasFrame,
+  ]);
+
+  useEffect(() => {
     if (!hasFrame || !viewAnchor || lastAnchor.current === viewAnchor) return;
     const person = display.people.find(({ id }) => id === viewAnchor.personId);
     if (!person) return;
     lastAnchor.current = viewAnchor;
+    if (viewAnchor.overview) {
+      setManualCamera(null);
+      return;
+    }
     changeCamera((current) => {
       const fitted = fitCamera(layout, frame, current);
-      if (viewAnchor.overview) {
-        return scopedIds
-          ? fitProjectedPeople(
-              display.people.filter(({ id }) => scopedIds.has(id)),
-              frame,
-              current,
-              scopedFamilyId,
-            )
-          : fitted;
-      }
       const zoom = clamp(fitted.zoom * viewAnchor.scale, minZoom, MAX_ZOOM);
       return {
         ...current,
@@ -659,17 +715,7 @@ export function GenogramSpatialView({
         y: frame.height * (viewAnchor.vertical - 0.5) - (person.y + person.height / 2) * zoom,
       };
     });
-  }, [
-    changeCamera,
-    display.people,
-    frame,
-    hasFrame,
-    layout,
-    minZoom,
-    scopedFamilyId,
-    scopedIds,
-    viewAnchor,
-  ]);
+  }, [changeCamera, display.people, frame, hasFrame, layout, minZoom, viewAnchor]);
 
   useEffect(() => {
     const viewport = viewportRef.current;
@@ -908,6 +954,7 @@ export function GenogramSpatialView({
   }
 
   function followRoute(route: SpatialRoute) {
+    onDismissRelationship?.();
     setChosenRoute((current) =>
       sameRoute(
         display.routes.find(({ id }) => id === current),
@@ -929,6 +976,7 @@ export function GenogramSpatialView({
   const y = frame.height / 2 + camera.y;
   const frontal = camera.yaw === 0 && camera.pitch === 0;
   const selected = display.people.find((person) => person.id === selectedPersonId);
+  const reference = selected ?? display.people.find(({ data }) => data.is_proband);
   const hasSuggestions = display.routes.some((route) => route.suggested);
   const shownUnions = display.unions.filter((union) => union.expanded);
   const nameById = new Map(names.map(({ person, name }) => [person.id, name]));
@@ -1093,6 +1141,7 @@ export function GenogramSpatialView({
       className="geno-spatial"
       aria-label="Visualização 3D do genossociograma"
       data-view-scope={scopedFamilyId ? "family" : (branch ?? "overview")}
+      data-reading-view={reading || undefined}
     >
       <span className="sr-only" role="status">
         {activeRouteDescription &&
@@ -1108,10 +1157,17 @@ export function GenogramSpatialView({
           <div className="geno-spatial-scopes" role="group" aria-label="Explorar ramos da família">
             <button
               type="button"
-              aria-pressed={!scopedIds}
+              aria-pressed={!scopedIds && !reading}
               onClick={() => changeBranch(null, camera)}
             >
               Árvore inteira
+            </button>
+            <button
+              type="button"
+              aria-pressed={!scopedIds && reading}
+              onClick={() => changeBranch(null, camera, "reading")}
+            >
+              Ler do topo
             </button>
             {branches.map((id) => (
               <button
@@ -1143,6 +1199,17 @@ export function GenogramSpatialView({
               </button>
             )}
           </div>
+          {reference && onOpenPerson && (
+            <button
+              type="button"
+              className="geno-spatial-open-person"
+              aria-label={`Abrir ficha de ${nameById.get(reference.id)}`}
+              disabled={!!parentagePreview || !!connectionOriginId}
+              onClick={() => onOpenPerson(reference.id)}
+            >
+              Ficha
+            </button>
+          )}
           <span className={scopedFamilyId ? "geno-spatial-scope-detail" : "sr-only"} role="status">
             {scopeName}
           </span>
@@ -1182,6 +1249,7 @@ export function GenogramSpatialView({
               onClick={() => {
                 setChosenRoute(null);
                 setChosenUnion(null);
+                onDismissRelationship?.();
               }}
             >
               <X className="size-4" aria-hidden />
@@ -1354,6 +1422,11 @@ export function GenogramSpatialView({
                         transform={`translate(${union.x} ${union.y})`}
                       >
                         {union.label && <title>{union.label}</title>}
+                        {union.hubOffset && union.label && (
+                          <text x="8" y="-7" className="geno-spatial-union-label">
+                            {union.label}
+                          </text>
+                        )}
                         <path d="M 0 -6 L 6 0 L 0 6 L -6 0 Z" className="geno-spatial-union" />
                         {union.kind === "divorcio" && (
                           <path d="M -8 7 L -2 -7 M 0 7 L 6 -7" className="geno-spatial-break" />
@@ -1451,7 +1524,7 @@ export function GenogramSpatialView({
                           "--plaque-width": `${SPATIAL_CARD_WIDTH}px`,
                           "--plaque-height": `${person.height / person.scale}px`,
                           "--plaque-scale": plaqueScale,
-                          "--plaque-name-size": `${plaqueNameSize(name, plaqueScale, inFocusedFamily)}px`,
+                          "--plaque-name-size": `${plaqueNameSize(name, plaqueScale, inFocusedFamily || reading)}px`,
                           "--plaque-role-size": `${clamp(8 / plaqueScale, 14, SPATIAL_MAX_ROLE_SIZE)}px`,
                           "--depth-x": `${-16 * Math.sin(camera.yaw)}px`,
                           "--depth-y": `${9 * Math.sin(camera.pitch)}px`,

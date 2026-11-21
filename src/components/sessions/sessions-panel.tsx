@@ -100,6 +100,7 @@ type Session = {
   status: string;
   error_message: string | null;
   structured_note: Record<string, unknown> | null;
+  summary_stale?: boolean;
   clinical_status: string | null;
   manual_notes: string | null;
   ai_reviewed_at: string | null;
@@ -114,6 +115,24 @@ type CapturedAudio = {
   fileId: string;
   path?: string;
 };
+
+async function confirmAudioUpload(sessionId: string, path: string) {
+  const { data, error } = await supabase.rpc("confirm_session_audio_upload", {
+    _session_id: sessionId,
+    _path: path,
+  });
+  if (error) throw new Error("Não foi possível verificar o envio. Tente confirmar novamente.");
+  if (data === "confirmed") return;
+  if (data === "missing") {
+    throw new Error("O arquivo ainda não está no dossiê. Tente novamente ou remova a reserva.");
+  }
+  if (data === "consent") {
+    throw new Error(
+      "A autorização usada para gravar deixou de estar vigente. Remova o envio pendente.",
+    );
+  }
+  throw new Error("O estado do envio mudou. Atualize a sessão.");
+}
 
 async function clearPendingUpload(sessionId: string, path: string) {
   const { data, error } = await supabase
@@ -220,14 +239,33 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
   const [operationError, setOperationError] = useState("");
   const [scheduling, setScheduling] = useState(false);
   const [manualFocusId, setManualFocusId] = useState<string>();
-  const [recordingTarget, setRecordingTarget] = useState(focusedSessionId ?? "");
+  const [recordingSelection, setRecordingSelection] = useState<{
+    focus: string | undefined;
+    id: string;
+  }>();
+  const recordingTarget =
+    recordingSelection && recordingSelection.focus === focusedSessionId
+      ? recordingSelection.id
+      : (focusedSessionId ?? "");
   const targets = sessions.filter(
-    (session) => !session.audio_path && clinicalStatusOf(session) !== "canceled",
+    (session) =>
+      !session.audio_path &&
+      session.status !== "deleting" &&
+      clinicalStatusOf(session) !== "canceled",
+  );
+  const linkedSession = sessions.find(
+    (session) =>
+      session.id === focusedSessionId &&
+      clinicalStatusOf(session) !== "canceled" &&
+      session.status !== "deleting",
   );
   const targetId = targets.some((session) => session.id === recordingTarget) ? recordingTarget : "";
+  const targetUnavailable = !!recordingTarget && !targetId;
   const grantFor = (scope: "recording" | "external_processing", sessionId?: string) =>
     !consentQuery.isError ? activeAudioConsent(events, scope, sessionId) : undefined;
-  const recordingGrant = grantFor("recording", targetId || undefined);
+  const recordingGrant = targetUnavailable
+    ? undefined
+    : grantFor("recording", targetId || undefined);
   const canUploadPending =
     pendingAudio &&
     grantFor("recording", pendingAudio.existingSession ? pendingAudio.sessionId : undefined)?.id ===
@@ -244,11 +282,16 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
           ? "Autorização indisponível. Confira o registro de autorizações."
           : recordingGrant
             ? "Gravação autorizada para esta seleção."
-            : "Esta seleção precisa de autorização para gravar.";
+            : targetUnavailable
+              ? "Selecione uma sessão disponível para receber a gravação."
+              : "Esta seleção precisa de autorização para gravar.";
   const [processingTarget, setProcessingTarget] = useState<string>();
   const processingGrant = processingTarget
     ? grantFor("external_processing", processingTarget)
     : undefined;
+  const processingTranscript = sessions.find(
+    (session) => session.id === processingTarget,
+  )?.transcript;
   const mountedRef = useRef(false);
   const startLock = useRef(false);
   const audioLock = useRef(false);
@@ -291,37 +334,54 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
 
   useEffect(() => {
     const grant = activeGrantRef.current;
+    const recorder = mediaRecorderRef.current;
+    if (!recorder || !grant) return;
+    if (consentQuery.isError) {
+      if (recorder.state !== "inactive") {
+        recorder.stop();
+        setOperationError(
+          "A consulta de autorização falhou. O trecho capturado fica nesta tela até você confirmar a autorização ou descartar o áudio.",
+        );
+      }
+      return;
+    }
     if (
-      mediaRecorderRef.current &&
-      grant &&
-      (consentQuery.isError ||
-        grant.id !== activeAudioConsent(consentQuery.data ?? [], "recording", grant.sessionId)?.id)
+      grant.id !== activeAudioConsent(consentQuery.data ?? [], "recording", grant.sessionId)?.id
     ) {
       clearRecorder();
-      setOperationError("Gravação interrompida. Confirme a autorização antes de gravar novamente.");
+      setOperationError("A autorização para gravar mudou. A gravação foi interrompida.");
     }
   }, [consentQuery.data, consentQuery.isError, clearRecorder]);
 
   const scrollTarget = manualFocusId ?? focusedSessionId;
   const visibleTarget = sessions.find((session) => session.id === scrollTarget)?.id;
+  const focusNotes = useCallback((sessionId: string) => {
+    const notes = document.getElementById(`notes-${sessionId}`);
+    notes?.scrollIntoView({ block: "nearest" });
+    notes?.focus({ preventScroll: true });
+  }, []);
   useEffect(() => {
-    if (!visibleTarget || (!manualFocusId && focusConsent) || preparing?.id === visibleTarget)
+    if (!visibleTarget) return;
+    if (manualFocusId) {
+      focusNotes(visibleTarget);
       return;
-    const target = document.getElementById(
-      manualFocusId ? `notes-${visibleTarget}` : `session-${visibleTarget}`,
-    );
+    }
+    if (focusConsent || preparing?.id === visibleTarget) return;
+    const target = document.getElementById(`session-${visibleTarget}`);
     target?.scrollIntoView({ block: "nearest" });
     target?.focus({ preventScroll: true });
-  }, [visibleTarget, manualFocusId, focusConsent, preparing?.id]);
+  }, [visibleTarget, manualFocusId, focusConsent, preparing?.id, focusNotes]);
 
-  const focusAudioConsent = useCallback(() => {
+  const [requestedConsentScope, setRequestedConsentScope] = useState<{ sessionId?: string }>();
+  const focusAudioConsent = useCallback((sessionId?: string) => {
+    setRequestedConsentScope({ sessionId });
     const section = document.getElementById("audio-consents");
     section?.scrollIntoView({ block: "start" });
     section?.focus({ preventScroll: true });
   }, []);
   useEffect(() => {
-    if (focusConsent) focusAudioConsent();
-  }, [focusConsent, focusAudioConsent]);
+    if (focusConsent) focusAudioConsent(focusedSessionId);
+  }, [focusConsent, focusedSessionId, focusAudioConsent]);
 
   const startRecording = async () => {
     if (startLock.current || mediaRecorderRef.current || pendingAudioRef.current || !recordingGrant)
@@ -451,6 +511,7 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
         throw new Error("A sessão já tem outro áudio.");
       if (existing?.status === "discarding_upload")
         throw new Error("A remoção do arquivo pendente está em andamento.");
+      if (existing?.status === "deleting") throw new Error("A sessão está em exclusão.");
       const attachment = {
         audio_path: path,
         duration_seconds: audio.seconds,
@@ -480,26 +541,18 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
       }
       if (existing?.status === "awaiting_upload" || existing?.audio_path !== path) {
         const bucket = supabase.storage.from("session-audio");
-        const { error } = await bucket.upload(path, audio.blob, {
-          contentType: audio.blob.type,
-          upsert: false,
-        });
-        // A prior attempt may have written the object while the response was lost.
-        if (error) {
-          const info = await bucket.info(path);
-          if (info.error || !info.data) throw new Error("Falha no envio. Tente novamente.");
+        const priorUpload = existing?.audio_path === path && (await bucket.info(path)).data;
+        if (!priorUpload) {
+          const { error } = await bucket.upload(path, audio.blob, {
+            contentType: audio.blob.type,
+            upsert: false,
+          });
+          // The object may have been written while the response was lost.
+          if (error && !(await bucket.info(path)).data)
+            throw new Error("Falha no envio. Tente novamente.");
         }
-        const { data, error: finishError } = await supabase
-          .from("clinical_sessions")
-          .update({ status: "draft", error_message: null })
-          .eq("id", audio.sessionId)
-          .eq("audio_path", path)
-          .eq("status", "awaiting_upload")
-          .select("id")
-          .maybeSingle();
-        if (finishError || !data)
-          throw new Error("O áudio foi enviado, mas falta confirmar na sessão.");
       }
+      await confirmAudioUpload(audio.sessionId, path);
 
       updatePending(null);
       void refreshSessions();
@@ -603,31 +656,42 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
     onError: (error) => toast.error(error.message),
   });
 
+  const resumeOrphanUpload = useMutation({
+    mutationFn: ({ id, audio_path }: Session) => {
+      if (!audio_path) throw new Error("A sessão não tem envio pendente.");
+      return confirmAudioUpload(id, audio_path);
+    },
+    onSettled: () => void refreshSessions(),
+    onSuccess: () => toast.success("Áudio guardado no dossiê."),
+    onError: (error) => toast.error(error.message),
+  });
+
   const deleteSession = useMutation({
-    mutationFn: async (session: Session) => {
-      if (session.audio_path) {
-        const { error } = await supabase.storage.from("session-audio").remove([session.audio_path]);
-        if (error)
-          throw new Error("Não foi possível remover o áudio. A sessão continua no dossiê.");
-      }
-      const { data, error } = await supabase
-        .from("clinical_sessions")
-        .delete()
-        .eq("id", session.id)
-        .select("id")
-        .maybeSingle();
-      if (error || !data) {
+    mutationFn: async (sessionId: string) => {
+      const { data: path, error: beginError } = await supabase.rpc("begin_session_deletion", {
+        _session_id: sessionId,
+      });
+      if (beginError)
         throw new Error(
-          session.audio_path
-            ? "O áudio foi removido. A sessão continua no dossiê e pode ser excluída novamente."
-            : "Não foi possível remover a sessão.",
+          "O início da exclusão não foi confirmado. Confira a sessão e tente novamente.",
         );
+      if (path) {
+        // A falha pode ser apenas na resposta do Storage. O banco confere se o objeto ainda existe.
+        await supabase.storage
+          .from("session-audio")
+          .remove([path])
+          .catch(() => undefined);
       }
+      const { data: removed, error: finishError } = await supabase.rpc("finish_session_deletion", {
+        _session_id: sessionId,
+      });
+      if (finishError)
+        throw new Error("A etapa final não foi confirmada. Retome a exclusão na sessão.");
+      if (!removed)
+        throw new Error("O áudio continua pendente de remoção. Retome a exclusão na sessão.");
     },
-    onSuccess: () => {
-      void refreshSessions();
-      toast.success("Sessão removida");
-    },
+    onSettled: () => void refreshSessions(),
+    onSuccess: () => toast.success("Sessão removida"),
     onError: (error) => toast.error(error.message),
   });
 
@@ -698,13 +762,22 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
         <header className="dossier-session-record-head">
           <h2 className="dossier-work-heading">Registro de sessão</h2>
           <div className="flex flex-wrap items-center gap-2">
+            {linkedSession && (
+              <Button
+                variant="forest"
+                className="min-h-11"
+                onClick={() => focusNotes(linkedSession.id)}
+              >
+                Registrar sessão sem áudio
+              </Button>
+            )}
             <Button
-              variant="forest"
+              variant={linkedSession ? "outline" : "forest"}
               className="min-h-11"
               onClick={() => createManual.mutate()}
-              disabled={createManual.isPending}
+              disabled={createManual.isPending || (!!focusedSessionId && (isLoading || isError))}
             >
-              <Plus className="mr-2 size-4" /> Registrar sessão sem áudio
+              <Plus className="mr-2 size-4" /> Nova sessão sem áudio
             </Button>
             <Button variant="outline" className="min-h-11" onClick={() => setScheduling(true)}>
               <CalendarDays size={16} aria-hidden />
@@ -719,14 +792,23 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
             autorização própria.
           </p>
           <div className="flex flex-wrap items-end gap-3">
-            <label className="block min-w-0 max-w-full text-sm font-medium">
+            <label className="dossier-session-select block min-w-0 text-sm font-medium">
               Sessão para o áudio
               <select
-                className="mt-1 block min-h-11 max-w-full rounded-sm border border-input bg-background p-2"
-                value={targetId}
-                onChange={(event) => setRecordingTarget(event.target.value)}
+                className="mt-1 block min-h-11 w-full min-w-0 rounded-sm border border-input bg-background p-2"
+                value={recordingTarget}
+                onChange={(event) =>
+                  setRecordingSelection({ focus: focusedSessionId, id: event.target.value })
+                }
                 disabled={starting || recording || uploading || !!pendingAudio}
               >
+                {targetUnavailable && (
+                  <option value={recordingTarget}>
+                    {isLoading
+                      ? "Carregando sessão selecionada…"
+                      : "Sessão indisponível para gravação"}
+                  </option>
+                )}
                 <option value="">Nova sessão</option>
                 {targets.map((session) => (
                   <option key={session.id} value={session.id}>
@@ -784,7 +866,11 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
                 {recordingStatus}
               </p>
               {!recordingGrant && !consentQuery.isPending && (
-                <Button variant="link" className="min-h-11 px-0" onClick={focusAudioConsent}>
+                <Button
+                  variant="link"
+                  className="min-h-11 px-0"
+                  onClick={() => focusAudioConsent(recordingTarget || undefined)}
+                >
                   Ver autorizações de áudio
                 </Button>
               )}
@@ -852,6 +938,7 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
         unavailable={consentQuery.isError}
         refresh={() => consentQuery.refetch()}
         initialSessionId={focusedSessionId}
+        requestedScope={requestedConsentScope}
         sessions={sessions.map((session) => ({
           id: session.id,
           label: `${format(new Date(session.session_date), "dd/MM/yyyy HH:mm")} · ${session.title || "Sessão"}`,
@@ -864,10 +951,16 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Enviar o áudio para processamento externo?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {processingTranscript
+                ? "Enviar a transcrição para atualizar a síntese?"
+                : "Enviar o áudio para processamento externo?"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Os serviços de IA via Lovable recebem o áudio e a transcrição para gerar texto
-              provisório. Suas notas manuais ficam no dossiê.
+              {processingTranscript
+                ? "O serviço de IA via Lovable recebe o texto da transcrição, com os trechos corrigidos e sem os descartados."
+                : "Os serviços de IA via Lovable recebem o áudio e a transcrição para gerar texto provisório."}{" "}
+              Suas notas manuais ficam no dossiê.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -927,19 +1020,22 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
               onReprocess={() => setProcessingTarget(s.id)}
               onDelete={() => {
                 if (
+                  s.status === "deleting" ||
                   window.confirm(
                     "Excluir esta sessão, suas notas e o áudio? Isso não pode ser desfeito.",
                   )
                 ) {
-                  deleteSession.mutate(s);
+                  deleteSession.mutate(s.id);
                 }
               }}
+              deleting={deleteSession.isPending}
               onDiscardUpload={() => clearOrphanUpload.mutate(s)}
-              discardingUpload={clearOrphanUpload.isPending}
+              onResumeUpload={() => resumeOrphanUpload.mutate(s)}
+              uploadBusy={clearOrphanUpload.isPending || resumeOrphanUpload.isPending}
               showDiscardUpload={pendingAudio?.sessionId !== s.id}
               processingAuthorized={!!grantFor("external_processing", s.id)}
               processingBusy={reprocess.isPending}
-              onOpenConsent={focusAudioConsent}
+              onOpenConsent={() => focusAudioConsent(s.id)}
               recordingAuthorization={events.find(({ id }) => id === s.recording_consent_id)}
               processingAuthorization={events.find(({ id }) => id === s.processing_consent_id)}
               reprocessing={reprocess.isPending && reprocess.variables === s.id}
@@ -957,7 +1053,9 @@ function SessionCard({
   onReprocess,
   onDelete,
   onDiscardUpload,
-  discardingUpload,
+  onResumeUpload,
+  uploadBusy,
+  deleting,
   showDiscardUpload,
   processingAuthorized,
   processingBusy,
@@ -971,7 +1069,9 @@ function SessionCard({
   onReprocess: () => void;
   onDelete: () => void;
   onDiscardUpload: () => void;
-  discardingUpload: boolean;
+  onResumeUpload: () => void;
+  uploadBusy: boolean;
+  deleting: boolean;
   showDiscardUpload: boolean;
   processingAuthorized: boolean;
   processingBusy: boolean;
@@ -988,38 +1088,57 @@ function SessionCard({
 
   // Notas manuais: rascunho em memória; o servidor nunca sobrescreve edição pendente.
   const [draft, dispatch] = useReducer(noteReducer, session.manual_notes, noteDraftInit);
-  useEffect(
-    () => dispatch({ type: "reset", saved: session.manual_notes ?? "" }),
-    [session.manual_notes],
-  );
+  useEffect(() => dispatch({ type: "reset", saved: session.manual_notes }), [session.manual_notes]);
   const dirty = isDirty(draft);
 
   const refresh = () => invalidateSessionViews(qc, clientId);
 
-  /** Lança erro se o banco não confirmou (o texto continua na tela). */
-  const persistNotes = async () => {
-    const text = draft.text;
-    dispatch({ type: "save_start" });
-    const { data, error } = await supabase
-      .from("clinical_sessions")
-      .update({ manual_notes: text })
-      .eq("id", session.id)
-      .select("manual_notes")
-      .maybeSingle();
-    if (error || !data) {
-      const message = error?.message ?? "Sem permissão para salvar.";
-      dispatch({ type: "save_fail", message });
-      throw new Error(message);
-    }
-    dispatch({ type: "save_ok", persisted: data.manual_notes ?? "" });
-    refresh();
+  const activeNoteSave = useRef<Promise<void> | null>(null);
+  const persistNotes = () => {
+    if (activeNoteSave.current) return activeNoteSave.current;
+    const request = (async () => {
+      dispatch({ type: "save_start" });
+      const query = supabase
+        .from("clinical_sessions")
+        .update({ manual_notes: draft.text })
+        .eq("id", session.id);
+      const matching =
+        draft.saved === null
+          ? query.is("manual_notes", null)
+          : query.eq("manual_notes", draft.saved);
+      const { data, error } = await matching.select("manual_notes").maybeSingle();
+      if (error || !data) {
+        const message =
+          error?.message ??
+          "A nota mudou em outra sessão. Compare com a versão salva antes de continuar.";
+        dispatch({ type: "save_fail", message });
+        void refresh();
+        throw new Error(message);
+      }
+      dispatch({ type: "save_ok", persisted: data.manual_notes });
+      void refresh();
+    })().finally(() => {
+      activeNoteSave.current = null;
+    });
+    activeNoteSave.current = request;
+    return request;
   };
   const saveNotes = () => persistNotes().catch(() => {});
   useUnsaved(`note:${session.id}`, {
     label: "Notas da sessão",
-    isDirty: () => isDirty(draft) || draft.phase === "saving",
+    isDirty: () => isDirty(draft) || activeNoteSave.current !== null,
     save: persistNotes,
-    discard: () => dispatch({ type: "discard" }),
+    discard: async () => {
+      const active = activeNoteSave.current;
+      if (active) {
+        const sent = await active.then(
+          () => true,
+          () => false,
+        );
+        if (sent) toast.info("O envio em andamento das notas foi confirmado.");
+      }
+      dispatch({ type: "discard" });
+    },
   });
 
   const [reviewState, setReviewState] = useState<{ pending: boolean; error?: string }>({
@@ -1032,6 +1151,9 @@ function SessionCard({
         .from("clinical_sessions")
         .update({ ai_reviewed_at: new Date().toISOString() })
         .eq("id", session.id)
+        .eq("updated_at", session.updated_at)
+        .eq("summary_stale", false)
+        .eq("status", "ready")
         .select("ai_reviewed_at")
         .maybeSingle();
       if (error) throw error;
@@ -1079,10 +1201,33 @@ function SessionCard({
     session.status,
     session.processing_started_at,
     session.updated_at,
+    Date.now(),
+    session.summary_stale,
   );
   const isError = audio === "error";
   const notesId = `notes-${session.id}`;
   const clinicalId = `clinical-${session.id}`;
+
+  if (session.status === "deleting") {
+    return (
+      <article
+        id={`session-${session.id}`}
+        tabIndex={-1}
+        className="dossier-session-entry scroll-mt-24"
+      >
+        <div className="space-y-2 p-4 sm:p-6">
+          <h3 className="text-base font-semibold text-primary">{session.title ?? "Sessão"}</h3>
+          <p role="status" className="text-sm text-muted-foreground">
+            Exclusão pendente. O registro permanece nesta lista até a confirmação da remoção do
+            áudio e da sessão.
+          </p>
+          <Button className="min-h-11" variant="outline" onClick={onDelete} disabled={deleting}>
+            {deleting ? "Excluindo…" : "Retomar exclusão"}
+          </Button>
+        </div>
+      </article>
+    );
+  }
 
   return (
     <article
@@ -1149,16 +1294,19 @@ function SessionCard({
               >
                 <AudioLines className="mr-2 size-4" aria-hidden />
                 {reprocessing
-                  ? "Enviando para processamento…"
-                  : isProcessing
-                    ? "Retomar processamento"
-                    : "Processar áudio com IA"}
+                  ? "Processando…"
+                  : session.summary_stale || session.transcript
+                    ? "Gerar síntese da transcrição"
+                    : isProcessing
+                      ? "Retomar processamento"
+                      : "Processar áudio com IA"}
               </Button>
             )}
             <Button
               size="icon"
               variant="ghost"
               onClick={onDelete}
+              disabled={deleting}
               aria-label="Excluir sessão"
               className="min-h-11 min-w-11"
             >
@@ -1210,15 +1358,21 @@ function SessionCard({
         {audio === "waiting_upload" && showDiscardUpload && (
           <div className="flex flex-wrap items-center gap-2 rounded-sm border border-border bg-background p-3 text-sm">
             <p className="text-muted-foreground">
-              Envio de áudio incompleto. Você pode liberar a sessão para uma nova gravação.
+              Etapa de armazenamento pendente. Confira se o arquivo já chegou ou libere a sessão
+              para outra gravação.
             </p>
+            {session.status === "awaiting_upload" && (
+              <Button className="min-h-11" onClick={onResumeUpload} disabled={uploadBusy}>
+                Confirmar áudio já enviado
+              </Button>
+            )}
             <Button
               variant="outline"
               className="min-h-11"
               onClick={onDiscardUpload}
-              disabled={discardingUpload}
+              disabled={uploadBusy}
             >
-              {discardingUpload ? "Removendo…" : "Remover envio pendente"}
+              Remover envio pendente
             </Button>
           </div>
         )}
@@ -1255,6 +1409,23 @@ function SessionCard({
             onChange={(e) => dispatch({ type: "edit", text: e.target.value })}
             className="min-h-[140px] text-[16px] leading-relaxed"
           />
+          {dirty && draft.saved !== draft.server && (
+            <details className="space-y-2 rounded-md border border-border p-3">
+              <summary className="cursor-pointer font-semibold">
+                Ver versão salva em outra aba
+              </summary>
+              <p className="whitespace-pre-wrap break-words text-sm">
+                {draft.server || "A outra versão está sem notas."}
+              </p>
+              <Button
+                variant="outline"
+                className="min-h-11"
+                onClick={() => dispatch({ type: "discard" })}
+              >
+                Usar versão salva
+              </Button>
+            </details>
+          )}
           <div className="flex flex-wrap items-center gap-3 text-[14px]">
             <Button
               onClick={saveNotes}
@@ -1274,7 +1445,7 @@ function SessionCard({
               className={draft.phase === "error" ? "text-destructive" : "text-muted-foreground"}
             >
               {draft.phase === "error"
-                ? "Falha ao salvar as notas. O texto continua aqui."
+                ? (draft.error ?? "Falha ao salvar as notas. O texto continua aqui.")
                 : draft.phase === "saving"
                   ? "Salvando notas…"
                   : dirty
@@ -1294,9 +1465,17 @@ function SessionCard({
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-[15px] font-semibold text-primary">
                 Texto gerado pela IA{" "}
-                {session.ai_reviewed_at ? "· revisado" : "· provisório, requer revisão"}
+                {session.summary_stale
+                  ? "· desatualizado"
+                  : session.ai_reviewed_at
+                    ? "· revisado"
+                    : "· provisório, requer revisão"}
               </p>
-              {session.ai_reviewed_at ? (
+              {session.summary_stale ? (
+                <p role="status" className="text-sm text-clinical-warning">
+                  A transcrição mudou. Gere uma nova síntese e revise o resultado.
+                </p>
+              ) : session.ai_reviewed_at ? (
                 <span className="flex items-center gap-1.5 text-[14px] text-clinical-positive">
                   <CheckCircle2 className="size-4" /> Revisado em{" "}
                   {format(new Date(session.ai_reviewed_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
@@ -1306,7 +1485,7 @@ function SessionCard({
                   variant="outline"
                   className="min-h-11"
                   onClick={review}
-                  disabled={reviewState.pending || isProcessing}
+                  disabled={reviewState.pending || session.status !== "ready"}
                 >
                   {reviewState.pending && <Loader2 className="mr-2 size-4 animate-spin" />}
                   Li e revisei este texto
@@ -1354,7 +1533,7 @@ function SessionCard({
             reviews={session.transcript_reviews}
             audioPath={session.audio_path}
             updatedAt={session.updated_at}
-            processing={isProcessing}
+            processing={session.status !== "ready" && session.status !== "error"}
             refresh={refresh}
           />
         )}

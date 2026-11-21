@@ -24,6 +24,7 @@ async function calendarRecords() {
       ...entry,
       clients: roster.find((client) => client.id === entry.client_id),
     }))
+    .filter((entry) => entry.clients?.status === "active" && entry.status !== "deleting")
     .sort((a, b) => Date.parse(a.session_date) - Date.parse(b.session_date));
   return { rows, roster, user: auth.user.id as string };
 }
@@ -83,6 +84,7 @@ type AppointmentInput = {
   time: string;
   durationMin: number;
   tz: string;
+  occurrence?: number;
 };
 const rejected = (reason: string) => ({ ok: false as const, errors: [reason], conflicts: [] });
 
@@ -97,10 +99,14 @@ async function saveAppointment(
   if (!clientId || !roster.some((client) => client.id === clientId && client.status === "active")) {
     return rejected("Selecione um dossiê ativo da sua conta.");
   }
-  if (!scheduled && (!previous || clinicalStatusOf(previous, now) !== "scheduled"))
+  if (
+    !scheduled &&
+    (!previous || (previous.clinical_status ?? clinicalStatusOf(previous, now)) !== "scheduled")
+  )
     return rejected("Este atendimento não está agendado.");
   const validation = validateReschedule({
     ...input,
+    originalStartISO: previous?.session_date,
     existing: rows
       .filter((row) => ["scheduled", "in_progress"].includes(clinicalStatusOf(row, now)))
       .map((row) => ({
@@ -152,7 +158,7 @@ export const rescheduleSession = ({ data }: { data: AppointmentInput }) => saveA
 export async function cancelSession({ data }: { data: { sessionId: string } }) {
   const { rows } = await calendarRecords();
   const row = rows.find((s) => s.id === data.sessionId);
-  if (!row || !["scheduled", "canceled"].includes(clinicalStatusOf(row)))
+  if (!row || !["scheduled", "canceled"].includes(row.clinical_status ?? clinicalStatusOf(row)))
     return rejected("Este atendimento não está agendado.");
   await supabase.from("clinical_sessions").update({ clinical_status: "canceled" }).eq("id", row.id);
   return {

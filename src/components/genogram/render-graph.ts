@@ -87,6 +87,8 @@ export function buildRenderGraph(
       data: {
         isSingle: union.partners.length === 1,
         label: union.label,
+        relationshipId: union.relationshipId,
+        hubOffset: union.hubOffset,
         kind: union.kind,
         generation: union.generation,
         branchId: union.branchId,
@@ -102,19 +104,6 @@ export function buildRenderGraph(
   const seenChildUnion = new Set<string>();
   const childKindsByUnion = new Map<string, Record<string, string>>();
   const suggestionsByUnion = new Map<string, string[]>();
-  const recordedUnionsByPartners = new Map<string, string | null>();
-  const unionPair = (partners: readonly string[]) => [...partners].sort().join("|");
-  for (const rel of rels) {
-    if (rel.relationship_type !== "union") continue;
-    if (
-      graph.persons.get(rel.from_person_id)?.row.client_id !== rel.client_id ||
-      graph.persons.get(rel.to_person_id)?.row.client_id !== rel.client_id
-    )
-      continue;
-    const pair = unionPair([rel.from_person_id, rel.to_person_id]);
-    // A linha do mapa agrupa o par. Com mais de um registro, cada união é editada na ficha.
-    recordedUnionsByPartners.set(pair, recordedUnionsByPartners.has(pair) ? null : rel.id);
-  }
   for (const edge of graph.edges) {
     if (edge.kind !== "child") continue;
     const children = childKindsByUnion.get(edge.unionId) ?? {};
@@ -128,8 +117,7 @@ export function buildRenderGraph(
   }
   for (const e of graph.edges) {
     if (e.kind === "partner") {
-      const partners = graph.unions.get(e.unionId)?.partners ?? [];
-      const relationshipId = recordedUnionsByPartners.get(unionPair(partners));
+      const relationshipId = graph.unions.get(e.unionId)?.relationshipId;
       edges.push({
         id: `partner_${e.personId}_${e.unionId}`,
         source: e.personId,

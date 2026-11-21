@@ -82,6 +82,7 @@ export function IntakeEventProposal({
               source: "intake",
               source_field: finding.field,
               source_label: finding.label,
+              source_status: finding.context.status ?? "",
               source_type: finding.context.source ?? "",
               source_note: finding.context.note?.trim() ?? "",
             },

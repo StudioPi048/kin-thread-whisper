@@ -114,6 +114,15 @@ describe("guard de navegação", () => {
       ),
     ).toBe(false);
   });
+
+  it("protege rascunhos de hipóteses ao trocar o dossiê na mesma página", () => {
+    expect(
+      isGuardedNavigation(
+        { pathname: "/app/ia-clinica", search: { caseId: "a" } },
+        { pathname: "/app/ia-clinica", search: { caseId: "b" } },
+      ),
+    ).toBe(true);
+  });
 });
 
 describe("KeyedDebounce da planilha", () => {
@@ -198,4 +207,20 @@ describe("KeyedDebounce da planilha", () => {
     await expect(saving).rejects.toThrow("offline");
     expect(queue.hasPending()).toBe(false);
   });
+});
+
+it("aguarda o envio ativo ao descartar e nunca envia a edição enfileirada", async () => {
+  const pending = deferred();
+  const send = vi.fn(() => pending.promise);
+  const queue = new KeyedDebounce(send);
+  queue.push("case", { date: "original" });
+  const saving = queue.flush();
+  queue.push("case", { date: "descartar" });
+  const discard = queue.discardAndWait();
+  expect(queue.hasPending()).toBe(true);
+  pending.resolve();
+  await saving;
+  await expect(discard).resolves.toBe(true);
+  expect(send).toHaveBeenCalledExactlyOnceWith("case", { date: "original" });
+  expect(queue.hasPending()).toBe(false);
 });

@@ -1,6 +1,6 @@
 import { recognizedGeneration, type LogicalGraph } from "@/lib/geno/build";
 import { civilDate } from "./civil-date";
-import { INTAKE_ANSWER_SOURCE } from "./intake";
+import { INTAKE_ANSWER_SOURCE, INTAKE_ANSWER_STATUS } from "./intake";
 import { personLifeEvents, type PersonRow, type RelationshipRow } from "@/lib/patterns";
 
 export type TimelineKind = "birth" | "death" | "union" | "event";
@@ -13,6 +13,7 @@ export type CaseTimelineItem = {
   personId: string;
   personName: string;
   personIds?: string[];
+  relationshipId?: string;
   branch?: TimelineBranch;
   relationship: string | null;
   generation: number | null;
@@ -182,6 +183,7 @@ export function buildCaseTimeline(
               ? [
                   "Anamnese",
                   ev.source_label,
+                  INTAKE_ANSWER_STATUS[ev.source_status as keyof typeof INTAKE_ANSWER_STATUS],
                   INTAKE_ANSWER_SOURCE[ev.source_type as keyof typeof INTAKE_ANSWER_SOURCE],
                   ev.source_note,
                 ]
@@ -210,6 +212,7 @@ export function buildCaseTimeline(
     const base = {
       personId: from.id,
       personIds: [from.id, to.id],
+      relationshipId: relationship.id,
       personName: `${nameOf(from)} e ${nameOf(to)}`,
       relationship: null,
       generation: left?.generation ?? right?.generation ?? null,

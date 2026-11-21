@@ -1,5 +1,4 @@
-import { isAuthSessionMissingError, type User } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+import type { User } from "@supabase/supabase-js";
 
 const AUTH_CHECK_TIMEOUT = 8000;
 const INVALID_SESSION_CODES = new Set([
@@ -29,6 +28,10 @@ export async function withAuthCheckTimeout<T>(operation: () => Promise<T>): Prom
 }
 
 export async function verifiedWorkspaceUser(): Promise<User | null> {
+  const [{ supabase }, { isAuthSessionMissingError }] = await Promise.all([
+    import("@/integrations/supabase/client"),
+    import("@supabase/supabase-js"),
+  ]);
   const { data, error } = await supabase.auth.getUser();
   if (!error) return data.user;
   if (

@@ -152,7 +152,11 @@ export function detectPatterns(
   // 2) Mesma causa de morte
   patterns.push(
     ...groupBy(
-      orderedPersons.filter((p) => p.cause_of_death?.trim()),
+      orderedPersons.filter(
+        (p) =>
+          p.cause_of_death?.trim() &&
+          (p.is_deceased || p.death_date || p.death_date_partial?.trim()),
+      ),
       (p) => normalize(p.cause_of_death!),
     ).flatMap(([key, group]) =>
       group.length >= 2

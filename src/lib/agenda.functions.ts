@@ -32,7 +32,7 @@ export type AgendaDataDTO = {
 type Supabase = SupabaseClient<Database>;
 const civilDate = z.string().refine(isCivilDateKey, "Informe uma data válida.");
 const sessionColumns =
-  "id, client_id, session_date, title, status, duration_seconds, planned_duration_minutes, clinical_status, manual_notes, audio_path, ai_reviewed_at, structured_note, clients(id, full_name, preferred_name)" as const;
+  "id, client_id, session_date, title, status, duration_seconds, planned_duration_minutes, clinical_status, manual_notes, audio_path, ai_reviewed_at, summary_stale, structured_note, clients!inner(id, full_name, preferred_name)" as const;
 
 async function pendingCount(supabase: Supabase) {
   const { data, error } = await supabase.rpc("pending_clinical_record_count", {});
@@ -62,6 +62,8 @@ export const getAgendaData = createServerFn({ method: "GET" })
       supabase
         .from("clinical_sessions")
         .select(sessionColumns)
+        .eq("clients.status", "active")
+        .neq("status", "deleting")
         .eq("user_id", userId)
         .gte("session_date", edge(0))
         .lt("session_date", edge(1))
@@ -69,7 +71,9 @@ export const getAgendaData = createServerFn({ method: "GET" })
         .order("id"),
       supabase
         .from("clinical_sessions")
-        .select("session_date, clinical_status")
+        .select("session_date, clinical_status, clients!inner(id)")
+        .eq("clients.status", "active")
+        .neq("status", "deleting")
         .eq("user_id", userId)
         .gte("session_date", edge(-2))
         .lt("session_date", edge(5)),
@@ -81,7 +85,9 @@ export const getAgendaData = createServerFn({ method: "GET" })
         .order("full_name"),
       supabase
         .from("clinical_sessions")
-        .select("client_id")
+        .select("client_id, clients!inner(id)")
+        .eq("clients.status", "active")
+        .neq("status", "deleting")
         .eq("user_id", userId)
         .gte("session_date", now.toISOString())
         .or("clinical_status.eq.scheduled,clinical_status.is.null"),
@@ -141,6 +147,7 @@ export type WeekSessionDTO = Pick<
   | "startISO"
   | "durationMin"
   | "clinicalStatus"
+  | "overdue"
 >;
 
 export const getAgendaWeek = createServerFn({ method: "GET" })
@@ -155,8 +162,10 @@ export const getAgendaWeek = createServerFn({ method: "GET" })
     const { data: rows, error } = await context.supabase
       .from("clinical_sessions")
       .select(
-        "id, client_id, session_date, title, status, clinical_status, duration_seconds, planned_duration_minutes, manual_notes, ai_reviewed_at, clients(full_name, preferred_name)",
+        "id, client_id, session_date, title, status, clinical_status, duration_seconds, planned_duration_minutes, manual_notes, ai_reviewed_at, clients!inner(full_name, preferred_name)",
       )
+      .eq("clients.status", "active")
+      .neq("status", "deleting")
       .eq("user_id", context.userId)
       .gte("session_date", start.toISOString())
       .lt("session_date", end.toISOString())
@@ -166,9 +175,30 @@ export const getAgendaWeek = createServerFn({ method: "GET" })
 
     const now = new Date();
     return (rows ?? []).map((row) => {
-      const { id, clientId, patient, dateKey, start, end, startISO, durationMin, clinicalStatus } =
-        agendaSession(row, tz, now);
-      return { id, clientId, patient, dateKey, start, end, startISO, durationMin, clinicalStatus };
+      const {
+        id,
+        clientId,
+        patient,
+        dateKey,
+        start,
+        end,
+        startISO,
+        durationMin,
+        clinicalStatus,
+        overdue,
+      } = agendaSession(row, tz, now);
+      return {
+        id,
+        clientId,
+        patient,
+        dateKey,
+        start,
+        end,
+        startISO,
+        durationMin,
+        clinicalStatus,
+        overdue,
+      };
     });
   });
 
@@ -181,6 +211,7 @@ const saveInput = z.object({
   date: civilDate,
   time: z.string(),
   durationMin: z.number().int(),
+  occurrence: z.number().int().min(0).max(1).optional(),
   tz: z.string().max(64),
 });
 type SaveInput = z.infer<typeof saveInput>;
@@ -228,8 +259,9 @@ async function saveAppointment(
   input: SaveInput,
   action: "schedule" | "reschedule",
   client?: { id: string; title?: string },
+  originalStartISO?: string,
 ): Promise<RescheduleResponse> {
-  const validation = validateReschedule({ ...input, existing: [] });
+  const validation = validateReschedule({ ...input, existing: [], originalStartISO });
   if (!validation.ok) return { ok: false, errors: validation.errors, conflicts: [] };
   return commitAppointment(
     supabase,
@@ -259,7 +291,18 @@ export const scheduleSession = createServerFn({ method: "POST" })
 export const rescheduleSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: SaveInput) => saveInput.parse(data))
-  .handler(({ data, context }) => saveAppointment(context.supabase, data, "reschedule"));
+  .handler(async ({ data, context }) => {
+    const { data: current, error } = await context.supabase
+      .from("clinical_sessions")
+      .select("session_date")
+      .eq("id", data.sessionId)
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    if (error) throw error;
+    if (!current)
+      return { ok: false as const, errors: ["Atendimento indisponível."], conflicts: [] };
+    return saveAppointment(context.supabase, data, "reschedule", undefined, current.session_date);
+  });
 
 export const cancelSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

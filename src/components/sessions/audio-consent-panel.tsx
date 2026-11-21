@@ -29,6 +29,7 @@ export function AudioConsentPanel({
   refresh,
   sessions,
   initialSessionId,
+  requestedScope,
 }: {
   clientId: string;
   events: AudioConsentEvent[];
@@ -37,14 +38,25 @@ export function AudioConsentPanel({
   refresh: () => Promise<unknown>;
   sessions: { id: string; label: string }[];
   initialSessionId?: string;
+  requestedScope?: { sessionId?: string };
 }) {
-  const [change, setChange] = useState<{ scope: AudioConsentScope; granted: boolean }>();
+  const [change, setChange] = useState<{
+    scope: AudioConsentScope;
+    granted: boolean;
+    sessionId: string;
+    targetLabel: string;
+  }>();
   const [source, setSource] = useState<AudioConsentSource | "">("");
-  const [selectedSession, setSession] = useState<string>();
-  const sessionId =
-    selectedSession ??
-    (sessions.some((s) => s.id === initialSessionId) ? initialSessionId : "") ??
-    "";
+  const [selection, setSelection] = useState<{ request: typeof requestedScope; id: string }>();
+  const target =
+    selection && selection.request === requestedScope
+      ? selection.id
+      : requestedScope
+        ? requestedScope.sessionId
+        : initialSessionId;
+  const selected = sessions.find((session) => session.id === target);
+  const sessionId = selected?.id ?? "";
+  const targetUnavailable = !!target && !selected;
   const [termVersion, setVersion] = useState("");
   const [reference, setReference] = useState("");
   const activeEvents = sessionId
@@ -58,7 +70,7 @@ export function AudioConsentPanel({
         _scope: change.scope,
         _granted: change.granted,
         _source: source,
-        ...(sessionId ? { _session_id: sessionId } : {}),
+        ...(change.sessionId ? { _session_id: change.sessionId } : {}),
         ...(termVersion.trim() ? { _term_version: termVersion.trim() } : {}),
         ...(reference.trim() ? { _document_reference: reference.trim() } : {}),
       });
@@ -88,15 +100,16 @@ export function AudioConsentPanel({
           Registre a decisão do consultante para cada finalidade, no caso inteiro ou em uma sessão.
         </p>
       </div>
-      {sessions.length > 0 && (
-        <label className="grid max-w-md gap-1.5 text-sm font-medium">
+      {(sessions.length > 0 || targetUnavailable) && (
+        <label className="grid min-w-0 max-w-md grid-cols-[minmax(0,1fr)] gap-1.5 text-sm font-medium">
           Aplicação da decisão
           <select
-            className="min-h-11 w-full rounded-md border border-input bg-card px-3 text-base"
-            value={sessionId}
+            className="min-h-11 w-full min-w-0 rounded-md border border-input bg-card px-3 text-base"
+            value={targetUnavailable ? target : sessionId}
             disabled={!!change || save.isPending}
-            onChange={(e) => setSession(e.target.value)}
+            onChange={(e) => setSelection({ request: requestedScope, id: e.target.value })}
           >
+            {targetUnavailable && <option value={target}>Sessão indisponível</option>}
             <option value="">Caso inteiro</option>
             {sessions.map((session) => (
               <option key={session.id} value={session.id}>
@@ -137,10 +150,15 @@ export function AudioConsentPanel({
                     variant="outline"
                     className="min-h-11"
                     aria-label={`${latest?.granted ? "Revogar" : "Registrar autorização para"} ${AUDIO_CONSENT_SCOPE[scope].toLowerCase()}`}
-                    disabled={save.isPending}
+                    disabled={save.isPending || targetUnavailable}
                     onClick={() => {
                       save.reset();
-                      setChange({ scope, granted: !latest?.granted });
+                      setChange({
+                        scope,
+                        granted: !latest?.granted,
+                        sessionId,
+                        targetLabel: selected?.label ?? "Caso inteiro",
+                      });
                       setSource("");
                       setVersion("");
                       setReference("");
@@ -163,6 +181,9 @@ export function AudioConsentPanel({
               <p className="text-sm font-semibold">
                 {change.granted ? "Registrar autorização" : "Registrar revogação"} ·{" "}
                 {AUDIO_CONSENT_SCOPE[change.scope]}
+              </p>
+              <p className="text-sm">
+                Aplicação da decisão · <strong>{change.targetLabel}</strong>
               </p>
               <label className="block text-sm">
                 Origem da decisão

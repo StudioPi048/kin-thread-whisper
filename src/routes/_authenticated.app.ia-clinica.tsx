@@ -5,7 +5,8 @@ import { RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { DocumentHeader } from "@/components/ui/document-header";
-import { evidenceForCase } from "@/lib/evidence";
+import { evidenceForCase, type Hypothesis } from "@/lib/evidence";
+import type { DetectedPattern } from "@/lib/patterns";
 import { clinicalIntelQuery } from "@/lib/clinical-intel";
 import { readVisits } from "@/lib/recent-activity";
 import { EvidenceSources } from "@/components/clients/evidence-sources";
@@ -39,6 +40,8 @@ export const Route = createFileRoute("/_authenticated/app/ia-clinica")({
   component: IaClinicaPage,
 });
 
+type ReviewEntry = { hypothesis: Hypothesis; pattern: DetectedPattern };
+
 function IaClinicaPage() {
   const { caseId } = Route.useSearch();
   const { user } = Route.useRouteContext();
@@ -66,25 +69,47 @@ function IaClinicaPage() {
   const recentCase = clients.find((client) => client.id === recentId);
   // Mesma queryFn/formato do dossiê (lib/clinical-intel) → cache compatível
   const caseQ = useQuery(clinicalIntelQuery(clientId));
-  const [panel, setPanel] = useState({ clientId: "", selected: new Set<string>(), showHyp: false });
+  const [panel, setPanel] = useState({
+    clientId: "",
+    selected: new Set<string>(),
+    opened: new Map<string, ReviewEntry>(),
+    showHyp: false,
+  });
   const selected = panel.clientId === clientId ? panel.selected : new Set<string>();
+  const opened = panel.clientId === clientId ? panel.opened : new Map<string, ReviewEntry>();
   const showHyp = panel.clientId === clientId && panel.showHyp;
+  const evidenceData = caseQ.data;
+  const ev = evidenceData
+    ? evidenceForCase(evidenceData.persons, evidenceData.relationships)
+    : null;
+  const patterns = new Map(ev?.patterns.map((pattern) => [pattern.id, pattern]));
+  const current = new Map<string, ReviewEntry>();
+  for (const hypothesis of ev?.hypotheses ?? []) {
+    const pattern = patterns.get(hypothesis.patternId);
+    if (pattern) current.set(hypothesis.id, { hypothesis, pattern });
+  }
+
   const changeCase = (id: string) => {
-    setPanel({ clientId: id, selected: new Set(), showHyp: false });
     void navigate({ search: id ? { caseId: id } : {} });
+  };
+  const updateSelection = (next: Set<string>, show: boolean) => {
+    const entries = new Map(opened);
+    if (show) {
+      for (const [id, entry] of current) {
+        if (next.has(entry.hypothesis.patternId)) entries.set(id, entry);
+      }
+    }
+    setPanel({ clientId, selected: next, opened: entries, showHyp: show });
   };
   const toggle = (id: string) => {
     const next = new Set(selected);
     if (next.has(id)) next.delete(id);
     else next.add(id);
-    setPanel({ clientId, selected: next, showHyp: false });
+    updateSelection(next, showHyp);
   };
 
-  const evidenceData = caseQ.data;
-  const ev = evidenceData
-    ? evidenceForCase(evidenceData.persons, evidenceData.relationships)
-    : null;
-  const hyps = ev && showHyp ? ev.hypotheses.filter((h) => selected.has(h.patternId)) : [];
+  const visibleHypotheses =
+    showHyp && [...opened.values()].some(({ hypothesis }) => selected.has(hypothesis.patternId));
   const hypothesisHeadingRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     if (showHyp) hypothesisHeadingRef.current?.focus();
@@ -223,7 +248,10 @@ function IaClinicaPage() {
                 <Button
                   className="min-h-11"
                   disabled={selected.size === 0}
-                  onClick={() => setPanel({ clientId, selected, showHyp: true })}
+                  onClick={() => {
+                    updateSelection(selected, true);
+                    if (showHyp) hypothesisHeadingRef.current?.focus();
+                  }}
                 >
                   Ver hipóteses{" "}
                   {selected.size > 0 && (
@@ -234,8 +262,8 @@ function IaClinicaPage() {
                   )}
                 </Button>
               )}
-              {hyps.length > 0 && (
-                <section aria-labelledby="hy-h" className="space-y-3">
+              {opened.size > 0 && (
+                <section aria-labelledby="hy-h" className="space-y-3" hidden={!visibleHypotheses}>
                   <h2
                     id="hy-h"
                     ref={hypothesisHeadingRef}
@@ -244,37 +272,41 @@ function IaClinicaPage() {
                   >
                     Hipóteses provisórias
                   </h2>
-                  {hyps.map((h) => (
-                    <article key={h.id} className="space-y-2 border-b border-border bg-card p-4">
-                      <h3 className="text-[16px] font-semibold">{h.title}</h3>
-                      <p className="text-[15px]">{h.description}</p>
-                      <p className="text-[15px]">
-                        <strong>Familiares mencionados</strong> · {h.sources.join(", ")}
-                      </p>
-                      <p className="text-[14px] text-muted-foreground">
-                        <strong>Limites</strong> · {h.limits}
-                      </p>
-                      <div className="text-[15px]">
-                        <strong>Perguntas para a sessão</strong>
-                        <ul className="ml-5 list-disc">
-                          {h.questions.map((q) => (
-                            <li key={q}>{q}</li>
-                          ))}
-                        </ul>
-                      </div>
-                      {(() => {
-                        const pt = ev.patterns.find((x) => x.id === h.patternId);
-                        return pt ? (
-                          <HypothesisReview
-                            clientId={clientId}
-                            hypothesisKey={h.id}
-                            title={h.title}
-                            pattern={pt}
-                          />
-                        ) : null;
-                      })()}
-                    </article>
-                  ))}
+                  {[...opened.entries()].map(([id, original]) => {
+                    const latest = current.get(id);
+                    const { hypothesis: h, pattern } = latest ?? original;
+                    return (
+                      <article
+                        key={`${clientId}:${id}`}
+                        hidden={!selected.has(h.patternId)}
+                        className="space-y-2 border-b border-border bg-card p-4"
+                      >
+                        <h3 className="text-[16px] font-semibold">{h.title}</h3>
+                        <p className="text-[15px]">{h.description}</p>
+                        <p className="text-[15px]">
+                          <strong>Familiares mencionados</strong> · {h.sources.join(", ")}
+                        </p>
+                        <p className="text-[14px] text-muted-foreground">
+                          <strong>Limites</strong> · {h.limits}
+                        </p>
+                        <div className="text-[15px]">
+                          <strong>Perguntas para a sessão</strong>
+                          <ul className="ml-5 list-disc">
+                            {h.questions.map((q) => (
+                              <li key={q}>{q}</li>
+                            ))}
+                          </ul>
+                        </div>
+                        <HypothesisReview
+                          clientId={clientId}
+                          hypothesisKey={id}
+                          title={h.title}
+                          pattern={pattern}
+                          available={Boolean(latest)}
+                        />
+                      </article>
+                    );
+                  })}
                 </section>
               )}
               <HypothesisReviewArchive clientId={clientId} patterns={ev.patterns} />

@@ -400,19 +400,20 @@ export function ClanSpreadsheet({
     save: async () => {
       await queueRef.current!.flush();
     },
-    discard: () => {
-      queueRef.current!.discard();
+    discard: async () => {
+      const confirmed = await queueRef.current!.discardAndWait();
       setDrafts({});
       setSaveFailed(false);
+      if (confirmed) {
+        await refetch();
+        toast.info("Uma alteração já enviada foi salva. As demais foram descartadas.");
+      }
     },
   });
 
-  // Desmontagem sem passar pelo guard (ex.: troca de cliente): envia já o que falta
   useEffect(() => {
     const q = queueRef.current!;
-    return () => {
-      if (q.hasPending()) void q.flush().catch(() => {});
-    };
+    return () => q.discard();
   }, []);
 
   // Cliente é sempre o foco: garante que o proband exista no genograma,

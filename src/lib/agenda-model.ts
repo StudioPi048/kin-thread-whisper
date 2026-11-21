@@ -1,5 +1,10 @@
 import { appointmentDurationMin, dateKeyInTz, timeInTz } from "./scheduling";
-import { audioStateOf, clinicalStatusOf, type SessionLike } from "./session-state";
+import {
+  audioStateOf,
+  clinicalStatusOf,
+  isAppointmentOverdue,
+  type SessionLike,
+} from "./session-state";
 
 export type AgendaSessionRow = SessionLike & {
   id: string;
@@ -32,7 +37,12 @@ export function sessionHistory(rows: HistoryRow[]) {
 function clinicRecordPreview(row: AgendaSessionRow): string | null {
   const note = row.manual_notes?.trim();
   if (note) return note.length > 220 ? `${note.slice(0, 220)}…` : note;
-  if (!row.ai_reviewed_at || !row.structured_note || typeof row.structured_note !== "object")
+  if (
+    row.summary_stale ||
+    !row.ai_reviewed_at ||
+    !row.structured_note ||
+    typeof row.structured_note !== "object"
+  )
     return null;
   const structuredNote = row.structured_note as { resumo?: unknown; summary?: unknown };
   const summary = structuredNote.resumo ?? structuredNote.summary;
@@ -83,6 +93,7 @@ export function agendaSession(
     lastEvolution: clinicRecordPreview(row),
     durationMin,
     clinicalStatus,
+    overdue: isAppointmentOverdue(row, now),
     audioState: audioStateOf(row),
   };
 }

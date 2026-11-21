@@ -133,6 +133,30 @@ describe("importação da planilha", () => {
     expect(row.record?.relationship_to_proband).toBe("Irmão do avô");
   });
 
+  it.each([false, true])(
+    "lê a data civil do Excel inteiro no calendário 1904=%s",
+    async (date1904) => {
+      const XLSX = await import("xlsx");
+      const epoch = date1904 ? Date.UTC(1904, 0, 1) : Date.UTC(1899, 11, 30);
+      const serial = (Date.UTC(2024, 0, 1) - epoch) / 86_400_000;
+      const sheet = XLSX.utils.aoa_to_sheet([
+        ["Nome", "Nascimento", "Ordem"],
+        ["Pessoa fictícia", serial, 3],
+      ]);
+      sheet.B2.z = "dd/mm/yyyy";
+      const workbook = XLSX.utils.book_new();
+      workbook.Workbook = { WBProps: { date1904 } };
+      XLSX.utils.book_append_sheet(workbook, sheet, "Pessoas");
+
+      const { rows } = await readClanFile(
+        XLSX.write(workbook, { type: "array", bookType: "xlsx" }),
+        "xlsx",
+      );
+
+      expect(rows).toEqual([["Pessoa fictícia", "2024-01-01", "3"]]);
+    },
+  );
+
   it("lê o gênero da pessoa e não do parente mencionado no rótulo", () => {
     expect(inferGenderFromRelationship("Irmã do avô paterno")).toBe("feminino");
     expect(inferGenderFromRelationship("Irmão da avó")).toBe("masculino");

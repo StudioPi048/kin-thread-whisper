@@ -152,13 +152,14 @@ export function PersonFormDialog({
         gender: form.gender || null,
         ...birth,
       };
+      const isDeceased = form.is_deceased || Boolean(death.death_date || death.death_date_partial);
       const payload = {
         client_id: clientId,
         ...death,
-        is_deceased: form.is_deceased || Boolean(form.death_date),
+        is_deceased: isDeceased,
         is_proband: form.is_proband,
         occupation: form.occupation.trim() || null,
-        cause_of_death: form.cause_of_death.trim() || null,
+        cause_of_death: isDeceased ? form.cause_of_death.trim() || null : null,
         health_conditions: form.health_conditions,
         life_events:
           form.life_events as unknown as Database["public"]["Tables"]["genogram_persons"]["Insert"]["life_events"],

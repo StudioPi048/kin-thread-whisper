@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   calculateCompletion,
+  intakeBirthTimeInput,
+  intakeBirthTimeStorage,
   findIntakeQuestions,
   sectionCompletion,
   type ClientIntake,
@@ -143,4 +145,23 @@ describe("salvamento da anamnese", () => {
     });
     expect(queue.hasPending()).toBe(false);
   });
+});
+
+it("preserva a hora civil relatada e permite limpar uma data na Anamnese", () => {
+  expect(intakeBirthTimeInput("1992-01-05 09:30:00+00")).toBe("1992-01-05T09:30");
+  expect(intakeBirthTimeStorage("1992-01-05T09:30")).toBe("1992-01-05T09:30:00Z");
+  expect(intakeBirthTimeStorage("")).toBeNull();
+  expect(
+    intakePatch(
+      sample({ union_date: "2020-02-11" }),
+      captureIntakeEdits(
+        {
+          birth_datetime: null,
+          union_date: null,
+          birth_place: "Cidade de teste",
+        },
+        1,
+      ),
+    ),
+  ).toEqual({ birth_datetime: null, union_date: null, birth_place: "Cidade de teste" });
 });

@@ -10,6 +10,9 @@ const pageTitle = "Genealiz — Genossociogramas para a psicogenealogia";
 const pageDescription =
   "Monte a árvore familiar, acompanhe acontecimentos e registre cada atendimento em um só dossiê. Experimente o Genealiz com uma família fictícia.";
 
+const shareImage = "https://kin-thread-whisper.lovable.app/assets/genealiz/archive-hero.jpg";
+const shareImageAlt = "Fotografias antigas de família sobre um álbum de arquivo.";
+
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
@@ -18,7 +21,13 @@ export const Route = createFileRoute("/")({
       { property: "og:title", content: pageTitle },
       { property: "og:description", content: pageDescription },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
+      { property: "og:image", content: shareImage },
+      { property: "og:image:width", content: "1536" },
+      { property: "og:image:height", content: "1024" },
+      { property: "og:image:alt", content: shareImageAlt },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: shareImage },
+      { name: "twitter:image:alt", content: shareImageAlt },
     ],
   }),
   component: Index,

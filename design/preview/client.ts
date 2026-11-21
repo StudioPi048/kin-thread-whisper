@@ -136,6 +136,7 @@ export const sessions = [9, 11, 14].map((h, i) => {
     status: "scheduled",
     duration_seconds: 3000,
     structured_note: null,
+    summary_stale: false,
     transcript: null,
     audio_path: null,
     created_at: stamp,
@@ -157,6 +158,7 @@ const syntheticReviewSession = {
   duration_seconds: null,
   audio_path: null,
   structured_note: null,
+  summary_stale: false,
   transcript:
     "A família do exercício relata uma mudança de cidade. A data ainda vai ser confirmada.",
   transcript_segments: [
@@ -267,7 +269,11 @@ class Query {
     return this;
   }
   eq(k: string, v: any) {
-    this.filters.push((r) => r[k] === v);
+    this.filters.push((r) =>
+      k === "clients.status"
+        ? db.clients.find((client) => client.id === r.client_id)?.status === v
+        : r[k] === v,
+    );
     return this;
   }
   neq(k: string, v: any) {
@@ -368,12 +374,33 @@ class Query {
       let rows = this.rows.filter((r) => this.filters.every((f) => f(r)));
       if (this.mutation === "update") {
         const touchedAt = new Date().toISOString();
-        const touchDate = ["client_intakes", "clinical_sessions"].includes(this.table);
+        const touchDate = ["client_intakes", "clinical_sessions", "clients"].includes(this.table);
+        const transcriptContent = (reviews: any) =>
+          JSON.stringify(
+            Object.entries(reviews ?? {}).flatMap(([key, review]: [string, any]) =>
+              review.decision === "excluded" || review.decision === "corrected"
+                ? [[key, review.decision, review.correction?.trim() || null]]
+                : [],
+            ),
+          );
         const updated = new Map(
-          rows.map((row) => [
-            row,
-            { ...row, ...this.payload, ...(touchDate ? { updated_at: touchedAt } : {}) },
-          ]),
+          rows.map((row) => {
+            const next = {
+              ...row,
+              ...this.payload,
+              ...(touchDate ? { updated_at: touchedAt } : {}),
+            };
+            if (this.table === "clinical_sessions") {
+              if (
+                row.structured_note &&
+                transcriptContent(row.transcript_reviews) !==
+                  transcriptContent(next.transcript_reviews)
+              )
+                next.summary_stale = true;
+              if (next.summary_stale) next.ai_reviewed_at = null;
+            }
+            return [row, next];
+          }),
         );
         db[this.table] = this.rows.map((row) => updated.get(row) ?? row);
         rows = [...updated.values()];
@@ -383,10 +410,12 @@ class Query {
         rows = (Array.isArray(this.payload) ? this.payload : [this.payload]).map((v: any) => ({
           id: crypto.randomUUID(),
           created_at: stamp,
-          ...(["client_intakes", "clinical_sessions"].includes(this.table)
+          ...(["client_intakes", "clinical_sessions", "clients"].includes(this.table)
             ? { updated_at: new Date().toISOString() }
             : {}),
-          ...(this.table === "clinical_sessions" ? { session_date: new Date().toISOString() } : {}),
+          ...(this.table === "clinical_sessions"
+            ? { session_date: new Date().toISOString(), summary_stale: false }
+            : {}),
           ...v,
         }));
         const remaining =
@@ -630,6 +659,9 @@ function importFixtureWorkbook(args: Record<string, unknown>) {
         start_date: link.start_date,
         end_date: link.end_date,
         notes: link.notes,
+        marriage_order: link.marriage_order_present
+          ? link.marriage_order
+          : (existing?.marriage_order ?? null),
         clan_reference: existing?.clan_reference ?? link.key,
         updated_at: now,
       };
@@ -668,6 +700,54 @@ export const supabase: any = {
   from: (table: string) => new Query(table),
   rpc: async (name: string, args: Record<string, unknown>) => {
     readFixtureFamily();
+    if (name === "confirm_session_audio_upload") {
+      const session = db.clinical_sessions.find((row) => row.id === args._session_id);
+      if (
+        !session?.audio_path ||
+        session.audio_path !== args._path ||
+        !["awaiting_upload", "draft", "transcribing", "structuring", "ready", "error"].includes(
+          session.status,
+        )
+      ) {
+        return fixtureResult("unavailable");
+      }
+      if (!fixtureAudio.has(session.audio_path)) return fixtureResult("missing");
+      if (session.status === "awaiting_upload") {
+        const grant = [...db.audio_consent_events]
+          .reverse()
+          .find(
+            (event) =>
+              event.scope === "recording" &&
+              event.client_id === session.client_id &&
+              (!event.session_id || event.session_id === session.id),
+          );
+        if (!grant?.granted || grant.id !== session.recording_consent_id)
+          return fixtureResult("consent");
+        Object.assign(session, {
+          status: "draft",
+          error_message: null,
+          updated_at: new Date().toISOString(),
+        });
+      }
+      return fixtureResult("confirmed");
+    }
+    if (name === "begin_session_deletion" || name === "finish_session_deletion") {
+      const session = db.clinical_sessions.find((row) => row.id === args._session_id);
+      if (name === "begin_session_deletion") {
+        if (!session) return fixtureResult(null);
+        session.status = "deleting";
+        return fixtureResult(session.audio_path ?? null);
+      }
+      if (!session) return fixtureResult(true);
+      if (
+        session.status !== "deleting" ||
+        (session.audio_path && fixtureAudio.has(session.audio_path))
+      ) {
+        return fixtureResult(false);
+      }
+      db.clinical_sessions = db.clinical_sessions.filter((row) => row !== session);
+      return fixtureResult(true);
+    }
     if (name === "list_dossier_deletions")
       return fixtureResult(db.dossier_deletion_jobs.filter((job) => !job.completed_at));
     if (name === "begin_dossier_deletion") {
@@ -728,20 +808,36 @@ export const supabase: any = {
       if (!result.error) persistFixtureFamily();
       return result;
     }
-    if (name === "mesa_pending_clinical_records") {
+    if (name === "mesa_pending_clinical_records" || name === "list_pending_clinical_records") {
+      const offset = name === "mesa_pending_clinical_records" ? 0 : Number(args._offset ?? 0);
+      const limit = name === "mesa_pending_clinical_records" ? 5 : Number(args._limit ?? 31);
       return fixtureResult(
         db.clinical_sessions
           .filter(
             (session) =>
+              session.status !== "deleting" &&
+              db.clients.some(
+                (client) => client.id === session.client_id && client.status === "active",
+              ) &&
               Date.parse(session.session_date) <= Date.now() &&
-              (session.clinical_status === "pending_record" ||
+              (["scheduled", "pending_record"].includes(session.clinical_status) ||
                 (session.clinical_status == null &&
                   !session.manual_notes?.trim() &&
-                  !session.ai_reviewed_at &&
-                  !session.structured_note)),
+                  !session.ai_reviewed_at)),
           )
-          .sort((a, b) => Date.parse(b.session_date) - Date.parse(a.session_date))
-          .slice(0, 5),
+          .sort(
+            (a, b) =>
+              Date.parse(b.session_date) - Date.parse(a.session_date) || a.id.localeCompare(b.id),
+          )
+          .slice(offset, offset + limit)
+          .map((session) => {
+            const client = db.clients.find((entry) => entry.id === session.client_id);
+            return {
+              ...session,
+              client_name: client?.preferred_name || client?.full_name || "Cliente",
+              overdue: session.clinical_status === "scheduled",
+            };
+          }),
       );
     }
     if (name === "list_timeline_cases") {

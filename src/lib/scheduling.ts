@@ -107,6 +107,22 @@ export function zonedLocalToUtc(date: string, time: string, tz: string): Date | 
   return new Date(guess);
 }
 
+export function zonedTimeOccurrences(date: string, time: string, tz: string) {
+  const resolved = zonedLocalToUtc(date, time, tz);
+  if (!resolved) return [];
+  const wallTime = Date.parse(`${date}T${time}Z`);
+  const dayMillis = 86_400_000;
+  const offsets = [-dayMillis, dayMillis].map((day) => {
+    const sample = resolved.getTime() + day;
+    const { y, mo, d, h, mi } = partsInTz(new Date(sample), tz);
+    return Date.UTC(y, mo - 1, d, h, mi) - sample;
+  });
+  return [...new Set([resolved.getTime(), ...offsets.map((offset) => wallTime - offset)])]
+    .sort((a, b) => a - b)
+    .map((instant) => new Date(instant))
+    .filter((instant) => dateKeyInTz(instant, tz) === date && timeInTz(instant, tz) === time);
+}
+
 export type ScheduledItem = { id: string; startISO: string; durationMin: number };
 
 export type RescheduleInput = {
@@ -116,6 +132,8 @@ export type RescheduleInput = {
   durationMin: number;
   tz: string;
   existing: ScheduledItem[];
+  originalStartISO?: string;
+  occurrence?: number;
 };
 
 export type RescheduleResult =
@@ -131,7 +149,24 @@ export function validateReschedule(input: RescheduleInput): RescheduleResult {
     input.durationMin > MAX_DURATION
   )
     errors.push(`Duração deve ser entre ${MIN_DURATION} e ${MAX_DURATION} minutos.`);
-  const start = errors.length ? null : zonedLocalToUtc(input.date, input.time, input.tz);
+  const choices = errors.length ? [] : zonedTimeOccurrences(input.date, input.time, input.tz);
+  const original = input.originalStartISO ? new Date(input.originalStartISO) : null;
+  const originalMatches =
+    original &&
+    Number.isFinite(original.getTime()) &&
+    choices.some(
+      (choice) => Math.floor(choice.getTime() / 60_000) === Math.floor(original.getTime() / 60_000),
+    );
+  const start =
+    input.occurrence !== undefined
+      ? choices[input.occurrence]
+      : originalMatches
+        ? original
+        : choices.length === 1
+          ? choices[0]
+          : null;
+  if (!start && choices.length > 1)
+    errors.push("Este horário ocorre duas vezes. Selecione uma das ocorrências.");
   if (!errors.length && !start)
     errors.push("Data ou horário inválido (ou inexistente neste fuso por mudança de horário).");
   if (errors.length || !start) return { ok: false, errors, conflicts: [] };

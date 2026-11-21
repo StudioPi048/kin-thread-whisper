@@ -52,8 +52,8 @@ const TASKS: Task[] = [
     id: "vincular",
     title: "Adicionar familiares e vincular pais",
     steps: [
-      "No Genossociograma, use “Pessoa” para cadastrar um familiar com nome completo e parentesco.",
-      "Na ficha da pessoa, “Definir pai ou mãe” liga explicitamente a pessoa aos genitores já cadastrados. Esse vínculo vale mais que o parentesco digitado.",
+      "No Genossociograma, use “Adicionar pessoa” para cadastrar um familiar com nome completo e parentesco.",
+      "Na ficha da pessoa, use “Definir filiação” para vincular os genitores já cadastrados ou “Revisar filiação” para corrigir um vínculo. A filiação registrada tem prioridade sobre o parentesco digitado.",
       "Meios-irmãos: vincule cada um ao pai/mãe correto; o mapa cria uniões separadas.",
       "Quando a filiação estiver em aberto, consulte as pendências do mapa e registre a fonte ao revisar.",
     ],
@@ -65,7 +65,7 @@ const TASKS: Task[] = [
     id: "salvar",
     title: "Salvar e recuperar o layout do mapa",
     steps: [
-      "Arraste pessoas para ajustar. O layout é salvo automaticamente após 2 s; “Salvar layout” força o envio.",
+      "Arraste as pessoas para ajustar o layout. O mapa salva as posições automaticamente após 2 s. Use “Salvar layout agora” no menu de ferramentas para adiantar o envio.",
       "Desfazer/Refazer valem só para posições — remover pessoas não é desfeito.",
       "Se a conexão cair, mantenha a página aberta e tente salvar novamente. As edições pendentes ficam nesta página.",
       "“Organizar” pede confirmação, porque substitui as posições salvas.",
@@ -88,9 +88,9 @@ const TASKS: Task[] = [
     id: "importar",
     title: "Importar a planilha do clã",
     steps: [
-      "Na aba Planilha, “Importar” aceita CSV ou XLSX.",
+      "Na aba Planilha, use “Importar CSV/XLSX” e escolha o arquivo.",
       "Confira a prévia: mapeamento de colunas, erros por linha e possíveis duplicidades.",
-      "Escolha se substitui os familiares atuais ou apenas acrescenta. O cliente nunca é apagado.",
+      "Acrescente ou atualize familiares pela prévia. A opção de substituição aparece quando os vínculos existentes permitem. O cadastro do consultante é preservado.",
       "A gravação é tudo-ou-nada: se falhar, a planilha anterior permanece intacta.",
     ],
     to: "/app/clientes",

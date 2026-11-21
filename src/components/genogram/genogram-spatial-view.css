@@ -526,6 +526,35 @@
   outline-offset: -3px;
 }
 
+.geno-spatial-open-person {
+  flex: none;
+  min-width: 44px;
+  min-height: 44px;
+  padding-inline: 8px;
+  color: var(--forest);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.geno-spatial-open-person:focus-visible {
+  outline: 2px solid var(--forest);
+  outline-offset: -3px;
+}
+
+.geno-spatial-open-person:disabled {
+  opacity: 0.5;
+}
+
+.geno-spatial-union-label {
+  paint-order: stroke;
+  fill: var(--ink);
+  stroke: var(--archive);
+  stroke-width: 3px;
+  font-size: 12px;
+  font-weight: 650;
+}
+
 .geno-spatial-scopes button[data-branch]::before {
   width: 11px;
   flex: none;

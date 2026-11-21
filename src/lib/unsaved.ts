@@ -80,12 +80,18 @@ export class RevisionTracker {
   }
 }
 
-/** Decide se a navegação deve passar pelo guard: troca de página ou de aba do dossiê. */
+/** Protege mudanças de página, aba do dossiê ou caso em revisão. */
 export function isGuardedNavigation(
   current: { pathname: string; search?: Record<string, unknown> },
   next: { pathname: string; search?: Record<string, unknown> },
 ) {
   if (current.pathname !== next.pathname) return true;
+  if (
+    current.pathname.replace(/\/$/, "") === "/app/ia-clinica" &&
+    (current.search?.caseId ?? null) !== (next.search?.caseId ?? null)
+  ) {
+    return true;
+  }
   return (current.search?.tab ?? null) !== (next.search?.tab ?? null);
 }
 
@@ -154,6 +160,12 @@ export class KeyedDebounce<P extends Record<string, unknown>> {
       }
     }
     if (errors.length) throw errors[0];
+  }
+  async discardAndWait() {
+    const active = [...this.inFlight.values()];
+    this.discard();
+    const outcomes = await Promise.allSettled(active);
+    return outcomes.some((outcome) => outcome.status === "fulfilled");
   }
   discard() {
     this.discardVersion++;

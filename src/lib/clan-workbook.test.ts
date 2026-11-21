@@ -110,4 +110,98 @@ describe("conciliação da planilha do clã", () => {
     expect(preview.actionable).toBe(false);
     expect(preview.plan.parentages).toEqual([]);
   });
+
+  it("reimporta o modelo parcialmente preenchido e mantém uma ficha sem nome que já tem dados", async () => {
+    const { persons, rels } = consultanteFamily();
+    const empty = {
+      ...persons[1],
+      id: "reserved",
+      full_name: "",
+      birth_date: null,
+      birth_order: null,
+    };
+    const partial = { ...empty, id: "partial", notes: "Informação a conferir" };
+    const existingPeople = [...persons, empty, partial];
+    const workbook = await createClanWorkbook(existingPeople, rels);
+    const XLSX = await import("xlsx");
+    const [peopleSheet, linksSheet] = await readClanWorkbook(
+      XLSX.write(workbook, { type: "array", bookType: "xlsx" }),
+      "xlsx",
+    );
+    expect(peopleSheet.rows.some((row) => row[0] === empty.id)).toBe(false);
+    expect(peopleSheet.rows.some((row) => row[0] === partial.id)).toBe(true);
+    peopleSheet.rows.find((row) => row[0] === persons[1].id)![1] = "Nome corrigido";
+    const preview = planClanWorkbook({
+      peopleSheet,
+      linksSheet,
+      existingPeople,
+      existingLinks: rels,
+      choices: {},
+      replaceParentage: false,
+    });
+    expect(preview.blocking).toBe(false);
+    expect(preview.people.find(({ key }) => key === partial.id)?.state).toBe("keep");
+    expect(preview.plan.people.find(({ key }) => key === persons[1].id)?.patch.full_name).toBe(
+      "Nome corrigido",
+    );
+  });
+
+  it("compara as datas exatas com a ficha salva antes de confirmar a importação", () => {
+    const { persons } = consultanteFamily();
+    const saved = { ...persons[1], birth_date: "1950-01-01", death_date: "2021-01-01" };
+    const preview = planClanWorkbook({
+      peopleSheet: {
+        name: "Pessoas",
+        header: ["ID da pessoa", "Nome", "Nascimento"],
+        rows: [[saved.id, saved.full_name, "2024-01-01"]],
+      },
+      existingPeople: [saved],
+      existingLinks: [],
+      choices: {},
+      replaceParentage: false,
+    });
+    expect(preview.blocking).toBe(true);
+    expect(preview.people[0]).toMatchObject({ line: 2, name: saved.full_name, state: "error" });
+    expect(preview.people[0].changes.join(" ")).toContain("Nascimento e Falecimento");
+    expect(preview.plan.people).toHaveLength(0);
+  });
+
+  it("transporta duas uniões com os mesmos participantes e preserva a ordem em arquivo antigo", async () => {
+    const { persons, rels } = consultanteFamily();
+    const first = rels.find((rel) => rel.relationship_type === "union")!;
+    const unions = [
+      { ...first, marriage_order: 1 },
+      { ...first, id: "next-union", marriage_order: 2 },
+    ];
+    const workbook = await createClanWorkbook(persons, unions);
+    const XLSX = await import("xlsx");
+    const [peopleSheet, linksSheet] = await readClanWorkbook(
+      XLSX.write(workbook, { type: "array", bookType: "xlsx" }),
+      "xlsx",
+    );
+    const input = { peopleSheet, linksSheet, choices: {}, replaceParentage: false };
+    const transfer = planClanWorkbook({
+      ...input,
+      existingPeople: [persons[0]],
+      existingLinks: [],
+    });
+    expect(transfer.blocking).toBe(false);
+    expect(transfer.plan.links.map(({ key, marriage_order }) => [key, marriage_order])).toEqual([
+      [unions[0].id, 1],
+      [unions[1].id, 2],
+    ]);
+    const legacyLink = {
+      ...linksSheet,
+      header: linksSheet.header.slice(0, -1),
+      rows: [linksSheet.rows[1].slice(0, -1)],
+    };
+    const legacy = planClanWorkbook({
+      ...input,
+      linksSheet: legacyLink,
+      existingPeople: persons,
+      existingLinks: unions,
+    });
+    expect(legacy.blocking).toBe(false);
+    expect(legacy.plan.links).toHaveLength(0);
+  });
 });

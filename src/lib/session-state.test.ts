@@ -115,3 +115,17 @@ describe("recuperação de processamento de áudio", () => {
     expect(canRetryAudioProcessing("ready", null, past, now.getTime())).toBe(false);
   });
 });
+
+it("encaminha um compromisso vencido não resolvido para registro", () => {
+  expect(
+    clinicalStatusOf({ session_date: past, clinical_status: "scheduled", status: "draft" }, now),
+  ).toBe("pending_record");
+});
+
+it("mantém a revisão da qual saiu o rascunho quando outra aba salva", () => {
+  const draft = noteReducer(noteDraftInit(null), { type: "edit", text: "Minha nota" });
+  const conflict = noteReducer(draft, { type: "reset", saved: "Nota de outra aba" });
+  expect(conflict.saved).toBeNull();
+  expect(conflict.text).toBe("Minha nota");
+  expect(noteReducer(conflict, { type: "discard" }).text).toBe("Nota de outra aba");
+});

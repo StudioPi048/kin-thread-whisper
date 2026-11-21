@@ -185,7 +185,8 @@ const personName = (person?: PersonRow) =>
 const UNION_SIZE = 12;
 const MAP_OVERVIEW_PADDING = 0.11;
 const UnionNodeComponent = ({ data }: NodeProps) => {
-  const d = (data as { label?: string; kind?: string; isSingle?: boolean }) ?? {};
+  const d =
+    (data as { label?: string; kind?: string; isSingle?: boolean; focused?: boolean }) ?? {};
   const isDivorce = d.kind === "divorcio";
   return (
     <div
@@ -194,7 +195,10 @@ const UnionNodeComponent = ({ data }: NodeProps) => {
     >
       {d.label && (
         <div
-          className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-card/95 px-1.5 py-0.5 text-[14px] font-bold uppercase tracking-[0.08em] text-forest shadow-sm"
+          className={cn(
+            "absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-card/95 px-1.5 py-0.5 text-[14px] font-bold uppercase tracking-[0.08em] text-forest shadow-sm",
+            d.focused && "ring-2 ring-forest",
+          )}
           style={{ top: -22 }}
         >
           {d.label}
@@ -561,6 +565,7 @@ interface CanvasProps {
   clientId: string;
   /** Familiar a selecionar e centralizar ao abrir (ex.: vindo da linha do tempo). */
   focusPersonId?: string;
+  focusRelationId?: string;
   reviewParentagePersonId?: string;
   resumePersonId?: string;
   onOpenSpreadsheet?: () => void;
@@ -590,6 +595,7 @@ import {
 function GenogramCanvasInner({
   clientId,
   focusPersonId: requestedPersonId,
+  focusRelationId,
   reviewParentagePersonId,
   resumePersonId,
   onOpenSpreadsheet,
@@ -645,6 +651,7 @@ function GenogramCanvasInner({
   const [view, setView] = useState<"2d" | "3d">("2d");
   const [hasOpenedSpatial, setHasOpenedSpatial] = useState(false);
   const [spatialAnchor, setSpatialAnchor] = useState<MapViewAnchor>();
+  const [spatialFitRequest, setSpatialFitRequest] = useState(0);
   const spatialCameraRef = useRef<SpatialCameraHandle>(null);
   const [mapReading, setMapReading] = useState(false);
   const [readerPersonId, setReaderPersonId] = useState<string | null>(null);
@@ -667,6 +674,7 @@ function GenogramCanvasInner({
   const [showSocialLinks, setShowSocialLinks] = useState(false);
   const [creatingPerson, setCreatingPerson] = useState(false);
   const [focusedPersonId, setFocusedPersonId] = useState<string | null>(null);
+  const [focusedRelationshipId, setFocusedRelationshipId] = useState<string | null>(null);
   useEffect(() => {
     if (focusedPersonId) onFocusPerson?.(focusedPersonId);
   }, [focusedPersonId, onFocusPerson]);
@@ -881,6 +889,7 @@ function GenogramCanvasInner({
   }
   const openPerson = useCallback(
     (id: string) => {
+      setFocusedRelationshipId(null);
       setFocusedPersonId(id);
       setPanelOpen(true);
       if (isMobile) setMobileSheetOpen(true);
@@ -890,6 +899,7 @@ function GenogramCanvasInner({
 
   const locatePerson = useCallback(
     (id: string, revealInspector = true) => {
+      setFocusedRelationshipId(null);
       setFocusedPersonId(id);
       setReaderPersonId(id);
       if (revealInspector) setPanelOpen(true);
@@ -910,7 +920,7 @@ function GenogramCanvasInner({
 
   const focusedOnceRef = useRef<string | null>(null);
   useEffect(() => {
-    if (reviewParentagePersonId) return;
+    if (reviewParentagePersonId || focusRelationId) return;
     if (!focusPersonId) {
       focusedOnceRef.current = null;
       return;
@@ -925,7 +935,25 @@ function GenogramCanvasInner({
       locatePerson(focusPersonId);
     }, 160);
     return () => window.clearTimeout(timer);
-  }, [focusPersonId, nodes, locatePerson, reviewParentagePersonId]);
+  }, [focusPersonId, focusRelationId, nodes, locatePerson, reviewParentagePersonId]);
+
+  const relationFocusHandled = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (!focusRelationId) {
+      relationFocusHandled.current = undefined;
+      return;
+    }
+    if (reviewParentagePersonId || relationFocusHandled.current === focusRelationId) return;
+    const union = nodes.find(
+      (node) => node.type === "union" && node.data.relationshipId === focusRelationId,
+    );
+    if (!union) return;
+    relationFocusHandled.current = focusRelationId;
+    setFocusedRelationshipId(focusRelationId);
+    setPanelOpen(false);
+    setMobileSheetOpen(false);
+    void rfInstance.setCenter(union.position.x, union.position.y, { zoom: 1 });
+  }, [focusRelationId, nodes, reviewParentagePersonId, rfInstance]);
 
   const [printOpen, setPrintOpen] = useState(false);
 
@@ -1028,7 +1056,8 @@ function GenogramCanvasInner({
   );
 
   const onEdgeDoubleClick: EdgeMouseHandler = (_, edge) => {
-    const rel = data?.rels.find((item) => item.id === edge.id);
+    if (connection || parentageDraft) return;
+    const rel = data?.rels.find((item) => item.id === (edge.data?.relationshipId ?? edge.id));
     if (rel) {
       editRelationship(rel);
       return;
@@ -1873,17 +1902,31 @@ function GenogramCanvasInner({
   );
 
   const branchById = new Map(positionedNodes.map((node) => [node.id, node.data.branchId]));
-  const colorScopedEdges = mapBranch
-    ? visibleEdges.map((edge) => ({
-        ...edge,
-        className: cn(
-          edge.className,
-          branchById.get(edge.source) !== mapBranch &&
-            branchById.get(edge.target) !== mapBranch &&
-            "geno-map-muted-edge",
-        ),
-      }))
-    : visibleEdges;
+  const colorScopedEdges =
+    mapBranch || focusedRelationshipId
+      ? visibleEdges.map((edge) => ({
+          ...edge,
+          style:
+            focusedRelationshipId && edge.data?.relationshipId === focusedRelationshipId
+              ? { ...edge.style, stroke: "var(--bronze)", strokeWidth: 4 }
+              : edge.style,
+          className: cn(
+            edge.className,
+            mapBranch &&
+              branchById.get(edge.source) !== mapBranch &&
+              branchById.get(edge.target) !== mapBranch &&
+              "geno-map-muted-edge",
+          ),
+        }))
+      : visibleEdges;
+  const focusedRelationship = focusedRelationshipId
+    ? data?.rels.find((link) => link.id === focusedRelationshipId)
+    : undefined;
+  const focusedUnionLabel =
+    focusedRelationship &&
+    positionedNodes.find(
+      (node) => node.type === "union" && node.data.relationshipId === focusedRelationship.id,
+    )?.data.label;
   const reader = persons.find((person) => person.id === readerPersonId) ?? focusedPerson;
   const focusedName = personName(focusedPerson);
   const focusedRole = focusedPerson?.is_proband
@@ -1894,6 +1937,7 @@ function GenogramCanvasInner({
 
   function fitAllPeople() {
     setFocusRequest(undefined);
+    if (view === "3d") setSpatialFitRequest((request) => request + 1);
     void rfInstance.fitView({
       nodes: rfInstance.getNodes().filter((node) => node.type === "person"),
       padding: MAP_OVERVIEW_PADDING,
@@ -2724,11 +2768,13 @@ function GenogramCanvasInner({
               >
                 <ReactFlow
                   className="geno-drafting-plane"
-                  nodes={interactiveNodes.map((node) =>
-                    reviewHighlights.has(node.id)
-                      ? { ...node, className: cn(node.className, "geno-parentage-highlight") }
-                      : node,
-                  )}
+                  nodes={interactiveNodes.map((node) => {
+                    if (reviewHighlights.has(node.id))
+                      return { ...node, className: cn(node.className, "geno-parentage-highlight") };
+                    if (focusedRelationshipId && node.data.relationshipId === focusedRelationshipId)
+                      return { ...node, data: { ...node.data, focused: true } };
+                    return node;
+                  })}
                   edges={colorScopedEdges}
                   nodeTypes={nodeTypes}
                   edgeTypes={edgeTypes}
@@ -2742,6 +2788,14 @@ function GenogramCanvasInner({
                     dragStartRef.current = null;
                   }}
                   onNodeClick={(_, node) => node.type === "person" && activatePerson(node.id)}
+                  onEdgeClick={(_, edge) => {
+                    if (
+                      !connection &&
+                      !parentageDraft &&
+                      typeof edge.data?.relationshipId === "string"
+                    )
+                      setFocusedRelationshipId(edge.data.relationshipId);
+                  }}
                   onEdgeDoubleClick={onEdgeDoubleClick}
                   onConnect={onConnect}
                   isValidConnection={(pair) =>
@@ -2814,7 +2868,11 @@ function GenogramCanvasInner({
                       onSelectPerson={activatePerson}
                       connectionOriginId={originId}
                       selectedPersonId={connection ? originId : focusedPerson?.id}
+                      focusedRelationshipId={focusedRelationshipId}
+                      onDismissRelationship={() => setFocusedRelationshipId(null)}
+                      onOpenPerson={openPerson}
                       focusRequest={focusRequest}
+                      fitRequest={spatialFitRequest}
                       viewAnchor={spatialAnchor}
                       cameraRef={spatialCameraRef}
                       parentagePreview={parentagePreview}
@@ -2832,6 +2890,42 @@ function GenogramCanvasInner({
                     />
                   </Suspense>
                 </div>
+              )}
+              {view === "2d" && focusedRelationship && !parentageDraft && !connection && (
+                <section
+                  className="absolute top-2 right-2 z-10 w-64 max-w-[calc(100%-3.75rem)] rounded-md border bg-card px-3 py-2 shadow-sm"
+                  aria-label="Vínculo em foco"
+                >
+                  <div className="flex items-start justify-between gap-1">
+                    <div className="min-w-0 py-1">
+                      <strong className="block break-words">
+                        {String(focusedUnionLabel ?? "União")}
+                      </strong>
+                      <p className="break-words text-sm text-muted-foreground">
+                        {[focusedRelationship.from_person_id, focusedRelationship.to_person_id]
+                          .map((id) => personName(persons.find((person) => person.id === id)))
+                          .join(" · ")}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="min-h-11 min-w-11"
+                      aria-label="Fechar vínculo em foco"
+                      onClick={() => setFocusedRelationshipId(null)}
+                    >
+                      <X className="size-4" aria-hidden />
+                    </Button>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="min-h-11"
+                    onClick={() => editRelationship(focusedRelationship)}
+                  >
+                    Editar vínculo
+                  </Button>
+                </section>
               )}
               {mapReading && reader && (
                 <div className="geno-map-reader" role="status" aria-label="Leitura do familiar">

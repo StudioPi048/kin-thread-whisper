@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -68,8 +68,14 @@ export function ClientFormDialog({
   const qc = useQueryClient();
   const [values, setValues] = useState<ClientFormValues>(emptyValues);
 
+  const opened = useRef<ClientRow | null | undefined>(undefined);
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      opened.current = undefined;
+      return;
+    }
+    if (opened.current !== undefined && opened.current?.id === editing?.id) return;
+    opened.current = editing ?? null;
     if (editing) {
       setValues({
         full_name: editing.full_name ?? "",
@@ -92,6 +98,7 @@ export function ClientFormDialog({
 
   const mutation = useMutation({
     mutationFn: async (v: ClientFormValues) => {
+      const original = opened.current;
       const parsed = clientFormSchema.parse(v);
       const payload = {
         professional_id: professionalId,
@@ -106,18 +113,30 @@ export function ClientFormDialog({
         clinical_notes: parsed.clinical_notes || null,
         tags: parseTags(parsed.tags_input),
         consent_given_at: parsed.consent_given
-          ? (editing?.consent_given_at ?? new Date().toISOString())
+          ? (original?.consent_given_at ?? new Date().toISOString())
           : null,
         consent_notes: parsed.consent_notes || null,
       };
-      if (editing) {
+      if (original) {
+        const patch = Object.fromEntries(
+          Object.entries(payload).filter(
+            ([key, value]) =>
+              JSON.stringify(value) !== JSON.stringify(original[key as keyof ClientRow]),
+          ),
+        ) as Partial<typeof payload>;
+        if (Object.keys(patch).length === 0) return original;
         const { data, error } = await supabase
           .from("clients")
-          .update(payload)
-          .eq("id", editing.id)
+          .update(patch)
+          .eq("id", original.id)
+          .eq("updated_at", original.updated_at)
           .select()
-          .single();
+          .maybeSingle();
         if (error) throw error;
+        if (!data)
+          throw new Error(
+            "O dossiê mudou durante a edição. Preserve seu rascunho e reabra o cadastro para conferir a versão salva.",
+          );
         return data;
       }
       const { data, error } = await supabase.from("clients").insert(payload).select().single();

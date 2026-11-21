@@ -112,9 +112,11 @@ function AppHome() {
         supabase
           .from("clinical_sessions")
           .select(
-            "id, client_id, session_date, title, status, duration_seconds, planned_duration_minutes, clients(full_name, preferred_name)",
+            "id, client_id, session_date, title, status, duration_seconds, planned_duration_minutes, clients!inner(full_name, preferred_name)",
           )
           .eq("user_id", user.id)
+          .eq("clients.status", "active")
+          .neq("status", "deleting")
           .gte("session_date", now)
           .order("session_date")
           .order("id")
@@ -451,7 +453,11 @@ function AppHome() {
                     ))}
                     {pendingRecordsQ.data.count > pendingRecordsQ.data.records.length && (
                       <li>
-                        <Link to="/app/agenda" className="work-desk-text-link">
+                        <Link
+                          to="/app/agenda"
+                          search={{ view: "pending" }}
+                          className="work-desk-text-link"
+                        >
                           Ver todos os {pendingRecordsQ.data.count} registros{" "}
                           <ArrowRight size={17} aria-hidden />
                         </Link>

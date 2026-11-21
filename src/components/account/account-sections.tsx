@@ -1,10 +1,15 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, Loader2, RefreshCw } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { DEFAULT_PREFERENCES, preferencesKey, type Preferences } from "@/lib/preferences";
+import {
+  DEFAULT_PREFERENCES,
+  parsePreferences,
+  preferencesKey,
+  type Preferences,
+} from "@/lib/preferences";
 import { usePreferences } from "./use-preferences";
 import { exportAccountData } from "@/lib/data-export";
 import { downloadJson, readExportPage } from "@/lib/download-export";
@@ -20,24 +25,29 @@ const card =
 export function AccountPreferences({ userId }: { userId: string }) {
   const qc = useQueryClient();
   const q = usePreferences(userId);
-  const [form, setForm] = useState<Preferences>(DEFAULT_PREFERENCES);
-  useEffect(() => {
-    if (q.data) setForm(q.data);
-  }, [q.data]);
+  const [draft, setDraft] = useState<Preferences | null>(null);
+  const form = draft ?? q.data ?? DEFAULT_PREFERENCES;
   const save = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (submitted: Preferences) => {
       const { data, error } = await supabase
         .from("profiles")
-        .update({ preferences: form })
+        .update({ preferences: submitted })
         .eq("id", userId)
         .select("preferences")
         .maybeSingle();
       if (error) throw error;
       if (!data) throw new Error("Perfil não encontrado");
+      return parsePreferences(data.preferences);
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: preferencesKey(userId) }),
+    onSuccess: async (saved) => {
+      const queryKey = preferencesKey(userId);
+      await qc.cancelQueries({ queryKey, exact: true });
+      qc.setQueryData(queryKey, saved);
+      setDraft(null);
+    },
   });
   const dirty = !!q.data && JSON.stringify(form) !== JSON.stringify(q.data);
+  const fieldsDisabled = !q.data || save.isPending;
 
   return (
     <section className={card} aria-labelledby="prefs-h">
@@ -47,7 +57,7 @@ export function AccountPreferences({ userId }: { userId: string }) {
       <p className="mt-1 text-[14px] text-muted-foreground">
         Salvas na sua conta e aplicadas em qualquer dispositivo.
       </p>
-      {q.isError ? (
+      {q.isError && !q.data ? (
         <p role="alert" className="mt-4 text-[15px] text-destructive">
           Não foi possível carregar.{" "}
           <Button size="sm" variant="outline" className="min-h-11" onClick={() => q.refetch()}>
@@ -56,7 +66,7 @@ export function AccountPreferences({ userId }: { userId: string }) {
         </p>
       ) : (
         <div className="mt-4 space-y-4 text-[15px]">
-          <fieldset>
+          <fieldset disabled={fieldsDisabled}>
             <legend className="font-semibold">Tamanho do texto</legend>
             <div className="mt-2 flex gap-2">
               {(["normal", "large"] as const).map((v) => (
@@ -68,7 +78,7 @@ export function AccountPreferences({ userId }: { userId: string }) {
                     type="radio"
                     name="textSize"
                     checked={form.textSize === v}
-                    onChange={() => setForm({ ...form, textSize: v })}
+                    onChange={() => setDraft({ ...form, textSize: v })}
                     className="size-4"
                   />
                   {v === "normal" ? "Padrão" : "Maior"}
@@ -76,7 +86,7 @@ export function AccountPreferences({ userId }: { userId: string }) {
               ))}
             </div>
           </fieldset>
-          <fieldset>
+          <fieldset disabled={fieldsDisabled}>
             <legend className="font-semibold">Visão inicial da Agenda</legend>
             <div className="mt-2 flex gap-2">
               {(["day", "week"] as const).map((v) => (
@@ -88,7 +98,7 @@ export function AccountPreferences({ userId }: { userId: string }) {
                     type="radio"
                     name="agendaView"
                     checked={form.agendaView === v}
-                    onChange={() => setForm({ ...form, agendaView: v })}
+                    onChange={() => setDraft({ ...form, agendaView: v })}
                     className="size-4"
                   />
                   {v === "day" ? "Dia" : "Semana"}
@@ -100,7 +110,8 @@ export function AccountPreferences({ userId }: { userId: string }) {
             <input
               type="checkbox"
               checked={form.reduceMotion}
-              onChange={(e) => setForm({ ...form, reduceMotion: e.target.checked })}
+              onChange={(e) => setDraft({ ...form, reduceMotion: e.target.checked })}
+              disabled={fieldsDisabled}
               className="size-5"
             />
             Reduzir animações (além da configuração do sistema)
@@ -109,7 +120,7 @@ export function AccountPreferences({ userId }: { userId: string }) {
             <Button
               className="min-h-11"
               disabled={!dirty || save.isPending}
-              onClick={() => save.mutate()}
+              onClick={() => save.mutate(form)}
             >
               {save.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
               {save.isError ? "Tentar salvar de novo" : "Salvar preferências"}
@@ -120,9 +131,13 @@ export function AccountPreferences({ userId }: { userId: string }) {
             >
               {save.isError
                 ? `Não salvo: ${save.error instanceof Error ? save.error.message : "erro"}.`
-                : save.isSuccess && !dirty
-                  ? "Salvo"
-                  : ""}
+                : save.isPending
+                  ? "Salvando preferências…"
+                  : q.isPending
+                    ? "Carregando preferências…"
+                    : save.isSuccess && !dirty
+                      ? "Salvo"
+                      : ""}
             </span>
           </div>
         </div>

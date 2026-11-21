@@ -72,6 +72,65 @@ afterEach(() => {
   Reflect.deleteProperty(HTMLElement.prototype, "scrollIntoView");
 });
 
+it("abre o board estreito em escala de leitura, com ficha e panorama fora da escala", async () => {
+  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(320);
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={queryClient}>
+      <GenogramCanvas clientId={clientId} />
+    </QueryClientProvider>,
+  );
+  fireEvent.click(await screen.findByRole("button", { name: "3D" }));
+  await waitFor(() => expect(peopleOnMap()).toHaveLength(35));
+  const initialPeople = peopleOnMap();
+  const anchor = spatial().querySelector<HTMLButtonElement>('[data-reference="true"]')!;
+  const effectiveSize = () =>
+    parseFloat(anchor.style.getPropertyValue("--plaque-name-size")) *
+    parseFloat(anchor.style.getPropertyValue("--plaque-scale"));
+  expect(effectiveSize()).toBeGreaterThanOrEqual(11.99);
+  expect(screen.getByRole("button", { name: "Ler do topo" }).getAttribute("aria-pressed")).toBe(
+    "true",
+  );
+  const scope = within(screen.getByRole("group", { name: "Explorar ramos da família" }));
+  fireEvent.click(scope.getByRole("button", { name: "Árvore inteira" }));
+  expect(effectiveSize()).toBeLessThan(12);
+  expect(peopleOnMap()).toEqual(initialPeople);
+  fireEvent.click(screen.getByRole("button", { name: "Abrir ficha de Consultante" }));
+  expect(
+    within(screen.getByRole("complementary", { name: "Ficha da pessoa selecionada" })).getByRole(
+      "button",
+      { name: "Adicionar parente" },
+    ),
+  ).toBeTruthy();
+  fireEvent.click(scope.getByRole("button", { name: "Ler do topo" }));
+  expect(effectiveSize()).toBeGreaterThanOrEqual(11.99);
+  expect(peopleOnMap()).toEqual(initialPeople);
+});
+
+it("abre pelo ID da união e mantém o vínculo em foco no 2D e no 3D", async () => {
+  const rows = await relationRows();
+  const union = rows!.find((row) => row.relationship_type === "union")!;
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={queryClient}>
+      <GenogramCanvas clientId={clientId} focusRelationId={union.id} />
+    </QueryClientProvider>,
+  );
+  const inspector = await screen.findByRole("region", { name: "Vínculo em foco" });
+  expect(within(inspector).getByRole("button", { name: "Editar vínculo" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "3D" }));
+  await waitFor(() => {
+    expect(
+      spatial().querySelector(`[data-union-id="union:${union.id}"][data-active]`),
+    ).toBeTruthy();
+  });
+  expect(
+    within(screen.getByRole("region", { name: "Vínculo em foco" })).getByRole("button", {
+      name: "Editar vínculo",
+    }),
+  ).toBeTruthy();
+});
+
 it("explora os ramos em 3D, edita por ID no mapa e desfaz sem mudar o restante da árvore", async () => {
   const { data: people, error } = await supabase
     .from("genogram_persons")

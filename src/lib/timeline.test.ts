@@ -143,8 +143,30 @@ describe("linha do tempo do caso", () => {
     expect(scale?.events[0]?.from).toBe(0);
     expect(scale?.events[0]?.to).toBeGreaterThan(0);
     expect(filterTimeline(timeline, { personId: "b", kind: "union" })).toMatchObject([
-      { personIds: ["a", "b"], personName: "Pessoa A e Pessoa B" },
+      { relationshipId: "union", personIds: ["a", "b"], personName: "Pessoa A e Pessoa B" },
     ]);
+  });
+
+  it("mantém o ID de cada união entre as mesmas pessoas", () => {
+    const people = [p({ id: "a" }), p({ id: "b" })];
+    const first = {
+      id: "first",
+      relationship_type: "union",
+      from_person_id: "a",
+      to_person_id: "b",
+      start_date: "1990-01-20",
+      end_date: "1994-04-19",
+    } as RelationshipRow;
+    const second = {
+      ...first,
+      id: "second",
+      start_date: "1998-07-21",
+      end_date: null,
+    };
+
+    expect(
+      buildCaseTimeline(people, undefined, [first, second]).map((e) => e.relationshipId),
+    ).toEqual(["first", "first", "second"]);
   });
 
   it("mantém relatos sem data e deixa datas civis impossíveis fora do gráfico", () => {
@@ -165,4 +187,23 @@ describe("linha do tempo do caso", () => {
     expect(events[1].meta).toBe("Dia inconsistente");
     expect(buildTimelineScale(events)).toBeNull();
   });
+});
+
+it("preserva a incerteza e a fonte de um acontecimento proposto na Anamnese", () => {
+  const [event] = buildCaseTimeline([
+    p({
+      life_events: [
+        {
+          date: "1985",
+          description: "Mudança",
+          source: "intake",
+          source_status: "pending",
+          source_type: "family",
+          source_field: "clan_important_events",
+        },
+      ],
+    }),
+  ]);
+  expect(event.source).toBe("Anamnese · A confirmar · Relato de familiar");
+  expect(event.sourceField).toBe("clan_important_events");
 });

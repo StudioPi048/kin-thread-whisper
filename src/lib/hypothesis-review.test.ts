@@ -175,4 +175,20 @@ describe("versionamento de evidências", () => {
     expect(pattern?.details?.ages).toEqual([49, 49]);
     expect(detectPatterns(people.reverse(), [])[0]?.id).toBe(pattern?.id);
   });
+
+  it("usa a causa de morte apenas quando há falecimento registrado", () => {
+    const alive = ["a", "b"].map((id) =>
+      person(id, { is_deceased: false, death_date_partial: null, cause_of_death: "Causa teste" }),
+    );
+    expect(detectPatterns(alive, [])).toEqual([]);
+
+    const deceased = [
+      person("c", { is_deceased: true, cause_of_death: "Causa teste" }),
+      person("d", { death_date_partial: "1980", cause_of_death: "Causa teste" }),
+      person("e", { death_date: "1990-02-10", cause_of_death: "Causa teste" }),
+    ];
+    expect(detectPatterns([...alive, ...deceased], [])).toMatchObject([
+      { type: "shared_cause_of_death", personIds: ["c", "d", "e"] },
+    ]);
+  });
 });

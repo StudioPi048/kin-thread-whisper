@@ -44,6 +44,7 @@ import {
   formatDurationMinutes,
   shiftDateKey,
   timeInTz,
+  zonedTimeOccurrences,
 } from "@/lib/scheduling";
 import {
   AUDIO_LABEL,
@@ -74,7 +75,14 @@ export function StatusPill({ status }: { status: ClinicalStatus }) {
 
 type Appointment = Pick<
   WeekSessionDTO,
-  "id" | "clientId" | "patient" | "dateKey" | "startISO" | "durationMin" | "clinicalStatus"
+  | "id"
+  | "clientId"
+  | "patient"
+  | "dateKey"
+  | "startISO"
+  | "durationMin"
+  | "clinicalStatus"
+  | "overdue"
 >;
 
 function CancellationDialog({ session, onClose }: { session: Appointment; onClose: () => void }) {
@@ -135,7 +143,7 @@ function CancellationDialog({ session, onClose }: { session: Appointment; onClos
   );
 }
 
-function appointmentDestination(session: Appointment) {
+function appointmentDestination(session: Appointment, agendaView: "day" | "week" = "day") {
   return {
     to: "/app/clientes/$clientId" as const,
     params: { clientId: session.clientId },
@@ -144,6 +152,7 @@ function appointmentDestination(session: Appointment) {
       session: session.id,
       from: "agenda" as const,
       agendaDate: session.dateKey,
+      agendaView,
     },
   };
 }
@@ -152,7 +161,7 @@ function AppointmentActions({ session }: { session: Appointment }) {
   const [dialog, setDialog] = useState<"move" | "cancel" | null>(null);
   return (
     <div className="flex flex-wrap gap-2">
-      {session.clinicalStatus === "scheduled" && (
+      {(session.clinicalStatus === "scheduled" || session.overdue) && (
         <>
           <Button
             size="sm"
@@ -327,6 +336,16 @@ function AppointmentDialog({
     duration: String(session?.durationMin ?? 60),
     tz: displayTz,
   });
+  const [occurrence, setOccurrence] = useState<number | undefined>();
+  const occurrences = zonedTimeOccurrences(form.date, form.time, form.tz);
+  const originalOccurrence = session
+    ? occurrences.findIndex(
+        (option) =>
+          Math.floor(option.getTime() / 60_000) ===
+          Math.floor(Date.parse(session.startISO) / 60_000),
+      )
+    : -1;
+  const occurrenceValue = occurrence ?? (originalOccurrence >= 0 ? originalOccurrence : undefined);
   const [result, setResult] = useState<Extract<RescheduleResponse, { ok: false }> | null>(null);
 
   const chooseClient = !session && !clientId;
@@ -356,6 +375,7 @@ function AppointmentDialog({
         time: form.time,
         durationMin: Number(form.duration),
         tz: form.tz,
+        occurrence,
       };
       return session
         ? move({ data })
@@ -377,6 +397,8 @@ function AppointmentDialog({
 
   const edit = (patch: Partial<typeof form>) => {
     if (result) setResult(null);
+    if (patch.date !== undefined || patch.time !== undefined || patch.tz !== undefined)
+      setOccurrence(undefined);
     if (!session) setRequestId(crypto.randomUUID());
     setForm((previous) => ({ ...previous, ...patch }));
   };
@@ -510,6 +532,29 @@ function AppointmentDialog({
                 ))}
               </select>
             </div>
+            {occurrences.length > 1 && (
+              <div className="space-y-1 sm:col-span-2">
+                <Label htmlFor={formId + "-occurrence"}>Ocorrência do horário</Label>
+                <select
+                  id={formId + "-occurrence"}
+                  className={selectClass}
+                  required
+                  value={occurrenceValue ?? ""}
+                  onChange={(event) =>
+                    setOccurrence(
+                      event.target.value === "" ? undefined : Number(event.target.value),
+                    )
+                  }
+                >
+                  <option value="">Selecione a ocorrência</option>
+                  {occurrences.map((instant, index) => (
+                    <option key={instant.toISOString()} value={index}>
+                      {index + 1}ª ocorrência · {instant.toISOString().slice(11, 16)} UTC
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             {result && (
               <div
                 role="alert"
@@ -640,7 +685,7 @@ export function WeekView({
                       {slot.end && " – " + slot.end}
                     </p>
                     <Link
-                      {...appointmentDestination(slot)}
+                      {...appointmentDestination(slot, "week")}
                       className="flex min-h-11 items-center gap-1.5 break-words font-semibold text-forest hover:underline"
                     >
                       <span className="min-w-0">{slot.patient}</span>

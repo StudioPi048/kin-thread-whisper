@@ -158,9 +158,11 @@ export async function readClanWorkbook(file: ArrayBuffer, format: "csv" | "xlsx"
   const workbook =
     format === "csv"
       ? XLSX.read(decodeCsv(file), { type: "string", raw: true })
-      : XLSX.read(file, { type: "array", raw: true, cellDates: true });
+      : XLSX.read(file, { type: "array", raw: true, cellNF: true });
   const sheets = workbook.SheetNames.map((name): ClanSheet => {
-    const [header = [], ...rows] = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets[name], {
+    const sheet = workbook.Sheets[name];
+    const origin = XLSX.utils.decode_range(sheet["!ref"] ?? "A1").s;
+    const [header = [], ...rows] = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
       header: 1,
       raw: true,
       defval: "",
@@ -169,12 +171,27 @@ export async function readClanWorkbook(file: ArrayBuffer, format: "csv" | "xlsx"
     return {
       name,
       header: header.map((cell) => String(cell ?? "")),
-      rows: rows.map((row) =>
-        row.map((cell) =>
-          cell instanceof Date && !Number.isNaN(cell.getTime())
-            ? cell.toISOString().slice(0, 10)
-            : String(cell ?? ""),
-        ),
+      rows: rows.map((row, index) =>
+        row.map((value, column) => {
+          if (format === "xlsx" && typeof value === "number") {
+            const address = XLSX.utils.encode_cell({
+              r: origin.r + index + 1,
+              c: origin.c + column,
+            });
+            const numberFormat = sheet[address]?.z;
+            if (numberFormat && XLSX.SSF.is_date(numberFormat)) {
+              const date = XLSX.SSF.parse_date_code(value, {
+                date1904: workbook.Workbook?.WBProps?.date1904,
+              });
+              if (date) {
+                return [date.y, date.m, date.d]
+                  .map((part, i) => String(part).padStart(i === 0 ? 4 : 2, "0"))
+                  .join("-");
+              }
+            }
+          }
+          return String(value ?? "");
+        }),
       ),
     };
   });

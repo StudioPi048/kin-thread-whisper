@@ -1,3 +1,4 @@
+import { invalidateSessionViews } from "@/lib/session-state";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { lazy, Suspense } from "react";
 
@@ -121,7 +122,9 @@ export const Route = createFileRoute("/_authenticated/app/clientes/$clientId")({
     tab?: DossierTab;
     from?: "agenda";
     agendaDate?: string;
+    agendaView?: "day" | "week" | "pending";
     person?: string;
+    relation?: string;
     session?: string;
     review?: "parentage";
     focus?: "audio-consent";
@@ -144,10 +147,19 @@ export const Route = createFileRoute("/_authenticated/app/clientes/$clientId")({
       ...(typeof search.person === "string" && /^[0-9a-f-]{36}$/i.test(search.person)
         ? { person: search.person }
         : {}),
+      ...(typeof search.relation === "string" &&
+      /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(search.relation)
+        ? { relation: search.relation }
+        : {}),
       ...(typeof search.session === "string" && /^[0-9a-f-]{36}$/i.test(search.session)
         ? { session: search.session }
         : {}),
       ...(DOSSIER_TABS.includes(tab as DossierTab) ? { tab: tab as DossierTab } : {}),
+      ...(search.agendaView === "day" ||
+      search.agendaView === "week" ||
+      search.agendaView === "pending"
+        ? { agendaView: search.agendaView }
+        : {}),
       ...(search.from === "agenda" ? { from: "agenda" as const } : {}),
     };
   },
@@ -161,7 +173,9 @@ function ClientDossierPage() {
     tab: tabFromUrl,
     from,
     agendaDate,
+    agendaView,
     person: focusPerson,
+    relation: focusRelationId,
     session: focusedSessionId,
     review,
     focus,
@@ -200,6 +214,7 @@ function ClientDossierPage() {
         ...prev,
         tab: next,
         person: next === "clan" || next === "genogram" ? selectedPerson : undefined,
+        relation: undefined,
         review: undefined,
         focus: undefined,
         event: undefined,
@@ -306,12 +321,13 @@ function ClientDossierPage() {
   // duplicam os dados completos que cada aba (Sessões/Genograma) já busca.
   const nextSessionQ = useQuery({
     queryKey: ["client-next-session", clientId],
-    enabled: hasClient,
+    enabled: hasClient && client?.status === "active",
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clinical_sessions")
         .select("id, session_date")
         .eq("client_id", clientId)
+        .neq("status", "deleting")
         .or("clinical_status.eq.scheduled,clinical_status.is.null")
         .gt("session_date", new Date().toISOString())
         .order("session_date", { ascending: true })
@@ -343,7 +359,13 @@ function ClientDossierPage() {
       qc.invalidateQueries({ queryKey: ["all-clients-search"] });
       qc.invalidateQueries({ queryKey: ["genograms-list"] });
       qc.invalidateQueries({ queryKey: ["timelines-list"] });
-      toast.success(next === "archived" ? "Dossiê arquivado." : "Dossiê reativado.");
+      void invalidateSessionViews(qc, clientId);
+      void qc.invalidateQueries({ queryKey: ["mesa-clients"] });
+      toast.success(
+        next === "archived"
+          ? "Dossiê arquivado. Os atendimentos ficam no dossiê e saem da Agenda."
+          : "Dossiê reativado. Os atendimentos voltam à Agenda.",
+      );
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
@@ -416,7 +438,7 @@ function ClientDossierPage() {
           </Button>
           <Button asChild variant="outline" className="min-h-11">
             {from === "agenda" ? (
-              <Link to="/app/agenda" search={agendaDate ? { date: agendaDate } : {}}>
+              <Link to="/app/agenda" search={{ date: agendaDate, view: agendaView }}>
                 Voltar à agenda
               </Link>
             ) : (
@@ -444,7 +466,7 @@ function ClientDossierPage() {
   const initials = initialsFrom(client.full_name);
 
   const sessionCount = sessionCountQ.data;
-  const nextSession = nextSessionQ.data;
+  const nextSession = client?.status === "active" ? nextSessionQ.data : null;
   const family = intelQ.data
     ? getMappablePersons(intelQ.data.persons, intelQ.data.relationships)
     : undefined;
@@ -487,7 +509,7 @@ function ClientDossierPage() {
           <div className="container-liz dossier-masthead-tools">
             <nav aria-label="Localização" className="dossier-back">
               {from === "agenda" ? (
-                <Link to="/app/agenda" search={agendaDate ? { date: agendaDate } : {}}>
+                <Link to="/app/agenda" search={{ date: agendaDate, view: agendaView }}>
                   <ArrowLeft size={16} aria-hidden /> Agenda
                 </Link>
               ) : (
@@ -918,6 +940,7 @@ function ClientDossierPage() {
                   key={client.id}
                   clientId={client.id}
                   focusPersonId={focusPerson}
+                  focusRelationId={focusRelationId}
                   reviewParentagePersonId={review === "parentage" ? focusPerson : undefined}
                   resumePersonId={mapFocus?.clientId === clientId ? mapFocus.personId : undefined}
                   onFocusPerson={rememberMapFocus}
@@ -965,6 +988,7 @@ function ClientDossierPage() {
                         ...prev,
                         tab: "genogram",
                         person: personId,
+                        relation: undefined,
                         review: "parentage",
                         event: undefined,
                       }),

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { dateKeyInTz, timeInTz, validateReschedule, zonedLocalToUtc } from "./scheduling";
+import {
+  dateKeyInTz,
+  timeInTz,
+  validateReschedule,
+  zonedLocalToUtc,
+  zonedTimeOccurrences,
+} from "./scheduling";
 
 const base = { sessionId: "s1", tz: "America/Sao_Paulo", durationMin: 50, existing: [] };
 
@@ -80,5 +86,23 @@ describe("reagendamento", () => {
   });
   it("rejeita data inválida", () => {
     expect(validateReschedule({ ...base, date: "2026-13-02", time: "08:00" }).ok).toBe(false);
+  });
+});
+
+it("conserva a ocorrência original de um horário repetido e permite escolher outra", () => {
+  const input = { ...base, tz: "Europe/Lisbon", date: "2027-10-31", time: "01:30" };
+  const times = zonedTimeOccurrences(input.date, input.time, input.tz);
+  expect(times.map((instant) => instant.toISOString())).toEqual([
+    "2027-10-31T00:30:00.000Z",
+    "2027-10-31T01:30:00.000Z",
+  ]);
+  expect(validateReschedule(input).ok).toBe(false);
+  expect(validateReschedule({ ...input, originalStartISO: "2027-10-31T00:30:00Z" })).toMatchObject({
+    ok: true,
+    startISO: "2027-10-31T00:30:00.000Z",
+  });
+  expect(validateReschedule({ ...input, occurrence: 1 })).toMatchObject({
+    ok: true,
+    startISO: "2027-10-31T01:30:00.000Z",
   });
 });

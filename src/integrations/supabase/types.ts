@@ -431,6 +431,7 @@ export type Database = {
           session_date: string
           status: string
           structured_note: Json | null
+          summary_stale: boolean
           time_zone: string | null
           title: string | null
           transcript_segments: Json
@@ -457,6 +458,7 @@ export type Database = {
           session_date?: string
           status?: string
           structured_note?: Json | null
+          summary_stale?: boolean
           time_zone?: string | null
           title?: string | null
           transcript_segments?: Json
@@ -483,6 +485,7 @@ export type Database = {
           session_date?: string
           status?: string
           structured_note?: Json | null
+          summary_stale?: boolean
           time_zone?: string | null
           title?: string | null
           transcript_segments?: Json
@@ -1029,6 +1032,9 @@ export type Database = {
       begin_dossier_deletion: { Args: { _client_id: string }; Returns: boolean }
       dossier_deletion_manifest: { Args: { _client_id: string }; Returns: Json }
       finish_dossier_deletion: { Args: { _client_id: string }; Returns: boolean }
+      begin_session_deletion: { Args: { _session_id: string }; Returns: string | null }
+      finish_session_deletion: { Args: { _session_id: string }; Returns: boolean }
+      confirm_session_audio_upload: { Args: { _session_id: string; _path: string }; Returns: string }
       list_dossier_deletions: {
         Args: Record<string, never>
         Returns: { client_id: string; created_at: string }[]
@@ -1047,6 +1053,10 @@ export type Database = {
       list_timeline_cases: {
         Args: { _status?: string; _search?: string; _offset?: number }
         Returns: { id: string; full_name: string; preferred_name: string | null; has_events: boolean }[]
+      }
+      list_pending_clinical_records: {
+        Args: { _offset?: number; _limit?: number }
+        Returns: { id: string; client_id: string; session_date: string; title: string | null; client_name: string; overdue: boolean }[]
       }
       mesa_pending_clinical_records: {
         Args: Record<PropertyKey, never>

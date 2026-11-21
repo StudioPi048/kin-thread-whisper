@@ -1,0 +1,163 @@
+// @vitest-environment jsdom
+import type { ReactNode } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { supabase } from "@/integrations/supabase/client";
+import { audioConsentsKey } from "@/lib/audio-consent";
+import { clients, sessions } from "../../../design/preview/client";
+import { SessionsPanel } from "./sessions-panel";
+
+const controls = vi.hoisted(() => ({ consentUnavailable: false }));
+
+vi.mock("@/integrations/supabase/client", () => import("../../../design/preview/client"));
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({ children }: { children: ReactNode }) => <a>{children}</a>,
+}));
+vi.mock("@tanstack/react-start", () => ({ useServerFn: (fn: unknown) => fn }));
+vi.mock("@/lib/ai/session-processing.functions", () => ({ processSessionAudio: vi.fn() }));
+vi.mock("@/lib/audio-consent", async (original) => {
+  const actual = await original<typeof import("@/lib/audio-consent")>();
+  return {
+    ...actual,
+    readAudioConsents: (...args: Parameters<typeof actual.readAudioConsents>) => {
+      if (controls.consentUnavailable) throw new Error("Consulta fictícia indisponível");
+      return actual.readAudioConsents(...args);
+    },
+  };
+});
+
+const queryClients: QueryClient[] = [];
+
+function openSessionPanel(index: number, focusSession: boolean) {
+  const client = clients[index];
+  const session = sessions[index];
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  queryClients.push(queryClient);
+  render(
+    <QueryClientProvider client={queryClient}>
+      <SessionsPanel
+        clientId={client.id}
+        clientName={client.full_name}
+        focusedSessionId={focusSession ? session.id : undefined}
+      />
+    </QueryClientProvider>,
+  );
+  return { client, session, queryClient };
+}
+
+beforeEach(() => {
+  controls.consentUnavailable = false;
+  Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+    configurable: true,
+    value: vi.fn(),
+  });
+});
+
+afterEach(() => {
+  cleanup();
+  queryClients.splice(0).forEach((client) => client.clear());
+  Reflect.deleteProperty(HTMLElement.prototype, "scrollIntoView");
+  Reflect.deleteProperty(navigator, "mediaDevices");
+  vi.unstubAllGlobals();
+});
+
+it("abre as notas no compromisso selecionado sem duplicá-lo", async () => {
+  const { client, session } = openSessionPanel(0, true);
+  const register = await screen.findByRole("button", { name: "Registrar sessão sem áudio" });
+  fireEvent.click(register);
+  expect(document.activeElement?.id).toBe(`notes-${session.id}`);
+  const { data } = await supabase.from("clinical_sessions").select("id").eq("client_id", client.id);
+  expect(data?.map(({ id }) => id)).toEqual([session.id]);
+  expect(screen.getByRole("button", { name: "Nova sessão sem áudio" })).toBeTruthy();
+});
+
+it("confirma a autorização no escopo acionado no gravador", async () => {
+  const { client, session } = openSessionPanel(1, false);
+  const recorder = screen.getByRole("region", { name: "Gravação de áudio" });
+  const shortcut = await within(recorder).findByRole("button", {
+    name: "Ver autorizações de áudio",
+  });
+  fireEvent.change(within(recorder).getByLabelText("Sessão para o áudio"), {
+    target: { value: session.id },
+  });
+  fireEvent.click(shortcut);
+
+  const consents = screen.getByRole("region", { name: "Autorizações de áudio" });
+  expect((within(consents).getByLabelText("Aplicação da decisão") as HTMLSelectElement).value).toBe(
+    session.id,
+  );
+  fireEvent.click(
+    within(consents).getByRole("button", { name: "Registrar autorização para gravar áudio" }),
+  );
+  expect(
+    within(consents).getByText(session.title, { exact: false, selector: "strong" }),
+  ).toBeTruthy();
+  fireEvent.change(within(consents).getByLabelText("Origem da decisão"), {
+    target: { value: "written" },
+  });
+  fireEvent.click(within(consents).getByRole("button", { name: "Confirmar decisão" }));
+  await waitFor(async () => {
+    const { data } = await supabase
+      .from("audio_consent_events")
+      .select("*")
+      .eq("client_id", client.id);
+    expect(data?.map((row) => row.session_id)).toEqual([session.id]);
+  });
+});
+
+it("retém o trecho capturado em caso de falha e aguarda reconfirmação para guardá-lo", async () => {
+  const { id: sessionId, client_id: clientId } = sessions[2];
+  const stopped = vi.fn();
+  Object.defineProperty(navigator, "mediaDevices", {
+    configurable: true,
+    value: { getUserMedia: async () => ({ getTracks: () => [{ stop: stopped }] }) },
+  });
+  vi.stubGlobal(
+    "MediaRecorder",
+    class {
+      static isTypeSupported() {
+        return true;
+      }
+      state = "inactive";
+      mimeType = "audio/webm";
+      ondataavailable?: (event: { data: Blob }) => void;
+      onstop?: () => void;
+      constructor(readonly stream: MediaStream) {}
+      start() {
+        this.state = "recording";
+      }
+      stop() {
+        this.state = "inactive";
+        const notify = () => {
+          this.ondataavailable?.({ data: new Blob(["áudio fictício"]) });
+          this.onstop?.();
+        };
+        queueMicrotask(notify);
+      }
+    },
+  );
+  await supabase.rpc("record_audio_consent_details", {
+    _client_id: clientId,
+    _scope: "recording",
+    _source: "written",
+    _granted: true,
+    _session_id: sessionId,
+  });
+  const { queryClient } = openSessionPanel(2, true);
+  const start = await screen.findByRole("button", { name: "Iniciar gravação" });
+  await waitFor(() => expect((start as HTMLButtonElement).disabled).toBe(false));
+  fireEvent.click(start);
+  await screen.findByRole("button", { name: "Finalizar gravação" });
+  controls.consentUnavailable = true;
+  await act(() => queryClient.invalidateQueries({ queryKey: audioConsentsKey(clientId) }));
+  const keep = await screen.findByRole<HTMLButtonElement>("button", {
+    name: "Guardar áudio no dossiê",
+  });
+  expect(keep.disabled).toBe(true);
+  expect(stopped).toHaveBeenCalledTimes(1);
+
+  controls.consentUnavailable = false;
+  await act(() => queryClient.invalidateQueries({ queryKey: audioConsentsKey(clientId) }));
+  await waitFor(() => expect(keep.disabled).toBe(false));
+});
