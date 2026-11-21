@@ -793,28 +793,6 @@
 }
 
 @media (max-width: 470px) {
-  .geno-editor-toolbar {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) max-content;
-  }
-
-  .geno-editor-modes {
-    justify-self: start;
-  }
-
-  .geno-editor-edit {
-    justify-self: end;
-  }
-
-  .geno-editor-navigation {
-    order: 0;
-    min-width: 0;
-  }
-
-  .geno-editor-orbit-suffix {
-    display: none;
-  }
-
   .geno-editor-tools {
     gap: 0;
   }
@@ -1117,7 +1095,6 @@
 }
 
 .geno-parentage-picking .react-flow__node-person,
-.geno-parentage-picking .geno-spatial-person,
-.geno-parentage-picking .geno-orbit-person {
+.geno-parentage-picking .geno-spatial-person {
   cursor: crosshair;
 }

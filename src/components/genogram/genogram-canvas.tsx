@@ -61,7 +61,6 @@ import {
   Minimize2,
   Crosshair,
   Box,
-  Orbit,
   Focus,
   Ellipsis,
   GitBranch,
@@ -127,7 +126,6 @@ import {
 } from "./map-view-context";
 import { buildRenderGraph } from "./render-graph";
 import { MapNavigator } from "./map-navigator";
-import type { OrbitCameraHandle, OrbitCameraSnapshot } from "./genogram-orbit-view";
 import type { SpatialCamera, SpatialCameraHandle } from "./genogram-spatial-view";
 import {
   parentageSources,
@@ -154,14 +152,9 @@ type PersonRow = Database["public"]["Tables"]["genogram_persons"]["Row"];
 type RelRow = Database["public"]["Tables"]["genogram_relationships"]["Row"];
 type NodePositionRow = Database["public"]["Tables"]["genogram_node_positions"]["Row"];
 type LayoutRow = Database["public"]["Tables"]["genogram_layouts"]["Row"];
-type MapMode = "2d" | "3d" | "orbit";
 
 const SpatialView = lazy(() =>
   import("./genogram-spatial-view").then((module) => ({ default: module.GenogramSpatialView })),
-);
-
-const OrbitView = lazy(() =>
-  import("./genogram-orbit-view").then((module) => ({ default: module.GenogramOrbitView })),
 );
 
 const PrintPreview = lazy(() =>
@@ -649,15 +642,10 @@ function GenogramCanvasInner({
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const warnings = renderGraph?.warnings ?? [];
-  const [view, setView] = useState<MapMode>("2d");
-  const isSpatial = view !== "2d";
+  const [view, setView] = useState<"2d" | "3d">("2d");
   const [hasOpenedSpatial, setHasOpenedSpatial] = useState(false);
-  const [hasOpenedOrbit, setHasOpenedOrbit] = useState(false);
   const [spatialAnchor, setSpatialAnchor] = useState<MapViewAnchor>();
-  const [orbitAnchor, setOrbitAnchor] = useState<MapViewAnchor>();
   const spatialCameraRef = useRef<SpatialCameraHandle>(null);
-  const orbitCameraRef = useRef<OrbitCameraHandle>(null);
-  const [mapFitRequest, setMapFitRequest] = useState(0);
   const [mapReading, setMapReading] = useState(false);
   const [readerPersonId, setReaderPersonId] = useState<string | null>(null);
   const [mapBranch, setMapBranch] = useState<MapBranch | null>(null);
@@ -728,7 +716,6 @@ function GenogramCanvasInner({
     viewport: Viewport;
     anchor?: MapViewAnchor;
     spatialCamera?: SpatialCamera;
-    orbitCamera?: OrbitCameraSnapshot;
     branch: MapBranch | null;
     personId: string | null;
     panelOpen: boolean;
@@ -851,22 +838,13 @@ function GenogramCanvasInner({
     return anchor ? { ...anchor, overview } : undefined;
   }
 
-  function switchMap(next: MapMode, focusSelected = false) {
+  function switchMap(next: "2d" | "3d") {
     if (next === view) return;
-    const personToFocus = focusSelected ? focusedPersonId : null;
-    const anchor =
-      view === "2d"
-        ? readAnchor2D()
-        : view === "3d"
-          ? spatialCameraRef.current?.readAnchor()
-          : orbitCameraRef.current?.readAnchor();
     if (next === "3d") {
-      setSpatialAnchor(personToFocus ? undefined : anchor);
+      setSpatialAnchor(readAnchor2D());
       setHasOpenedSpatial(true);
-    } else if (next === "orbit") {
-      setOrbitAnchor(anchor);
-      setHasOpenedOrbit(true);
     } else {
+      const anchor = spatialCameraRef.current?.readAnchor();
       const node = anchor && rfInstance.getNode(anchor.personId);
       const stage = stageRef.current;
       if (anchor && node && stage) {
@@ -884,7 +862,7 @@ function GenogramCanvasInner({
         }
       }
     }
-    setFocusRequest(personToFocus ? { personId: personToFocus } : undefined);
+    setFocusRequest(undefined);
     setView(next);
   }
 
@@ -899,8 +877,6 @@ function GenogramCanvasInner({
     setMapBranch(previous.branch);
     if (previous.spatialCamera) spatialCameraRef.current?.restore(previous.spatialCamera);
     else if (view === "3d") setSpatialAnchor(previous.anchor);
-    if (previous.orbitCamera) orbitCameraRef.current?.restore(previous.orbitCamera);
-    else if (view === "orbit") setOrbitAnchor(previous.anchor);
     requestAnimationFrame(() => void rfInstance.setViewport(previous.viewport));
   }
   const openPerson = useCallback(
@@ -1375,22 +1351,20 @@ function GenogramCanvasInner({
     mutationFn: async (reviewId: string) => {
       const viewport = rfInstance.getViewport();
       const spatialCamera = spatialCameraRef.current?.read();
-      const orbitCamera = orbitCameraRef.current?.read();
       const { data, error } = await supabase.rpc("undo_parentage_review", {
         _client_id: clientId,
         _review_id: reviewId,
       });
       if (error) throw new Error(error.message);
       if (!data) throw new Error("O servidor não confirmou o desfazer.");
-      return { viewport, spatialCamera, orbitCamera, branch: mapBranch };
+      return { viewport, spatialCamera, branch: mapBranch };
     },
-    onSuccess: async ({ viewport, spatialCamera, orbitCamera, branch }, reviewId) => {
+    onSuccess: async ({ viewport, spatialCamera, branch }, reviewId) => {
       await invalidateCase(qc, clientId);
       setConfirmedParentage((saved) => (saved?.reviewId === reviewId ? null : saved));
       void qc.invalidateQueries({ queryKey: ["genogram-parentage-review", clientId] });
       setMapBranch(branch);
       if (spatialCamera) spatialCameraRef.current?.restore(spatialCamera);
-      if (orbitCamera) orbitCameraRef.current?.restore(orbitCamera);
       requestAnimationFrame(() => void rfInstance.setViewport(viewport));
       toast.success("Filiação anterior restaurada.");
     },
@@ -1433,10 +1407,9 @@ function GenogramCanvasInner({
       edge.selected &&
       data?.rels.some((rel) => rel.id === edge.id && rel.relationship_type !== "parent"),
   ).length;
-  const visibleEdges = useMemo(
-    () => (showSocialLinks ? edges : edges.filter((edge) => !edge.data?.relationshipType)),
-    [edges, showSocialLinks],
-  );
+  const visibleEdges = showSocialLinks
+    ? edges
+    : edges.filter((edge) => !edge.data?.relationshipType);
   const resolvedParents =
     focusedPerson && renderGraph ? getResolvedParents(renderGraph.graph, focusedPerson.id) : [];
   const suggestedParents =
@@ -1464,7 +1437,7 @@ function GenogramCanvasInner({
   const recordedUnions = remainingLinks.filter((link) => link.relationship_type === "union");
   const childrenById = new Map<string, boolean>();
   const focusId = focusedPerson?.id;
-  if (isSpatial && focusId && renderGraph) {
+  if (view === "3d" && focusId && renderGraph) {
     const graph = renderGraph.graph;
     for (const union of graph.unions.values()) {
       if (!union.partners.includes(focusId)) continue;
@@ -1476,17 +1449,18 @@ function GenogramCanvasInner({
       }
     }
   }
-  const otherLinks = isSpatial
-    ? remainingLinks.filter(
-        (link) =>
-          link.relationship_type !== "union" &&
-          !(
-            link.relationship_type === "parent" &&
-            link.from_person_id === focusId &&
-            childrenById.has(link.to_person_id)
-          ),
-      )
-    : remainingLinks;
+  const otherLinks =
+    view === "3d"
+      ? remainingLinks.filter(
+          (link) =>
+            link.relationship_type !== "union" &&
+            !(
+              link.relationship_type === "parent" &&
+              link.from_person_id === focusId &&
+              childrenById.has(link.to_person_id)
+            ),
+        )
+      : remainingLinks;
   const reviewChild = parentageDraft?.childId;
   const reviewCurrent = parentageDraft?.current;
   const reviewProposal = parentageDraft?.proposed;
@@ -1531,7 +1505,6 @@ function GenogramCanvasInner({
       viewport: rfInstance.getViewport(),
       anchor: readAnchor2D(),
       spatialCamera: spatialCameraRef.current?.read(),
-      orbitCamera: orbitCameraRef.current?.read(),
       branch: mapBranch,
       personId: fromRoute ? childId : focusedPersonId,
       panelOpen: fromRoute || panelOpen,
@@ -1921,11 +1894,6 @@ function GenogramCanvasInner({
 
   function fitAllPeople() {
     setFocusRequest(undefined);
-    if (isSpatial) {
-      selectBranch(null);
-      setMapFitRequest((request) => request + 1);
-      return;
-    }
     void rfInstance.fitView({
       nodes: rfInstance.getNodes().filter((node) => node.type === "person"),
       padding: MAP_OVERVIEW_PADDING,
@@ -1945,10 +1913,6 @@ function GenogramCanvasInner({
     if (!focusedPerson) return;
     setMobileSheetOpen(false);
     setEditingPerson(focusedPerson);
-  }
-  function editRelationshipById(id: string) {
-    const link = data?.rels.find((item) => item.id === id);
-    if (link) editRelationship(link);
   }
   const personActionsBlocked = !!connection || !!parentageDraft;
   const reviewAction = focusedPerson && (
@@ -2038,7 +2002,7 @@ function GenogramCanvasInner({
           <p className="mt-1 text-sm text-muted-foreground">{focusedRole}</p>
         )}
       </header>
-      {isSpatial && (
+      {view === "3d" && (
         <div
           className="geno-dock-person-actions"
           role="group"
@@ -2161,13 +2125,13 @@ function GenogramCanvasInner({
         )}
       </section>
       {view === "2d" && <div className="geno-dock-edit-actions">{personActions}</div>}
-      {isSpatial && recordedUnions.length > 0 && (
+      {view === "3d" && recordedUnions.length > 0 && (
         <details className="geno-dock-relatives">
           <summary>Uniões registradas ({recordedUnions.length})</summary>
           {renderRecordedLinks(recordedUnions)}
         </details>
       )}
-      {isSpatial && childrenById.size > 0 && (
+      {view === "3d" && childrenById.size > 0 && (
         <details className="geno-dock-relatives">
           <summary>Filhos ({childrenById.size})</summary>
           <ul className="geno-dock-link-list">
@@ -2297,21 +2261,6 @@ function GenogramCanvasInner({
     />
   );
 
-  const spatialMapProps = {
-    nodes: positionedNodes,
-    edges: visibleEdges,
-    onSelectPerson: activatePerson,
-    connectionOriginId: originId,
-    selectedPersonId: connection ? originId : focusedPerson?.id,
-    fitRequest: mapFitRequest,
-    parentagePreview,
-    highlightedBranch: mapBranch,
-    onBranchChange: selectBranch,
-    onFocusPerson: setReaderPersonId,
-    onReviewParentage: (id: string) => startParentageReview(id),
-    onEditRelationship: editRelationshipById,
-  };
-
   return (
     <div
       ref={rootRef}
@@ -2339,22 +2288,8 @@ function GenogramCanvasInner({
             aria-pressed={view === "3d"}
             onClick={() => switchMap("3d")}
             aria-label="3D"
-            title="Board verde"
           >
             <Box className="size-4" aria-hidden /> 3D
-          </Button>
-          <Button
-            size="sm"
-            variant={view === "orbit" ? "forest" : "ghost"}
-            aria-pressed={view === "orbit"}
-            aria-label="Órbita 3D"
-            title="Explorar a árvore com órbita livre"
-            onClick={() => switchMap("orbit")}
-          >
-            <Orbit className="size-4" aria-hidden />
-            <span>
-              Órbita<span className="geno-editor-orbit-suffix"> 3D</span>
-            </span>
           </Button>
         </div>
 
@@ -2761,11 +2696,11 @@ function GenogramCanvasInner({
               <div
                 className={cn(
                   "absolute inset-0",
-                  isSpatial && "invisible",
+                  view === "3d" && "invisible",
                   connection && "geno-linking",
                 )}
-                aria-hidden={isSpatial}
-                inert={isSpatial}
+                aria-hidden={view === "3d"}
+                inert={view === "3d"}
                 onFocus={(event) => {
                   if (mapReading && event.target instanceof HTMLElement) {
                     const node = event.target.closest<HTMLElement>(".react-flow__node-person");
@@ -2860,9 +2795,9 @@ function GenogramCanvasInner({
               </div>
               {hasOpenedSpatial && (
                 <div
-                  className={cn("absolute inset-0", view !== "3d" && "invisible")}
-                  inert={view !== "3d"}
-                  aria-hidden={view !== "3d"}
+                  className={cn("absolute inset-0", view === "2d" && "invisible")}
+                  inert={view === "2d"}
+                  aria-hidden={view === "2d"}
                 >
                   <Suspense
                     fallback={
@@ -2873,38 +2808,27 @@ function GenogramCanvasInner({
                   >
                     <SpatialView
                       key={clientId}
-                      {...spatialMapProps}
                       workbench
-                      focusRequest={view === "3d" ? focusRequest : undefined}
+                      nodes={positionedNodes}
+                      edges={visibleEdges}
+                      onSelectPerson={activatePerson}
+                      connectionOriginId={originId}
+                      selectedPersonId={connection ? originId : focusedPerson?.id}
+                      focusRequest={focusRequest}
                       viewAnchor={spatialAnchor}
                       cameraRef={spatialCameraRef}
+                      parentagePreview={parentagePreview}
+                      highlightedBranch={mapBranch}
+                      onBranchChange={selectBranch}
+                      onFocusPerson={(id) => setReaderPersonId(id)}
+                      onReviewParentage={(id) => startParentageReview(id)}
+                      onEditRelationship={(id) => {
+                        const link = data?.rels.find((item) => item.id === id);
+                        if (link) editRelationship(link);
+                      }}
                       canMovePeople={canMoveLayout}
                       onMovePerson={moveSpatialPerson}
                       getMovePersonDelta={getMovePersonDelta}
-                    />
-                  </Suspense>
-                </div>
-              )}
-              {hasOpenedOrbit && (
-                <div
-                  className={cn("absolute inset-0", view !== "orbit" && "invisible")}
-                  inert={view !== "orbit"}
-                  aria-hidden={view !== "orbit"}
-                >
-                  <Suspense
-                    fallback={
-                      <div className="p-4 text-sm" role="status">
-                        Carregando cena 3D…
-                      </div>
-                    }
-                  >
-                    <OrbitView
-                      key={clientId}
-                      {...spatialMapProps}
-                      focusRequest={view === "orbit" ? focusRequest : undefined}
-                      viewAnchor={orbitAnchor}
-                      cameraRef={orbitCameraRef}
-                      onReturnToBoard={() => switchMap("3d", true)}
                     />
                   </Suspense>
                 </div>
