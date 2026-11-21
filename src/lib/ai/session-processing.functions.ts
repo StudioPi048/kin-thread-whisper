@@ -8,7 +8,7 @@ import {
   prepareSessionTranscript,
   transcriptForSummary,
 } from "@/lib/transcript";
-import { canRetryAudioProcessing } from "@/lib/session-state";
+import { canRetranscribeSession, canRetryAudioProcessing } from "@/lib/session-state";
 import type { TablesUpdate } from "@/integrations/supabase/types";
 
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1";
@@ -71,14 +71,16 @@ async function callGateway(path: string, init: RequestInit): Promise<Response> {
 
 export const processSessionAudio = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((data) => z.object({ sessionId: z.string().uuid() }).parse(data))
+  .validator((data) =>
+    z.object({ sessionId: z.string().uuid(), retranscribe: z.boolean().optional() }).parse(data),
+  )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
     const { data: session, error: sErr } = await supabase
       .from("clinical_sessions")
       .select(
-        "id, client_id, audio_path, user_id, status, updated_at, processing_started_at, transcript, transcript_segments, transcript_reviews, summary_stale",
+        "id, client_id, audio_path, user_id, status, updated_at, processing_started_at, transcript, transcript_segments, transcript_reviews, structured_note, ai_reviewed_at, summary_stale",
       )
       .eq("id", data.sessionId)
       .maybeSingle();
@@ -87,21 +89,24 @@ export const processSessionAudio = createServerFn({ method: "POST" })
     if (session.user_id !== userId) throw new Error("Sem permissão");
     if (!session.audio_path) throw new Error("Sessão sem áudio");
 
-    if (
-      !canRetryAudioProcessing(
-        session.status,
-        session.processing_started_at,
-        session.updated_at,
-        Date.now(),
-        session.summary_stale,
-      )
-    ) {
+    const { retranscribe = false } = data;
+    const canProcess = retranscribe
+      ? canRetranscribeSession(session)
+      : canRetryAudioProcessing(
+          session.status,
+          session.processing_started_at,
+          session.updated_at,
+          Date.now(),
+          session.summary_stale,
+        );
+    if (!canProcess) {
       throw new Error("O áudio não está disponível para processamento.");
     }
 
-    const checkpoint = session.transcript?.trim()
-      ? { text: session.transcript, segments: parseTimedTranscript(session.transcript_segments) }
-      : null;
+    const checkpoint =
+      !retranscribe && session.transcript?.trim()
+        ? { text: session.transcript, segments: parseTimedTranscript(session.transcript_segments) }
+        : null;
     if (
       checkpoint &&
       !transcriptForSummary(checkpoint.text, checkpoint.segments, session.transcript_reviews)
@@ -182,8 +187,8 @@ export const processSessionAudio = createServerFn({ method: "POST" })
           await checkConsent();
           const { data: transcribed, error: transcriptError } = await updateAttempt({
             status: "structuring",
-            transcript: text,
-            transcript_segments: segments,
+            // When replacing a result, keep both previous outputs until the new pair is ready.
+            ...(retranscribe ? {} : { transcript: text, transcript_segments: segments }),
           });
           if (transcriptError || !transcribed)
             throw new Error("Não foi possível guardar a transcrição.");
@@ -216,12 +221,17 @@ export const processSessionAudio = createServerFn({ method: "POST" })
         structured = structureSchema.parse(JSON.parse(raw));
       } catch {
         throw new Error(
-          "A síntese gerada não pôde ser validada. A transcrição está disponível para nova tentativa.",
+          retranscribe
+            ? "A nova síntese não pôde ser validada. O texto anterior foi preservado."
+            : "A síntese gerada não pôde ser validada. A transcrição está disponível para nova tentativa.",
         );
       }
 
       await checkConsent();
       const { data: saved, error: noteError } = await updateAttempt({
+        ...(retranscribe
+          ? { transcript: transcript.text, transcript_segments: transcript.segments }
+          : {}),
         structured_note: structured,
         summary_stale: false,
         ai_reviewed_at: null,

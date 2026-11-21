@@ -35,6 +35,8 @@ export function TranscriptReview({
   audioPath,
   updatedAt,
   processing,
+  onRetranscribe,
+  retranscribeDisabled,
   refresh,
 }: {
   sessionId: string;
@@ -45,6 +47,8 @@ export function TranscriptReview({
   audioPath: string | null;
   updatedAt: string;
   processing: boolean;
+  onRetranscribe?: () => void;
+  retranscribeDisabled?: boolean;
   refresh: () => Promise<unknown>;
 }) {
   const [open, setOpen] = useState(false);
@@ -158,6 +162,17 @@ export function TranscriptReview({
                 <Play className="size-4" aria-hidden />{" "}
                 {playback.data ? "Atualizar player" : "Abrir áudio"}
               </Button>
+              {onRetranscribe && !draft && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="min-h-11"
+                  disabled={retranscribeDisabled}
+                  onClick={onRetranscribe}
+                >
+                  Transcrever novamente
+                </Button>
+              )}
               {playback.data && (
                 <audio
                   ref={player}

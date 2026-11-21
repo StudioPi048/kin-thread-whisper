@@ -62,6 +62,7 @@ import {
   CLINICAL_LABEL,
   audioStateOf,
   clinicalStatusOf,
+  canRetranscribeSession,
   canRetryAudioProcessing,
   confirmReview,
   invalidateSessionViews,
@@ -285,13 +286,16 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
             : targetUnavailable
               ? "Selecione uma sessão disponível para receber a gravação."
               : "Esta seleção precisa de autorização para gravar.";
-  const [processingTarget, setProcessingTarget] = useState<string>();
+  const [processingTarget, setProcessingTarget] = useState<{
+    sessionId: string;
+    retranscribe?: boolean;
+  }>();
   const processingGrant = processingTarget
-    ? grantFor("external_processing", processingTarget)
+    ? grantFor("external_processing", processingTarget.sessionId)
     : undefined;
-  const processingTranscript = sessions.find(
-    (session) => session.id === processingTarget,
-  )?.transcript;
+  const processingTranscript =
+    !processingTarget?.retranscribe &&
+    sessions.find((session) => session.id === processingTarget?.sessionId)?.transcript;
   const mountedRef = useRef(false);
   const startLock = useRef(false);
   const audioLock = useRef(false);
@@ -615,7 +619,7 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
   });
 
   const reprocess = useMutation({
-    mutationFn: (sessionId: string) => processFn({ data: { sessionId } }),
+    mutationFn: (data: { sessionId: string; retranscribe?: boolean }) => processFn({ data }),
     onSettled: () => void refreshSessions(),
     onError: (error) =>
       toast.error(error instanceof Error ? error.message : "Falha ao processar áudio"),
@@ -952,14 +956,18 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {processingTranscript
-                ? "Enviar a transcrição para atualizar a síntese?"
-                : "Enviar o áudio para processamento externo?"}
+              {processingTarget?.retranscribe
+                ? "Transcrever novamente o áudio desta sessão?"
+                : processingTranscript
+                  ? "Enviar a transcrição para atualizar a síntese?"
+                  : "Enviar o áudio para processamento externo?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {processingTranscript
-                ? "O serviço de IA via Lovable recebe o texto da transcrição, com os trechos corrigidos e sem os descartados."
-                : "Os serviços de IA via Lovable recebem o áudio e a transcrição para gerar texto provisório."}{" "}
+              {processingTarget?.retranscribe
+                ? "O áudio original será enviado à IA via Lovable. A transcrição e a síntese atuais permanecem disponíveis até a nova versão ser salva."
+                : processingTranscript
+                  ? "O serviço de IA via Lovable recebe o texto da transcrição, com os trechos corrigidos e sem os descartados."
+                  : "Os serviços de IA via Lovable recebem o áudio e a transcrição para gerar texto provisório."}{" "}
               Suas notas manuais ficam no dossiê.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -1017,7 +1025,7 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
               key={s.id}
               session={s}
               clientId={clientId}
-              onReprocess={() => setProcessingTarget(s.id)}
+              onReprocess={(retranscribe) => setProcessingTarget({ sessionId: s.id, retranscribe })}
               onDelete={() => {
                 if (
                   s.status === "deleting" ||
@@ -1038,7 +1046,7 @@ export function SessionsPanel({ clientId, clientName, focusedSessionId, focusCon
               onOpenConsent={() => focusAudioConsent(s.id)}
               recordingAuthorization={events.find(({ id }) => id === s.recording_consent_id)}
               processingAuthorization={events.find(({ id }) => id === s.processing_consent_id)}
-              reprocessing={reprocess.isPending && reprocess.variables === s.id}
+              reprocessing={reprocess.isPending && reprocess.variables?.sessionId === s.id}
             />
           ))}
         </div>
@@ -1066,7 +1074,7 @@ function SessionCard({
 }: {
   session: Session;
   clientId: string;
-  onReprocess: () => void;
+  onReprocess: (retranscribe?: boolean) => void;
   onDelete: () => void;
   onDiscardUpload: () => void;
   onResumeUpload: () => void;
@@ -1204,6 +1212,7 @@ function SessionCard({
     Date.now(),
     session.summary_stale,
   );
+  const canRetranscribe = canRetranscribeSession(session);
   const isError = audio === "error";
   const notesId = `notes-${session.id}`;
   const clinicalId = `clinical-${session.id}`;
@@ -1285,7 +1294,7 @@ function SessionCard({
             {canRetry && session.audio_path && (
               <Button
                 variant="outline"
-                onClick={onReprocess}
+                onClick={() => onReprocess()}
                 disabled={!processingAuthorized || processingBusy}
                 aria-describedby={
                   !processingAuthorized ? `processing-consent-${session.id}` : undefined
@@ -1317,7 +1326,7 @@ function SessionCard({
       </div>
 
       <div className="space-y-6 p-4 sm:p-6">
-        {canRetry && session.audio_path && !processingAuthorized && (
+        {(canRetry || canRetranscribe) && session.audio_path && !processingAuthorized && (
           <div className="flex flex-wrap items-center gap-x-3">
             <p id={`processing-consent-${session.id}`} className="text-sm text-muted-foreground">
               O processamento exige autorização para envio à IA.
@@ -1534,6 +1543,8 @@ function SessionCard({
             audioPath={session.audio_path}
             updatedAt={session.updated_at}
             processing={session.status !== "ready" && session.status !== "error"}
+            onRetranscribe={canRetranscribe ? () => onReprocess(true) : undefined}
+            retranscribeDisabled={!processingAuthorized || processingBusy}
             refresh={refresh}
           />
         )}

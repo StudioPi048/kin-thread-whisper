@@ -185,3 +185,24 @@ export function canRetryAudioProcessing(
   const startedAt = Date.parse(processingStartedAt ?? updatedAt ?? "");
   return Number.isFinite(startedAt) && now - startedAt >= 10 * 60 * 1000;
 }
+
+export function canRetranscribeSession(session: {
+  status: string;
+  audio_path: string | null;
+  transcript: string | null;
+  transcript_reviews?: unknown;
+  structured_note: unknown;
+  ai_reviewed_at: string | null;
+  processing_started_at?: string | null;
+  updated_at: string;
+}) {
+  return (
+    (session.status === "ready" ||
+      canRetryAudioProcessing(session.status, session.processing_started_at, session.updated_at)) &&
+    !!session.audio_path &&
+    !!session.transcript?.trim() &&
+    !!session.structured_note &&
+    !session.ai_reviewed_at &&
+    Object.keys(session.transcript_reviews ?? {}).length === 0
+  );
+}
